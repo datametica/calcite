@@ -17,7 +17,10 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlWriter;
 
 /**
  * A <code>SqlDialect</code> implementation for Google BigQuery's "Standard SQL"
@@ -34,6 +37,34 @@ public class BigQuerySqlDialect extends SqlDialect {
   public BigQuerySqlDialect(SqlDialect.Context context) {
     super(context);
   }
+
+  @Override public boolean emulatesFunction(final SqlOperator operator) {
+    switch (operator.getName()) {
+    case "POSITION":
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  @Override public void unparseSqlFunction(SqlOperator operatorRex, final SqlWriter writer,
+      final SqlCall call, final int leftPrec, final int rightPrec) {
+    if (operatorRex.getName().equals("POSITION")) {
+      final SqlWriter.Frame frame = writer.startFunCall("STRPOS");
+      writer.sep(",");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.sep(",");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      if (3 == call.operandCount()) {
+        throw new RuntimeException("3rd operand Not Supported for Function STRPOS in Big Query");
+      }
+      writer.endFunCall(frame);
+    } else {
+      throw new RuntimeException("Emulation for Function :- " + operatorRex.getName()
+          + "is not handled.");
+    }
+  }
+
 }
 
 // End BigQuerySqlDialect.java

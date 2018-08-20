@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 import java.util.Objects;
+
 import javax.annotation.Nonnull;
 
 import static org.apache.calcite.util.Static.RESOURCE;
@@ -161,7 +162,11 @@ public class SqlFunction extends SqlOperator {
       SqlCall call,
       int leftPrec,
       int rightPrec) {
-    getSyntax().unparse(writer, this, call, leftPrec, rightPrec);
+    if (writer.getDialect().emulatesFunction(this)) {
+      writer.getDialect().unparseSqlFunction(this, writer, call, leftPrec, rightPrec);
+    } else {
+      getSyntax().unparse(writer, this, call, leftPrec, rightPrec);
+    }
   }
 
   /**
@@ -247,8 +252,8 @@ public class SqlFunction extends SqlOperator {
       if (convertRowArgToColumnList && containsRowArg(args)) {
         if (function == null
             && SqlUtil.matchRoutinesByParameterCount(
-                validator.getOperatorTable(), getNameAsId(), argTypes,
-                getFunctionType())) {
+            validator.getOperatorTable(), getNameAsId(), argTypes,
+            getFunctionType())) {
           // remove the already validated node types corresponding to
           // row arguments before re-validating
           for (SqlNode operand : args) {

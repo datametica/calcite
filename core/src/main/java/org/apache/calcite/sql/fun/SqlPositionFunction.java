@@ -57,15 +57,19 @@ public class SqlPositionFunction extends SqlFunction {
       SqlCall call,
       int leftPrec,
       int rightPrec) {
-    final SqlWriter.Frame frame = writer.startFunCall(getName());
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
-    writer.sep("IN");
-    call.operand(1).unparse(writer, leftPrec, rightPrec);
-    if (3 == call.operandCount()) {
-      writer.sep("FROM");
-      call.operand(2).unparse(writer, leftPrec, rightPrec);
+    if (writer.getDialect().emulatesFunction(this)) {
+      writer.getDialect().unparseSqlFunction(this, writer, call, leftPrec, rightPrec);
+    } else {
+      final SqlWriter.Frame frame = writer.startFunCall(getName());
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.sep("IN");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      if (3 == call.operandCount()) {
+        writer.sep("FROM");
+        call.operand(2).unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(frame);
     }
-    writer.endFunCall(frame);
   }
 
   public String getSignatureTemplate(final int operandsCount) {

@@ -418,6 +418,15 @@ public class SqlDialect {
         RelDataTypeSystem.DEFAULT);
   }
 
+  public boolean emulatesFunction(SqlOperator operator) {
+    return false;
+  }
+
+  public void unparseSqlFunction(SqlOperator operator, SqlWriter writer,
+      SqlCall call, int leftPrec, int rightPrec) {
+    SqlSyntax.FUNCTION.unparse(writer, operator, call, leftPrec, rightPrec);
+  }
+
   /**
    * Returns whether the string contains any characters outside the
    * comfortable 7-bit ASCII range (32 through 127).
