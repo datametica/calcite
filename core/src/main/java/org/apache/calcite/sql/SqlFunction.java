@@ -162,8 +162,8 @@ public class SqlFunction extends SqlOperator {
       SqlCall call,
       int leftPrec,
       int rightPrec) {
-    if (writer.getDialect().emulatesFunction(this)) {
-      writer.getDialect().unparseSqlFunction(this, writer, call, leftPrec, rightPrec);
+    if (writer.getDialect().emulatesOperator(this)) {
+      writer.getDialect().unparseSqlOperator(this, writer, call, leftPrec, rightPrec);
     } else {
       getSyntax().unparse(writer, this, call, leftPrec, rightPrec);
     }

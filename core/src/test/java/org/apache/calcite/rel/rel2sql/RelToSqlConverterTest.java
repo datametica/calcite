@@ -467,6 +467,15 @@ public class RelToSqlConverterTest {
     sql(query).dialect(HiveSqlDialect.DEFAULT).ok(expected);
   }
 
+  @Test public void testUnionOperatorEmulationForBigQuery() {
+    final String query = "select mod(11,3) from \"product\"\n"
+        + "UNION select 1 from \"product\"";
+    final String expected = "SELECT MOD(11, 3)\n"
+        + "FROM foodmart.product\n"
+        + "UNION DISTINCT\nSELECT 1\nFROM foodmart.product";
+    sql(query).dialect(BigQuerySqlDialect.DEFAULT).ok(expected);
+  }
+
   @Test public void testHiveSelectQueryWithOrderByDescAndNullsFirstShouldBeEmulated() {
     final String query = "select \"product_id\" from \"product\"\n"
         + "order by \"product_id\" desc nulls first";

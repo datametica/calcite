@@ -329,7 +329,12 @@ public abstract class SqlOperator {
       SqlCall call,
       int leftPrec,
       int rightPrec) {
-    getSyntax().unparse(writer, this, call, leftPrec, rightPrec);
+    // Here the the unparse can be totally delegated to the Dialect instead of checking.
+    if (writer.getDialect().emulatesOperator(this)) {
+      writer.getDialect().unparseSqlOperator(this, writer, call, leftPrec, rightPrec);
+    } else {
+      getSyntax().unparse(writer, this, call, leftPrec, rightPrec);
+    }
   }
 
   // REVIEW jvs 9-June-2006: See http://issues.eigenbase.org/browse/FRG-149
@@ -569,7 +574,7 @@ public abstract class SqlOperator {
     final SqlValidatorScope operandScope = scope.getOperandScope(call);
 
     final ImmutableList.Builder<RelDataType> argTypeBuilder =
-            ImmutableList.builder();
+        ImmutableList.builder();
     for (SqlNode operand : args) {
       RelDataType nodeType;
       // for row arguments that should be converted to ColumnList

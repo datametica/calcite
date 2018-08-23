@@ -68,7 +68,7 @@ public class HiveSqlDialect extends SqlDialect {
     return null;
   }
 
-  @Override public boolean emulatesFunction(final SqlOperator operator) {
+  @Override public boolean emulatesOperator(final SqlOperator operator) {
     switch (operator.getName()) {
     case "POSITION":
     case "MOD":
@@ -78,7 +78,7 @@ public class HiveSqlDialect extends SqlDialect {
     }
   }
 
-  @Override public void unparseSqlFunction(SqlOperator operatorRex, final SqlWriter writer,
+  @Override public void unparseSqlOperator(SqlOperator operatorRex, final SqlWriter writer,
       final SqlCall call, final int leftPrec, final int rightPrec) {
     if (operatorRex.getName().equals("POSITION")) {
       final SqlWriter.Frame frame = writer.startFunCall("INSTR");
@@ -98,7 +98,7 @@ public class HiveSqlDialect extends SqlDialect {
     }
   }
 
-  public static final SqlOperator MOD = new SqlBinaryOperator(
+  private static final SqlOperator MOD = new SqlBinaryOperator(
       "%",
       SqlKind.OTHER,
       22,

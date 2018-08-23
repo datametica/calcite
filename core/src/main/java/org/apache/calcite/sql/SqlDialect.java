@@ -46,6 +46,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -150,7 +151,7 @@ public class SqlDialect {
     this.identifierEndQuoteString =
         identifierQuoteString == null ? null
             : identifierQuoteString.equals("[") ? "]"
-            : identifierQuoteString;
+                : identifierQuoteString;
     this.identifierEscapedQuote =
         identifierQuoteString == null ? null
             : this.identifierEndQuoteString + this.identifierEndQuoteString;
@@ -391,7 +392,7 @@ public class SqlDialect {
         writer.keyword("TO");
         final String end = qualifier.timeUnitRange.endUnit.name();
         if ((TimeUnit.SECOND == qualifier.timeUnitRange.endUnit)
-                && (!qualifier.useDefaultFractionalSecondPrecision())) {
+            && (!qualifier.useDefaultFractionalSecondPrecision())) {
           final SqlWriter.Frame frame = writer.startFunCall(end);
           writer.print(fractionalSecondPrecision);
           writer.endList(frame);
@@ -418,13 +419,13 @@ public class SqlDialect {
         RelDataTypeSystem.DEFAULT);
   }
 
-  public boolean emulatesFunction(SqlOperator operator) {
+  public boolean emulatesOperator(SqlOperator operator) {
     return false;
   }
 
-  public void unparseSqlFunction(SqlOperator operator, SqlWriter writer,
+  public void unparseSqlOperator(SqlOperator operator, SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
-    SqlSyntax.FUNCTION.unparse(writer, operator, call, leftPrec, rightPrec);
+    operator.getSyntax().unparse(writer, operator, call, leftPrec, rightPrec);
   }
 
   /**
@@ -611,14 +612,14 @@ public class SqlDialect {
     if (type instanceof BasicSqlType) {
       return new SqlDataTypeSpec(
           new SqlIdentifier(type.getSqlTypeName().name(), SqlParserPos.ZERO),
-              type.getPrecision(),
-              type.getScale(),
-              type.getCharset() != null
-                  && supportsCharSet()
-                  ? type.getCharset().name()
-                  : null,
-              null,
-              SqlParserPos.ZERO);
+          type.getPrecision(),
+          type.getScale(),
+          type.getCharset() != null
+              && supportsCharSet()
+              ? type.getCharset().name()
+              : null,
+          null,
+          SqlParserPos.ZERO);
     }
     return SqlTypeUtil.convertTypeToSpec(type);
   }
@@ -949,20 +950,35 @@ public class SqlDialect {
    * which returns a new context with the desired property value. */
   public interface Context {
     @Nonnull DatabaseProduct databaseProduct();
+
     Context withDatabaseProduct(@Nonnull DatabaseProduct databaseProduct);
+
     String databaseProductName();
+
     Context withDatabaseProductName(String databaseProductName);
+
     String databaseVersion();
+
     Context withDatabaseVersion(String databaseVersion);
+
     int databaseMajorVersion();
+
     Context withDatabaseMajorVersion(int databaseMajorVersion);
+
     int databaseMinorVersion();
+
     Context withDatabaseMinorVersion(int databaseMinorVersion);
+
     String identifierQuoteString();
+
     Context withIdentifierQuoteString(String identifierQuoteString);
+
     @Nonnull NullCollation nullCollation();
+
     Context withNullCollation(@Nonnull NullCollation nullCollation);
+
     JethroDataSqlDialect.JethroInfo jethroInfo();
+
     Context withJethroInfo(JethroDataSqlDialect.JethroInfo jethroInfo);
   }
 

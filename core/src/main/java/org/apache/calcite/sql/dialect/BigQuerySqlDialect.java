@@ -19,7 +19,10 @@ package org.apache.calcite.sql.dialect;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlSetOperator;
+import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 
 /**
@@ -38,18 +41,20 @@ public class BigQuerySqlDialect extends SqlDialect {
     super(context);
   }
 
-  @Override public boolean emulatesFunction(final SqlOperator operator) {
+  @Override public boolean emulatesOperator(final SqlOperator operator) {
     switch (operator.getName()) {
     case "POSITION":
+    case "UNION":
       return true;
     default:
       return false;
     }
   }
 
-  @Override public void unparseSqlFunction(SqlOperator operatorRex, final SqlWriter writer,
+  @Override public void unparseSqlOperator(SqlOperator operatorRex, final SqlWriter writer,
       final SqlCall call, final int leftPrec, final int rightPrec) {
-    if (operatorRex.getName().equals("POSITION")) {
+    switch (operatorRex.getName()) {
+    case "POSITION":
       final SqlWriter.Frame frame = writer.startFunCall("STRPOS");
       writer.sep(",");
       call.operand(1).unparse(writer, leftPrec, rightPrec);
@@ -59,11 +64,18 @@ public class BigQuerySqlDialect extends SqlDialect {
         throw new RuntimeException("3rd operand Not Supported for Function STRPOS in Big Query");
       }
       writer.endFunCall(frame);
-    } else {
+      break;
+    case "UNION":
+      SqlSyntax.BINARY.unparse(writer, UNION_DISTINCT, call, leftPrec, rightPrec);
+      break;
+    default:
       throw new RuntimeException("Emulation for Function :- " + operatorRex.getName()
           + "is not handled.");
     }
   }
+
+  private static final SqlOperator UNION_DISTINCT = new SqlSetOperator(
+      "UNION DISTINCT", SqlKind.UNION, 14, true);
 
 }
 

@@ -57,8 +57,8 @@ public class SqlPositionFunction extends SqlFunction {
       SqlCall call,
       int leftPrec,
       int rightPrec) {
-    if (writer.getDialect().emulatesFunction(this)) {
-      writer.getDialect().unparseSqlFunction(this, writer, call, leftPrec, rightPrec);
+    if (writer.getDialect().emulatesOperator(this)) {
+      writer.getDialect().unparseSqlOperator(this, writer, call, leftPrec, rightPrec);
     } else {
       final SqlWriter.Frame frame = writer.startFunCall(getName());
       call.operand(0).unparse(writer, leftPrec, rightPrec);
