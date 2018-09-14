@@ -95,6 +95,9 @@ public class SqlWindow extends SqlCall {
   /** Whether to allow partial results. It may be null. */
   SqlLiteral allowPartial;
 
+  /** Whether to allow framing or not. */
+  boolean framingAllowed = true;
+
   private SqlCall windowCall = null;
 
   //~ Constructors -----------------------------------------------------------
@@ -140,7 +143,13 @@ public class SqlWindow extends SqlCall {
   //~ Methods ----------------------------------------------------------------
 
   public SqlOperator getOperator() {
-    return SqlWindowOperator.INSTANCE;
+    SqlWindowOperator operator = SqlWindowOperator.INSTANCE;
+    operator.allowFraming(framingAllowed);
+    return operator;
+  }
+
+  public void allowFraming(boolean allowsFraming) {
+    this.framingAllowed = allowsFraming;
   }
 
   @Override public SqlKind getKind() {
@@ -807,9 +816,14 @@ public class SqlWindow extends SqlCall {
   /** An operator describing a window specification. */
   private static class SqlWindowOperator extends SqlOperator {
     private static final SqlWindowOperator INSTANCE = new SqlWindowOperator();
+    private boolean framingAllowed;
 
     private SqlWindowOperator() {
       super("WINDOW", SqlKind.WINDOW, 2, true, null, null, null);
+    }
+
+    public void allowFraming(boolean allowsFraming) {
+      this.framingAllowed = allowsFraming;
     }
 
     public SqlSyntax getSyntax() {
@@ -881,24 +895,26 @@ public class SqlWindow extends SqlCall {
         window.orderList.unparse(writer, 0, 0);
         writer.endList(orderFrame);
       }
-      if (window.lowerBound == null) {
-        // No ROWS or RANGE clause
-      } else if (window.upperBound == null) {
-        if (window.isRows()) {
-          writer.sep("ROWS");
+      if (framingAllowed) {
+        if (window.lowerBound == null) {
+          // No ROWS or RANGE clause
+        } else if (window.upperBound == null) {
+          if (window.isRows()) {
+            writer.sep("ROWS");
+          } else {
+            writer.sep("RANGE");
+          }
+          window.lowerBound.unparse(writer, 0, 0);
         } else {
-          writer.sep("RANGE");
+          if (window.isRows()) {
+            writer.sep("ROWS BETWEEN");
+          } else {
+            writer.sep("RANGE BETWEEN");
+          }
+          window.lowerBound.unparse(writer, 0, 0);
+          writer.keyword("AND");
+          window.upperBound.unparse(writer, 0, 0);
         }
-        window.lowerBound.unparse(writer, 0, 0);
-      } else {
-        if (window.isRows()) {
-          writer.sep("ROWS BETWEEN");
-        } else {
-          writer.sep("RANGE BETWEEN");
-        }
-        window.lowerBound.unparse(writer, 0, 0);
-        writer.keyword("AND");
-        window.upperBound.unparse(writer, 0, 0);
       }
 
       // ALLOW PARTIAL/DISALLOW PARTIAL

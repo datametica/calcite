@@ -665,6 +665,8 @@ public abstract class SqlImplementor {
       final SqlWindow sqlWindow = SqlWindow.create(null, null, partitionList,
           orderList, isRows, lowerBound, upperBound, allowPartial, POS);
 
+      sqlWindow.allowFraming(rexOver.getAggOperator().allowsFraming());
+
       final List<SqlNode> nodeList = toSql(program, rexOver.getOperands());
       final SqlCall aggFunctionCall =
           rexOver.getAggOperator().createCall(POS, nodeList);

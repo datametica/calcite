@@ -1417,6 +1417,13 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test public void testRowNumberFunctionForPrintingOfFrameBoundary() {
+    String query = "SELECT row_number() over (partition by \"hire_date\") FROM \"employee\"";
+    String expected = "SELECT ROW_NUMBER() OVER (PARTITION BY \"hire_date\")\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query).ok(expected);
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1826">[CALCITE-1826]
    * JDBC dialect-specific FLOOR fails when in GROUP BY</a>. */

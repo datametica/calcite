@@ -46,7 +46,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-
 import javax.annotation.Nonnull;
 
 /**
