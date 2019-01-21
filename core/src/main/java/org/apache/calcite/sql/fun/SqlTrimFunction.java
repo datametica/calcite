@@ -18,6 +18,7 @@ package org.apache.calcite.sql.fun;
 
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
+import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
@@ -107,13 +108,51 @@ public class SqlTrimFunction extends SqlFunction {
       SqlCall call,
       int leftPrec,
       int rightPrec) {
-    final SqlWriter.Frame frame = writer.startFunCall(getName());
-    assert call.operand(0) instanceof SqlLiteral : call.operand(0);
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
-    call.operand(1).unparse(writer, leftPrec, rightPrec);
-    writer.sep("FROM");
-    call.operand(2).unparse(writer, leftPrec, rightPrec);
-    writer.endFunCall(frame);
+    if (writer.getDialect().allowsTrimTrailingAndLeading()) {
+      final SqlWriter.Frame frame = writer.startFunCall(getName());
+      assert call.operand(0) instanceof SqlLiteral : call.operand(0);
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.sep("FROM");
+      call.operand(2).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(frame);
+    } else {
+      SqlWriter.Frame frame;
+      switch (call.operand(1).toString()) {
+      case "' '":
+        if (call.operand(0).toString().equals("LEADING")) {
+          frame = writer.startFunCall("LTRIM");
+        } else if (call.operand(0).toString().equals("TRAILING")) {
+          frame = writer.startFunCall("RTRIM");
+        } else {
+          frame = writer.startFunCall("TRIM");
+        }
+        call.operand(2).unparse(writer, leftPrec, rightPrec);
+        writer.endFunCall(frame);
+        break;
+      default:
+        frame = writer.startFunCall("REGEXP_REPLACE");
+        writer.sep(",");
+        call.operand(2).unparse(writer, leftPrec, rightPrec);
+        writer.sep(",");
+        String trimChar = SqlDialect.FakeUtil.replace(call.operand(1).toString(), "\'", "");
+        if (call.operand(0).toString().equals("LEADING")) {
+          writer.print(appendSingleQuotes("^".concat(trimChar)));
+        } else if (call.operand(0).toString().equals("TRAILING")) {
+          writer.print(appendSingleQuotes(trimChar.concat("$")));
+        } else {
+          writer.print(appendSingleQuotes("^".concat(trimChar).concat("|").concat(trimChar).concat("$")));
+        }
+        writer.sep(",");
+        writer.print("\'\'");
+        writer.endFunCall(frame);
+        break;
+      }
+    }
+  }
+
+  private String appendSingleQuotes(String trimChar) {
+    return "'".concat(trimChar).concat("'");
   }
 
   public String getSignatureTemplate(final int operandsCount) {
@@ -135,9 +174,9 @@ public class SqlTrimFunction extends SqlFunction {
       // This variant occurs when someone writes TRIM(string)
       // as opposed to the sugared syntax TRIM(string FROM string).
       operands = new SqlNode[]{
-        Flag.BOTH.symbol(SqlParserPos.ZERO),
-        SqlLiteral.createCharString(" ", pos),
-        operands[0]
+          Flag.BOTH.symbol(SqlParserPos.ZERO),
+          SqlLiteral.createCharString(" ", pos),
+          operands[0]
       };
       break;
     case 3:

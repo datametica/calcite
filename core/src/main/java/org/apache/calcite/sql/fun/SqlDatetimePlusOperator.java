@@ -38,7 +38,7 @@ public class SqlDatetimePlusOperator extends SqlSpecialOperator {
   //~ Constructors -----------------------------------------------------------
 
   SqlDatetimePlusOperator() {
-    super("+", SqlKind.PLUS, 40, true, ReturnTypes.ARG2_NULLABLE,
+    super("+", SqlKind.DATETIME_PLUS, 40, true, ReturnTypes.ARG2_NULLABLE,
         InferTypes.FIRST_KNOWN, OperandTypes.MINUS_DATE_OPERATOR);
   }
 

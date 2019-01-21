@@ -54,6 +54,7 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.sql.util.ReflectiveSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlModality;
@@ -1377,7 +1378,7 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
         }
       };
 
-  //-------------------------------------------------------------
+  //-------------------------------------------------------------MINUS_DATE_OPERATOR
   //                   FUNCTIONS
   //-------------------------------------------------------------
 
@@ -1421,7 +1422,7 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlFunction CHAR_LENGTH =
       new SqlFunction(
           "CHAR_LENGTH",
-          SqlKind.OTHER_FUNCTION,
+          SqlKind.CHAR_LENGTH,
           ReturnTypes.INTEGER_NULLABLE,
           null,
           OperandTypes.CHARACTER,
@@ -1430,7 +1431,7 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlFunction CHARACTER_LENGTH =
       new SqlFunction(
           "CHARACTER_LENGTH",
-          SqlKind.OTHER_FUNCTION,
+          SqlKind.CHARACTER_LENGTH,
           ReturnTypes.INTEGER_NULLABLE,
           null,
           OperandTypes.CHARACTER,
@@ -1651,7 +1652,7 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlFunction TRUNCATE =
       new SqlFunction(
           "TRUNCATE",
-          SqlKind.OTHER_FUNCTION,
+          SqlKind.TRUNCATE,
           ReturnTypes.ARG0_NULLABLE,
           null,
           OperandTypes.NUMERIC_OPTIONAL_INTEGER,
@@ -1692,6 +1693,15 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           null, OperandTypes.NILADIC, SqlFunctionCategory.MATCH_RECOGNIZE);
 
   public static final SqlFunction NULLIF = new SqlNullifFunction();
+
+  /**
+   * The "NVL(value, value)" function.`
+   */
+  public static final SqlFunction NVL =
+      new SqlFunction("NVL", SqlKind.NVL,
+      ReturnTypes.cascade(ReturnTypes.LEAST_RESTRICTIVE,
+        SqlTypeTransforms.TO_NULLABLE_ALL),
+      null, OperandTypes.SAME_SAME, SqlFunctionCategory.SYSTEM);
 
   /**
    * The COALESCE builtin function.

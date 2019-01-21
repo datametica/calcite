@@ -45,7 +45,7 @@ public class SqlDatetimeSubtractionOperator extends SqlSpecialOperator {
   public SqlDatetimeSubtractionOperator() {
     super(
         "-",
-        SqlKind.MINUS,
+        SqlKind.MINUS_DATETIME,
         40,
         true,
         ReturnTypes.ARG2_NULLABLE,

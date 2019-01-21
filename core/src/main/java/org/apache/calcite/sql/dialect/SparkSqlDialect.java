@@ -16,64 +16,65 @@
  */
 package org.apache.calcite.sql.dialect;
 
+import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlIntervalLiteral;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 /**
- * A <code>SqlDialect</code> implementation for Google BigQuery's "Standard SQL"
- * dialect.
+ * A <code>SqlDialect</code> implementation for the APACHE SPARK database.
  */
-public class BigQuerySqlDialect extends SqlDialect {
+public class SparkSqlDialect extends SqlDialect {
   public static final SqlDialect DEFAULT =
-      new BigQuerySqlDialect(
-          EMPTY_CONTEXT
-              .withDatabaseProduct(SqlDialect.DatabaseProduct.BIG_QUERY)
-              .withNullCollation(NullCollation.LOW));
+      new SparkSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.SPARK)
+          .withNullCollation(NullCollation.LOW));
 
-  /** Creates a BigQuerySqlDialect. */
-  public BigQuerySqlDialect(SqlDialect.Context context) {
+  /**
+   * Creates a SparkSqlDialect.
+   */
+  public SparkSqlDialect(SqlDialect.Context context) {
     super(context);
+  }
+
+  @Override protected boolean allowsAs() {
+    return false;
   }
 
   @Override public boolean allowsTrimTrailingAndLeading() {
     return false;
   }
 
-  @Override public void unparseCall(final SqlWriter writer, final SqlCall call, final int leftPrec,
-      final int rightPrec) {
+  @Override public void unparseOffsetFetch(SqlWriter writer, SqlNode offset,
+      SqlNode fetch) {
+    unparseFetchUsingLimit(writer, offset, fetch);
+  }
 
+  @Override public void unparseCall(final SqlWriter writer, final SqlCall call,
+      final int leftPrec, final int rightPrec) {
     switch (call.getKind()) {
+
     case POSITION:
-      final SqlWriter.Frame frame = writer.startFunCall("STRPOS");
+      final SqlWriter.Frame frame = writer.startFunCall("INSTR");
       writer.sep(",");
       call.operand(1).unparse(writer, leftPrec, rightPrec);
       writer.sep(",");
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       if (3 == call.operandCount()) {
-        throw new RuntimeException("3rd operand Not Supported for Function STRPOS in Big Query");
+        throw new RuntimeException("3rd operand Not Supported for Function INSTR in Hive");
       }
       writer.endFunCall(frame);
       break;
-    case UNION:
-      if (!((SqlSetOperator) call.getOperator()).isAll()) {
-        SqlSyntax.BINARY.unparse(writer, UNION_DISTINCT, call, leftPrec, rightPrec);
-      }
-      break;
-    case EXCEPT:
-      if (!((SqlSetOperator) call.getOperator()).isAll()) {
-        SqlSyntax.BINARY.unparse(writer, EXCEPT_DISTINCT, call, leftPrec, rightPrec);
-      }
-      break;
-    case INTERSECT:
-      if (!((SqlSetOperator) call.getOperator()).isAll()) {
-        SqlSyntax.BINARY.unparse(writer, INTERSECT_DISTINCT, call, leftPrec, rightPrec);
-      }
+    case MOD:
+      SqlOperator op = SqlStdOperatorTable.PERCENT_REMAINDER;
+      SqlSyntax.BINARY.unparse(writer, op, call, leftPrec, rightPrec);
       break;
     case CHAR_LENGTH:
     case CHARACTER_LENGTH:
@@ -92,7 +93,14 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.endFunCall(substringFrame);
       break;
     case DATETIME_PLUS:
-      final SqlWriter.Frame dateAddFrame = writer.startFunCall("DATE_ADD");
+      final SqlWriter.Frame dateAddFrame;
+      final SqlLiteral timeUnitNode = call.operand(1);
+      final TimeUnitRange timeUnit = timeUnitNode.getValueAs(TimeUnitRange.class);
+      if (timeUnit == TimeUnitRange.MONTH) {
+        dateAddFrame = writer.startFunCall("ADD_MONTHS");
+      } else {
+        dateAddFrame = writer.startFunCall("DATE_ADD");
+      }
       writer.sep(",");
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       writer.sep(",");
@@ -100,41 +108,36 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.endFunCall(dateAddFrame);
       break;
     case MINUS_DATETIME:
-      final SqlWriter.Frame dateDiffFrame = writer.startFunCall("DATE_DIFF");
+      final SqlWriter.Frame dateDiffFrame = writer.startFunCall("DATEDIFF");
       writer.sep(",");
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       writer.sep(",");
       call.operand(1).unparse(writer, leftPrec, rightPrec);
-      writer.sep(",");
-      writer.literal("DAY");
       writer.endFunCall(dateDiffFrame);
       break;
-    case TRUNCATE:
-      final SqlWriter.Frame truncateFrame = writer.startFunCall("TRUNC");
-      writer.sep(",");
-      call.operand(0).unparse(writer, leftPrec, rightPrec);
-      writer.sep(",");
+    case EXTRACT:
+      final SqlWriter.Frame extractFrame = writer.startFunCall(call.operand(0).toString());
       call.operand(1).unparse(writer, leftPrec, rightPrec);
-      writer.endFunCall(truncateFrame);
+      writer.endFunCall(extractFrame);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
-  /**
-   * List of BigQuery Specific Operators needed to form Syntactically Correct SQL.
-   *
-   * */
-  private static final SqlOperator UNION_DISTINCT = new SqlSetOperator(
-      "UNION DISTINCT", SqlKind.UNION, 14, false);
+  @Override public boolean supportsCharSet() {
+    return false;
+  }
 
-  private static final SqlSetOperator EXCEPT_DISTINCT =
-      new SqlSetOperator("EXCEPT DISTINCT", SqlKind.EXCEPT, 14, false);
-
-  private static final SqlSetOperator INTERSECT_DISTINCT =
-      new SqlSetOperator("INTERSECT DISTINCT", SqlKind.INTERSECT, 18, false);
-
+  @Override public void unparseSqlIntervalLiteral(SqlWriter writer,
+      SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) literal.getValue();
+    if (interval.getSign() == -1) {
+      writer.print("-");
+    }
+    writer.literal(literal.getValue().toString());
+  }
 }
 
-// End BigQuerySqlDialect.java
+// End SparkSqlDialect.java
