@@ -555,9 +555,6 @@ public class SqlDialect {
   public boolean hasDualTable() {
     return false; }
 
-  public boolean supportCommaForCrossJoin() {
-    return true; }
-
   // -- behaviors --
   protected boolean requiresAliasForFromItems() {
     return false;
@@ -748,6 +745,10 @@ public class SqlDialect {
   public SqlNode emulateNullDirection(SqlNode node, boolean nullsFirst,
       boolean desc) {
     return null;
+  }
+
+  public JoinType emulateJoinTypeForCrossJoin() {
+    return JoinType.COMMA;
   }
 
   protected SqlNode emulateNullDirectionWithIsNull(SqlNode node,
