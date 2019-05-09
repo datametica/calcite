@@ -1795,6 +1795,12 @@ public class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"";
     final String expectedMysql = "SELECT SUBSTRING(`brand_name` FROM 2)\n"
         + "FROM `foodmart`.`product`";
+    final String expectedHive = "SELECT SUBSTR(brand_name, 2)\n"
+        + "FROM foodmart.product";
+    final String expectedSpark = "SELECT SUBSTR(brand_name, 2)\n"
+        + "FROM foodmart.product";
+    final String expectedBiqQuery = "SELECT SUBSTR(brand_name, 2)\n"
+        + "FROM foodmart.product";
     sql(query)
         .withOracle()
         .ok(expectedOracle)
@@ -1804,7 +1810,13 @@ public class RelToSqlConverterTest {
         .ok(expectedMysql)
         .withMssql()
         // mssql does not support this syntax and so should fail
-        .throws_("MSSQL SUBSTRING requires FROM and FOR arguments");
+        .throws_("MSSQL SUBSTRING requires FROM and FOR arguments")
+        .withHive()
+        .ok(expectedHive)
+        .withSpark()
+        .ok(expectedSpark)
+        .withBigquery()
+        .ok(expectedBiqQuery);
   }
 
   @Test public void testSubstringWithFor() {
@@ -1822,6 +1834,8 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product";
     final String expectedSpark = "SELECT SUBSTR(brand_name, 2, 3)\n"
         + "FROM foodmart.product";
+    final String expectedBiqQuery = "SELECT SUBSTR(brand_name, 2, 3)\n"
+        + "FROM foodmart.product";
     sql(query)
         .withOracle()
         .ok(expectedOracle)
@@ -1834,7 +1848,9 @@ public class RelToSqlConverterTest {
         .withSpark()
         .ok(expectedSpark)
         .withHive()
-        .ok(expectedHive);
+        .ok(expectedHive)
+        .withBigquery()
+        .ok(expectedBiqQuery);
   }
 
   /** Test case for
@@ -3225,6 +3241,14 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     sql(query)
         .withBigquery().ok(expectedBigQuery);
+  }
+
+  @Test public void truncateFunctionWithSingleOperandEmulationForBigQuery() {
+    String query = "select truncate(2.30259) from \"employee\"";
+    final String expectedBigQuery = "SELECT TRUNC(2.30259)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+      .withBigquery().ok(expectedBigQuery);
   }
 
   @Test public void extractFunctionEmulationForHiveAndSparkAndBigQuery() {
