@@ -566,6 +566,9 @@ public class RexBuilder {
             && matchNullability) {
           return makeAbstractCast(type, literal2);
         }
+        if (value == null) {
+            return makeAbstractCast(type, exp);
+        }
         return literal2;
       }
     } else if (SqlTypeUtil.isExactNumeric(type)

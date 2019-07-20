@@ -1274,7 +1274,7 @@ public class RelBuilder {
     // Simplify expressions.
     if (simplify) {
       for (int i = 0; i < nodeList.size(); i++) {
-        nodeList.set(i, simplifier.simplifyPreservingType(nodeList.get(i)));
+          //nodeList.set(i, simplifier.simplifyPreservingType(nodeList.get(i)));
       }
     }
 
