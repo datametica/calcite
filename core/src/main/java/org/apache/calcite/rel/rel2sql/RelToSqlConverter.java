@@ -255,11 +255,18 @@ public class RelToSqlConverter extends SqlImplementor
     final List<SqlNode> groupKeys = new ArrayList<>();
     for (int key : groupList) {
       boolean isGroupByAlias = dialect.getSqlConformance().isGroupByAlias();
+      SqlNode field;
       if (builder.context.field(key).getKind() == SqlKind.LITERAL
           && dialect.getSqlConformance().isGroupByOrdinal()) {
-        isGroupByAlias = false;
+        //Calcite anyways creates a projection of ordinal beneath the agg so it will
+        // be same as this.
+        //But doing this manually will ensure that even if there were no projection of
+        // ordinal beneath the agg,
+        // we still print the ordinal of the group key if the Dialect supports.
+        field = SqlLiteral.createExactNumeric(String.format("%d", key + 1), SqlParserPos.ZERO);
+      } else {
+        field = builder.context.field(key, isGroupByAlias);
       }
-      final SqlNode field = builder.context.field(key, isGroupByAlias);
       groupKeys.add(field);
     }
     for (int key : sortedGroupList) {
