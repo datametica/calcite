@@ -276,13 +276,7 @@ public abstract class SqlImplementor {
    */
   private static RexNode stripCastFromString(RexNode node) {
     switch (node.getKind()) {
-    case EQUALS:
     case IS_NOT_DISTINCT_FROM:
-    case NOT_EQUALS:
-    case GREATER_THAN:
-    case GREATER_THAN_OR_EQUAL:
-    case LESS_THAN:
-    case LESS_THAN_OR_EQUAL:
       final RexCall call = (RexCall) node;
       final RexNode o0 = call.operands.get(0);
       final RexNode o1 = call.operands.get(1);

@@ -1248,7 +1248,7 @@ public class RelToSqlConverterTest {
         + "group by \"store_id\", \"position_title\"";
     final String expected = "SELECT COUNT(*), SUM(\"employee_id\")\n"
         + "FROM \"foodmart\".\"reserve_employee\"\n"
-        + "WHERE \"hire_date\" > '2015-01-01' "
+        + "WHERE \"hire_date\" > CAST('2015-01-01' AS TIMESTAMP(0)) "
         + "AND (\"position_title\" = 'SDE' OR \"position_title\" = 'SDM')\n"
         + "GROUP BY \"store_id\", \"position_title\"";
     sql(query).ok(expected);
@@ -1554,7 +1554,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT"
         + " COUNT(*), SUM(reserve_employee.employee_id)\n"
         + "FROM foodmart.reserve_employee AS reserve_employee\n"
-        + "WHERE reserve_employee.hire_date > '2015-01-01' "
+        + "WHERE reserve_employee.hire_date > CAST('2015-01-01' AS TIMESTAMP(0)) "
         + "AND (reserve_employee.position_title = 'SDE' OR "
         + "reserve_employee.position_title = 'SDM')\n"
         + "GROUP BY reserve_employee.store_id, reserve_employee.position_title";
