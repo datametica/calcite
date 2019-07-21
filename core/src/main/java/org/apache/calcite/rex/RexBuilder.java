@@ -567,7 +567,7 @@ public class RexBuilder {
           return makeAbstractCast(type, literal2);
         }
         if (value == null) {
-         return makeAbstractCast(type, exp);
+          return makeAbstractCast(type, exp);
         }
         return literal2;
       }
