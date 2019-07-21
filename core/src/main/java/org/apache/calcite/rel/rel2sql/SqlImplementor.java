@@ -220,7 +220,7 @@ public abstract class SqlImplementor {
     case GREATER_THAN_OR_EQUAL:
     case LESS_THAN:
     case LESS_THAN_OR_EQUAL:
-      //node = stripCastFromString(node);
+      node = stripCastFromString(node);
       operands = ((RexCall) node).getOperands();
       op = ((RexCall) node).getOperator();
       if (operands.size() == 2
@@ -293,7 +293,7 @@ public abstract class SqlImplementor {
         case CHAR:
         case VARCHAR:
           SqlTypeName castType = o0.getType().getSqlTypeName();
-          if (!SqlTypeName.NUMERIC_TYPES.contains(castType)) {
+          if (!SqlTypeName.NUMERIC_TYPES.contains(castType) && SqlTypeName.DATE != castType) {
             return call.clone(call.getType(), ImmutableList.of(o0b, o1));
           }
         }
@@ -305,7 +305,7 @@ public abstract class SqlImplementor {
         case CHAR:
         case VARCHAR:
           SqlTypeName castType = o1.getType().getSqlTypeName();
-          if (!SqlTypeName.NUMERIC_TYPES.contains(castType)) {
+          if (!SqlTypeName.NUMERIC_TYPES.contains(castType) && SqlTypeName.DATE != castType) {
             return call.clone(call.getType(), ImmutableList.of(o0, o1b));
           }
         }
