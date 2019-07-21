@@ -536,7 +536,10 @@ public abstract class SqlImplementor {
         case NULL:
           switch (literal.getTypeName()) {
           case NULL:
-            return SqlLiteral.createNull(POS);
+            return literal.getTypeName().equals(literal.getType())
+              ? SqlLiteral.createNull(POS)
+              : SqlStdOperatorTable.CAST.createCall(SqlNodeList.
+              of(SqlLiteral.createNull(POS), dialect.getCastSpec(literal.getType())));
           // fall through
           }
         default:
