@@ -548,7 +548,7 @@ public class RelToSqlConverterTest {
         + " OVER (ORDER BY \"product_id\" ROWS BETWEEN 3 PRECEDING AND CURRENT ROW)) > 0 "
         + "THEN COALESCE(SUM(\"net_weight\")"
         + " OVER (ORDER BY \"product_id\" ROWS BETWEEN 3 PRECEDING AND CURRENT ROW), 0)"
-        + " ELSE NULL END / (COUNT(\"net_weight\")"
+        + " ELSE CAST(NULL AS DOUBLE PRECISION) END / (COUNT(\"net_weight\")"
         + " OVER (ORDER BY \"product_id\" ROWS BETWEEN 3 PRECEDING AND CURRENT ROW))\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query)
