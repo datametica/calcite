@@ -263,7 +263,7 @@ public class RelToSqlConverter extends SqlImplementor
         //But doing this manually will ensure that even if there were no projection of
         // ordinal beneath the agg,
         // we still print the ordinal of the group key if the Dialect supports.
-        field = SqlLiteral.createExactNumeric(String.format("%d", key + 1), SqlParserPos.ZERO);
+        field = SqlLiteral.createExactNumeric(String.valueOf(key + 1), SqlParserPos.ZERO);
       } else {
         field = builder.context.field(key, isGroupByAlias);
       }
