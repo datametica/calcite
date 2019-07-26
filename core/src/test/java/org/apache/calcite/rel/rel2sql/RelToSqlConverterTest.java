@@ -160,7 +160,7 @@ public class RelToSqlConverterTest {
     final String hiveExpected = "SELECT SKU + 1 A\nFROM foodmart.product\n"
         + "ORDER BY A IS NULL, A";
     sql(query)
-        .withBigquery()
+        .withBigQuery()
         .ok(bigQueryExpected)
         .withHive()
         .ok(hiveExpected);
@@ -173,7 +173,7 @@ public class RelToSqlConverterTest {
     final String hiveExpected = "SELECT SKU + 1 A\nFROM foodmart.product\n"
         + "ORDER BY A IS NULL DESC, A DESC";
     sql(query)
-        .withBigquery()
+        .withBigQuery()
         .ok(bigQueryExpected)
         .withHive()
         .ok(hiveExpected);
@@ -334,7 +334,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "GROUP BY a, B";
     sql(query)
-        .withBigquery()
+        .withBigQuery()
         .ok(bigQueryExpected);
   }
 
@@ -345,7 +345,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "GROUP BY a, B";
     sql(query)
-        .withBigquery()
+        .withBigQuery()
         .ok(bigQueryExpected);
   }
 
@@ -953,7 +953,7 @@ public class RelToSqlConverterTest {
     sql(query)
         .withHive()
         .ok(expected)
-        .withBigquery()
+        .withBigQuery()
         .ok(expected);
   }
 
@@ -966,7 +966,7 @@ public class RelToSqlConverterTest {
     sql(query)
         .withHive()
         .ok(expected)
-        .withBigquery()
+        .withBigQuery()
         .ok(expected);
   }
 
@@ -979,7 +979,7 @@ public class RelToSqlConverterTest {
     sql(query)
         .withHive()
         .ok(expected)
-        .withBigquery()
+        .withBigQuery()
         .ok(expected);
   }
 
@@ -992,7 +992,7 @@ public class RelToSqlConverterTest {
     sql(query)
         .withHive()
         .ok(expected)
-        .withBigquery()
+        .withBigQuery()
         .ok(expected);
   }
 
@@ -1004,7 +1004,7 @@ public class RelToSqlConverterTest {
     sql(query)
       .withHive()
       .ok(expected)
-      .withBigquery()
+      .withBigQuery()
       .ok(expected)
       .withSpark()
       .ok(expected);
@@ -1018,7 +1018,7 @@ public class RelToSqlConverterTest {
     sql(query)
       .withHive()
       .ok(expected)
-      .withBigquery()
+      .withBigQuery()
       .ok(expected)
       .withSpark()
       .ok(expected);
@@ -2065,7 +2065,7 @@ public class RelToSqlConverterTest {
         .ok(expectedHive)
         .withSpark()
         .ok(expectedSpark)
-        .withBigquery()
+        .withBigQuery()
         .ok(expectedBiqQuery);
   }
 
@@ -3256,9 +3256,8 @@ public class RelToSqlConverterTest {
         .ok(expectedHive)
         .withSpark()
         .ok(expectedSpark)
-        .withBigquery()
+        .withBigQuery()
         .ok(expectedBigQuery)
-        .ok(expectedOracle)
         .withSnowflake()
         .ok(expectedSnowflake)
         .withRedshift()
@@ -3495,7 +3494,7 @@ public class RelToSqlConverterTest {
   @Test public void testSubstringInSpark() {
     final String query = "select substring(\"brand_name\" from 2) "
         + "from \"product\"\n";
-    final String expected = "SELECT SUBSTRING(brand_name, 2)\n"
+    final String expected = "SELECT SUBSTR(brand_name, 2)\n"
         + "FROM foodmart.product";
     sql(query).withSpark().ok(expected);
   }
@@ -3503,7 +3502,7 @@ public class RelToSqlConverterTest {
   @Test public void testSubstringWithForInSpark() {
     final String query = "select substring(\"brand_name\" from 2 for 3) "
         + "from \"product\"\n";
-    final String expected = "SELECT SUBSTRING(brand_name, 2, 3)\n"
+    final String expected = "SELECT SUBSTR(brand_name, 2, 3)\n"
         + "FROM foodmart.product";
     sql(query).withSpark().ok(expected);
   }
@@ -3605,7 +3604,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     sql(query)
         .withHive().ok(expectedHive)
-        .withBigquery().ok(expectedBigQuery)
+        .withBigQuery().ok(expectedBigQuery)
         .withSpark().ok(expectedSpark);
   }
 
@@ -3619,7 +3618,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     sql(query)
         .withHive().ok(expectedHive)
-        .withBigquery().ok(expectedBigQuery)
+        .withBigQuery().ok(expectedBigQuery)
         .withSpark().ok(expectedSpark);
   }
 
@@ -3633,7 +3632,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     sql(query)
         .withHive().ok(expectedHive)
-        .withBigquery().ok(expectedBigQuery)
+        .withBigQuery().ok(expectedBigQuery)
         .withSpark().ok(expectedSpark);
   }
 
@@ -3642,7 +3641,7 @@ public class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT TRUNC(2.30259, 3)\n"
         + "FROM foodmart.employee";
     sql(query)
-        .withBigquery().ok(expectedBigQuery);
+        .withBigQuery().ok(expectedBigQuery);
   }
 
   @Test public void truncateFunctionWithSingleOperandEmulationForBigQuery() {
@@ -3650,7 +3649,7 @@ public class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT TRUNC(2.30259)\n"
         + "FROM foodmart.employee";
     sql(query)
-      .withBigquery().ok(expectedBigQuery);
+      .withBigQuery().ok(expectedBigQuery);
   }
 
   @Test public void extractFunctionEmulationForHiveAndSparkAndBigQuery() {
@@ -3666,7 +3665,7 @@ public class RelToSqlConverterTest {
         .ok(expectedHive)
         .withSpark()
         .ok(expectedSpark)
-        .withBigquery()
+        .withBigQuery()
         .ok(expectedBigQuery);
   }
 
@@ -3678,7 +3677,7 @@ public class RelToSqlConverterTest {
         .ok(expected)
         .withSpark()
         .ok(expected)
-        .withBigquery()
+        .withBigQuery()
         .ok(expected);
   }
 
@@ -3693,7 +3692,7 @@ public class RelToSqlConverterTest {
         .ok(expectedHiveQuery)
         .withSparkIdentifierQuoteString()
         .ok(expectedSparkQuery)
-        .withBigquery()
+        .withBigQuery()
         .ok(expectedBigQuery);
   }
 
@@ -3706,7 +3705,7 @@ public class RelToSqlConverterTest {
         .ok(expected)
         .withSpark()
         .ok(expected)
-        .withBigquery()
+        .withBigQuery()
         .ok(expected);
   }
 
