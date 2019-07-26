@@ -24,6 +24,9 @@ import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rules.UnionMergeRule;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.runtime.FlatLists;
@@ -39,10 +42,12 @@ import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.dialect.HiveSqlDialect;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
+import org.apache.calcite.sql.dialect.OracleSqlDialect;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.test.CalciteAssert;
@@ -70,7 +75,9 @@ import static org.apache.calcite.test.Matchers.isLinux;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@link RelToSqlConverter}.
@@ -242,6 +249,26 @@ public class RelToSqlConverterTest {
         .ok(expected)
         .withMysql()
         .ok(expectedMySql);
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-3097">[CALCITE-3097]
+   * GROUPING SETS breaks on sets of size &gt; 1 due to precedence issues</a>,
+   * in particular, that we maintain proper precedence around nested lists. */
+  @Test public void testGroupByGroupingSets() {
+    final String query = "select \"product_class_id\", \"brand_name\"\n"
+        + "from \"product\"\n"
+        + "group by GROUPING SETS ((\"product_class_id\", \"brand_name\"),"
+        + " (\"product_class_id\"))\n"
+        + "order by 2, 1";
+    final String expected = "SELECT \"product_class_id\", \"brand_name\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY GROUPING SETS((\"product_class_id\", \"brand_name\"),"
+        + " \"product_class_id\")\n"
+        + "ORDER BY \"brand_name\", \"product_class_id\"";
+    sql(query)
+        .withPostgresql()
+        .ok(expected);
   }
 
   /** Tests GROUP BY ROLLUP of two columns. The SQL for MySQL has
@@ -494,6 +521,14 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
+  @Test public void testCastDecimal1() {
+    final String query = "select -0.0000000123\n"
+        + " from \"expense_fact\"";
+    final String expected = "SELECT -1.23E-8\n"
+        + "FROM \"foodmart\".\"expense_fact\"";
+    sql(query).ok(expected);
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2713">[CALCITE-2713]
    * JDBC adapter may generate casts on PostgreSQL for VARCHAR type exceeding
@@ -501,9 +536,17 @@ public class RelToSqlConverterTest {
   @Test public void testCastLongVarchar1() {
     final String query = "select cast(\"store_id\" as VARCHAR(10485761))\n"
         + " from \"expense_fact\"";
-    final String expected = "SELECT CAST(\"store_id\" AS VARCHAR(256))\n"
+    final String expectedPostgreSQL = "SELECT CAST(\"store_id\" AS VARCHAR(256))\n"
         + "FROM \"foodmart\".\"expense_fact\"";
-    sql(query).withPostgresqlModifiedTypeSystem().ok(expected);
+    sql(query)
+        .withPostgresqlModifiedTypeSystem()
+        .ok(expectedPostgreSQL);
+
+    final String expectedOracle = "SELECT CAST(\"store_id\" AS VARCHAR(512))\n"
+        + "FROM \"foodmart\".\"expense_fact\"";
+    sql(query)
+        .withOracleModifiedTypeSystem()
+        .ok(expectedOracle);
   }
 
   /** Test case for
@@ -513,9 +556,17 @@ public class RelToSqlConverterTest {
   @Test public void testCastLongVarchar2() {
     final String query = "select cast(\"store_id\" as VARCHAR(175))\n"
         + " from \"expense_fact\"";
-    final String expected = "SELECT CAST(\"store_id\" AS VARCHAR(175))\n"
+    final String expectedPostgreSQL = "SELECT CAST(\"store_id\" AS VARCHAR(175))\n"
         + "FROM \"foodmart\".\"expense_fact\"";
-    sql(query).withPostgresqlModifiedTypeSystem().ok(expected);
+    sql(query)
+        .withPostgresqlModifiedTypeSystem()
+        .ok(expectedPostgreSQL);
+
+    final String expectedOracle = "SELECT CAST(\"store_id\" AS VARCHAR(175))\n"
+        + "FROM \"foodmart\".\"expense_fact\"";
+    sql(query)
+        .withOracleModifiedTypeSystem()
+        .ok(expectedOracle);
   }
 
   /** Test case for
@@ -594,14 +645,11 @@ public class RelToSqlConverterTest {
         + "FROM (SELECT SUM(`net_weight`) AS `net_weight1`\n"
         + "FROM `foodmart`.`product`\n"
         + "GROUP BY `product_id`) AS `t1`";
-    final String expectedVertica = "SELECT SUM(\"net_weight1\") AS \"net_weight_converted\"\n"
-        + "FROM (SELECT SUM(\"net_weight\") AS \"net_weight1\"\n"
-        + "FROM \"foodmart\".\"product\"\n"
-        + "GROUP BY \"product_id\") AS \"t1\"";
     final String expectedPostgresql = "SELECT SUM(\"net_weight1\") AS \"net_weight_converted\"\n"
         + "FROM (SELECT SUM(\"net_weight\") AS \"net_weight1\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "GROUP BY \"product_id\") AS \"t1\"";
+    final String expectedVertica = expectedPostgresql;
     sql(query)
         .withOracle()
         .ok(expectedOracle)
@@ -859,7 +907,7 @@ public class RelToSqlConverterTest {
     final String query = "select position('A' IN 'ABC') from \"product\"";
     final String expected = "SELECT STRPOS('ABC', 'A')\n"
         + "FROM foodmart.product";
-    sql(query).withBigquery().ok(expected);
+    sql(query).withBigQuery().ok(expected);
   }
 
   @Test public void testModFunctionForHive() {
@@ -875,7 +923,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT MOD(11, 3)\n"
         + "FROM foodmart.product\n"
         + "UNION DISTINCT\nSELECT 1\nFROM foodmart.product";
-    sql(query).withBigquery().ok(expected);
+    sql(query).withBigQuery().ok(expected);
   }
 
   @Test public void testIntersectOperatorForBigQuery() {
@@ -884,7 +932,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT MOD(11, 3)\n"
         + "FROM foodmart.product\n"
         + "INTERSECT DISTINCT\nSELECT 1\nFROM foodmart.product";
-    sql(query).withBigquery().ok(expected);
+    sql(query).withBigQuery().ok(expected);
   }
 
   @Test public void testExceptOperatorForBigQuery() {
@@ -893,7 +941,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT MOD(11, 3)\n"
         + "FROM foodmart.product\n"
         + "EXCEPT DISTINCT\nSELECT 1\nFROM foodmart.product";
-    sql(query).withBigquery().ok(expected);
+    sql(query).withBigQuery().ok(expected);
   }
 
   @Test public void testSelectQueryWithOrderByDescAndNullsFirstShouldBeEmulated() {
@@ -1989,6 +2037,8 @@ public class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"";
     final String expectedPostgresql = "SELECT SUBSTRING(\"brand_name\" FROM 2)\n"
         + "FROM \"foodmart\".\"product\"";
+    final String expectedSnowflake = expectedPostgresql;
+    final String expectedRedshift = expectedPostgresql;
     final String expectedMysql = "SELECT SUBSTRING(`brand_name` FROM 2)\n"
         + "FROM `foodmart`.`product`";
     final String expectedHive = "SELECT SUBSTR(brand_name, 2)\n"
@@ -2002,6 +2052,10 @@ public class RelToSqlConverterTest {
         .ok(expectedOracle)
         .withPostgresql()
         .ok(expectedPostgresql)
+        .withSnowflake()
+        .ok(expectedSnowflake)
+        .withRedshift()
+        .ok(expectedRedshift)
         .withMysql()
         .ok(expectedMysql)
         .withMssql()
@@ -2022,6 +2076,8 @@ public class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"";
     final String expectedPostgresql = "SELECT SUBSTRING(\"brand_name\" FROM 2 FOR 3)\n"
         + "FROM \"foodmart\".\"product\"";
+    final String expectedSnowflake = expectedPostgresql;
+    final String expectedRedshift = expectedPostgresql;
     final String expectedMysql = "SELECT SUBSTRING(`brand_name` FROM 2 FOR 3)\n"
         + "FROM `foodmart`.`product`";
     final String expectedMssql = "SELECT SUBSTRING([brand_name], 2, 3)\n"
@@ -2035,6 +2091,10 @@ public class RelToSqlConverterTest {
         .ok(expectedOracle)
         .withPostgresql()
         .ok(expectedPostgresql)
+        .withSnowflake()
+        .ok(expectedSnowflake)
+        .withRedshift()
+        .ok(expectedRedshift)
         .withMysql()
         .ok(expectedMysql)
         .withMssql()
@@ -3183,6 +3243,8 @@ public class RelToSqlConverterTest {
         + "FROM (SELECT 1 AS a, 'x ' AS b\n"
         + "UNION ALL\n"
         + "SELECT 2 AS a, 'yy' AS b)";
+    final String expectedSnowflake = expectedPostgresql;
+    final String expectedRedshift = expectedPostgresql;
     sql(sql)
         .withHsqldb()
         .ok(expectedHsqldb)
@@ -3195,7 +3257,12 @@ public class RelToSqlConverterTest {
         .withSpark()
         .ok(expectedSpark)
         .withBigquery()
-        .ok(expectedBigQuery);
+        .ok(expectedBigQuery)
+        .ok(expectedOracle)
+        .withSnowflake()
+        .ok(expectedSnowflake)
+        .withRedshift()
+        .ok(expectedRedshift);
   }
 
   /** Test case for
@@ -3330,14 +3397,14 @@ public class RelToSqlConverterTest {
 
   @Test public void testJsonExists() {
     String query = "select json_exists(\"product_name\", 'lax $') from \"product\"";
-    final String expected = "SELECT JSON_EXISTS(\"product_name\" FORMAT JSON, 'lax $')\n"
+    final String expected = "SELECT JSON_EXISTS(\"product_name\", 'lax $')\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
   }
 
   @Test public void testJsonPretty() {
     String query = "select json_pretty(\"product_name\") from \"product\"";
-    final String expected = "SELECT JSON_PRETTY(\"product_name\" FORMAT JSON)\n"
+    final String expected = "SELECT JSON_PRETTY(\"product_name\")\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
   }
@@ -3345,7 +3412,7 @@ public class RelToSqlConverterTest {
   @Test public void testJsonValue() {
     String query = "select json_value(\"product_name\", 'lax $') from \"product\"";
     // todo translate to JSON_VALUE rather than CAST
-    final String expected = "SELECT CAST(JSON_VALUE_ANY(\"product_name\" FORMAT JSON, "
+    final String expected = "SELECT CAST(JSON_VALUE_ANY(\"product_name\", "
         + "'lax $' NULL ON EMPTY NULL ON ERROR) AS VARCHAR(2000) CHARACTER SET \"ISO-8859-1\")\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
@@ -3353,7 +3420,7 @@ public class RelToSqlConverterTest {
 
   @Test public void testJsonQuery() {
     String query = "select json_query(\"product_name\", 'lax $') from \"product\"";
-    final String expected = "SELECT JSON_QUERY(\"product_name\" FORMAT JSON, 'lax $' "
+    final String expected = "SELECT JSON_QUERY(\"product_name\", 'lax $' "
         + "WITHOUT ARRAY WRAPPER NULL ON EMPTY NULL ON ERROR)\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
@@ -3425,10 +3492,81 @@ public class RelToSqlConverterTest {
     sql(query).withSpark().ok(expected);
   }
 
+  @Test public void testSubstringInSpark() {
+    final String query = "select substring(\"brand_name\" from 2) "
+        + "from \"product\"\n";
+    final String expected = "SELECT SUBSTRING(brand_name, 2)\n"
+        + "FROM foodmart.product";
+    sql(query).withSpark().ok(expected);
+  }
+
+  @Test public void testSubstringWithForInSpark() {
+    final String query = "select substring(\"brand_name\" from 2 for 3) "
+        + "from \"product\"\n";
+    final String expected = "SELECT SUBSTRING(brand_name, 2, 3)\n"
+        + "FROM foodmart.product";
+    sql(query).withSpark().ok(expected);
+  }
+
+  @Test public void testFloorInSpark() {
+    final String query = "select floor(\"hire_date\" TO MINUTE) "
+        + "from \"employee\"";
+    final String expected = "SELECT DATE_TRUNC('MINUTE', hire_date)\n"
+        + "FROM foodmart.employee";
+    sql(query).withSpark().ok(expected);
+  }
+
+  @Test public void testNumericFloorInSpark() {
+    final String query = "select floor(\"salary\") "
+        + "from \"employee\"";
+    final String expected = "SELECT FLOOR(salary)\n"
+        + "FROM foodmart.employee";
+    sql(query).withSpark().ok(expected);
+  }
+
+  @Test public void testJsonStorageSize() {
+    String query = "select json_storage_size(\"product_name\") from \"product\"";
+    final String expected = "SELECT JSON_STORAGE_SIZE(\"product_name\")\n"
+        + "FROM \"foodmart\".\"product\"";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testCubeInSpark() {
+    final String query = "select count(*) "
+        + "from \"foodmart\".\"product\" "
+        + "group by cube(\"product_id\",\"product_class_id\")";
+    final String expected = "SELECT COUNT(*)\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY CUBE(\"product_id\", \"product_class_id\")";
+    final String expectedInSpark = "SELECT COUNT(*)\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY product_id, product_class_id WITH CUBE";
+    sql(query)
+        .ok(expected)
+        .withSpark()
+        .ok(expectedInSpark);
+  }
+
+  @Test public void testRollupInSpark() {
+    final String query = "select count(*) "
+        + "from \"foodmart\".\"product\" "
+        + "group by rollup(\"product_id\",\"product_class_id\")";
+    final String expected = "SELECT COUNT(*)\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY ROLLUP(\"product_id\", \"product_class_id\")";
+    final String expectedInSpark = "SELECT COUNT(*)\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY product_id, product_class_id WITH ROLLUP";
+    sql(query)
+        .ok(expected)
+        .withSpark()
+        .ok(expectedInSpark);
+  }
+
   @Test public void testJsonType() {
     String query = "select json_type(\"product_name\") from \"product\"";
     final String expected = "SELECT "
-        + "JSON_TYPE(\"product_name\" FORMAT JSON)\n"
+        + "JSON_TYPE(\"product_name\")\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
   }
@@ -3436,7 +3574,7 @@ public class RelToSqlConverterTest {
   @Test public void testJsonDepth() {
     String query = "select json_depth(\"product_name\") from \"product\"";
     final String expected = "SELECT "
-        + "JSON_DEPTH(\"product_name\" FORMAT JSON)\n"
+        + "JSON_DEPTH(\"product_name\")\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
   }
@@ -3444,15 +3582,15 @@ public class RelToSqlConverterTest {
   @Test public void testJsonLength() {
     String query = "select json_length(\"product_name\", 'lax $'), "
         + "json_length(\"product_name\") from \"product\"";
-    final String expected = "SELECT JSON_LENGTH(\"product_name\" FORMAT JSON, 'lax $'), "
-        + "JSON_LENGTH(\"product_name\" FORMAT JSON)\n"
+    final String expected = "SELECT JSON_LENGTH(\"product_name\", 'lax $'), "
+        + "JSON_LENGTH(\"product_name\")\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
   }
 
   @Test public void testJsonKeys() {
     String query = "select json_keys(\"product_name\", 'lax $') from \"product\"";
-    final String expected = "SELECT JSON_KEYS(\"product_name\" FORMAT JSON, 'lax $')\n"
+    final String expected = "SELECT JSON_KEYS(\"product_name\", 'lax $')\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
   }
@@ -3572,6 +3710,113 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test public void testJsonRemove() {
+    String query = "select json_remove(\"product_name\", '$[0]') from \"product\"";
+    final String expected = "SELECT JSON_REMOVE(\"product_name\", '$[0]')\n"
+           + "FROM \"foodmart\".\"product\"";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testUnionAllWithNoOperandsUsingOracleDialect() {
+    String query = "select A.\"department_id\" "
+        + "from \"foodmart\".\"employee\" A "
+        + " where A.\"department_id\" = ( select min( A.\"department_id\") from \"foodmart\".\"department\" B where 1=2 )";
+    final String expected = "SELECT \"employee\".\"department_id\"\n"
+        + "FROM \"foodmart\".\"employee\"\n"
+        + "INNER JOIN (SELECT \"t1\".\"department_id\" \"department_id0\", MIN(\"t1\".\"department_id\")\n"
+        + "FROM (SELECT NULL \"department_id\", NULL \"department_description\"\nFROM \"DUAL\"\nWHERE 1 = 0) \"t\",\n"
+        + "(SELECT \"department_id\"\nFROM \"foodmart\".\"employee\"\nGROUP BY \"department_id\") \"t1\"\n"
+        + "GROUP BY \"t1\".\"department_id\") \"t3\" ON \"employee\".\"department_id\" = \"t3\".\"department_id0\""
+        + " AND \"employee\".\"department_id\" = MIN(\"t1\".\"department_id\")";
+    sql(query).withOracle().ok(expected);
+  }
+
+  @Test public void testUnionAllWithNoOperands() {
+    String query = "select A.\"department_id\" "
+        + "from \"foodmart\".\"employee\" A "
+        + " where A.\"department_id\" = ( select min( A.\"department_id\") from \"foodmart\".\"department\" B where 1=2 )";
+    final String expected = "SELECT \"employee\".\"department_id\"\n"
+        + "FROM \"foodmart\".\"employee\"\n"
+        + "INNER JOIN (SELECT \"t1\".\"department_id\" AS \"department_id0\","
+        + " MIN(\"t1\".\"department_id\")\n"
+        + "FROM (SELECT *\nFROM (VALUES  (NULL, NULL))"
+        + " AS \"t\" (\"department_id\", \"department_description\")"
+        + "\nWHERE 1 = 0) AS \"t\","
+        + "\n(SELECT \"department_id\"\nFROM \"foodmart\".\"employee\""
+        + "\nGROUP BY \"department_id\") AS \"t1\""
+        + "\nGROUP BY \"t1\".\"department_id\") AS \"t3\" "
+        + "ON \"employee\".\"department_id\" = \"t3\".\"department_id0\""
+        + " AND \"employee\".\"department_id\" = MIN(\"t1\".\"department_id\")";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testSmallintOracle() {
+    String query = "SELECT CAST(\"department_id\" AS SMALLINT) FROM \"employee\"";
+    String expected = "SELECT CAST(\"department_id\" AS NUMBER(5))\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+        .withOracle()
+        .ok(expected);
+  }
+
+  @Test public void testBigintOracle() {
+    String query = "SELECT CAST(\"department_id\" AS BIGINT) FROM \"employee\"";
+    String expected = "SELECT CAST(\"department_id\" AS NUMBER(19))\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+        .withOracle()
+        .ok(expected);
+  }
+
+  @Test public void testDoubleOracle() {
+    String query = "SELECT CAST(\"department_id\" AS DOUBLE) FROM \"employee\"";
+    String expected = "SELECT CAST(\"department_id\" AS DOUBLE PRECISION)\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+        .withOracle()
+        .ok(expected);
+  }
+
+  @Test public void testDateLiteralOracle() {
+    String query = "SELECT DATE '1978-05-02' FROM \"employee\"";
+    String expected = "SELECT TO_DATE ('1978-05-02', 'YYYY-MM-DD')\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+        .withOracle()
+        .ok(expected);
+  }
+
+  @Test public void testTimestampLiteralOracle() {
+    String query = "SELECT TIMESTAMP '1978-05-02 12:34:56.78' FROM \"employee\"";
+    String expected = "SELECT TO_TIMESTAMP ('1978-05-02 12:34:56.78', 'YYYY-MM-DD HH24:MI:SS.FF')\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+        .withOracle()
+        .ok(expected);
+  }
+
+  @Test public void testTimeLiteralOracle() {
+    String query = "SELECT TIME '12:34:56.78' FROM \"employee\"";
+    String expected = "SELECT TO_TIME ('12:34:56.78', 'HH24:MI:SS.FF')\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+        .withOracle()
+        .ok(expected);
+  }
+
+  @Test public void testSupportsDataType() {
+    final RelDataTypeFactory typeFactory =
+        new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
+    final RelDataType booleanDataType = typeFactory.createSqlType(SqlTypeName.BOOLEAN);
+    final RelDataType integerDataType = typeFactory.createSqlType(SqlTypeName.INTEGER);
+    final SqlDialect oracleDialect = SqlDialect.DatabaseProduct.ORACLE.getDialect();
+    assertFalse(oracleDialect.supportsDataType(booleanDataType));
+    assertTrue(oracleDialect.supportsDataType(integerDataType));
+    final SqlDialect postgresqlDialect = SqlDialect.DatabaseProduct.POSTGRESQL.getDialect();
+    assertTrue(postgresqlDialect.supportsDataType(booleanDataType));
+    assertTrue(postgresqlDialect.supportsDataType(integerDataType));
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;
@@ -3644,11 +3889,19 @@ public class RelToSqlConverterTest {
       return dialect(SqlDialect.DatabaseProduct.POSTGRESQL.getDialect());
     }
 
+    Sql withRedshift() {
+      return dialect(DatabaseProduct.REDSHIFT.getDialect());
+    }
+
+    Sql withSnowflake() {
+      return dialect(DatabaseProduct.SNOWFLAKE.getDialect());
+    }
+
     Sql withVertica() {
       return dialect(SqlDialect.DatabaseProduct.VERTICA.getDialect());
     }
 
-    Sql withBigquery() {
+    Sql withBigQuery() {
       return dialect(SqlDialect.DatabaseProduct.BIG_QUERY.getDialect());
     }
 
@@ -3689,6 +3942,25 @@ public class RelToSqlConverterTest {
                 }
               }));
       return dialect(postgresqlSqlDialect);
+    }
+
+    Sql withOracleModifiedTypeSystem() {
+      // Oracle dialect with max length for varchar set to 512
+      final OracleSqlDialect oracleSqlDialect =
+          new OracleSqlDialect(SqlDialect.EMPTY_CONTEXT
+              .withDatabaseProduct(DatabaseProduct.ORACLE)
+              .withIdentifierQuoteString("\"")
+              .withDataTypeSystem(new RelDataTypeSystemImpl() {
+                @Override public int getMaxPrecision(SqlTypeName typeName) {
+                  switch (typeName) {
+                    case VARCHAR:
+                      return 512;
+                    default:
+                      return super.getMaxPrecision(typeName);
+                  }
+                }
+              }));
+      return dialect(oracleSqlDialect);
     }
 
     Sql config(SqlToRelConverter.Config config) {
