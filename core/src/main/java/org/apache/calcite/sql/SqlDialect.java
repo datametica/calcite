@@ -145,7 +145,7 @@ public class SqlDialect {
   private final Casing unquotedCasing;
   private final Casing quotedCasing;
   private final boolean caseSensitive;
-  private final SqlConformance sqlConformance;
+  private final SqlConformance conformance;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -202,7 +202,7 @@ public class SqlDialect {
    * @param context All the information necessary to create a dialect
    */
   public SqlDialect(Context context) {
-    this.sqlConformance = Objects.requireNonNull(context.sqlConformance());
+    this.conformance = Objects.requireNonNull(context.conformance());
     this.nullCollation = Objects.requireNonNull(context.nullCollation());
     this.dataTypeSystem = Objects.requireNonNull(context.dataTypeSystem());
     this.databaseProduct =
@@ -234,7 +234,7 @@ public class SqlDialect {
     return new ContextImpl(DatabaseProduct.UNKNOWN, null, null, -1, -1, null,
         Casing.UNCHANGED, Casing.TO_UPPER, true, SqlConformanceEnum.DEFAULT,
         NullCollation.HIGH, RelDataTypeSystemImpl.DEFAULT,
-        JethroDataSqlDialect.JethroInfo.EMPTY, SqlConformanceEnum.DEFAULT);
+        JethroDataSqlDialect.JethroInfo.EMPTY);
   }
 
   /**
@@ -939,13 +939,6 @@ public class SqlDialect {
     return nullCollation;
   }
 
-  /**
-   * Returns SqlConformance for current SqlDialect
-   */
-  public SqlConformance getSqlConformance() {
-    return this.sqlConformance;
-  }
-
   /** Returns whether NULL values are sorted first or last, in this dialect,
    * in an ORDER BY item of a given direction. */
   public @Nonnull RelFieldCollation.NullDirection defaultNullDirection(
@@ -1031,6 +1024,10 @@ public class SqlDialect {
       return SqlConformanceEnum.ORACLE_10;
     case MSSQL:
       return SqlConformanceEnum.SQL_SERVER_2008;
+    case HIVE:
+      return SqlConformanceEnum.HIVE;
+    case BIG_QUERY:
+      return SqlConformanceEnum.BIG_QUERY;
     default:
       return SqlConformanceEnum.PRAGMATIC_2003;
     }
@@ -1249,8 +1246,6 @@ public class SqlDialect {
     Context withDataTypeSystem(@Nonnull RelDataTypeSystem dataTypeSystem);
     JethroDataSqlDialect.JethroInfo jethroInfo();
     Context withJethroInfo(JethroDataSqlDialect.JethroInfo jethroInfo);
-    @Nonnull SqlConformance sqlConformance();
-    Context withSqlConformance(@Nonnull SqlConformance sqlConformance);
   }
 
   /** Implementation of Context. */
@@ -1268,7 +1263,6 @@ public class SqlDialect {
     private final NullCollation nullCollation;
     private final RelDataTypeSystem dataTypeSystem;
     private final JethroDataSqlDialect.JethroInfo jethroInfo;
-    private final SqlConformance sqlConformance;
 
     private ContextImpl(DatabaseProduct databaseProduct,
         String databaseProductName, String databaseVersion,
@@ -1277,8 +1271,7 @@ public class SqlDialect {
         Casing unquotedCasing, boolean caseSensitive,
         SqlConformance conformance, NullCollation nullCollation,
         RelDataTypeSystem dataTypeSystem,
-        JethroDataSqlDialect.JethroInfo jethroInfo,
-        SqlConformance sqlConformance) {
+        JethroDataSqlDialect.JethroInfo jethroInfo) {
       this.databaseProduct = Objects.requireNonNull(databaseProduct);
       this.databaseProductName = databaseProductName;
       this.databaseVersion = databaseVersion;
@@ -1292,7 +1285,6 @@ public class SqlDialect {
       this.nullCollation = Objects.requireNonNull(nullCollation);
       this.dataTypeSystem = Objects.requireNonNull(dataTypeSystem);
       this.jethroInfo = Objects.requireNonNull(jethroInfo);
-      this.sqlConformance = Objects.requireNonNull(sqlConformance);
     }
 
     @Nonnull public DatabaseProduct databaseProduct() {
@@ -1306,8 +1298,7 @@ public class SqlDialect {
           identifierQuoteString, quotedCasing, unquotedCasing,
           caseSensitive,
           conformance, nullCollation,
-          dataTypeSystem, jethroInfo,
-          sqlConformance);
+          dataTypeSystem, jethroInfo);
     }
 
     public String databaseProductName() {
@@ -1318,7 +1309,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     public String databaseVersion() {
@@ -1329,7 +1320,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     public int databaseMajorVersion() {
@@ -1340,7 +1331,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     public int databaseMinorVersion() {
@@ -1351,7 +1342,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     public String identifierQuoteString() {
@@ -1363,7 +1354,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     @Nonnull public Casing unquotedCasing() {
@@ -1374,7 +1365,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     @Nonnull public Casing quotedCasing() {
@@ -1385,7 +1376,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     public boolean caseSensitive() {
@@ -1396,7 +1387,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     @Nonnull public SqlConformance conformance() {
@@ -1407,7 +1398,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     @Nonnull public NullCollation nullCollation() {
@@ -1419,7 +1410,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     @Nonnull public RelDataTypeSystem dataTypeSystem() {
@@ -1430,7 +1421,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
     @Nonnull public JethroDataSqlDialect.JethroInfo jethroInfo() {
@@ -1441,18 +1432,7 @@ public class SqlDialect {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
-    }
-
-    public Context withSqlConformance(@Nonnull SqlConformance sqlConformance) {
-      return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, databaseMajorVersion, databaseMinorVersion,
-          identifierQuoteString, quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo, sqlConformance);
-    }
-
-    @Nonnull public SqlConformance sqlConformance() {
-      return sqlConformance;
+          conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
   }
 }

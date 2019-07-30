@@ -256,7 +256,7 @@ public class RelToSqlConverter extends SqlImplementor
 
     final List<SqlNode> groupKeys = new ArrayList<>();
     for (int key : groupList) {
-      boolean isGroupByAlias = dialect.getSqlConformance().isGroupByAlias();
+      boolean isGroupByAlias = dialect.getConformance().isGroupByAlias();
       final SqlNode field = builder.context.field(key, isGroupByAlias);
       groupKeys.add(field);
     }
