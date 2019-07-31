@@ -89,7 +89,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Utility to convert relational expressions to SQL abstract syntax tree.
@@ -257,7 +256,11 @@ public class RelToSqlConverter extends SqlImplementor
     final List<SqlNode> groupKeys = new ArrayList<>();
     for (int key : groupList) {
       boolean isGroupByAlias = dialect.getConformance().isGroupByAlias();
-      final SqlNode field = builder.context.field(key, isGroupByAlias);
+      if (builder.context.field(key).getKind() == SqlKind.LITERAL
+          && dialect.getConformance().isGroupByOrdinal()) {
+        isGroupByAlias = false;
+      }
+      SqlNode field = builder.context.field(key, isGroupByAlias);
       groupKeys.add(field);
     }
     for (int key : sortedGroupList) {
