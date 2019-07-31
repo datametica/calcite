@@ -89,6 +89,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Utility to convert relational expressions to SQL abstract syntax tree.

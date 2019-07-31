@@ -3809,7 +3809,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "GROUP BY 1, product_id";
     sql(query)
-        .withBigquery()
+        .withBigQuery()
         .ok(expected);
   }
 
