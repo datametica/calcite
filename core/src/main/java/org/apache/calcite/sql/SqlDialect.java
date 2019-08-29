@@ -987,7 +987,8 @@ public class SqlDialect {
 
   /**
    * Returns whether the dialect needs cast in string operands of comparison operator.
-   * for instance, where employee_id = '10' is comparable in most of the dialect, so doesn't need cast for string operand '10'.
+   * for instance, where employee_id = '10' is comparable in most of the dialect,
+   * so doesn't need cast for string operand '10'.
    * but in BiqQuery the above statement is not valid without cast.
    * @param node operand of comparison operator which contain cast.
    * @return
