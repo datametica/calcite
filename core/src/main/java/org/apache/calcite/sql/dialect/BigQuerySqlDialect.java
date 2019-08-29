@@ -65,8 +65,8 @@ public class BigQuerySqlDialect extends SqlDialect {
     return false;
   }
 
-  @Override public boolean isCastRequire(RexCall node) {
-    if (super.isCastRequire(node)) {
+  @Override public boolean castRequiredForStringOperand(RexCall node) {
+    if (super.castRequiredForStringOperand(node)) {
       return true;
     }
     RexNode operand = node.getOperands().get(0);

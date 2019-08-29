@@ -292,7 +292,7 @@ public abstract class SqlImplementor {
       final RexNode o1 = call.operands.get(1);
       if (o0.getKind() == SqlKind.CAST
           && o1.getKind() != SqlKind.CAST) {
-        if (dialect.isCastRequire((RexCall) o0)) {
+        if (dialect.castRequiredForStringOperand((RexCall) o0)) {
           return node;
         }
         final RexNode o0b = ((RexCall) o0).getOperands().get(0);
@@ -300,7 +300,7 @@ public abstract class SqlImplementor {
       }
       if (o1.getKind() == SqlKind.CAST
           && o0.getKind() != SqlKind.CAST) {
-        if (dialect.isCastRequire((RexCall) o1)) {
+        if (dialect.castRequiredForStringOperand((RexCall) o1)) {
           return node;
         }
         final RexNode o1b = ((RexCall) o1).getOperands().get(0);
