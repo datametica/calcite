@@ -991,7 +991,6 @@ public class SqlDialect {
    * so doesn't need cast for string operand '10'.
    * but in BiqQuery the above statement is not valid without cast.
    * @param node operand of comparison operator which contain cast.
-   * @return
    */
   public boolean castRequiredForStringOperand(RexCall node) {
     RexNode operand = node.getOperands().get(0);
