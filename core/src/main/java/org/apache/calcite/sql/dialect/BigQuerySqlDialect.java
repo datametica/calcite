@@ -17,6 +17,7 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlKind;
@@ -141,6 +142,10 @@ public class BigQuerySqlDialect extends SqlDialect {
   @Override public SqlNode emulateNullDirection(SqlNode node,
       boolean nullsFirst, boolean desc) {
     return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
+  }
+
+  @Override public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
+    return ((SqlBasicCall) aggCall).operand(0);
   }
 
   /**
