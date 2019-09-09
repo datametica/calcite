@@ -164,6 +164,7 @@ public class HiveSqlDialect extends SqlDialect {
       break;
     case FORMAT:
       unparseFormat(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
