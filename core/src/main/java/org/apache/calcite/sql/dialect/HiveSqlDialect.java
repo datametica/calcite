@@ -16,8 +16,8 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIntervalLiteral;
@@ -27,7 +27,9 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 
 /**
@@ -86,8 +88,22 @@ public class HiveSqlDialect extends SqlDialect {
     return null;
   }
 
-  @Override public void unparseCall(final SqlWriter writer, final SqlCall call, final int leftPrec,
-      final int rightPrec) {
+  @Override public SqlOperator getTargetFunc(RexCall call) {
+    switch (call.type.getSqlTypeName()) {
+    case DATE:
+      switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+      case INTERVAL_DAY:
+        return SqlLibraryOperators.DATE_ADD;
+      case INTERVAL_MONTH:
+        return SqlLibraryOperators.ADD_MONTHS;
+      }
+    default:
+      return super.getTargetFunc(call);
+    }
+  }
+
+  @Override public void unparseCall(final SqlWriter writer, final SqlCall call,
+      final int leftPrec, final int rightPrec) {
     switch (call.getKind()) {
     case POSITION:
       final SqlWriter.Frame frame = writer.startFunCall("INSTR");
@@ -103,6 +119,9 @@ public class HiveSqlDialect extends SqlDialect {
     case MOD:
       SqlOperator op = SqlStdOperatorTable.PERCENT_REMAINDER;
       SqlSyntax.BINARY.unparse(writer, op, call, leftPrec, rightPrec);
+      break;
+    case TRIM:
+      unparseTrim(writer, call, leftPrec, rightPrec);
       break;
     case CHAR_LENGTH:
     case CHARACTER_LENGTH:
@@ -143,12 +162,34 @@ public class HiveSqlDialect extends SqlDialect {
     case DIVIDE_INTEGER:
       unparseDivideInteger(writer, call, leftPrec, rightPrec);
       break;
-    case FORMAT:
-      unparseFormat(writer, call, leftPrec, rightPrec);
-      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  /**
+   * For usage of TRIM, LTRIM and RTRIM in Hive, see
+   * <a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF">Hive UDF usage</a>.
+   */
+  private void unparseTrim(SqlWriter writer, SqlCall call, int leftPrec,
+      int rightPrec) {
+    assert call.operand(0) instanceof SqlLiteral : call.operand(0);
+    SqlLiteral flag = call.operand(0);
+    final String operatorName;
+    switch (flag.getValueAs(SqlTrimFunction.Flag.class)) {
+    case LEADING:
+      operatorName = "LTRIM";
+      break;
+    case TRAILING:
+      operatorName = "RTRIM";
+      break;
+    default:
+      operatorName = call.getOperator().getName();
+      break;
+    }
+    final SqlWriter.Frame frame = writer.startFunCall(operatorName);
+    call.operand(2).unparse(writer, leftPrec, rightPrec);
+    writer.endFunCall(frame);
   }
 
   @Override public boolean supportsCharSet() {
@@ -168,21 +209,6 @@ public class HiveSqlDialect extends SqlDialect {
   @Override public void unparseSqlDatetimeArithmetic(SqlWriter writer,
       SqlCall call, SqlKind sqlKind, int leftPrec, int rightPrec) {
     switch (sqlKind) {
-    case PLUS:
-      SqlWriter.Frame dateAddFrame = null;
-      final SqlLiteral timeUnitNode = call.operand(1);
-      final TimeUnitRange timeUnit = timeUnitNode.getValueAs(TimeUnitRange.class);
-      if (timeUnit == TimeUnitRange.MONTH) {
-        dateAddFrame = writer.startFunCall("ADD_MONTHS");
-      } else if (timeUnit == TimeUnitRange.DAY) {
-        dateAddFrame = writer.startFunCall("DATE_ADD");
-      }
-      writer.sep(",");
-      call.operand(0).unparse(writer, leftPrec, rightPrec);
-      writer.sep(",");
-      unparseSqlIntervalLiteralHive(writer, call.operand(1));
-      writer.endFunCall(dateAddFrame);
-      break;
     case MINUS:
       final SqlWriter.Frame dateDiffFrame = writer.startFunCall("DATEDIFF");
       writer.sep(",");
@@ -192,6 +218,16 @@ public class HiveSqlDialect extends SqlDialect {
       writer.endFunCall(dateDiffFrame);
       break;
     }
+  }
+
+  @Override public void unparseIntervalOperandsBasedFunctions(SqlWriter writer,
+      SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWriter.Frame frame = writer.startFunCall(call.getOperator().toString());
+    writer.sep(",");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.sep(",");
+    unparseSqlIntervalLiteralHive(writer, call.operand(1));
+    writer.endFunCall(frame);
   }
 }
 // End HiveSqlDialect.java
