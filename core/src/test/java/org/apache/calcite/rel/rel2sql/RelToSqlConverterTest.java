@@ -4227,13 +4227,16 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test public void testCurrentUserForHive() {
+  @Test public void testCurrentUserForHiveSpark() {
     String query = "select CURRENT_USER from \"product\" where \"product_id\" = 1";
     final String expected = "SELECT CURRENT_USER() CURRENT_USER\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1";
     sql(query)
         .withHive()
+        .ok(expected);
+    sql(query)
+        .withSpark()
         .ok(expected);
   }
 
