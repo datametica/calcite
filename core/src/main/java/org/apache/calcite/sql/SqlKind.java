@@ -118,6 +118,13 @@ public enum SqlKind {
   OTHER_FUNCTION,
 
   /**
+   * Function that is system function.
+   *
+   * @see #FUNCTION
+   */
+  SYSTEM_FUNCTION,
+
+  /**
    * POSITION Function
    */
   POSITION,

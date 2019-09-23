@@ -4207,6 +4207,36 @@ public class RelToSqlConverterTest {
     });
   }
 
+  @Test public void testCurrentUserForBigQuery() {
+    String query = "select CURRENT_USER from \"product\" where \"product_id\" = 1";
+    final String expected = "SELECT SESSION_USER() AS CURRENT_USER\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testCurrentUserWithAliasForBigQuery() {
+    String query = "select CURRENT_USER myuser from \"product\" where \"product_id\" = 1";
+    final String expected = "SELECT SESSION_USER() AS MYUSER\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testCurrentUserForHive() {
+    String query = "select CURRENT_USER from \"product\" where \"product_id\" = 1";
+    final String expected = "SELECT CURRENT_USER() CURRENT_USER\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1";
+    sql(query)
+        .withHive()
+        .ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;

@@ -220,6 +220,14 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.literal("INT64");
       writer.endFunCall(castFrame);
       break;
+    case SYSTEM_FUNCTION:
+      if (call.getOperator().getName().equals("CURRENT_USER")) {
+        final SqlWriter.Frame currUserFrame = writer.startFunCall("SESSION_USER");
+        writer.endFunCall(currUserFrame);
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
