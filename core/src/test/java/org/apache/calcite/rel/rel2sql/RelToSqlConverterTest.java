@@ -4209,12 +4209,19 @@ public class RelToSqlConverterTest {
 
   @Test public void testCurrentUserForBigQuery() {
     String query = "select CURRENT_USER from \"product\" where \"product_id\" = 1";
-    final String expected = "SELECT SESSION_USER() AS CURRENT_USER\n"
+    final String expectedSql = "SELECT CURRENT_USER() CURRENT_USER\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1";
+    final String expectedSqlBQ = "SELECT SESSION_USER() AS CURRENT_USER\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1";
     sql(query)
+        .withHive()
+        .ok(expectedSql)
+        .withSpark()
+        .ok(expectedSql)
         .withBigQuery()
-        .ok(expected);
+        .ok(expectedSqlBQ);
   }
 
   @Test public void testCurrentUserWithAliasForBigQuery() {
@@ -4224,19 +4231,6 @@ public class RelToSqlConverterTest {
         + "WHERE product_id = 1";
     sql(query)
         .withBigQuery()
-        .ok(expected);
-  }
-
-  @Test public void testCurrentUserForHiveSpark() {
-    String query = "select CURRENT_USER from \"product\" where \"product_id\" = 1";
-    final String expected = "SELECT CURRENT_USER() CURRENT_USER\n"
-        + "FROM foodmart.product\n"
-        + "WHERE product_id = 1";
-    sql(query)
-        .withHive()
-        .ok(expected);
-    sql(query)
-        .withSpark()
         .ok(expected);
   }
 

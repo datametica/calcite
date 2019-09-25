@@ -222,8 +222,8 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     case SYSTEM_FUNCTION:
       if (call.getOperator().getName().equals("CURRENT_USER")) {
-        final SqlWriter.Frame currUserFrame = writer.startFunCall("SESSION_USER");
-        writer.endFunCall(currUserFrame);
+        final SqlWriter.Frame sessionUserFrame = writer.startFunCall("SESSION_USER");
+        writer.endFunCall(sessionUserFrame);
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
