@@ -4226,10 +4226,17 @@ public class RelToSqlConverterTest {
 
   @Test public void testCurrentUserWithAliasForBigQuery() {
     String query = "select CURRENT_USER myuser from \"product\" where \"product_id\" = 1";
+    final String expectedSql = "SELECT CURRENT_USER() MYUSER\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1";
     final String expected = "SELECT SESSION_USER() AS MYUSER\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1";
     sql(query)
+        .withHive()
+        .ok(expectedSql)
+        .withSpark()
+        .ok(expectedSql)
         .withBigQuery()
         .ok(expected);
   }
