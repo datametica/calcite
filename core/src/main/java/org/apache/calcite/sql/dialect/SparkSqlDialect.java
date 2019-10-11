@@ -20,10 +20,12 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.JoinType;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
@@ -198,6 +200,14 @@ public class SparkSqlDialect extends SqlDialect {
     writer.literal(literal.getValue().toString());
   }
 
+  public void unparseSqlIntervalColumnSpark(
+      SqlWriter writer,
+      SqlBasicCall columnLiteral) {
+    SqlIdentifier sqlIdentifier = columnLiteral.operand(0);
+
+    writer.literal(sqlIdentifier.toString());
+  }
+
   @Override public void unparseSqlDatetimeArithmetic(SqlWriter writer,
       SqlCall call, SqlKind sqlKind, int leftPrec, int rightPrec) {
     switch (sqlKind) {
@@ -218,7 +228,11 @@ public class SparkSqlDialect extends SqlDialect {
     writer.sep(",");
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.sep(",");
-    unparseSqlIntervalLiteralSpark(writer, call.operand(1));
+    if (call.operand(1).getClass().getName().contains("SqlBasicCall")) {
+      unparseSqlIntervalColumnSpark(writer, call.operand(1));
+    } else {
+      unparseSqlIntervalLiteralSpark(writer, call.operand(1));
+    }
     writer.endFunCall(frame);
   }
 }

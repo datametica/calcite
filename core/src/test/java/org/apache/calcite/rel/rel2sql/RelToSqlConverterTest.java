@@ -3920,6 +3920,23 @@ public class RelToSqlConverterTest {
         .withSpark().ok(expectedSpark);
   }
 
+  @Test public void datePlusColumnDayFunctionForHiveAndSparkAndBigQuery() {
+    String query = "select \"birth_date\" + \"store_id\" * INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT DATE_ADD(birth_date, store_id)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, store_id)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
   @Test public void minusDateFunctionForHiveAndSparkAndBigQuery() {
     String query = "select (\"birth_date\" - DATE '1899-12-31') day from \"employee\"";
     final String expectedHive = "SELECT DATEDIFF(birth_date, DATE '1899-12-31')\n"
@@ -3929,9 +3946,12 @@ public class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT DATE_DIFF(birth_date, DATE '1899-12-31', DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
-        .withHive().ok(expectedHive)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedSpark);
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
   }
 
   @Test public void truncateFunctionEmulationForBigQuery() {

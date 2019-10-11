@@ -24,6 +24,8 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
@@ -255,6 +257,39 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.endFunCall(dateDiffFrame);
       break;
     }
+  }
+
+  @Override public void unparseIntervalOperandsBasedFunctions(
+      SqlWriter writer,
+      SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWriter.Frame frame = writer.startFunCall(call.getOperator().toString());
+    writer.sep(",");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.sep(",");
+    if (call.operand(1).getClass().getName().contains("SqlBasicCall")) {
+      unparseSqlIntervalColumnBq(writer, call.operand(1));
+    } else {
+      unparseSqlIntervalLiteralBq(writer, call.operand(1));
+    }
+    writer.endFunCall(frame);
+  }
+
+  public void unparseSqlIntervalLiteralBq(
+      SqlWriter writer,
+      SqlIntervalLiteral literal) {
+
+    writer.literal(literal.toString());
+
+  }
+
+  public void unparseSqlIntervalColumnBq(
+      SqlWriter writer,
+      SqlBasicCall columnLiteral) {
+    SqlIdentifier sqlIdentifier = columnLiteral.operand(0);
+
+    writer.literal("INTERVAL");
+    writer.literal(sqlIdentifier.toString());
+    writer.literal("DAY");
   }
 }
 

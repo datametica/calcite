@@ -18,8 +18,10 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
@@ -209,6 +211,13 @@ public class HiveSqlDialect extends SqlDialect {
     writer.literal(literal.getValue().toString());
   }
 
+  public void unparseSqlIntervalColumnHive(SqlWriter writer,
+      SqlBasicCall columnLiteral) {
+    SqlIdentifier sqlIdentifier = columnLiteral.operand(0);
+
+    writer.literal(sqlIdentifier.toString());
+  }
+
   @Override public void unparseSqlDatetimeArithmetic(SqlWriter writer,
       SqlCall call, SqlKind sqlKind, int leftPrec, int rightPrec) {
     switch (sqlKind) {
@@ -229,7 +238,11 @@ public class HiveSqlDialect extends SqlDialect {
     writer.sep(",");
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.sep(",");
-    unparseSqlIntervalLiteralHive(writer, call.operand(1));
+    if (call.operand(1).getClass().getName().contains("SqlBasicCall")) {
+      unparseSqlIntervalColumnHive(writer, call.operand(1));
+    } else {
+      unparseSqlIntervalLiteralHive(writer, call.operand(1));
+    }
     writer.endFunCall(frame);
   }
 }
