@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_USER;
+
 /**
  * A <code>SqlDialect</code> implementation for Google BigQuery's "Standard SQL"
  * dialect.
@@ -221,7 +223,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.endFunCall(castFrame);
       break;
     case SYSTEM_FUNCTION:
-      if (call.getOperator().getName().equals("CURRENT_USER")) {
+      if (call.getOperator().equals(CURRENT_USER)) {
         final SqlWriter.Frame sessionUserFrame = writer.startFunCall("SESSION_USER");
         writer.endFunCall(sessionUserFrame);
       } else {

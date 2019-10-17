@@ -4233,7 +4233,7 @@ public class RelToSqlConverterTest {
     });
   }
 
-  @Test public void testCurrentUserForBigQuery() {
+  @Test public void testCurrentUser() {
     String query = "select CURRENT_USER from \"product\" where \"product_id\" = 1";
     final String expectedSql = "SELECT CURRENT_USER() CURRENT_USER\n"
         + "FROM foodmart.product\n"
@@ -4250,7 +4250,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSqlBQ);
   }
 
-  @Test public void testCurrentUserWithAliasForBigQuery() {
+  @Test public void testCurrentUserWithAlias() {
     String query = "select CURRENT_USER myuser from \"product\" where \"product_id\" = 1";
     final String expectedSql = "SELECT CURRENT_USER() MYUSER\n"
         + "FROM foodmart.product\n"

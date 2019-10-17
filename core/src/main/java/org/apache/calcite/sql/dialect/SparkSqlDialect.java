@@ -37,6 +37,8 @@ import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.ReturnTypes;
 
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_USER;
+
 /**
  * A <code>SqlDialect</code> implementation for the APACHE SPARK database.
  */
@@ -183,7 +185,7 @@ public class SparkSqlDialect extends SqlDialect {
         unparseFormat(writer, call, leftPrec, rightPrec);
         break;
       case SYSTEM_FUNCTION:
-        if (call.getOperator().getName().equals("CURRENT_USER")) {
+        if (call.getOperator().equals(CURRENT_USER)) {
           final SqlWriter.Frame currUserFrame = writer.startFunCall("CURRENT_USER");
           writer.endFunCall(currUserFrame);
         } else {
