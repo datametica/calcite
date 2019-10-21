@@ -4234,13 +4234,9 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testCurrentUser() {
-    String query = "select CURRENT_USER from \"product\" where \"product_id\" = 1";
-    final String expectedSql = "SELECT CURRENT_USER() CURRENT_USER\n"
-        + "FROM foodmart.product\n"
-        + "WHERE product_id = 1";
-    final String expectedSqlBQ = "SELECT SESSION_USER() AS CURRENT_USER\n"
-        + "FROM foodmart.product\n"
-        + "WHERE product_id = 1";
+    String query = "select CURRENT_USER";
+    final String expectedSql = "SELECT CURRENT_USER() CURRENT_USER";
+    final String expectedSqlBQ = "SELECT SESSION_USER() AS CURRENT_USER";
     sql(query)
         .withHive()
         .ok(expectedSql)

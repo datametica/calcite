@@ -393,6 +393,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {HIVE, SPARK})
+  public static final SqlFunction CURRENT_USER =
+      new SqlStringContextVariable("CURRENT_USER") {
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          final SqlWriter.Frame currUserFrame = writer.startFunCall("CURRENT_USER");
+          writer.endFunCall(currUserFrame);
+        }
+      };
 }
 
 // End SqlLibraryOperators.java
