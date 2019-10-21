@@ -89,14 +89,17 @@ public class RelToSqlConverterTest {
           .withExpand(false)
           .build();
 
-  /** Initiates a test case with a given SQL query. */
+  /**
+   * Initiates a test case with a given SQL query.
+   */
   private Sql sql(String sql) {
     return new Sql(CalciteAssert.SchemaSpec.JDBC_FOODMART, sql,
         CalciteSqlDialect.DEFAULT, DEFAULT_REL_CONFIG,
         ImmutableList.of());
   }
 
-  private static Planner getPlanner(List<RelTraitDef> traitDefs,
+  private static Planner getPlanner(
+      List<RelTraitDef> traitDefs,
       SqlParser.Config parserConfig, SchemaPlus schema,
       SqlToRelConverter.Config sqlToRelConf, Program... programs) {
     final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
@@ -129,17 +132,23 @@ public class RelToSqlConverterTest {
         .withNullCollation(nullCollation));
   }
 
-  /** Creates a RelBuilder. */
+  /**
+   * Creates a RelBuilder.
+   */
   private static RelBuilder relBuilder() {
     return RelBuilder.create(RelBuilderTest.config().build());
   }
 
-  /** Converts a relational expression to SQL. */
+  /**
+   * Converts a relational expression to SQL.
+   */
   private String toSql(RelNode root) {
     return toSql(root, SqlDialect.DatabaseProduct.CALCITE.getDialect());
   }
 
-  /** Converts a relational expression to SQL in a given dialect. */
+  /**
+   * Converts a relational expression to SQL in a given dialect.
+   */
   private static String toSql(RelNode root, SqlDialect dialect) {
     final RelToSqlConverter converter = new RelToSqlConverter(dialect);
     final SqlNode sqlNode = converter.visitChild(0, root).asStatement();
@@ -244,8 +253,10 @@ public class RelToSqlConverterTest {
         .ok(expectedMySql);
   }
 
-  /** Tests GROUP BY ROLLUP of two columns. The SQL for MySQL has
-   * "GROUP BY ... ROLLUP" but no "ORDER BY". */
+  /**
+   * Tests GROUP BY ROLLUP of two columns. The SQL for MySQL has "GROUP BY ... ROLLUP" but no "ORDER
+   * BY".
+   */
   @Test public void testSelectQueryWithGroupByRollup() {
     final String query = "select \"product_class_id\", \"brand_name\"\n"
         + "from \"product\"\n"
@@ -275,8 +286,9 @@ public class RelToSqlConverterTest {
         .ok(expectedHive);
   }
 
-  /** As {@link #testSelectQueryWithGroupByRollup()},
-   * but ORDER BY columns reversed. */
+  /**
+   * As {@link #testSelectQueryWithGroupByRollup()}, but ORDER BY columns reversed.
+   */
   @Test public void testSelectQueryWithGroupByRollup2() {
     final String query = "select \"product_class_id\", \"brand_name\"\n"
         + "from \"product\"\n"
@@ -322,8 +334,9 @@ public class RelToSqlConverterTest {
         .ok(bigQueryExpected);
   }
 
-  /** CUBE of one column is equivalent to ROLLUP, and Calcite recognizes
-   * this. */
+  /**
+   * CUBE of one column is equivalent to ROLLUP, and Calcite recognizes this.
+   */
   @Test public void testSelectQueryWithSingletonCube() {
     final String query = "select \"product_class_id\", count(*) as c\n"
         + "from \"product\"\n"
@@ -351,8 +364,9 @@ public class RelToSqlConverterTest {
         .ok(expectedHive);
   }
 
-  /** As {@link #testSelectQueryWithSingletonCube()}, but no ORDER BY
-   * clause. */
+  /**
+   * As {@link #testSelectQueryWithSingletonCube()}, but no ORDER BY clause.
+   */
   @Test public void testSelectQueryWithSingletonCubeNoOrderBy() {
     final String query = "select \"product_class_id\", count(*) as c\n"
         + "from \"product\"\n"
@@ -374,8 +388,9 @@ public class RelToSqlConverterTest {
         .ok(expectedHive);
   }
 
-  /** Cannot rewrite if ORDER BY contains a column not in GROUP BY (in this
-   * case COUNT(*)). */
+  /**
+   * Cannot rewrite if ORDER BY contains a column not in GROUP BY (in this case COUNT(*)).
+   */
   @Test public void testSelectQueryWithRollupOrderByCount() {
     final String query = "select \"product_class_id\", \"brand_name\",\n"
         + " count(*) as c\n"
@@ -409,7 +424,9 @@ public class RelToSqlConverterTest {
         .ok(expectedHive);
   }
 
-  /** As {@link #testSelectQueryWithSingletonCube()}, but with LIMIT. */
+  /**
+   * As {@link #testSelectQueryWithSingletonCube()}, but with LIMIT.
+   */
   @Test public void testSelectQueryWithCubeLimit() {
     final String query = "select \"product_class_id\", count(*) as c\n"
         + "from \"product\"\n"
@@ -426,9 +443,9 @@ public class RelToSqlConverterTest {
         + "GROUP BY `product_class_id` WITH ROLLUP\n"
         + "LIMIT 5";
     final String expectedHive = "SELECT product_class_id, COUNT(*) C\n"
-            + "FROM foodmart.product\n"
-            + "GROUP BY product_class_id WITH ROLLUP\n"
-            + "LIMIT 5";
+        + "FROM foodmart.product\n"
+        + "GROUP BY product_class_id WITH ROLLUP\n"
+        + "LIMIT 5";
     sql(query)
         .ok(expected)
         .withMysql()
@@ -494,10 +511,11 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2713">[CALCITE-2713]
-   * JDBC adapter may generate casts on PostgreSQL for VARCHAR type exceeding
-   * max length</a>. */
+   * JDBC adapter may generate casts on PostgreSQL for VARCHAR type exceeding max length</a>.
+   */
   @Test public void testCastLongVarchar1() {
     final String query = "select cast(\"store_id\" as VARCHAR(10485761))\n"
         + " from \"expense_fact\"";
@@ -506,10 +524,11 @@ public class RelToSqlConverterTest {
     sql(query).withPostgresqlModifiedTypeSystem().ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2713">[CALCITE-2713]
-   * JDBC adapter may generate casts on PostgreSQL for VARCHAR type exceeding
-   * max length</a>. */
+   * JDBC adapter may generate casts on PostgreSQL for VARCHAR type exceeding max length</a>.
+   */
   @Test public void testCastLongVarchar2() {
     final String query = "select cast(\"store_id\" as VARCHAR(175))\n"
         + " from \"expense_fact\"";
@@ -518,9 +537,11 @@ public class RelToSqlConverterTest {
     sql(query).withPostgresqlModifiedTypeSystem().ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1174">[CALCITE-1174]
-   * When generating SQL, translate SUM0(x) to COALESCE(SUM(x), 0)</a>. */
+   * When generating SQL, translate SUM0(x) to COALESCE(SUM(x), 0)</a>.
+   */
   @Test public void testSum0BecomesCoalesce() {
     final RelBuilder builder = relBuilder();
     final RelNode root = builder
@@ -539,7 +560,9 @@ public class RelToSqlConverterTest {
         isLinux(expectedPostgresql));
   }
 
-  /** As {@link #testSum0BecomesCoalesce()} but for windowed aggregates. */
+  /**
+   * As {@link #testSum0BecomesCoalesce()} but for windowed aggregates.
+   */
   @Test public void testWindowedSum0BecomesCoalesce() {
     final String query = "select\n"
         + "  AVG(\"net_weight\") OVER (order by \"product_id\" rows 3 preceding)\n"
@@ -556,9 +579,11 @@ public class RelToSqlConverterTest {
         .ok(expectedPostgresql);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2722">[CALCITE-2722]
-   * SqlImplementor createLeftCall method throws StackOverflowError</a>. */
+   * SqlImplementor createLeftCall method throws StackOverflowError</a>.
+   */
   @Test public void testStack() {
     final RelBuilder builder = relBuilder();
     final RelNode root = builder
@@ -572,10 +597,12 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root), notNullValue());
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1946">[CALCITE-1946]
-   * JDBC adapter should generate sub-SELECT if dialect does not support nested
-   * aggregate functions</a>. */
+   * JDBC adapter should generate sub-SELECT if dialect does not support nested aggregate
+   * functions</a>.
+   */
   @Test public void testNestedAggregates() {
     // PostgreSQL, MySQL, Vertica do not support nested aggregate functions, so
     // for these, the JDBC adapter generates a SELECT in the FROM clause.
@@ -613,15 +640,15 @@ public class RelToSqlConverterTest {
         .ok(expectedPostgresql);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2628">[CALCITE-2628]
-   * JDBC adapter throws NullPointerException while generating GROUP BY query
-   * for MySQL</a>.
+   * JDBC adapter throws NullPointerException while generating GROUP BY query for MySQL</a>.
    *
    * <p>MySQL does not support nested aggregates, so {@link RelToSqlConverter}
-   * performs some extra checks, looking for aggregates in the input
-   * sub-query, and these would fail with {@code NullPointerException}
-   * and {@code ClassCastException} in some cases. */
+   * performs some extra checks, looking for aggregates in the input sub-query, and these would fail
+   * with {@code NullPointerException} and {@code ClassCastException} in some cases.
+   */
   @Test public void testNestedAggregatesMySqlTable() {
     final RelBuilder builder = relBuilder();
     final RelNode root = builder
@@ -635,8 +662,9 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
 
-  /** As {@link #testNestedAggregatesMySqlTable()}, but input is a sub-query,
-   * not a table. */
+  /**
+   * As {@link #testNestedAggregatesMySqlTable()}, but input is a sub-query, not a table.
+   */
   @Test public void testNestedAggregatesMySqlStar() {
     final RelBuilder builder = relBuilder();
     final RelNode root = builder
@@ -672,9 +700,11 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1665">[CALCITE-1665]
-   * Aggregates and having cannot be combined</a>. */
+   * Aggregates and having cannot be combined</a>.
+   */
   @Test public void testSelectQueryWithGroupByHaving2() {
     String query = " select \"product\".\"product_id\",\n"
         + "    min(\"sales_fact_1997\".\"store_id\")\n"
@@ -694,9 +724,11 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1665">[CALCITE-1665]
-   * Aggregates and having cannot be combined</a>. */
+   * Aggregates and having cannot be combined</a>.
+   */
   @Test public void testSelectQueryWithGroupByHaving3() {
     String query = " select * from (select \"product\".\"product_id\",\n"
         + "    min(\"sales_fact_1997\".\"store_id\")\n"
@@ -709,7 +741,8 @@ public class RelToSqlConverterTest {
     String expected = "SELECT *\n"
         + "FROM (SELECT \"product\".\"product_id\", MIN(\"sales_fact_1997\".\"store_id\")\n"
         + "FROM \"foodmart\".\"product\"\n"
-        + "INNER JOIN \"foodmart\".\"sales_fact_1997\" ON \"product\".\"product_id\" = \"sales_fact_1997\".\"product_id\"\n"
+        + "INNER JOIN \"foodmart\".\"sales_fact_1997\" ON \"product\".\"product_id\" = "
+        + "\"sales_fact_1997\".\"product_id\"\n"
         + "GROUP BY \"product\".\"product_id\"\n"
         + "HAVING COUNT(*) > 1) AS \"t2\"\n"
         + "WHERE \"t2\".\"product_id\" > 100";
@@ -761,9 +794,11 @@ public class RelToSqlConverterTest {
     sql(query).withHive().ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2715">[CALCITE-2715]
-   * MS SQL Server does not support character set as part of data type</a>. */
+   * MS SQL Server does not support character set as part of data type</a>.
+   */
   @Test public void testMssqlCharacterSet() {
     String query = "select \"hire_date\", cast(\"hire_date\" as varchar(10))\n"
         + "from \"foodmart\".\"reserve_employee\"";
@@ -954,12 +989,12 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT LENGTH('xyz')\n"
         + "FROM foodmart.product";
     sql(query)
-      .withHive()
-      .ok(expected)
-      .withBigquery()
-      .ok(expected)
-      .withSpark()
-      .ok(expected);
+        .withHive()
+        .ok(expected)
+        .withBigquery()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
   }
 
   @Test
@@ -968,12 +1003,12 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT LENGTH('xyz')\n"
         + "FROM foodmart.product";
     sql(query)
-      .withHive()
-      .ok(expected)
-      .withBigquery()
-      .ok(expected)
-      .withSpark()
-      .ok(expected);
+        .withHive()
+        .ok(expected)
+        .withBigquery()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
   }
 
   @Test public void testMysqlCastToBigint() {
@@ -1355,9 +1390,11 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1636">[CALCITE-1636]
-   * JDBC adapter generates wrong SQL for self join with sub-query</a>. */
+   * JDBC adapter generates wrong SQL for self join with sub-query</a>.
+   */
   @Test public void testSubQueryAlias() {
     String query = "select t1.\"customer_id\", t2.\"customer_id\" \n"
         + "from (select \"customer_id\" from \"sales_fact_1997\") as t1 \n"
@@ -1367,7 +1404,8 @@ public class RelToSqlConverterTest {
         + "FROM (SELECT sales_fact_1997.customer_id\n"
         + "FROM foodmart.sales_fact_1997 AS sales_fact_1997) AS t\n"
         + "INNER JOIN (SELECT sales_fact_19970.customer_id\n"
-        + "FROM foodmart.sales_fact_1997 AS sales_fact_19970) AS t0 ON t.customer_id = t0.customer_id";
+        + "FROM foodmart.sales_fact_1997 AS sales_fact_19970) AS t0 ON t.customer_id = t0"
+        + ".customer_id";
 
     sql(query).withDb2().ok(expected);
   }
@@ -1380,10 +1418,11 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2652">[CALCITE-2652]
-   * SqlNode to SQL conversion fails if the join condition references a BOOLEAN
-   * column</a>. */
+   * SqlNode to SQL conversion fails if the join condition references a BOOLEAN column</a>.
+   */
   @Test public void testJoinOnBoolean() {
     final String sql = "SELECT 1\n"
         + "from emps\n"
@@ -1424,9 +1463,11 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1332">[CALCITE-1332]
-   * DB2 should always use aliases for tables: x.y.z AS z</a>. */
+   * DB2 should always use aliases for tables: x.y.z AS z</a>.
+   */
   @Test public void testDb2DialectJoinStar() {
     String query = "select * "
         + "from \"foodmart\".\"employee\" A "
@@ -1561,9 +1602,11 @@ public class RelToSqlConverterTest {
     sql(query).withDb2().ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1372">[CALCITE-1372]
-   * JDBC adapter generates SQL with wrong field names</a>. */
+   * JDBC adapter generates SQL with wrong field names</a>.
+   */
   @Test public void testJoinPlan2() {
     final String sql = "SELECT v1.deptno, v2.deptno\n"
         + "FROM dept v1 LEFT JOIN emp v2 ON v1.deptno = v2.deptno\n"
@@ -1587,10 +1630,11 @@ public class RelToSqlConverterTest {
         .ok(expectedDb2);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1422">[CALCITE-1422]
-   * In JDBC adapter, allow IS NULL and IS NOT NULL operators in generated SQL
-   * join condition</a>. */
+   * In JDBC adapter, allow IS NULL and IS NOT NULL operators in generated SQL join condition</a>.
+   */
   @Test public void testSimpleJoinConditionWithIsNullOperators() {
     String query = "select *\n"
         + "from \"foodmart\".\"sales_fact_1997\" as \"t1\"\n"
@@ -1618,9 +1662,11 @@ public class RelToSqlConverterTest {
   }
 
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1586">[CALCITE-1586]
-   * JDBC adapter generates wrong SQL if UNION has more than two inputs</a>. */
+   * JDBC adapter generates wrong SQL if UNION has more than two inputs</a>.
+   */
   @Test public void testThreeQueryUnion() {
     String query = "SELECT \"product_id\" FROM \"product\" "
         + " UNION ALL "
@@ -1644,9 +1690,11 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1800">[CALCITE-1800]
-   * JDBC adapter fails to SELECT FROM a UNION query</a>. */
+   * JDBC adapter fails to SELECT FROM a UNION query</a>.
+   */
   @Test public void testUnionWrappedInASelect() {
     final String query = "select sum(\n"
         + "  case when \"product_id\"=0 then \"net_weight\" else 0 end)"
@@ -1732,10 +1780,11 @@ public class RelToSqlConverterTest {
             + "FROM (VALUES  (" + expected + ")) AS t (EXPR$0)");
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2625">[CALCITE-2625]
    * Removing Window Boundaries from SqlWindow of Aggregate Function which do not allow Framing</a>
-   * */
+   */
   @Test public void testRowNumberFunctionForPrintingOfFrameBoundary() {
     String query = "SELECT row_number() over (order by \"hire_date\") FROM \"employee\"";
     String expected = "SELECT ROW_NUMBER() OVER (ORDER BY \"hire_date\")\n"
@@ -1768,9 +1817,11 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1798">[CALCITE-1798]
-   * Generate dialect-specific SQL for FLOOR operator</a>. */
+   * Generate dialect-specific SQL for FLOOR operator</a>.
+   */
   @Test public void testFloor() {
     String query = "SELECT floor(\"hire_date\" TO MINUTE) FROM \"employee\"";
     String expected = "SELECT TRUNC(hire_date, 'MI')\nFROM foodmart.employee";
@@ -1951,9 +2002,11 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1826">[CALCITE-1826]
-   * JDBC dialect-specific FLOOR fails when in GROUP BY</a>. */
+   * JDBC dialect-specific FLOOR fails when in GROUP BY</a>.
+   */
   @Test public void testFloorWithGroupBy() {
     final String query = "SELECT floor(\"hire_date\" TO MINUTE)\n"
         + "FROM \"employee\"\n"
@@ -2045,9 +2098,11 @@ public class RelToSqlConverterTest {
         .ok(expectedHive);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1849">[CALCITE-1849]
-   * Support sub-queries (RexSubQuery) in RelToSqlConverter</a>. */
+   * Support sub-queries (RexSubQuery) in RelToSqlConverter</a>.
+   */
   @Test public void testExistsWithExpand() {
     String query = "select \"product_name\" from \"product\" a "
         + "where exists (select count(*) "
@@ -3198,9 +3253,11 @@ public class RelToSqlConverterTest {
         .ok(expectedBigQuery);
   }
 
-  /** Test case for
+  /**
+   * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2118">[CALCITE-2118]
-   * RelToSqlConverter should only generate "*" if field names match</a>. */
+   * RelToSqlConverter should only generate "*" if field names match</a>.
+   */
   @Test public void testPreserveAlias() {
     final String sql = "select \"warehouse_class_id\" as \"id\",\n"
         + " \"description\"\n"
@@ -3255,7 +3312,8 @@ public class RelToSqlConverterTest {
 
     final boolean[] callsUnparseCallOnSqlSelect = {false};
     final SqlDialect dialect = new SqlDialect(SqlDialect.EMPTY_CONTEXT) {
-      @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      @Override public void unparseCall(
+          SqlWriter writer, SqlCall call,
           int leftPrec, int rightPrec) {
         if (call instanceof SqlSelect) {
           callsUnparseCallOnSqlSelect[0] = true;
@@ -3512,7 +3570,7 @@ public class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT TRUNC(2.30259)\n"
         + "FROM foodmart.employee";
     sql(query)
-      .withBigquery().ok(expectedBigQuery);
+        .withBigquery().ok(expectedBigQuery);
   }
 
   @Test public void extractFunctionEmulationForHiveAndSparkAndBigQuery() {
@@ -3582,7 +3640,55 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  /** Fluid interface to run tests. */
+  @Test public void testInWithList() {
+    String query = "select  \"product_id\"  from \"product\" where \"product_name\" = 'xyz' "
+        + "OR \"product_id\" IN (100,200) OR \"net_weight\" = 300";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_name = 'xyz' OR product_id IN (100, 200) OR net_weight = 300";
+    sql(query)
+        .withBigquery()
+        .ok(expected);
+  }
+
+  @Test public void testMultipleInWithList() {
+    String query = "select  \"product_id\"  from \"product\" where \"product_name\" IN ('abc',"
+        + "'xyz') "
+        + "OR \"product_id\" IN (100,200)";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_name IN ('abc', 'xyz') OR product_id IN (100, 200)";
+    sql(query)
+        .withBigquery()
+        .ok(expected);
+  }
+
+  @Test public void testNotInWithList() {
+    String query = "select  \"product_id\"  from \"product\" where  \"net_weight\" NOT IN (200,"
+        + "300)";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE net_weight NOT IN (200, 300)";
+    sql(query)
+        .withBigquery()
+        .ok(expected);
+  }
+
+  @Test public void testNotInOrInWithList() {
+    String query = "select  \"product_id\"  from \"product\" where  \"net_weight\" IN (200,300) "
+        + "AND \"product_id\" IN (100,200)";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE net_weight IN (200, 300) AND product_id IN (100, 200)";
+    sql(query)
+        .withBigquery()
+        .ok(expected);
+  }
+
+
+  /**
+   * Fluid interface to run tests.
+   */
   static class Sql {
     private final SchemaPlus schema;
     private final String sql;
@@ -3590,7 +3696,8 @@ public class RelToSqlConverterTest {
     private final List<Function<RelNode, RelNode>> transforms;
     private final SqlToRelConverter.Config config;
 
-    Sql(CalciteAssert.SchemaSpec schemaSpec, String sql, SqlDialect dialect,
+    Sql(
+        CalciteAssert.SchemaSpec schemaSpec, String sql, SqlDialect dialect,
         SqlToRelConverter.Config config,
         List<Function<RelNode, RelNode>> transforms) {
       final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
@@ -3601,7 +3708,8 @@ public class RelToSqlConverterTest {
       this.config = config;
     }
 
-    Sql(SchemaPlus schema, String sql, SqlDialect dialect,
+    Sql(
+        SchemaPlus schema, String sql, SqlDialect dialect,
         SqlToRelConverter.Config config,
         List<Function<RelNode, RelNode>> transforms) {
       this.schema = schema;
@@ -3669,8 +3777,8 @@ public class RelToSqlConverterTest {
     Sql withHiveIdentifierQuoteString() {
       final HiveSqlDialect hiveSqlDialect =
           new HiveSqlDialect((SqlDialect.EMPTY_CONTEXT)
-          .withDatabaseProduct(DatabaseProduct.HIVE)
-          .withIdentifierQuoteString("`"));
+              .withDatabaseProduct(DatabaseProduct.HIVE)
+              .withIdentifierQuoteString("`"));
       return dialect(hiveSqlDialect);
     }
 

@@ -766,6 +766,10 @@ public class SqlDialect {
     return JoinType.COMMA;
   }
 
+  public boolean supportsInClause() {
+    return false;
+  }
+
   protected SqlNode emulateNullDirectionWithIsNull(SqlNode node,
       boolean nullsFirst, boolean desc) {
     // No need for emulation if the nulls will anyways come out the way we want
