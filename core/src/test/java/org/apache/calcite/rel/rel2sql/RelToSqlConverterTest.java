@@ -3636,10 +3636,6 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "GROUP BY 1, product_id";
     sql(query)
-        .withHive()
-        .ok(expected)
-        .withSpark()
-        .ok(expected)
         .withBigquery()
         .ok(expected);
   }
