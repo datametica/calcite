@@ -3636,6 +3636,10 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "GROUP BY 1, product_id";
     sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
         .withBigquery()
         .ok(expected);
   }
@@ -3647,6 +3651,10 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "WHERE product_name = 'xyz' OR product_id IN (100, 200) OR net_weight = 300";
     sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
         .withBigquery()
         .ok(expected);
   }
@@ -3659,6 +3667,10 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "WHERE product_name IN ('abc', 'xyz') OR product_id IN (100, 200)";
     sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
         .withBigquery()
         .ok(expected);
   }
@@ -3670,6 +3682,10 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "WHERE net_weight NOT IN (200, 300)";
     sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
         .withBigquery()
         .ok(expected);
   }
@@ -3681,6 +3697,10 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "WHERE net_weight IN (200, 300) AND product_id IN (100, 200)";
     sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
         .withBigquery()
         .ok(expected);
   }
