@@ -240,6 +240,9 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker INTERVAL =
       family(SqlTypeFamily.DATETIME_INTERVAL);
 
+  public static final SqlSingleOperandTypeChecker CHARACTER_CHARACTER_DATETIME =
+      family(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.DATETIME);
+
   public static final SqlSingleOperandTypeChecker PERIOD =
       new PeriodOperandTypeChecker();
 
@@ -405,6 +408,16 @@ public abstract class OperandTypes {
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
           SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
 
+  public static final SqlSingleOperandTypeChecker STRING_INTEGER =
+      family(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER);
+
+  /** Operand type-checking strategy where the first operand is a character or
+   * binary string (CHAR, VARCHAR, BINARY or VARBINARY), and the second operand
+   * is INTEGER. */
+  public static final SqlSingleOperandTypeChecker CBSTRING_INTEGER =
+      or(family(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
+          family(SqlTypeFamily.BINARY, SqlTypeFamily.INTEGER));
+
   /**
    * Operand type-checking strategy where two operands must both be in the
    * same string type family and last type is INTEGER.
@@ -435,6 +448,9 @@ public abstract class OperandTypes {
 
   public static final SqlSingleOperandTypeChecker DATETIME_INTERVAL =
       family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME_INTERVAL);
+
+  public static final SqlSingleOperandTypeChecker DATETIME_INTEGER =
+      family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER);
 
   public static final SqlSingleOperandTypeChecker DATETIME_INTERVAL_INTERVAL =
       family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME_INTERVAL,
