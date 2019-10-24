@@ -4240,8 +4240,6 @@ public class RelToSqlConverterTest {
     sql(query)
         .withHive()
         .ok(expectedSql)
-        .withSpark()
-        .ok(expectedSql)
         .withBigQuery()
         .ok(expectedSqlBQ);
   }
@@ -4256,8 +4254,6 @@ public class RelToSqlConverterTest {
         + "WHERE product_id = 1";
     sql(query)
         .withHive()
-        .ok(expectedSql)
-        .withSpark()
         .ok(expectedSql)
         .withBigQuery()
         .ok(expected);
