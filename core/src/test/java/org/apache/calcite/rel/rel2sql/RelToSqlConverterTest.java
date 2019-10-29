@@ -553,7 +553,6 @@ public class RelToSqlConverterTest {
         + "GROUP BY \"product_class_id\", \"product_id\"";
     sql(query).ok(expected);
   }
-
   /*@Test public void testGroupByAliasReplacementWithGroupByExpression() {
     String query = "select \"product_class_id\" + \"product_id\" as product_id, "
         + "\"product_id\" + 2 as prod_id, count(1) as num_records"
