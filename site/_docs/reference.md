@@ -49,6 +49,7 @@ here to appease testAllFunctionsAreDocumented:
 | SUCCEEDS       | Documented as a period operator
 | TABLE          | Documented as part of FROM syntax
 | VARIANCE()     | In SqlStdOperatorTable, but not fully implemented
+| TO_NUMBER()    | TODO: Document with MATCH_RECOGNIZE
 {% endcomment %}
 -->
 

@@ -142,6 +142,9 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlMultisetSetOperator MULTISET_INTERSECT =
       new SqlMultisetSetOperator("MULTISET INTERSECT ALL", 18, true);
 
+  /** Convert from hexadecimal to decimal number {@code TO_NUMBER}. */
+  public static final SqlFunction TO_NUMBER = SqlLibraryOperators.TO_NUMBER;
+
   //-------------------------------------------------------------
   //                   BINARY OPERATORS
   //-------------------------------------------------------------
@@ -2531,8 +2534,6 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
       throw new AssertionError(comparisonKind);
     }
   }
-
-  public static final SqlFunction TO_NUMBER = SqlLibraryOperators.TO_NUMBER;
 
 }
 

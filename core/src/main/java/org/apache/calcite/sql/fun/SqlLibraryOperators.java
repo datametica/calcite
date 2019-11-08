@@ -420,7 +420,7 @@ public abstract class SqlLibraryOperators {
    * as hexadecimal to a NUMBER using the format specified in string2. */
   @LibraryOperator(libraries = {BIGQUERY})
   public static final SqlFunction TO_NUMBER =
-    new SqlFunction(
+      new SqlFunction(
       "TO_NUMBER",
       SqlKind.TO_NUMBER,
       ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.INTEGER),
