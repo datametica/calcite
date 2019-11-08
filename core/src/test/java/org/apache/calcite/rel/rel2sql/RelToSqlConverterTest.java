@@ -4283,6 +4283,13 @@ public class RelToSqlConverterTest {
     });
   }
 
+  @Test
+  public void testVaibhav() {
+    String query = "select TO_NUMBER('03ea02653f6938ba','XXXXXXXXXXXXXXXX')";
+    final String expected = "SELECT CAST(CONCAT('03ea02653f6938ba', 'XXXXXXXXXXXXXXXX') AS INT64)";
+    sql(query).withBigQuery().ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;

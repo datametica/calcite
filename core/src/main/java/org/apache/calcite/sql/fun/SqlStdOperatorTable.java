@@ -2532,6 +2532,8 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
     }
   }
 
+  public static final SqlFunction TO_NUMBER = SqlLibraryOperators.TO_NUMBER;
+
 }
 
 // End SqlStdOperatorTable.java

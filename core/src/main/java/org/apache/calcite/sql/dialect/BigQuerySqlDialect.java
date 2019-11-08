@@ -230,6 +230,18 @@ public class BigQuerySqlDialect extends SqlDialect {
     case REGEXP_SUBSTR:
       unparseRegexSubstr(writer, call, leftPrec, rightPrec);
       break;
+    case TO_NUMBER:
+      final SqlWriter.Frame castFrameToNumber = writer.startFunCall("CAST");
+      final SqlWriter.Frame concatFrameToNumber = writer.startFunCall("CONCAT");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(concatFrameToNumber);
+      writer.sep("AS");
+      writer.literal("INT64");
+      writer.endFunCall(castFrameToNumber);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }

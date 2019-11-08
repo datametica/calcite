@@ -416,6 +416,18 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.STRING);
 
+  /** The "TO_NUMBER(string1, string2)" function; casts string1
+   * as hexadecimal to a NUMBER using the format specified in string2. */
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction TO_NUMBER =
+    new SqlFunction(
+      "TO_NUMBER",
+      SqlKind.TO_NUMBER,
+      ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.INTEGER),
+        SqlTypeTransforms.TO_NULLABLE),
+      null, OperandTypes.STRING_STRING,
+      SqlFunctionCategory.STRING);
+
 }
 
 // End SqlLibraryOperators.java
