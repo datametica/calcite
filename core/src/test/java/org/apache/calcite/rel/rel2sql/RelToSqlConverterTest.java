@@ -4284,7 +4284,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling() {
+  public void testTO_NUMBERFunctionHandling() {
     String query = "select TO_NUMBER('03ea02653f6938ba','XXXXXXXXXXXXXXXX')";
     final String expected = "SELECT CAST(CONCAT('03ea02653f6938ba', 'XXXXXXXXXXXXXXXX') AS INT64)";
     sql(query).withBigQuery().ok(expected);
