@@ -1131,7 +1131,7 @@ public abstract class SqlImplementor {
           && hasNestedAggregations((Aggregate) rel)) {
         needNew = true;
       }
-      if(rel instanceof Project
+      if (rel instanceof Project
           && rel.getInput(0) instanceof Aggregate
           && rel.getInput(0).getInput(0) instanceof Project
           && rel.getRowType().getFieldCount() < rel.getInput(0).getRowType().getFieldCount()) {
