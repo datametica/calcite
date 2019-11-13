@@ -22,8 +22,10 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
+import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
@@ -33,8 +35,10 @@ import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 
 import com.google.common.collect.ImmutableList;
@@ -231,20 +235,30 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseRegexSubstr(writer, call, leftPrec, rightPrec);
       break;
     case TO_NUMBER:
-      final SqlWriter.Frame castFrameToNumber = writer.startFunCall("CAST");
-      final SqlWriter.Frame concatFrameToNumber = writer.startFunCall("CONCAT");
-      for (SqlNode operand : call.getOperandList()) {
-        writer.sep(",");
-        operand.unparse(writer, leftPrec, rightPrec);
-      }
-      writer.endFunCall(concatFrameToNumber);
-      writer.sep("AS");
-      writer.literal("INT64");
-      writer.endFunCall(castFrameToNumber);
+      unparseRegexToNumber(writer, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseRegexToNumber(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlNode[] sqlNodes = new SqlNode[]{new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN,
+      new SqlNode[]{SqlLiteral.createCharString("0x", call.operand(1).getParserPosition())},
+      SqlParserPos.ZERO), call.operand(0)};
+    SqlCall extractCall = new SqlBasicCall(SqlStdOperatorTable.CONCAT, sqlNodes,
+        SqlParserPos.ZERO);
+
+    call.setOperand(0, extractCall);
+    call.setOperand(1,
+        new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.INTEGER, SqlParserPos.ZERO),
+        SqlParserPos.ZERO));
+
+    SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
+    extractCall = new SqlBasicCall(SqlStdOperatorTable.CAST,
+      extractNodeOperands, SqlParserPos.ZERO);
+
+    SqlStdOperatorTable.CAST.unparse(writer, extractCall, leftPrec, rightPrec);
   }
 
   @Override public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
@@ -327,4 +341,21 @@ public class BigQuerySqlDialect extends SqlDialect {
 
 }
 
+
+/*final SqlWriter.Frame castFrameToNumber = writer.startFunCall("CAST");
+        //SqlWriter.Frame concatFrameToNumber = null;
+        //SqlNode secondOperand = call.getOperandList().get(1);
+        //if(Pattern.matches("^'[Xx]+'", secondOperand.toString())){
+        SqlWriter.Frame concatFrameToNumber = writer.startFunCall("CONCAT");
+       // }
+
+        for (SqlNode operand : call.getOperandList()) {
+          writer.sep(",");
+          operand.unparse(writer, leftPrec, rightPrec);
+        }
+        writer.endFunCall(concatFrameToNumber);
+        writer.sep("AS");
+        writer.literal("INT64");
+        writer.endFunCall(castFrameToNumber);
+        break;*/
 // End BigQuerySqlDialect.java
