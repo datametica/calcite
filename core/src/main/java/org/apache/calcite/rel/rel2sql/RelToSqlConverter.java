@@ -267,7 +267,9 @@ public class RelToSqlConverter extends SqlImplementor
     final Result x = visitChild(0, e.getInput());
     final Builder builder;
     if (e.getInput() instanceof Project) {
-      builder = x.builder(e);
+      Project project = (Project) e.getInput();
+      builder = dialect.getConformance().isGroupByAlias() && project.getInput() instanceof Join
+          ? x.builder(e, Clause.GROUP_BY) : x.builder(e);
       builder.clauses.add(Clause.GROUP_BY);
     } else {
       builder = x.builder(e, Clause.GROUP_BY);

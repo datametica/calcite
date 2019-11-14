@@ -4165,6 +4165,20 @@ public class RelToSqlConverterTest {
     sql(expected).exec();
   }
 
+  @Test public void testSelectWithoutFilterAndGroupBy() {
+    String query = "select \"t1\".\"department_id\" from\n"
+        + "\"foodmart\".\"employee\" as \"t1\" inner join \"foodmart\".\"department\" as \"t2\"\n"
+        + "on \"t1\".\"department_id\" = \"t2\".\"department_id\"\n"
+        + "group by \"t2\".\"department_id\", \"t1\".\"department_id\"";
+    final String expected = "SELECT t.department_id\n"
+        + "FROM (SELECT department.department_id AS department_id0, employee.department_id\n"
+        + "FROM foodmart.employee\n"
+        + "INNER JOIN foodmart.department ON employee.department_id = department.department_id) "
+        + "AS t\n"
+        + "GROUP BY t.department_id0, t.department_id";
+    sql(query).withBigQuery().ok(expected);
+  }
+
   @Test public void testSelectNullWithInsert() {
     String query = "insert into\n"
             + "\"account\"(\"account_id\",\"account_parent\",\"account_type\",\"account_rollup\")\n"
