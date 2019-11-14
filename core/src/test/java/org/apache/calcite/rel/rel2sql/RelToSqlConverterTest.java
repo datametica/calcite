@@ -382,6 +382,25 @@ public class RelToSqlConverterTest {
         .ok(bigQueryExpected);
   }
 
+
+  @Test public void testDuplicateLiteralInSelectForGroupBy() {
+    final String query = "select '1' as \"a\", sku + 1 as b, '1' as \"d\" from"
+        + " \"product\" group by '1', sku + 1";
+    final String expectedSql = "SELECT '1' a, SKU + 1 B, '1' d\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY '1', SKU + 1";
+    final String bigQueryExpected = "SELECT '1' AS a, SKU + 1 AS B, '1' AS d\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY 1, B";
+    sql(query)
+        .withHive()
+        .ok(expectedSql)
+        .withSpark()
+        .ok(expectedSql)
+        .withBigQuery()
+        .ok(bigQueryExpected);
+  }
+
   /** CUBE of one column is equivalent to ROLLUP, and Calcite recognizes
    * this. */
   @Test public void testSelectQueryWithSingletonCube() {
@@ -3858,6 +3877,56 @@ public class RelToSqlConverterTest {
         .ok(expected)
         .withBigQuery()
         .ok(expectedBiqquery);
+  }
+
+  @Test public void testRegexSubstrFunction2Args() {
+    final String query = "select regexp_substr('choco chico chipo', '.*cho*p*c*?.*')"
+        + "from \"foodmart\".\"product\"";
+    final String expected = "SELECT REGEXP_EXTRACT('choco chico chipo', '.*cho*p*c*?.*')\n"
+        + "FROM foodmart.product";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testRegexSubstrFunction3Args() {
+    final String query = "select \"product_id\", regexp_substr('choco chico chipo', "
+        + "'.*cho*p*c*?.*', 7)\n"
+        + "from \"foodmart\".\"product\" where \"product_id\" = 1";
+    final String expected = "SELECT product_id, REGEXP_EXTRACT(SUBSTR('choco chico chipo', 7), "
+        + "'.*cho*p*c*?.*')\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testRegexSubstrFunction4Args() {
+    final String query = "select \"product_id\", regexp_substr('chocolate chip cookies', 'c+.{2}',"
+        + " 4, 2)\n"
+        + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3)";
+    final String expected = "SELECT product_id, REGEXP_EXTRACT_ALL(SUBSTR('chocolate chip "
+        + "cookies', 4), 'c+.{2}') [OFFSET(1)]\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testRegexSubstrFunction5Args() {
+    final String query = "select regexp_substr('chocolate Chip cookies', 'c+.{2}',"
+        + " 1, 2, 'i')\n"
+        + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3, 4)";
+    final String expected = "SELECT "
+        + "REGEXP_EXTRACT_ALL(SUBSTR('chocolate Chip cookies', 1), '(?i)c+.{2}') [OFFSET"
+        + "(1)]\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3 OR product_id = 4";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
   }
 
   @Test public void testJsonType() {
