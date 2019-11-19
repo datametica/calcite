@@ -186,8 +186,7 @@ public class RelToSqlConverterTest {
     return sqlNode.toSqlString(dialect).getSql();
   }
 
-  @Test
-  public void testSimpleSelectWithOrderByAliasAsc() {
+  @Test public void testSimpleSelectWithOrderByAliasAsc() {
     final String query = "select sku+1 as a from \"product\" order by a";
     final String bigQueryExpected = "SELECT SKU + 1 AS A\nFROM foodmart.product\n"
         + "ORDER BY A IS NULL, A";
@@ -4134,8 +4133,7 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test
-  public void testTimestampLiteralOracle() {
+  @Test public void testTimestampLiteralOracle() {
     String query = "SELECT TIMESTAMP '1978-05-02 12:34:56.78' FROM \"employee\"";
     String expected = "SELECT TO_TIMESTAMP('1978-05-02 12:34:56.78',"
         + " 'YYYY-MM-DD HH24:MI:SS.FF')\n"
@@ -4266,8 +4264,7 @@ public class RelToSqlConverterTest {
   }
 
 
-  @Test
-  public void testDialectQuoteStringLiteral() {
+  @Test public void testDialectQuoteStringLiteral() {
     dialects().forEach((dialect, databaseProduct) -> {
       assertThat(dialect.quoteStringLiteral(""), is("''"));
       assertThat(dialect.quoteStringLiteral("can't run"),
