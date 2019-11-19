@@ -4284,16 +4284,16 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling1() {
+  public void testTONUMBERFunctionHandlingHexaToInt() {
     String query = "select TO_NUMBER('03ea02653f6938ba','XXXXXXXXXXXXXXXX')";
     final String expected = "SELECT CAST(CONCAT('0x', '03ea02653f6938ba') AS INTEGER)";
-    final String expectedHive = "SELECT CONV('03ea02653f6938ba', 16, 10)";
+    //final String expectedHive = "SELECT CONV('03ea02653f6938ba', 16, 10)";
     sql(query).withBigQuery().ok(expected);
-    sql(query).withHive().ok(expectedHive);
+    //sql(query).withHive().ok(expectedHive);
   }
 
   @Test
-  public void testTONUMBERFunctionHandling2() {
+  public void testTONUMBERFunctionHandlingFloatingPoint() {
     String query = "select TO_NUMBER('1.789','9.999')";
     final String expected = "SELECT CAST('1.789' AS FLOAT)";
     sql(query).withBigQuery().ok(expected);
@@ -4301,7 +4301,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling3() {
+  public void testTONUMBERFunctionHandlingFloatingPointWithD() {
     String query = "select TO_NUMBER('1.789','9D999')";
     final String expected = "SELECT CAST('1.789' AS FLOAT)";
     sql(query).withBigQuery().ok(expected);
@@ -4309,7 +4309,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling4() {
+  public void testTONUMBERFunctionHandlingWithComma() {
     String query = "SELECT TO_NUMBER ('1,789', '9,999')";
     final String expected = "SELECT CAST('1789' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
@@ -4317,7 +4317,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling5() {
+  public void testTONUMBERFunctionHandlingWithCurrency() {
     String query = "SELECT TO_NUMBER ('$1789', '$9999')";
     final String expected = "SELECT CAST('1789' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
@@ -4325,7 +4325,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling6() {
+  public void testTONUMBERFunctionHandlingWithCurrencyAndL() {
     String query = "SELECT TO_NUMBER ('$1789', 'L9999')";
     final String expected = "SELECT CAST('1789' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
@@ -4333,7 +4333,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling7() {
+  public void testTONUMBERFunctionHandlingWithMinus() {
     String query = "SELECT TO_NUMBER ('-12334', 'S99999')";
     final String expected = "SELECT CAST('-12334' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
@@ -4341,7 +4341,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling8() {
+  public void testTONUMBERFunctionHandlingWithE() {
     String query = "SELECT TO_NUMBER ('12E3', '99EEEE')";
     final String expected = "SELECT CAST('12E3' AS DECIMAL)";
     sql(query).withBigQuery().ok(expected);
@@ -4349,7 +4349,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling9() {
+  public void testTONUMBERFunctionHandlingWithCurrencyName() {
     String query = "SELECT TO_NUMBER('dollar1234','L9999','NLS_CURRENCY=''dollar''')";
     final String expected = "SELECT CAST('1234' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
@@ -4357,7 +4357,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling10() {
+  public void testTONUMBERFunctionHandlingWithG() {
     String query = "SELECT TO_NUMBER ('1,2345', '9G9999')";
     final String expected = "SELECT CAST('12345' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
@@ -4365,7 +4365,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling11() {
+  public void testTONUMBERFunctionHandling() {
     String query = "SELECT TO_NUMBER ('1234', '9999')";
     final String expected = "SELECT CAST('1234' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);

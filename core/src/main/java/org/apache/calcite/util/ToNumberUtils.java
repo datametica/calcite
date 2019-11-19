@@ -56,7 +56,7 @@ public class ToNumberUtils {
     case 2:
       if (Pattern.matches("^'[Xx]+'", call.operand(1).toString())) {
 
-        if (writer.getDialect() instanceof HiveSqlDialect) {
+        /*if (writer.getDialect() instanceof HiveSqlDialect) {
           final SqlWriter.Frame convFrame = writer.startFunCall("CONV");
           writer.sep(",");
           writer.literal(call.getOperandList().get(0).toString());
@@ -66,7 +66,7 @@ public class ToNumberUtils {
           writer.literal("10");
 
           writer.endFunCall(convFrame);
-        } else {
+        } else {*/
           SqlNode[] sqlNodes = new SqlNode[]{new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN,
               new SqlNode[]{SqlLiteral.createCharString("0x", call.operand(1).getParserPosition())},
               SqlParserPos.ZERO), call.operand(0)};
@@ -75,7 +75,7 @@ public class ToNumberUtils {
           call.setOperand(0, extractCall);
 
           ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
-        }
+        /*}*/
 
 
       } else if (call.operand(0).toString().contains(".")) {
@@ -109,13 +109,13 @@ public class ToNumberUtils {
 
         ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
 
-      } else {
+      } /*else {
         SqlTypeName sqlTypeName = SqlTypeName.valueOf("NULL");
         call.setOperand(0,
             new SqlDataTypeSpec(new SqlBasicTypeNameSpec(sqlTypeName, SqlParserPos.ZERO),
                 SqlParserPos.ZERO));
         ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
-      }
+      }*/
       break;
     default:
       throw new IllegalArgumentException("Illegal Argument Exception");
