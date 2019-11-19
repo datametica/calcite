@@ -320,21 +320,4 @@ public class BigQuerySqlDialect extends SqlDialect {
 
 }
 
-
-/*final SqlWriter.Frame castFrameToNumber = writer.startFunCall("CAST");
-        //SqlWriter.Frame concatFrameToNumber = null;
-        //SqlNode secondOperand = call.getOperandList().get(1);
-        //if(Pattern.matches("^'[Xx]+'", secondOperand.toString())){
-        SqlWriter.Frame concatFrameToNumber = writer.startFunCall("CONCAT");
-       // }
-
-        for (SqlNode operand : call.getOperandList()) {
-          writer.sep(",");
-          operand.unparse(writer, leftPrec, rightPrec);
-        }
-        writer.endFunCall(concatFrameToNumber);
-        writer.sep("AS");
-        writer.literal("INT64");
-        writer.endFunCall(castFrameToNumber);
-        break;*/
 // End BigQuerySqlDialect.java
