@@ -186,7 +186,8 @@ public class RelToSqlConverterTest {
     return sqlNode.toSqlString(dialect).getSql();
   }
 
-  @Test public void testSimpleSelectWithOrderByAliasAsc() {
+  @Test
+  public void testSimpleSelectWithOrderByAliasAsc() {
     final String query = "select sku+1 as a from \"product\" order by a";
     final String bigQueryExpected = "SELECT SKU + 1 AS A\nFROM foodmart.product\n"
         + "ORDER BY A IS NULL, A";
@@ -4133,7 +4134,8 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test public void testTimestampLiteralOracle() {
+  @Test
+  public void testTimestampLiteralOracle() {
     String query = "SELECT TIMESTAMP '1978-05-02 12:34:56.78' FROM \"employee\"";
     String expected = "SELECT TO_TIMESTAMP('1978-05-02 12:34:56.78',"
         + " 'YYYY-MM-DD HH24:MI:SS.FF')\n"
@@ -4264,7 +4266,8 @@ public class RelToSqlConverterTest {
   }
 
 
-  @Test public void testDialectQuoteStringLiteral() {
+  @Test
+  public void testDialectQuoteStringLiteral() {
     dialects().forEach((dialect, databaseProduct) -> {
       assertThat(dialect.quoteStringLiteral(""), is("''"));
       assertThat(dialect.quoteStringLiteral("can't run"),
@@ -4284,10 +4287,92 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testTONUMBERFunctionHandling() {
+  public void testTONUMBERFunctionHandling1() {
     String query = "select TO_NUMBER('03ea02653f6938ba','XXXXXXXXXXXXXXXX')";
     final String expected = "SELECT CAST(CONCAT('0x', '03ea02653f6938ba') AS INTEGER)";
+    final String expectedHive = "SELECT CONV('03ea02653f6938ba', 16, 10)";
     sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expectedHive);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling2() {
+    String query = "select TO_NUMBER('1.789','9.999')";
+    final String expected = "SELECT CAST('1.789' AS FLOAT)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling3() {
+    String query = "select TO_NUMBER('1.789','9D999')";
+    final String expected = "SELECT CAST('1.789' AS FLOAT)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling4() {
+    String query = "SELECT TO_NUMBER ('1,789', '9,999')";
+    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling5() {
+    String query = "SELECT TO_NUMBER ('$1789', '$9999')";
+    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling6() {
+    String query = "SELECT TO_NUMBER ('$1789', 'L9999')";
+    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling7() {
+    String query = "SELECT TO_NUMBER ('-12334', 'S99999')";
+    final String expected = "SELECT CAST('-12334' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling8() {
+    String query = "SELECT TO_NUMBER ('12E3', '99EEEE')";
+    final String expected = "SELECT CAST('12E3' AS DECIMAL)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling9() {
+    String query = "SELECT TO_NUMBER('dollar1234','L9999','NLS_CURRENCY=''dollar''')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling10() {
+    String query = "SELECT TO_NUMBER ('1,2345', '9G9999')";
+    final String expected = "SELECT CAST('12345' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandling11() {
+    String query = "SELECT TO_NUMBER ('1234', '9999')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
   }
 
   /** Fluid interface to run tests. */
