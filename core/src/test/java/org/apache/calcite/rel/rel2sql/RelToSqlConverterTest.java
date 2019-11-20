@@ -4363,6 +4363,14 @@ public class RelToSqlConverterTest {
   }
 
   @Test
+  public void testTONUMBERFunctionHandlingWithU() {
+    String query = "SELECT TO_NUMBER ('$1234', 'U9999')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
   public void testTONUMBERFunctionHandling() {
     String query = "SELECT TO_NUMBER ('1234', '9999')";
     final String expected = "SELECT CAST('1234' AS INTEGER)";
