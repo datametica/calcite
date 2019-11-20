@@ -4296,6 +4296,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1.789' AS FLOAT)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4304,6 +4305,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1.789' AS FLOAT)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4312,6 +4314,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1789' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4320,6 +4323,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1789' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4328,6 +4332,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1789' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4336,6 +4341,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('-12334' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4344,6 +4350,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('12E3' AS DECIMAL)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4352,6 +4359,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1234' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4360,6 +4368,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('12345' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4368,6 +4377,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1234' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4376,6 +4386,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST(' 123 ' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4384,6 +4395,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('-1234' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4392,6 +4404,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('-1.234' AS FLOAT)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4400,6 +4413,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('01234' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4408,6 +4422,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1234' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   @Test
@@ -4416,6 +4431,7 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT CAST('1234' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
+    sql(query).withSpark().ok(expected);
   }
 
   /** Fluid interface to run tests. */

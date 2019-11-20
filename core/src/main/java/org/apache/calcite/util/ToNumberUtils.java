@@ -57,7 +57,7 @@ public class ToNumberUtils {
     }
     call.setOperand(0,
         new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN, new SqlNode[]{
-            SqlLiteral.createCharString(firstOperand,
+            SqlLiteral.createCharString(firstOperand.trim(),
                 call.operand(1).getParserPosition())}, SqlParserPos.ZERO));
   }
 
