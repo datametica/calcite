@@ -66,9 +66,15 @@ public class ToNumberUtils {
       } else if (call.operand(0).toString().contains(".")) {
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.FLOAT);
       } else {
+
+        String firstOperand = call.operand(0).toString().replaceAll("[-',$]+", "");
+        if (call.operand(1).toString().contains("MI") || call.operand(1).toString().contains("S")) {
+          firstOperand = "-" + firstOperand;
+        }
+
         call.setOperand(0,
             new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN, new SqlNode[]{
-                SqlLiteral.createCharString(call.operand(0).toString().replaceAll("[',$]+", ""),
+                SqlLiteral.createCharString(firstOperand,
                     call.operand(1).getParserPosition())}, SqlParserPos.ZERO));
 
         handleCasting(writer, call, leftPrec, rightPrec, (call.operand(0).toString

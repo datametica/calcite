@@ -4371,6 +4371,38 @@ public class RelToSqlConverterTest {
   }
 
   @Test
+  public void testTONUMBERFunctionHandlingWithPR() {
+    String query = "SELECT TO_NUMBER (' 123 ', '999PR')";
+    final String expected = "SELECT CAST(' 123 ' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandlingWithMI() {
+    String query = "SELECT TO_NUMBER ('1234-', '9999MI')";
+    final String expected = "SELECT CAST('-1234' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandlingWithZero() {
+    String query = "select TO_NUMBER('01234','09999')";
+    final String expected = "SELECT CAST('01234' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
+  public void testTONUMBERFunctionHandlingWithB() {
+    String query = "select TO_NUMBER('1234','B9999')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
   public void testTONUMBERFunctionHandling() {
     String query = "SELECT TO_NUMBER ('1234', '9999')";
     final String expected = "SELECT CAST('1234' AS INTEGER)";
