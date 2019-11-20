@@ -50,6 +50,17 @@ public class ToNumberUtils {
     SqlStdOperatorTable.CAST.unparse(writer, extractCallCast, leftPrec, rightPrec);
   }
 
+  private static void handleNegativeValue(SqlCall call, String regEx) {
+    String firstOperand = call.operand(0).toString().replaceAll(regEx, "");
+    if (call.operand(1).toString().contains("MI") || call.operand(1).toString().contains("S")) {
+      firstOperand = "-" + firstOperand;
+    }
+    call.setOperand(0,
+        new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN, new SqlNode[]{
+            SqlLiteral.createCharString(firstOperand,
+                call.operand(1).getParserPosition())}, SqlParserPos.ZERO));
+  }
+
   public static void handleToNumber(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperandList().size()) {
     case 2:
@@ -64,18 +75,12 @@ public class ToNumberUtils {
         ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
 
       } else if (call.operand(0).toString().contains(".")) {
+        String regEx = "[-']+";
+        handleNegativeValue(call, regEx);
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.FLOAT);
       } else {
-
-        String firstOperand = call.operand(0).toString().replaceAll("[-',$]+", "");
-        if (call.operand(1).toString().contains("MI") || call.operand(1).toString().contains("S")) {
-          firstOperand = "-" + firstOperand;
-        }
-
-        call.setOperand(0,
-            new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN, new SqlNode[]{
-                SqlLiteral.createCharString(firstOperand,
-                    call.operand(1).getParserPosition())}, SqlParserPos.ZERO));
+        String regEx = "[-',$]+";
+        handleNegativeValue(call, regEx);
 
         handleCasting(writer, call, leftPrec, rightPrec, (call.operand(0).toString
             ().contains("E")

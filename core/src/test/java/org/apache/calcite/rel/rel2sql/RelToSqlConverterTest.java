@@ -4387,6 +4387,14 @@ public class RelToSqlConverterTest {
   }
 
   @Test
+  public void testTONUMBERFunctionHandlingWithMIDecimal() {
+    String query = "SELECT TO_NUMBER ('1.234-', '9.999MI')";
+    final String expected = "SELECT CAST('-1.234' AS FLOAT)";
+    sql(query).withBigQuery().ok(expected);
+    sql(query).withHive().ok(expected);
+  }
+
+  @Test
   public void testTONUMBERFunctionHandlingWithZero() {
     String query = "select TO_NUMBER('01234','09999')";
     final String expected = "SELECT CAST('01234' AS INTEGER)";
