@@ -23,7 +23,6 @@ import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.dialect.HiveSqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -55,28 +54,14 @@ public class ToNumberUtils {
     switch (call.getOperandList().size()) {
     case 2:
       if (Pattern.matches("^'[Xx]+'", call.operand(1).toString())) {
+        SqlNode[] sqlNodes = new SqlNode[]{new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN,
+            new SqlNode[]{SqlLiteral.createCharString("0x", call.operand(1).getParserPosition())},
+            SqlParserPos.ZERO), call.operand(0)};
+        SqlCall extractCall = new SqlBasicCall(SqlStdOperatorTable.CONCAT, sqlNodes,
+            SqlParserPos.ZERO);
+        call.setOperand(0, extractCall);
 
-        /*if (writer.getDialect() instanceof HiveSqlDialect) {
-          final SqlWriter.Frame convFrame = writer.startFunCall("CONV");
-          writer.sep(",");
-          writer.literal(call.getOperandList().get(0).toString());
-          writer.sep(",");
-          writer.literal("16");
-          writer.sep(",");
-          writer.literal("10");
-
-          writer.endFunCall(convFrame);
-        } else {*/
-          SqlNode[] sqlNodes = new SqlNode[]{new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN,
-              new SqlNode[]{SqlLiteral.createCharString("0x", call.operand(1).getParserPosition())},
-              SqlParserPos.ZERO), call.operand(0)};
-          SqlCall extractCall = new SqlBasicCall(SqlStdOperatorTable.CONCAT, sqlNodes,
-              SqlParserPos.ZERO);
-          call.setOperand(0, extractCall);
-
-          ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
-        /*}*/
-
+        ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
 
       } else if (call.operand(0).toString().contains(".")) {
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.FLOAT);
@@ -109,13 +94,7 @@ public class ToNumberUtils {
 
         ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
 
-      } /*else {
-        SqlTypeName sqlTypeName = SqlTypeName.valueOf("NULL");
-        call.setOperand(0,
-            new SqlDataTypeSpec(new SqlBasicTypeNameSpec(sqlTypeName, SqlParserPos.ZERO),
-                SqlParserPos.ZERO));
-        ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
-      }*/
+      }
       break;
     default:
       throw new IllegalArgumentException("Illegal Argument Exception");
