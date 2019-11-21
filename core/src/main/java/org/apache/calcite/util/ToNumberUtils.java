@@ -85,10 +85,11 @@ public class ToNumberUtils {
         }
         handleNegativeValue(call, regEx);
 
-        handleCasting(writer, call, leftPrec, rightPrec, (call.operand(0).toString
-            ().contains("E")
-            && call.operand(1).toString().contains("E"))
-            ? SqlTypeName.DECIMAL : SqlTypeName.INTEGER);
+        SqlTypeName sqlTypeName = call.operand(0).toString().contains("E")
+            && call.operand(1).toString().contains("E")
+            ? SqlTypeName.DECIMAL : SqlTypeName.INTEGER;
+
+        handleCasting(writer, call, leftPrec, rightPrec, sqlTypeName);
       }
       break;
     case 3:
