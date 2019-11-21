@@ -4383,7 +4383,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testTONUMBERFunctionHandlingWithPR() {
     String query = "SELECT TO_NUMBER (' 123 ', '999PR')";
-    final String expected = "SELECT CAST(' 123 ' AS INTEGER)";
+    final String expected = "SELECT CAST('123' AS INTEGER)";
     sql(query).withBigQuery().ok(expected);
     sql(query).withHive().ok(expected);
     sql(query).withSpark().ok(expected);
