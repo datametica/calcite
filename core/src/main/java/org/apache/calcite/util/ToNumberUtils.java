@@ -55,24 +55,24 @@ public class ToNumberUtils {
     if (call.operand(1).toString().contains("MI") || call.operand(1).toString().contains("S")) {
       firstOperand = "-" + firstOperand;
     }
-    call.setOperand(0,
-        new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN, new SqlNode[]{
-            SqlLiteral.createCharString(firstOperand.trim(),
-                call.operand(1).getParserPosition())}, SqlParserPos.ZERO));
+
+    SqlNode[] sqlNode = new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(),
+        SqlParserPos.ZERO)};
+    call.setOperand(0, sqlNode[0]);
   }
 
   public static void handleToNumber(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperandList().size()) {
     case 2:
       if (Pattern.matches("^'[Xx]+'", call.operand(1).toString())) {
-        SqlNode[] sqlNodes = new SqlNode[]{new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN,
-            new SqlNode[]{SqlLiteral.createCharString("0x", call.operand(1).getParserPosition())},
+        SqlNode[] sqlNodes = new SqlNode[]{SqlLiteral.createCharString("0x",
             SqlParserPos.ZERO), call.operand(0)};
+
         SqlCall extractCall = new SqlBasicCall(SqlStdOperatorTable.CONCAT, sqlNodes,
             SqlParserPos.ZERO);
         call.setOperand(0, extractCall);
 
-        ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
+        handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
 
       } else if (call.operand(0).toString().contains(".")) {
         String regEx = "[-']+";
@@ -80,6 +80,9 @@ public class ToNumberUtils {
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.FLOAT);
       } else {
         String regEx = "[-',$]+";
+        if (call.operand(1).toString().contains("C")) {
+          regEx = "[-',$A-Za-z]+";
+        }
         handleNegativeValue(call, regEx);
 
         handleCasting(writer, call, leftPrec, rightPrec, (call.operand(0).toString
@@ -96,15 +99,15 @@ public class ToNumberUtils {
         int lengthOfFirstArgument = call.operand(0).toString().replaceAll("[']+", "").length()
             - call.operand(1).toString().replaceAll("[L']+", "").length();
 
-        call.setOperand(0,
-            new SqlBasicCall(SqlStdOperatorTable.LITERAL_CHAIN, new SqlNode[]{
-                SqlLiteral.createCharString(call.operand(0).toString().replaceAll("[']+", "")
-                        .substring(lengthOfFirstArgument, call.operand(0)
-                            .toString().replaceAll("[']+", "").length()),
-                    call.operand(1).getParserPosition())}, SqlParserPos.ZERO));
+        SqlNode[] sqlNodes = new SqlNode[]{
+            SqlLiteral.createCharString(call.operand(0).toString().replaceAll("[']+", "")
+                    .substring(lengthOfFirstArgument, call.operand(0)
+                        .toString().replaceAll("[']+", "").length()),
+                call.operand(1).getParserPosition())};
 
-        ToNumberUtils.handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
+        call.setOperand(0, sqlNodes[0]);
 
+        handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
       }
       break;
     default:
