@@ -1763,6 +1763,11 @@ public class RexUtil {
         ImmutableList.of(e));
   }
 
+  public static RexCall createRexCall(RelDataType type,
+      SqlOperator op, List<? extends RexNode> operands) {
+    return new RexCall(type, op, operands);
+  }
+
   static SqlOperator op(SqlKind kind) {
     switch (kind) {
     case IS_FALSE:

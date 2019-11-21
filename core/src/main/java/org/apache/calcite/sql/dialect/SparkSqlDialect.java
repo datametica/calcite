@@ -86,6 +86,10 @@ public class SparkSqlDialect extends SqlDialect {
     return true;
   }
 
+  @Override public boolean supportsInClause() {
+    return true;
+  }
+
   @Override public void unparseOffsetFetch(SqlWriter writer, SqlNode offset,
       SqlNode fetch) {
     unparseFetchUsingLimit(writer, offset, fetch);

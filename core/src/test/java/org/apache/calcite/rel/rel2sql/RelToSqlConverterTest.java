@@ -4302,6 +4302,83 @@ public class RelToSqlConverterTest {
     });
   }
 
+  @Test public void testInWithList() {
+    String query = "select  \"product_id\"  from \"product\" where \"product_name\" = 'xyz' "
+        + "OR \"product_id\" IN (100,200) OR \"net_weight\" = 300";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_name = 'xyz' OR product_id IN (100, 200) OR net_weight = 300";
+    sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testMultipleInWithList() {
+    String query = "select  \"product_id\"  from \"product\" where \"product_name\" IN ('abc',"
+        + "'xyz') "
+        + "OR \"product_id\" IN (100,200)";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_name IN ('abc', 'xyz') OR product_id IN (100, 200)";
+    sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testNotInWithList() {
+    String query = "select  \"product_id\"  from \"product\" where  \"net_weight\" NOT IN (200,"
+        + "300)";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE net_weight NOT IN (200, 300)";
+    sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testNotInOrInWithList() {
+    String query = "select  \"product_id\"  from \"product\" where  \"net_weight\" IN (200,300) "
+        + "AND \"product_id\" IN (100,200)";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE net_weight IN (200, 300) AND product_id IN (100, 200)";
+    sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testMultipleOrsAndAnds() {
+    String query = "select  \"product_id\"  from \"product\" where  \"net_weight\" = 200 "
+        + "AND \"product_id\" = 100 OR \"product_name\" = 'xyz' AND \"gross_weight\" = 100";
+    final String expected = "SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "WHERE net_weight = 200 AND product_id = 100 OR product_name = 'xyz' AND gross_weight ="
+        + " 100";
+    sql(query)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withBigQuery()
+        .ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;

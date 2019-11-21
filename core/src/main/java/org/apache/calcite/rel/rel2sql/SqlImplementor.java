@@ -41,6 +41,7 @@ import org.apache.calcite.rex.RexPatternFieldRef;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexWindow;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.sql.JoinType;
@@ -77,6 +78,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multimap;
 
 import java.math.BigDecimal;
 import java.util.AbstractList;
@@ -642,7 +645,7 @@ public abstract class SqlImplementor {
       case NOT:
         RexNode operand = ((RexCall) rex).operands.get(0);
         final SqlNode node = toSql(program, operand);
-        switch (operand.getKind()) {
+        switch (node.getKind()) {
         case IN:
           return SqlStdOperatorTable.NOT_IN
               .createCall(POS, ((SqlCall) node).getOperandList());
@@ -661,13 +664,20 @@ public abstract class SqlImplementor {
           return toSql(program, (RexOver) rex);
         }
 
-        final RexCall call = (RexCall) stripCastFromString(rex, dialect);
+        RexCall call = (RexCall) stripCastFromString(rex, dialect);
         SqlOperator op = call.getOperator();
         switch (op.getKind()) {
         case SUM0:
           op = SqlStdOperatorTable.SUM;
+          break;
+        case OR:
+          if (dialect.supportsInClause()) {
+            call = makeInRexCall(call, op);
+          }
+          break;
         }
-        final List<SqlNode> nodeList = toSql(program, call.getOperands());
+
+        List<SqlNode> nodeList = toSql(program, call.getOperands());
         switch (call.getKind()) {
         case CAST:
           if (ignoreCast) {
@@ -681,6 +691,10 @@ public abstract class SqlImplementor {
           op = dialect.getTargetFunc(call);
           break;
         }
+        if (call.op == SqlStdOperatorTable.IN) {
+          return call.getOperator().createCall(POS, nodeList.get(0),
+              new SqlNodeList(nodeList.subList(1, nodeList.size()), POS));
+        }
         if (op instanceof SqlBinaryOperator && nodeList.size() > 2) {
           // In RexNode trees, OR and AND have any number of children;
           // SqlCall requires exactly 2. So, convert to a left-deep binary tree.
@@ -688,6 +702,55 @@ public abstract class SqlImplementor {
         }
         return op.createCall(new SqlNodeList(nodeList, POS));
       }
+    }
+
+    private RexCall makeInRexCall(RexCall call, SqlOperator op) {
+      List<RexCall> rexCalls = new ArrayList<>();
+      Multimap<RexNode, RexNode> map = LinkedListMultimap.create();
+      for (RexNode rexNode : call.getOperands()) {
+        if (rexNode.getKind() == SqlKind.AND) {
+          RexCall rexCall = (RexCall) rexNode;
+          RexCall andRexCall = RexUtil.createRexCall(call.type, SqlStdOperatorTable.AND,
+              rexCall.getOperands());
+          rexCalls.add(andRexCall);
+        } else {
+          decomposeRex(map, rexNode);
+        }
+      }
+      for (Map.Entry<RexNode, Collection<RexNode>> entry : map.asMap().entrySet()
+      ) {
+        List<RexNode> opList = new ArrayList<>();
+        opList.add(entry.getKey());
+        opList.addAll(entry.getValue());
+
+        SqlOperator newOp;
+        if (entry.getValue().size() > 1) {
+          newOp = SqlStdOperatorTable.IN;
+        } else {
+          newOp = SqlStdOperatorTable.EQUALS;
+        }
+        rexCalls.add(RexUtil.createRexCall(call.type, newOp, opList));
+      }
+      if (rexCalls.size() > 1) {
+        call = RexUtil.createRexCall(call.type, op, rexCalls);
+      } else {
+        call = rexCalls.get(0);
+      }
+      return call;
+    }
+
+    private Multimap<RexNode, RexNode> decomposeRex(Multimap<RexNode, RexNode> map, RexNode rex) {
+      RexNode rexInputRef = null;
+      RexNode constantRex = null;
+      for (RexNode r : ((RexCall) rex).getOperands()) {
+        if (r instanceof RexInputRef) {
+          rexInputRef = r;
+        } else {
+          constantRex = r;
+        }
+      }
+      map.put(rexInputRef, constantRex);
+      return map;
     }
 
     /** Converts an expression from {@link RexWindowBound} to {@link SqlNode}
@@ -700,7 +763,7 @@ public abstract class SqlImplementor {
           rexWindowBound.getOffset() == null
               ? null
               : SqlLiteral.createCharString(rexWindowBound.getOffset().toString(),
-                  SqlParserPos.ZERO);
+              SqlParserPos.ZERO);
       if (rexWindowBound.isPreceding()) {
         return offsetLiteral == null
             ? SqlWindow.createUnboundedPreceding(POS)
