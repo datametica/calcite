@@ -75,7 +75,7 @@ public class ToNumberUtils {
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
 
       } else if (call.operand(0).toString().contains(".")) {
-        String regEx = "[-']+";
+        String regEx = "[-',]+";
         handleNegativeValue(call, regEx);
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.FLOAT);
       } else {
