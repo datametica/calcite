@@ -36,13 +36,7 @@ import org.apache.calcite.sql.type.SqlTypeTransforms;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.calcite.sql.fun.SqlLibrary.BIGQUERY;
-import static org.apache.calcite.sql.fun.SqlLibrary.HIVE;
-import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
-import static org.apache.calcite.sql.fun.SqlLibrary.ORACLE;
-import static org.apache.calcite.sql.fun.SqlLibrary.POSTGRESQL;
-import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
-import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
+import static org.apache.calcite.sql.fun.SqlLibrary.*;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
 
@@ -418,7 +412,7 @@ public abstract class SqlLibraryOperators {
 
   /** The "TO_NUMBER(string1, string2)" function; casts string1
    * as hexadecimal to a NUMBER using the format specified in string2. */
-  @LibraryOperator(libraries = {BIGQUERY})
+  @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction TO_NUMBER =
       new SqlFunction(
       "TO_NUMBER",
