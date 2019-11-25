@@ -422,13 +422,14 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction TO_NUMBER =
       new SqlFunction(
-      "TO_NUMBER",
-      SqlKind.TO_NUMBER,
-      ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.INTEGER),
-        SqlTypeTransforms.TO_NULLABLE),
-      null, OperandTypes.or(OperandTypes.STRING_STRING, OperandTypes.STRING_STRING_STRING),
-      SqlFunctionCategory.STRING);
-
+          "TO_NUMBER",
+          SqlKind.TO_NUMBER,
+          ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.INTEGER),
+              SqlTypeTransforms.TO_NULLABLE),
+          null, OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING,
+          OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.NULL),
+          OperandTypes.STRING_STRING_STRING),
+          SqlFunctionCategory.STRING);
 }
 
 // End SqlLibraryOperators.java

@@ -40,10 +40,9 @@ public class ToNumberUtils {
   private static void handleCasting(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
       SqlTypeName sqlTypeName) {
-    call.setOperand(1,
-        new SqlDataTypeSpec(new SqlBasicTypeNameSpec(sqlTypeName, SqlParserPos.ZERO),
-            SqlParserPos.ZERO));
-    SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
+    SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), new SqlDataTypeSpec(new
+        SqlBasicTypeNameSpec(sqlTypeName, SqlParserPos.ZERO),
+        SqlParserPos.ZERO)};
     SqlCall extractCallCast = new SqlBasicCall(SqlStdOperatorTable.CAST,
         extractNodeOperands, SqlParserPos.ZERO);
 
@@ -63,8 +62,39 @@ public class ToNumberUtils {
 
   public static void handleToNumber(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperandList().size()) {
+    case 1:
+      if (Pattern.matches("['.-[0-9]]+", call.operand(0).toString())) {
+        String regEx = "[',]+";
+        String firstOperand = call.operand(0).toString().replaceAll(regEx, "");
+
+        SqlNode[] sqlNode = new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(),
+            SqlParserPos.ZERO)};
+        call.setOperand(0, sqlNode[0]);
+
+        SqlTypeName sqlTypeName = call.operand(0).toString().contains(".")
+            ? SqlTypeName.FLOAT : SqlTypeName.INTEGER;
+
+        handleCasting(writer, call, leftPrec, rightPrec, sqlTypeName);
+      }
+      break;
     case 2:
+      if (call.operand(1).toString().equalsIgnoreCase("null")) {
+        SqlNode[] extractNodeOperands = new SqlNode[]{new SqlDataTypeSpec(new
+            SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+            SqlParserPos.ZERO), new SqlDataTypeSpec(new
+            SqlBasicTypeNameSpec(SqlTypeName.INTEGER, SqlParserPos.ZERO),
+            SqlParserPos.ZERO)};
+        SqlCall extractCallCast = new SqlBasicCall(SqlStdOperatorTable.CAST,
+            extractNodeOperands, SqlParserPos.ZERO);
+
+        SqlStdOperatorTable.CAST.unparse(writer, extractCallCast, leftPrec, rightPrec);
+        return;
+      }
       if (Pattern.matches("^'[Xx]+'", call.operand(1).toString())) {
+
+        if (!writer.getDialect().getConformance().toString().equals("BIG_QUERY"))
+          throw new UnsupportedOperationException();
+
         SqlNode[] sqlNodes = new SqlNode[]{SqlLiteral.createCharString("0x",
             SqlParserPos.ZERO), call.operand(0)};
 
