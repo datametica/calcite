@@ -78,7 +78,8 @@ public class ToNumberUtils {
       }
       break;
     case 2:
-      if (call.operand(1).toString().equalsIgnoreCase("null")) {
+      if (call.operand(1).toString().equalsIgnoreCase("null")
+          || call.operand(0).toString().equalsIgnoreCase("null")) {
         SqlNode[] extractNodeOperands = new SqlNode[]{new SqlDataTypeSpec(new
             SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
             SqlParserPos.ZERO), new SqlDataTypeSpec(new
@@ -92,8 +93,9 @@ public class ToNumberUtils {
       }
       if (Pattern.matches("^'[Xx]+'", call.operand(1).toString())) {
 
-        if (!writer.getDialect().getConformance().toString().equals("BIG_QUERY"))
+        if (!writer.getDialect().getConformance().toString().equals("BIG_QUERY")) {
           throw new UnsupportedOperationException();
+        }
 
         SqlNode[] sqlNodes = new SqlNode[]{SqlLiteral.createCharString("0x",
             SqlParserPos.ZERO), call.operand(0)};

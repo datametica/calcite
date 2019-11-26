@@ -4639,6 +4639,19 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test
+  public void testToNumberFunctionHandlingFirstOperandNull() {
+    final String query = "SELECT TO_NUMBER(null,'9D99')";
+    final String expected = "SELECT CAST(NULL AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
   /**
    * Fluid interface to run tests.
    */
