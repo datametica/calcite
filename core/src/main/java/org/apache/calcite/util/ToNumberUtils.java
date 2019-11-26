@@ -19,6 +19,7 @@ package org.apache.calcite.util;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -60,35 +61,51 @@ public class ToNumberUtils {
     call.setOperand(0, sqlNode[0]);
   }
 
+  public static boolean handleIfOperandIsNull(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    if (call.operand(0).toString().equalsIgnoreCase("null")
+        || (call.getOperandList().size() == 2 && call.operand(1).toString().equalsIgnoreCase
+        ("null"))) {
+
+      SqlNode[] extractNodeOperands = new SqlNode[]{new SqlDataTypeSpec(new
+          SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+          SqlParserPos.ZERO), new SqlDataTypeSpec(new
+          SqlBasicTypeNameSpec(SqlTypeName.INTEGER, SqlParserPos.ZERO),
+          SqlParserPos.ZERO)};
+
+      SqlCall extractCallCast = new SqlBasicCall(SqlStdOperatorTable.CAST,
+          extractNodeOperands, SqlParserPos.ZERO);
+
+      SqlStdOperatorTable.CAST.unparse(writer, extractCallCast, leftPrec, rightPrec);
+      return true;
+    }
+    return false;
+  }
+
   public static void handleToNumber(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperandList().size()) {
     case 1:
-      if (Pattern.matches("['.-[0-9]]+", call.operand(0).toString())) {
-        String regEx = "[',]+";
-        String firstOperand = call.operand(0).toString().replaceAll(regEx, "");
+      if (handleIfOperandIsNull(writer, call, leftPrec, rightPrec)) {
+        return;
+      }
+      if (call.operand(0) instanceof SqlCharStringLiteral && Pattern.matches("['.-[0-9]]+", call
+          .operand(0).toString())) {
+        String regEx1 = "[',]+";
+        String firstOperand = call.operand(0).toString().replaceAll(regEx1, "");
 
         SqlNode[] sqlNode = new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(),
             SqlParserPos.ZERO)};
+
         call.setOperand(0, sqlNode[0]);
 
-        SqlTypeName sqlTypeName = call.operand(0).toString().contains(".")
-            ? SqlTypeName.FLOAT : SqlTypeName.INTEGER;
-
-        handleCasting(writer, call, leftPrec, rightPrec, sqlTypeName);
       }
+      SqlTypeName sqlTypeName = call.operand(0).toString().contains(".")
+          ? SqlTypeName.FLOAT : SqlTypeName.INTEGER;
+
+      handleCasting(writer, call, leftPrec, rightPrec, sqlTypeName);
       break;
     case 2:
-      if (call.operand(1).toString().equalsIgnoreCase("null")
-          || call.operand(0).toString().equalsIgnoreCase("null")) {
-        SqlNode[] extractNodeOperands = new SqlNode[]{new SqlDataTypeSpec(new
-            SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
-            SqlParserPos.ZERO), new SqlDataTypeSpec(new
-            SqlBasicTypeNameSpec(SqlTypeName.INTEGER, SqlParserPos.ZERO),
-            SqlParserPos.ZERO)};
-        SqlCall extractCallCast = new SqlBasicCall(SqlStdOperatorTable.CAST,
-            extractNodeOperands, SqlParserPos.ZERO);
-
-        SqlStdOperatorTable.CAST.unparse(writer, extractCallCast, leftPrec, rightPrec);
+      if (handleIfOperandIsNull(writer, call, leftPrec, rightPrec)) {
         return;
       }
       if (Pattern.matches("^'[Xx]+'", call.operand(1).toString())) {
@@ -102,26 +119,31 @@ public class ToNumberUtils {
 
         SqlCall extractCall = new SqlBasicCall(SqlStdOperatorTable.CONCAT, sqlNodes,
             SqlParserPos.ZERO);
+
         call.setOperand(0, extractCall);
 
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
 
       } else if (call.operand(0).toString().contains(".")) {
         String regEx = "[-',]+";
+
         handleNegativeValue(call, regEx);
+
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.FLOAT);
       } else {
         String regEx = "[-',$]+";
+
         if (call.operand(1).toString().contains("C")) {
           regEx = "[-',$A-Za-z]+";
         }
+
         handleNegativeValue(call, regEx);
 
-        SqlTypeName sqlTypeName = call.operand(0).toString().contains("E")
+        SqlTypeName sqlType = call.operand(0).toString().contains("E")
             && call.operand(1).toString().contains("E")
             ? SqlTypeName.DECIMAL : SqlTypeName.INTEGER;
 
-        handleCasting(writer, call, leftPrec, rightPrec, sqlTypeName);
+        handleCasting(writer, call, leftPrec, rightPrec, sqlType);
       }
       break;
     case 3:

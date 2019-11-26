@@ -429,7 +429,8 @@ public abstract class SqlLibraryOperators {
           null, OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING,
           OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.NULL),
           OperandTypes.family(SqlTypeFamily.NULL, SqlTypeFamily.STRING),
-          OperandTypes.STRING_STRING_STRING),
+          OperandTypes.STRING_STRING_STRING,
+          OperandTypes.family(SqlTypeFamily.NULL)),
           SqlFunctionCategory.STRING);
 }
 
