@@ -4640,8 +4640,8 @@ public class RelToSqlConverterTest {
   }
 
   @Test
-  public void testToNumberFunctionHandlingFirstOperandNull() {
-    final String query = "SELECT TO_NUMBER(null,'9D99')";
+  public void testToNumberFunctionHandlingSecoNull() {
+    final String query = "SELECT TO_NUMBER(null,'9D99');";
     final String expected = "SELECT CAST(NULL AS INTEGER)";
     sql(query)
         .withBigQuery()
@@ -4652,33 +4652,6 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingSingleArgument() {
-    final String query = "SELECT TO_NUMBER(SUBSTRING('123456', 2))";
-    final String expectedBig = "SELECT CAST(SUBSTR('123456', 2) AS INTEGER)";
-    final String expected = "SELECT CAST(SUBSTR('123456', 2) AS INTEGER)";
-    final String expectedSpark = "SELECT CAST(SUBSTRING('123456', 2) AS INTEGER)";
-    sql(query)
-        .withBigQuery()
-        .ok(expectedBig)
-        .withHive()
-        .ok(expected)
-        .withSpark()
-        .ok(expectedSpark);
-  }
-
-  @Test
-  public void testToNumberFunctionHandlingNullFirst() {
-    final String query = "SELECT TO_NUMBER(null)";
-    final String expected = "SELECT CAST(NULL AS INTEGER)";
-    sql(query)
-        .withBigQuery()
-        .ok(expected)
-        .withHive()
-        .ok(expected)
-        .withSpark()
-        .ok(expected);
-  }
   /**
    * Fluid interface to run tests.
    */
