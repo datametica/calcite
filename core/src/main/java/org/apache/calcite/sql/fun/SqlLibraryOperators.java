@@ -424,8 +424,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "TO_NUMBER",
           SqlKind.TO_NUMBER,
-          ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.INTEGER),
-              SqlTypeTransforms.TO_NULLABLE),
+          ReturnTypes.BIGINT_FORCE_NULLABLE,
           null, OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING,
           OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.NULL),
           OperandTypes.family(SqlTypeFamily.NULL, SqlTypeFamily.STRING),

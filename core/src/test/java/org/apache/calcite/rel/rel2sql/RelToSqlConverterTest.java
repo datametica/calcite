@@ -4624,6 +4624,21 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test
+  public void testToNumberFunctionHandlingCaseWhenThen() {
+    final String query = "select case when TO_NUMBER('12.77') is not null then "
+        + "'is_numeric' else 'is not numeric' end";
+    final String expected = "SELECT CASE WHEN CAST('12.77' AS FLOAT) IS NOT NULL THEN "
+        + "'is_numeric    ' ELSE 'is not numeric' END";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;

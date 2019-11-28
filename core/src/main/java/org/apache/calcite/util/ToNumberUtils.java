@@ -92,17 +92,15 @@ public class ToNumberUtils {
           .operand(0).toString())) {
         String regEx1 = "[',]+";
         String firstOperand = call.operand(0).toString().replaceAll(regEx1, "");
-
         SqlNode[] sqlNode = new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(),
             SqlParserPos.ZERO)};
-
         call.setOperand(0, sqlNode[0]);
-
       }
+
       SqlTypeName sqlTypeName = call.operand(0).toString().contains(".")
           ? SqlTypeName.FLOAT : SqlTypeName.INTEGER;
-
       handleCasting(writer, call, leftPrec, rightPrec, sqlTypeName);
+
       break;
     case 2:
       if (handleIfOperandIsNull(writer, call, leftPrec, rightPrec)) {
@@ -113,32 +111,24 @@ public class ToNumberUtils {
         if (!writer.getDialect().getConformance().toString().equals("BIG_QUERY")) {
           throw new UnsupportedOperationException();
         }
-
         SqlNode[] sqlNodes = new SqlNode[]{SqlLiteral.createCharString("0x",
             SqlParserPos.ZERO), call.operand(0)};
-
         SqlCall extractCall = new SqlBasicCall(SqlStdOperatorTable.CONCAT, sqlNodes,
             SqlParserPos.ZERO);
-
         call.setOperand(0, extractCall);
-
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.INTEGER);
 
       } else if (call.operand(0).toString().contains(".")) {
         String regEx = "[-',]+";
-
         handleNegativeValue(call, regEx);
-
         handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.FLOAT);
       } else {
         String regEx = "[-',$]+";
-
         if (call.operand(1).toString().contains("C")) {
           regEx = "[-',$A-Za-z]+";
         }
 
         handleNegativeValue(call, regEx);
-
         SqlTypeName sqlType = call.operand(0).toString().contains("E")
             && call.operand(1).toString().contains("E")
             ? SqlTypeName.DECIMAL : SqlTypeName.INTEGER;
