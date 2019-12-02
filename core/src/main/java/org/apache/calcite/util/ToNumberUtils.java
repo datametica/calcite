@@ -31,7 +31,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import java.util.regex.Pattern;
 
 /**
- * A <code>ToNumberUtils</code> implementation for the ToNumber method.
+ * This class is specific to BigQuery, Hive and Spark.
  */
 public class ToNumberUtils {
 
