@@ -18,7 +18,6 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -38,6 +37,8 @@ import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
+import org.apache.calcite.util.ToNumberUtils;
+import org.apache.calcite.util.UnparseCommonUtil;
 
 import com.google.common.collect.ImmutableList;
 
@@ -240,6 +241,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case DATE_SUB:
       unparseDateAddAndSub(writer, call, leftPrec, rightPrec);
       break;
+    case TO_NUMBER:
+      ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -323,78 +327,37 @@ public class BigQuerySqlDialect extends SqlDialect {
     return new SqlBasicCall(SUBSTR, sqlNodes, SqlParserPos.ZERO);
   }
 
-
   public void unparseDateAddAndSub(SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
-    SqlCall modifiedDateCall;
-    switch (call.operand(1).getKind()) {
-    case LITERAL:
-      modifiedDateCall = makeDateAddLiteralCall(call);
-      break;
-    case TIMES:
-      modifiedDateCall = makeDateAddBasicCall(call, writer);
-      break;
-    default:
-      modifiedDateCall = call;
-    }
-    call.getOperator().unparse(writer, modifiedDateCall, leftPrec, rightPrec);
-  }
-
-  private SqlCall makeDateAddLiteralCall(SqlCall call) {
-    SqlNode[] sqlNodes = new SqlNode[]{call.operand(0), call.operand(1)};
-    return new SqlBasicCall(call.getOperator(), sqlNodes, SqlParserPos.ZERO);
-  }
-
-  private SqlCall makeDateAddBasicCall(SqlCall call, SqlWriter writer) {
-    SqlNode intervalValue = modifyIntervalLiteral(call.operand(1), writer);
-    SqlNode[] sqlNodes = new SqlNode[]{call.operand(0), intervalValue};
-    return new SqlBasicCall(call.getOperator(), sqlNodes, SqlParserPos.ZERO);
-  }
-
-  private SqlNode modifyIntervalLiteral(SqlBasicCall call, SqlWriter writer) {
-    String modifiedOperand = call.operand(0).toString();
-    SqlIntervalLiteral.IntervalValue literalValue
-        = getLiteralValue(writer, call.operand(1));
-    SqlIntervalLiteral.IntervalValue interval =
-        (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) call.operand(1)).getValue();
-    if (call.getKind() == SqlKind.TIMES) {
-      if (!interval.getIntervalLiteral().equals("1")) {
-        modifiedOperand = modifiedOperand.concat(" * " + interval);
-      }
-    }
-    return SqlLiteral.createInterval(literalValue.getSign(), modifiedOperand,
-        literalValue.getIntervalQualifier(), call.operand(1).getParserPosition());
-  }
-
-  public SqlIntervalLiteral.IntervalValue getLiteralValue(SqlWriter writer,
-      SqlNode intervalOperand) {
-    SqlIntervalLiteral.IntervalValue interval;
-    if (intervalOperand.getKind() == SqlKind.LITERAL) {
-      interval =
-          (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) intervalOperand).getValue();
+    final SqlWriter.Frame frame = writer.startFunCall(call.getOperator().toString());
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(",");
+    if (call.operand(1).getKind() == SqlKind.TIMES) {
+      unparseBasicLiteral(call.operand(1), writer, leftPrec, rightPrec);
     } else {
-      SqlIntervalLiteral intervalLiteral =
-          (SqlIntervalLiteral) ((SqlBasicCall) intervalOperand).operand(1);
-      interval = (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
     }
-    return interval;
+    writer.endFunCall(frame);
   }
 
-  @Override public void unparseSqlIntervalLiteral(SqlWriter writer,
-                  SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
-    SqlIntervalLiteral.IntervalValue interval =
-        (SqlIntervalLiteral.IntervalValue) literal.getValue();
-    writer.keyword("INTERVAL");
-    if (interval.getSign() == -1) {
-      writer.print("-");
+  private void unparseBasicLiteral(
+      SqlBasicCall call, SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlLiteral intervalLiteralValue = UnparseCommonUtil.getLiteralValue(call);
+    SqlNode identifierValue = UnparseCommonUtil.getIdentifierValue(call);
+    SqlIntervalLiteral.IntervalValue literalValue =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
+    writer.sep("INTERVAL");
+    if (call.getKind() == SqlKind.TIMES) {
+      if (!literalValue.getIntervalLiteral().equals("1")) {
+        identifierValue.unparse(writer, leftPrec, rightPrec);
+        writer.sep("*");
+        writer.sep(literalValue.toString());
+      } else {
+        identifierValue.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.sep(literalValue.getIntervalQualifier().toString());
     }
-    String literalValue = literal.getValue().toString();
-    literalValue = literalValue.replace("`", "");
-    writer.literal(literalValue);
-    unparseSqlIntervalQualifier(writer, interval.getIntervalQualifier(),
-        RelDataTypeSystem.DEFAULT);
   }
-
 }
 
 // End BigQuerySqlDialect.java

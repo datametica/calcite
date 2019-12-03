@@ -35,6 +35,7 @@ import org.apache.calcite.sql.fun.SqlFloorFunction;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.UnparseCommonUtil;
 
 /**
@@ -189,7 +190,10 @@ public class SparkSqlDialect extends SqlDialect {
       case DATE_ADD:
       case DATE_SUB:
       case ADD_MONTHS:
-        unparseDateAddAndSub(writer, call, leftPrec, rightPrec);
+        UnparseCommonUtil.unparseHiveSparkDateAddAndSub(call, writer, leftPrec, rightPrec);
+        break;
+      case TO_NUMBER:
+        ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
         break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -208,20 +212,6 @@ public class SparkSqlDialect extends SqlDialect {
       call.operand(1).unparse(writer, leftPrec, rightPrec);
       writer.endFunCall(dateDiffFrame);
       break;
-    }
-  }
-
-  public void unparseDateAddAndSub(SqlWriter writer,
-      SqlCall call, int leftPrec, int rightPrec) {
-    SqlCall dateAddCall;
-    switch (call.operand(1).getKind()) {
-    case LITERAL:
-    case TIMES:
-      dateAddCall = UnparseCommonUtil.makeDateAddCall(call, writer);
-      call.getOperator().unparse(writer, dateAddCall, leftPrec, rightPrec);
-      break;
-    default:
-      call.getOperator().unparse(writer, call, leftPrec, rightPrec);
     }
   }
 }

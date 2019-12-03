@@ -30,7 +30,9 @@ import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
+import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.UnparseCommonUtil;
+
 
 /**
  * A <code>SqlDialect</code> implementation for the Apache Hive database.
@@ -43,6 +45,7 @@ public class HiveSqlDialect extends SqlDialect {
           .withConformance(SqlConformanceEnum.HIVE));
 
   private final boolean emulateNullDirection;
+  private final boolean isHiveLowerVersion;
 
   /** Creates a HiveSqlDialect. */
   public HiveSqlDialect(Context context) {
@@ -52,6 +55,10 @@ public class HiveSqlDialect extends SqlDialect {
     emulateNullDirection = (context.databaseMajorVersion() < 2)
         || (context.databaseMajorVersion() == 2
             && context.databaseMinorVersion() < 1);
+
+    isHiveLowerVersion = (context.databaseMajorVersion() < 2)
+        || (context.databaseMajorVersion() == 2
+        && context.databaseMinorVersion() < 1);
   }
 
   @Override protected boolean allowsAs() {
@@ -174,6 +181,9 @@ public class HiveSqlDialect extends SqlDialect {
     case ADD_MONTHS:
       unparseDateAddAndSub(writer, call, leftPrec, rightPrec);
       break;
+    case TO_NUMBER:
+      ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -224,20 +234,15 @@ public class HiveSqlDialect extends SqlDialect {
 
   public void unparseDateAddAndSub(SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
-    SqlCall dateAddCall;
-    final SqlWriter.Frame castFrame = writer.startFunCall("CAST");
-    switch (call.operand(1).getKind()) {
-    case LITERAL:
-    case TIMES:
-      dateAddCall = UnparseCommonUtil.makeDateAddCall(call, writer);
-      call.getOperator().unparse(writer, dateAddCall, leftPrec, rightPrec);
-      break;
-    default:
-      call.getOperator().unparse(writer, call, leftPrec, rightPrec);
+    if (isHiveLowerVersion) {
+      final SqlWriter.Frame castFrame = writer.startFunCall("CAST");
+      UnparseCommonUtil.unparseHiveSparkDateAddAndSub(call, writer, leftPrec, rightPrec);
+      writer.sep("AS");
+      writer.literal("DATE");
+      writer.endFunCall(castFrame);
+    } else {
+      UnparseCommonUtil.unparseHiveSparkDateAddAndSub(call, writer, leftPrec, rightPrec);
     }
-    writer.sep("AS");
-    writer.literal("DATE");
-    writer.endFunCall(castFrame);
   }
 }
 // End HiveSqlDialect.java

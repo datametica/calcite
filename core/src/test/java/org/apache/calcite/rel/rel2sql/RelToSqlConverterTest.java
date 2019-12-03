@@ -3967,41 +3967,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 1)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 MONTH)\n"
-        + "FROM foodmart.employee";
-    sql(query)
-        .withHive()
-        .ok(expectedHive)
-        .withBigQuery()
-        .ok(expectedBigQuery)
-        .withSpark()
-        .ok(expectedSpark);
-  }
-
-  @Test public void testlowerDatePlusIntervalMonthFunction() {
-    String query = "select \"birth_date\" + INTERVAL '1' month from \"employee\"";
-    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 1) AS DATE)\n"
-        + "FROM foodmart.employee";
-    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 1)\n"
-        + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 MONTH)\n"
-        + "FROM foodmart.employee";
-    sql(query)
-        .withHive()
-        .ok(expectedHive)
-        .withBigQuery()
-        .ok(expectedBigQuery)
-        .withSpark()
-        .ok(expectedSpark);
-  }
-
-  @Test public void testlowerDatePlusIntervalValueMonthFunction() {
-    String query = "select \"birth_date\" + INTERVAL '2' month from \"employee\"";
-    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 2) AS DATE)\n"
-        + "FROM foodmart.employee";
-    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 2)\n"
-        + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 2 MONTH)\n"
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL '1' MONTH)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4047,7 +4013,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testDatePlusIntervalMonthFunctionWithArithOp() {
-    String query = "select \"birth_date\" + 10 * INTERVAL '2' month from \"employee\"";
+    String query = "select \"birth_date\" + 10 * INTERVAL '2' MONTH from \"employee\"";
     final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 10 * 2) AS DATE)\n"
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 10 * 2)\n"
@@ -4069,7 +4035,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT DATE_ADD(birth_date, 1)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 DAY)\n"
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL '1' DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4086,7 +4052,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT DATE_SUB(birth_date, 1)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL 1 DAY)\n"
+    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL '1' DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4103,7 +4069,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT DATE_ADD(DATE '2018-01-01', 1)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(DATE '2018-01-01', INTERVAL 1 DAY)\n"
+    final String expectedBigQuery = "SELECT DATE_ADD(DATE '2018-01-01', INTERVAL '1' DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4120,7 +4086,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT DATE_SUB(DATE '2018-01-01', 1)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_SUB(DATE '2018-01-01', INTERVAL 1 DAY)\n"
+    final String expectedBigQuery = "SELECT DATE_SUB(DATE '2018-01-01', INTERVAL '1' DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4137,7 +4103,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT DATE_ADD(birth_date, 2)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 2 DAY)\n"
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL '2' DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4154,7 +4120,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT DATE_SUB(birth_date, 2)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL 2 DAY)\n"
+    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL '2' DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4172,6 +4138,40 @@ public class RelToSqlConverterTest {
     final String expectedSpark = "SELECT DATE_ADD(birth_date, store_id)\n"
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusIntervalColumnFunction() {
+    String query = "select \"birth_date\" +  INTERVAL '1' DAY * \"store_id\" from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, store_id) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, store_id)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusIntervalIntFunction() {
+    String query = "select \"birth_date\" +  INTERVAL '1' DAY * 10 from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, 10) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, 10)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4284,30 +4284,13 @@ public class RelToSqlConverterTest {
         .ok(expectedSpark);
   }
 
-  @Test public void testDatePlusIntervalDayFunction() {
-    String query = "select \"birth_date\" + INTERVAL '1' DAY from \"employee\"";
-    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, 1) AS DATE)\n"
-        + "FROM foodmart.employee";
-    final String expectedSpark = "SELECT DATE_ADD(birth_date, 1)\n"
-        + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 DAY)\n"
-        + "FROM foodmart.employee";
-    sql(query)
-        .withHive()
-        .ok(expectedHive)
-        .withBigQuery()
-        .ok(expectedBigQuery)
-        .withSpark()
-        .ok(expectedSpark);
-  }
-
   @Test public void testIntervalDayPlusDateFunction() {
     String query = "select  INTERVAL '1' DAY + \"birth_date\" from \"employee\"";
     final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, 1) AS DATE)\n"
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT DATE_ADD(birth_date, 1)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 DAY)\n"
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL '1' DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -4629,6 +4612,343 @@ public class RelToSqlConverterTest {
             is("can't run"));
       }
     });
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingHexaToInt() {
+    String query = "select TO_NUMBER('03ea02653f6938ba','XXXXXXXXXXXXXXXX')";
+    final String expected = "SELECT CAST(CONCAT('0x', '03ea02653f6938ba') AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingFloatingPoint() {
+    String query = "select TO_NUMBER('1.789','9.999')";
+    final String expected = "SELECT CAST('1.789' AS FLOAT)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingFloatingPointWithD() {
+    String query = "select TO_NUMBER('1.789','9D999')";
+    final String expected = "SELECT CAST('1.789' AS FLOAT)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithComma() {
+    String query = "SELECT TO_NUMBER ('1,789', '9,999')";
+    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithCurrency() {
+    String query = "SELECT TO_NUMBER ('$1789', '$9999')";
+    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithCurrencyAndL() {
+    String query = "SELECT TO_NUMBER ('$1789', 'L9999')";
+    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithMinus() {
+    String query = "SELECT TO_NUMBER ('-12334', 'S99999')";
+    final String expected = "SELECT CAST('-12334' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithMinusLast() {
+    String query = "SELECT TO_NUMBER ('12334-', '99999S')";
+    final String expected = "SELECT CAST('-12334' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithE() {
+    String query = "SELECT TO_NUMBER ('12E3', '99EEEE')";
+    final String expected = "SELECT CAST('12E3' AS DECIMAL)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithCurrencyName() {
+    String query = "SELECT TO_NUMBER('dollar1234','L9999','NLS_CURRENCY=''dollar''')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithG() {
+    String query = "SELECT TO_NUMBER ('1,2345', '9G9999')";
+    final String expected = "SELECT CAST('12345' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithU() {
+    String query = "SELECT TO_NUMBER ('$1234', 'U9999')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithPR() {
+    String query = "SELECT TO_NUMBER (' 123 ', '999PR')";
+    final String expected = "SELECT CAST('123' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithMI() {
+    String query = "SELECT TO_NUMBER ('1234-', '9999MI')";
+    final String expected = "SELECT CAST('-1234' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithMIDecimal() {
+    String query = "SELECT TO_NUMBER ('1.234-', '9.999MI')";
+    final String expected = "SELECT CAST('-1.234' AS FLOAT)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithZero() {
+    String query = "select TO_NUMBER('01234','09999')";
+    final String expected = "SELECT CAST('01234' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithB() {
+    String query = "select TO_NUMBER('1234','B9999')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithC() {
+    String query = "select TO_NUMBER('USD1234','C9999')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandling() {
+    final String query = "SELECT TO_NUMBER ('1234', '9999')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingSingleArgumentInt() {
+    final String query = "SELECT TO_NUMBER ('1234')";
+    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingSingleArgumentFloat() {
+    final String query = "SELECT TO_NUMBER ('-1.234')";
+    final String expected = "SELECT CAST('-1.234' AS FLOAT)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingNull() {
+    final String query = "SELECT TO_NUMBER ('-1.234',null)";
+    final String expected = "SELECT CAST(NULL AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingSecoNull() {
+    final String query = "SELECT TO_NUMBER(null,'9D99')";
+    final String expected = "SELECT CAST(NULL AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingFunctionAsArgument() {
+    final String query = "SELECT TO_NUMBER(SUBSTRING('12345',2))";
+    final String expected = "SELECT CAST(SUBSTR('12345', 2) AS INTEGER)";
+    final String expectedSpark = "SELECT CAST(SUBSTRING('12345', 2) AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithNullArgument() {
+    final String query = "SELECT TO_NUMBER (null)";
+    final String expected = "SELECT CAST(NULL AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingCaseWhenThen() {
+    final String query = "select case when TO_NUMBER('12.77') is not null then "
+        + "'is_numeric' else 'is not numeric' end";
+    final String expected = "SELECT CASE WHEN CAST('12.77' AS FLOAT) IS NOT NULL THEN "
+        + "'is_numeric    ' ELSE 'is not numeric' END";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
   }
 
   /** Fluid interface to run tests. */
