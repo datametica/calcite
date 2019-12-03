@@ -302,6 +302,21 @@ public enum SqlKind {
   PLUS,
 
   /**
+   * The DATE_ADD function to add integer to date.
+   */
+  DATE_ADD,
+
+  /**
+   * The DATE_SUB function to subtract integer to date.
+   */
+  DATE_SUB,
+
+  /**
+   * The ADD_MONTHS function to add integer to months.
+   */
+  ADD_MONTHS,
+
+  /**
    * The arithmetic minus operator, "-".
    *
    * @see #MINUS_PREFIX
@@ -452,6 +467,11 @@ public enum SqlKind {
    * The "~*" operator.
    */
   POSIX_REGEX_CASE_INSENSITIVE,
+
+  /**
+   * The "REGEXP_SUBSTR" function.
+   */
+  REGEXP_SUBSTR,
 
   /**
    * The "BETWEEN" operator.

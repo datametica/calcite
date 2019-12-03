@@ -18,19 +18,24 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 
@@ -40,6 +45,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
 
 /**
  * A <code>SqlDialect</code> implementation for Google BigQuery's "Standard SQL"
@@ -141,7 +150,11 @@ public class BigQuerySqlDialect extends SqlDialect {
       switch (call.getOperands().get(1).getType().getSqlTypeName()) {
       case INTERVAL_DAY:
       case INTERVAL_MONTH:
-        return SqlLibraryOperators.DATE_ADD;
+        if (call.op.kind == SqlKind.MINUS) {
+          return SqlLibraryOperators.DATE_SUB;
+        } else {
+          return SqlLibraryOperators.DATE_ADD;
+        }
       }
     default:
       return super.getTargetFunc(call);
@@ -220,6 +233,13 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.literal("INT64");
       writer.endFunCall(castFrame);
       break;
+    case REGEXP_SUBSTR:
+      unparseRegexSubstr(writer, call, leftPrec, rightPrec);
+      break;
+    case DATE_ADD:
+    case DATE_SUB:
+      unparseDateAddAndSub(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -256,6 +276,125 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     }
   }
+
+  private void unparseRegexSubstr(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlCall extractCall;
+    switch (call.operandCount()) {
+    case 3:
+      extractCall = makeExtractSqlCall(call);
+      REGEXP_EXTRACT.unparse(writer, extractCall, leftPrec, rightPrec);
+      break;
+    case 4:
+    case 5:
+      extractCall = makeExtractSqlCall(call);
+      REGEXP_EXTRACT_ALL.unparse(writer, extractCall, leftPrec, rightPrec);
+      writeOffset(writer, call);
+      break;
+    default:
+      REGEXP_EXTRACT.unparse(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void writeOffset(SqlWriter writer, SqlCall call) {
+    int occurrenceNumber = Integer.parseInt(call.operand(3).toString()) - 1;
+    writer.literal("[OFFSET(" + occurrenceNumber + ")]");
+  }
+
+  private SqlCall makeExtractSqlCall(SqlCall call) {
+    SqlCall substringCall = makeSubstringSqlCall(call);
+    call.setOperand(0, substringCall);
+    if (call.operandCount() == 5 && call.operand(4).toString().equals("'i'")) {
+      SqlCharStringLiteral regexNode = makeRegexNode(call);
+      call.setOperand(1, regexNode);
+    }
+    SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
+    return new SqlBasicCall(REGEXP_EXTRACT, extractNodeOperands, SqlParserPos.ZERO);
+  }
+
+  private SqlCharStringLiteral makeRegexNode(SqlCall call) {
+    String regexStr = call.operand(1).toString();
+    String regexLiteral = "(?i)".concat(regexStr.substring(1, regexStr.length() - 1));
+    return SqlLiteral.createCharString(regexLiteral,
+        call.operand(1).getParserPosition());
+  }
+
+  private SqlCall makeSubstringSqlCall(SqlCall call) {
+    SqlNode[] sqlNodes = new SqlNode[]{call.operand(0), call.operand(2)};
+    return new SqlBasicCall(SUBSTR, sqlNodes, SqlParserPos.ZERO);
+  }
+
+
+  public void unparseDateAddAndSub(SqlWriter writer,
+      SqlCall call, int leftPrec, int rightPrec) {
+    SqlCall modifiedDateCall;
+    switch (call.operand(1).getKind()) {
+    case LITERAL:
+      modifiedDateCall = makeDateAddLiteralCall(call);
+      break;
+    case TIMES:
+      modifiedDateCall = makeDateAddBasicCall(call, writer);
+      break;
+    default:
+      modifiedDateCall = call;
+    }
+    call.getOperator().unparse(writer, modifiedDateCall, leftPrec, rightPrec);
+  }
+
+  private SqlCall makeDateAddLiteralCall(SqlCall call) {
+    SqlNode[] sqlNodes = new SqlNode[]{call.operand(0), call.operand(1)};
+    return new SqlBasicCall(call.getOperator(), sqlNodes, SqlParserPos.ZERO);
+  }
+
+  private SqlCall makeDateAddBasicCall(SqlCall call, SqlWriter writer) {
+    SqlNode intervalValue = modifyIntervalLiteral(call.operand(1), writer);
+    SqlNode[] sqlNodes = new SqlNode[]{call.operand(0), intervalValue};
+    return new SqlBasicCall(call.getOperator(), sqlNodes, SqlParserPos.ZERO);
+  }
+
+  private SqlNode modifyIntervalLiteral(SqlBasicCall call, SqlWriter writer) {
+    String modifiedOperand = call.operand(0).toString();
+    SqlIntervalLiteral.IntervalValue literalValue
+        = getLiteralValue(writer, call.operand(1));
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) call.operand(1)).getValue();
+    if (call.getKind() == SqlKind.TIMES) {
+      if (!interval.getIntervalLiteral().equals("1")) {
+        modifiedOperand = modifiedOperand.concat(" * " + interval);
+      }
+    }
+    return SqlLiteral.createInterval(literalValue.getSign(), modifiedOperand,
+        literalValue.getIntervalQualifier(), call.operand(1).getParserPosition());
+  }
+
+  public SqlIntervalLiteral.IntervalValue getLiteralValue(SqlWriter writer,
+      SqlNode intervalOperand) {
+    SqlIntervalLiteral.IntervalValue interval;
+    if (intervalOperand.getKind() == SqlKind.LITERAL) {
+      interval =
+          (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) intervalOperand).getValue();
+    } else {
+      SqlIntervalLiteral intervalLiteral =
+          (SqlIntervalLiteral) ((SqlBasicCall) intervalOperand).operand(1);
+      interval = (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    }
+    return interval;
+  }
+
+  @Override public void unparseSqlIntervalLiteral(SqlWriter writer,
+                  SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) literal.getValue();
+    writer.keyword("INTERVAL");
+    if (interval.getSign() == -1) {
+      writer.print("-");
+    }
+    String literalValue = literal.getValue().toString();
+    literalValue = literalValue.replace("`", "");
+    writer.literal(literalValue);
+    unparseSqlIntervalQualifier(writer, interval.getIntervalQualifier(),
+        RelDataTypeSystem.DEFAULT);
+  }
+
 }
 
 // End BigQuerySqlDialect.java

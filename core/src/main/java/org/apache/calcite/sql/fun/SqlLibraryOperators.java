@@ -18,13 +18,11 @@ package org.apache.calcite.sql.fun;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
@@ -124,7 +122,7 @@ public abstract class SqlLibraryOperators {
    *
    * <p>It has similar semantics to standard SQL's
    * {@link SqlStdOperatorTable#SUBSTRING} function but different syntax. */
-  @LibraryOperator(libraries = {ORACLE})
+  @LibraryOperator(libraries = {ORACLE, BIGQUERY})
   public static final SqlFunction SUBSTR =
       new SqlFunction("SUBSTR", SqlKind.OTHER_FUNCTION,
           ReturnTypes.ARG0_NULLABLE_VARYING, null, null,
@@ -182,6 +180,29 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {MYSQL, ORACLE})
   public static final SqlFunction REGEXP_REPLACE = new SqlRegexpReplaceFunction();
 
+  /**
+   * The REGEXP_EXTRACT(source_string, regex_pattern) returns the first substring in source_string
+   * that matches the regex_pattern. Returns NULL if there is no match.
+   *
+   * The REGEXP_EXTRACT_ALL(source_string, regex_pattern) returns an array of all substrings of
+   * source_string that match the regex_pattern.
+   */
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction REGEXP_EXTRACT = new SqlFunction("REGEXP_EXTRACT",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR),
+          SqlTypeTransforms.TO_NULLABLE),
+      null, OperandTypes.STRING_STRING,
+      SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction REGEXP_EXTRACT_ALL = new SqlFunction("REGEXP_EXTRACT_ALL",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR),
+          SqlTypeTransforms.TO_NULLABLE),
+      null, OperandTypes.STRING_STRING,
+      SqlFunctionCategory.STRING);
+
   /** The "MONTHNAME(datetime)" function; returns the name of the month,
    * in the current locale, of a TIMESTAMP or DATE argument. */
   @LibraryOperator(libraries = {MYSQL})
@@ -194,33 +215,31 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction DATE_ADD =
       new SqlFunction(
         "DATE_ADD",
-        SqlKind.PLUS,
+        SqlKind.DATE_ADD,
         ReturnTypes.DATE,
         null,
         OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
-        SqlFunctionCategory.TIMEDATE) {
-
-        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-          writer.getDialect().unparseIntervalOperandsBasedFunctions(
-                writer, call, leftPrec, rightPrec);
-        }
-      };
+        SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction ADD_MONTHS =
       new SqlFunction(
         "ADD_MONTHS",
-        SqlKind.PLUS,
+        SqlKind.ADD_MONTHS,
         ReturnTypes.DATE,
         null,
-        OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
-        SqlFunctionCategory.TIMEDATE) {
+        OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME_INTERVAL),
+        SqlFunctionCategory.TIMEDATE);
 
-        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-          writer.getDialect().unparseIntervalOperandsBasedFunctions(
-                writer, call, leftPrec, rightPrec);
-        }
-      };
+  @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
+  public static final SqlFunction DATE_SUB =
+      new SqlFunction(
+          "DATE_SUB",
+          SqlKind.DATE_SUB,
+          ReturnTypes.DATE,
+          null,
+          OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
+          SqlFunctionCategory.TIMEDATE);
 
   /** The "DAYNAME(datetime)" function; returns the name of the day of the week,
    * in the current locale, of a TIMESTAMP or DATE argument. */

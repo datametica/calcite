@@ -382,6 +382,25 @@ public class RelToSqlConverterTest {
         .ok(bigQueryExpected);
   }
 
+
+  @Test public void testDuplicateLiteralInSelectForGroupBy() {
+    final String query = "select '1' as \"a\", sku + 1 as b, '1' as \"d\" from"
+        + " \"product\" group by '1', sku + 1";
+    final String expectedSql = "SELECT '1' a, SKU + 1 B, '1' d\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY '1', SKU + 1";
+    final String bigQueryExpected = "SELECT '1' AS a, SKU + 1 AS B, '1' AS d\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY 1, B";
+    sql(query)
+        .withHive()
+        .ok(expectedSql)
+        .withSpark()
+        .ok(expectedSql)
+        .withBigQuery()
+        .ok(bigQueryExpected);
+  }
+
   /** CUBE of one column is equivalent to ROLLUP, and Calcite recognizes
    * this. */
   @Test public void testSelectQueryWithSingletonCube() {
@@ -554,7 +573,7 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  @Test public void testGroupByAliasReplacementWithGroupByExpression() {
+  /*@Test public void testGroupByAliasReplacementWithGroupByExpression() {
     String query = "select \"product_class_id\" + \"product_id\" as product_id, "
         + "\"product_id\" + 2 as prod_id, count(1) as num_records"
         + " from \"product\""
@@ -578,7 +597,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "GROUP BY CASE WHEN product_id = 1 THEN product_id ELSE 1234 END";
     sql(query).withBigQuery().ok(expected);
-  }
+  }*/
 
   @Test public void testCastDecimal1() {
     final String query = "select -0.0000000123\n"
@@ -3860,6 +3879,56 @@ public class RelToSqlConverterTest {
         .ok(expectedBiqquery);
   }
 
+  @Test public void testRegexSubstrFunction2Args() {
+    final String query = "select regexp_substr('choco chico chipo', '.*cho*p*c*?.*')"
+        + "from \"foodmart\".\"product\"";
+    final String expected = "SELECT REGEXP_EXTRACT('choco chico chipo', '.*cho*p*c*?.*')\n"
+        + "FROM foodmart.product";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testRegexSubstrFunction3Args() {
+    final String query = "select \"product_id\", regexp_substr('choco chico chipo', "
+        + "'.*cho*p*c*?.*', 7)\n"
+        + "from \"foodmart\".\"product\" where \"product_id\" = 1";
+    final String expected = "SELECT product_id, REGEXP_EXTRACT(SUBSTR('choco chico chipo', 7), "
+        + "'.*cho*p*c*?.*')\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testRegexSubstrFunction4Args() {
+    final String query = "select \"product_id\", regexp_substr('chocolate chip cookies', 'c+.{2}',"
+        + " 4, 2)\n"
+        + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3)";
+    final String expected = "SELECT product_id, REGEXP_EXTRACT_ALL(SUBSTR('chocolate chip "
+        + "cookies', 4), 'c+.{2}') [OFFSET(1)]\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testRegexSubstrFunction5Args() {
+    final String query = "select regexp_substr('chocolate Chip cookies', 'c+.{2}',"
+        + " 1, 2, 'i')\n"
+        + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3, 4)";
+    final String expected = "SELECT "
+        + "REGEXP_EXTRACT_ALL(SUBSTR('chocolate Chip cookies', 1), '(?i)c+.{2}') [OFFSET"
+        + "(1)]\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3 OR product_id = 4";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
   @Test public void testJsonType() {
     String query = "select json_type(\"product_name\") from \"product\"";
     final String expected = "SELECT "
@@ -3892,32 +3961,361 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
-  @Test public void datePlusIntervalMonthFunctionForHiveAndSparkAndBigQuery() {
+  @Test public void testDatePlusIntervalMonthFunction() {
     String query = "select \"birth_date\" + INTERVAL '1' MONTH from \"employee\"";
-    final String expectedHive = "SELECT ADD_MONTHS(birth_date, 1)\n"
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 1) AS DATE)\n"
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 1)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL '1' MONTH)\n"
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 MONTH)\n"
         + "FROM foodmart.employee";
     sql(query)
-        .withHive().ok(expectedHive)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedSpark);
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
   }
 
-  @Test public void datePlusIntervalDayFunctionForHiveAndSparkAndBigQuery() {
+  @Test public void testlowerDatePlusIntervalMonthFunction() {
+    String query = "select \"birth_date\" + INTERVAL '1' month from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 1) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 1)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 MONTH)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testlowerDatePlusIntervalValueMonthFunction() {
+    String query = "select \"birth_date\" + INTERVAL '2' month from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 2) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 2)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 2 MONTH)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusIntervalMonthFunctionWithArthOps() {
+    String query = "select \"birth_date\" + 10 * INTERVAL '1' MONTH from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 10) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 10)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 MONTH)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusIntervalMonthFunctionWithCol() {
+    String query = "select \"birth_date\" +  \"store_id\" * INTERVAL '10' MONTH from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, store_id * 10) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, store_id * 10)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id * 10 MONTH)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusIntervalMonthFunctionWithArithOp() {
+    String query = "select \"birth_date\" + 10 * INTERVAL '2' month from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 10 * 2) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 10 * 2)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 * 2 MONTH)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusColumnFunction() {
     String query = "select \"birth_date\" + INTERVAL '1' DAY from \"employee\"";
-    final String expectedHive = "SELECT DATE_ADD(birth_date, 1)\n"
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, 1) AS DATE)\n"
         + "FROM foodmart.employee";
     final String expectedSpark = "SELECT DATE_ADD(birth_date, 1)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL '1' DAY)\n"
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 DAY)\n"
         + "FROM foodmart.employee";
     sql(query)
-        .withHive().ok(expectedHive)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedSpark);
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDateSubColumnFunction() {
+    String query = "select \"birth_date\" - INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_SUB(birth_date, 1) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_SUB(birth_date, 1)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL 1 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDateValuePlusColumnFunction() {
+    String query = "select DATE'2018-01-01' + INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(DATE '2018-01-01', 1) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(DATE '2018-01-01', 1)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(DATE '2018-01-01', INTERVAL 1 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDateValueSubColumnFunction() {
+    String query = "select DATE'2018-01-01' - INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_SUB(DATE '2018-01-01', 1) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_SUB(DATE '2018-01-01', 1)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_SUB(DATE '2018-01-01', INTERVAL 1 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDateIntColumnFunction() {
+    String query = "select \"birth_date\" + INTERVAL '2' day from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, 2) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, 2)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 2 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDateSubInterFunction() {
+    String query = "select \"birth_date\" - INTERVAL '2' day from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_SUB(birth_date, 2) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_SUB(birth_date, 2)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL 2 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusColumnVariFunction() {
+    String query = "select \"birth_date\" + \"store_id\" * INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, store_id) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, store_id)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDateSubColumnVariFunction() {
+    String query = "select \"birth_date\" - \"store_id\" * INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_SUB(birth_date, store_id) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_SUB(birth_date, store_id)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDateValuePlusColumnVariFunction() {
+    String query = "select DATE'2018-01-01' + \"store_id\" * INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(DATE '2018-01-01', store_id) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(DATE '2018-01-01', store_id)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(DATE '2018-01-01', INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusColumnFunctionWithArithOp() {
+    String query = "select \"birth_date\" + \"store_id\" *11 * INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, store_id * 11) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, store_id * 11)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id * 11 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusColumnFunctionVariWithArithOp() {
+    String query = "select \"birth_date\" + \"store_id\"  * INTERVAL '11' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, store_id * 11) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, store_id * 11)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id * 11 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDateSubColumnFunctionVariWithArithOp() {
+    String query = "select \"birth_date\" - \"store_id\"  * INTERVAL '11' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_SUB(birth_date, store_id * 11) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_SUB(birth_date, store_id * 11)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL store_id * 11 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusIntervalDayFunctionWithArithOp() {
+    String query = "select \"birth_date\" + 10 * INTERVAL '2' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, 10 * 2) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, 10 * 2)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 * 2 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testDatePlusIntervalDayFunction() {
+    String query = "select \"birth_date\" + INTERVAL '1' DAY from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, 1) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, 1)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test public void testIntervalDayPlusDateFunction() {
+    String query = "select  INTERVAL '1' DAY + \"birth_date\" from \"employee\"";
+    final String expectedHive = "SELECT CAST(DATE_ADD(birth_date, 1) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT DATE_ADD(birth_date, 1)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withSpark()
+        .ok(expectedSpark);
   }
 
   @Test public void minusDateFunctionForHiveAndSparkAndBigQuery() {
