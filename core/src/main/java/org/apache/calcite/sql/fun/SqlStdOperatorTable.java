@@ -1516,7 +1516,7 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlFunction ASCII =
       new SqlFunction(
           "ASCII",
-          SqlKind.OTHER_FUNCTION,
+          SqlKind.ASCII,
           ReturnTypes.INTEGER_NULLABLE,
           null,
           OperandTypes.CHARACTER,

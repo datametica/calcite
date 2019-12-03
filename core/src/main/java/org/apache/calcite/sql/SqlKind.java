@@ -138,6 +138,11 @@ public enum SqlKind {
   SUBSTRING,
 
   /**
+   * ASCII Function
+   * */
+  ASCII,
+
+  /**
    * EXPLAIN statement
    */
   EXPLAIN,
