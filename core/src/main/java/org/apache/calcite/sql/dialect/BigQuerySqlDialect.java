@@ -114,6 +114,10 @@ public class BigQuerySqlDialect extends SqlDialect {
     return false;
   }
 
+  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+    return false;
+  }
+
   @Override public boolean supportsColumnAliasInSort() {
     return true;
   }

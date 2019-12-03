@@ -66,6 +66,10 @@ public class SparkSqlDialect extends SqlDialect {
     return false;
   }
 
+  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+    return false;
+  }
+
   @Override public boolean supportsAliasedValues() {
     return false;
   }

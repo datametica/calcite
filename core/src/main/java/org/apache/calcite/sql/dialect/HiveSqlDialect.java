@@ -74,6 +74,10 @@ public class HiveSqlDialect extends SqlDialect {
     return true;
   }
 
+  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+    return false;
+  }
+
   @Override public void unparseOffsetFetch(SqlWriter writer, SqlNode offset,
       SqlNode fetch) {
     unparseFetchUsingLimit(writer, offset, fetch);
