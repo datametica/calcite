@@ -4639,6 +4639,45 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test
+  public void testToNumberFunctionHandlingWithGDS() {
+    String query = "SELECT TO_NUMBER ('12,454.8-', '99G999D9S')";
+    final String expected = "SELECT CAST('-12454.8' AS FLOAT)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithCurrencyNameFloat() {
+    String query = "SELECT TO_NUMBER('dollar12.34','L99D99','NLS_CURRENCY=''dollar''')";
+    final String expected = "SELECT CAST('12.34' AS FLOAT)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithCurrencyNameNull() {
+    String query = "SELECT TO_NUMBER('dollar12.34','L99D99',null)";
+    final String expected = "SELECT CAST(NULL AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;
