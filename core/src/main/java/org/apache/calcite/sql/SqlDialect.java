@@ -949,6 +949,13 @@ public class SqlDialect {
     return true;
   }
 
+
+  public boolean supportsAnalyticalFunctionInGroupBy() {
+    return true;
+
+
+  }
+
   /**
    * Returns whether the dialect supports column alias in sorting, for instance
    * {@code SELECT SKU+1 AS A FROM "PRODUCT" ORDER BY A }.

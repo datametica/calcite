@@ -23,7 +23,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
-import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalSort;
@@ -1148,11 +1147,11 @@ public abstract class SqlImplementor {
         needNew = true;
       }
 
-     /* if (rel instanceof Filter && rel.getInput(0) instanceof Project && rel.getInput(0).getInput(0) instanceof Aggregate
-        && dialect.getConformance().isGroupByAlias()
-       *//* && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)*//*) {
+      if (rel instanceof Aggregate && rel.getInput(0) instanceof Project
+          && dialect.getConformance().isGroupByAlias()
+          && hasAnalyticalFunctionUsedInGroupBy((Aggregate) rel)) {
         needNew = true;
-      }*/
+      }
 
       if (rel instanceof LogicalSort
           && dialect.getConformance().isSortByAlias()) {
@@ -1273,6 +1272,28 @@ public abstract class SqlImplementor {
         }
       }
       return false;
+    }
+
+    private boolean hasAnalyticalFunctionUsedInGroupBy(Aggregate rel) {
+      boolean present = false;
+      if (node instanceof SqlSelect) {
+        List<String> groupByFieldNames = rel.getRowType().getFieldNames();
+        Project projectRel = (Project) rel.getInput(0);
+        for (String grp : groupByFieldNames) {
+          int i = 0;
+          for (String proj : projectRel.getRowType().getFieldNames()) {
+            if (grp.equals(proj)) {
+              present = isAnalyticalFunction(projectRel.getChildExps().get(i));
+            }
+            i++;
+          }
+        }
+      }
+      return present;
+    }
+
+    boolean isAnalyticalFunction(RexNode rexNode) {
+      return rexNode instanceof RexOver;
     }
 
     private boolean hasNestedAggregations(Aggregate rel) {
