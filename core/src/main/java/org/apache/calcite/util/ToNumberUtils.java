@@ -21,19 +21,29 @@ import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDataTypeSpec;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlSetOperator;
+import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
  * This class is specific to BigQuery, Hive and Spark.
  */
 public class ToNumberUtils {
+
+  private static final SqlSetOperator CONV =
+      new SqlSetOperator("CONV", SqlKind.CONV, 18, false);
 
   private ToNumberUtils() {
   }
@@ -86,7 +96,24 @@ public class ToNumberUtils {
         ("null")));
   }
 
-  public static void handleToNumber(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+  public static void unparseToNumbertoConv(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+
+    SqlNode[] sqlNode = new SqlNode[]{SqlLiteral.createExactNumeric("16",
+        SqlParserPos.ZERO), SqlLiteral.createExactNumeric("10",
+        SqlParserPos.ZERO)};
+
+    List<SqlNode> operandList = new ArrayList<>();
+    operandList.add(call.getOperandList().get(0));
+    operandList.add(sqlNode[0]);
+    operandList.add(sqlNode[1]);
+
+    SqlCall sqlCall = call.getOperator().createCall(null, SqlParserPos.ZERO,
+        operandList.toArray(new SqlNode[0]));
+    SqlSyntax.FUNCTION.unparse(writer, CONV, sqlCall, leftPrec, rightPrec);
+  }
+
+  public static void unparseToNumber(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperandList().size()) {
     case 1:
     case 3:
@@ -111,10 +138,6 @@ public class ToNumberUtils {
         handleNullOperand(writer, leftPrec, rightPrec);
       } else {
         if (Pattern.matches("^'[Xx]+'", call.operand(1).toString())) {
-
-          if (!writer.getDialect().getConformance().toString().equals("BIG_QUERY")) {
-            throw new UnsupportedOperationException();
-          }
           SqlNode[] sqlNodes = new SqlNode[]{SqlLiteral.createCharString("0x",
               SqlParserPos.ZERO), call.operand(0)};
           SqlCall extractCall = new SqlBasicCall(SqlStdOperatorTable.CONCAT, sqlNodes,

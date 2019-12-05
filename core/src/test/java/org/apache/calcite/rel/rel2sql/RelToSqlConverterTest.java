@@ -4305,9 +4305,14 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingHexaToInt() {
     String query = "select TO_NUMBER('03ea02653f6938ba','XXXXXXXXXXXXXXXX')";
-    final String expected = "SELECT CAST(CONCAT('0x', '03ea02653f6938ba') AS INTEGER)";
+    final String expectedBigQuery = "SELECT CAST(CONCAT('0x', '03ea02653f6938ba') AS INTEGER)";
+    final String expected = "SELECT CONV('03ea02653f6938ba', 16, 10)";
     sql(query)
         .withBigQuery()
+        .ok(expectedBigQuery)
+        .withHive()
+        .ok(expected)
+        .withSpark()
         .ok(expected);
   }
 
