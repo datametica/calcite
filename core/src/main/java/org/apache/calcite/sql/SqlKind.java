@@ -208,7 +208,7 @@ public enum SqlKind {
   INTERSECT,
 
   /**
-   * Intersect
+   * Conv
    */
   CONV,
 
