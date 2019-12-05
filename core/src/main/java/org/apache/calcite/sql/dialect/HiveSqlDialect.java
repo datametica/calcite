@@ -33,8 +33,6 @@ import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
 
-import com.sun.corba.se.impl.oa.toa.TOA;
-
 import java.util.regex.Pattern;
 
 /**
@@ -171,7 +169,8 @@ public class HiveSqlDialect extends SqlDialect {
       unparseFormat(writer, call, leftPrec, rightPrec);
       break;
     case TO_NUMBER:
-      if (call.getOperandList().size() == 2 && Pattern.matches("^'[Xx]+'", call.operand(1).toString())){
+      if (call.getOperandList().size() == 2 && Pattern.matches("^'[Xx]+'", call.operand(1)
+          .toString())) {
         ToNumberUtils.unparseToNumbertoConv(writer, call, leftPrec, rightPrec);
         break;
       }

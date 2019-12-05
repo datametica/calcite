@@ -24,11 +24,9 @@ import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -87,13 +85,12 @@ public class ToNumberUtils {
   }
 
   private static boolean isOperandNull(SqlCall call) {
-    return call.operand(0).toString().equalsIgnoreCase("null")
-        || (call.getOperandList().size() == 2 && call.operand(1).toString().equalsIgnoreCase
-        ("null"))
-        || (call.getOperandList().size() == 3 && (call.operand(0).toString().equalsIgnoreCase
-        ("null") || call.operand(1).toString().equalsIgnoreCase
-        ("null") || call.operand(2).toString().equalsIgnoreCase
-        ("null")));
+    for (SqlNode sqlNode : call.getOperandList()) {
+      if (sqlNode.toString().equalsIgnoreCase("null")) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public static void unparseToNumbertoConv(
