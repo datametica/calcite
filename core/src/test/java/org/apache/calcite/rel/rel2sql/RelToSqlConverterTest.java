@@ -765,7 +765,7 @@ public class RelToSqlConverterTest {
       .ok(expectedBigQuery);
   }
 
-  @Test public void testAnalyticalFunctionsInAggregate() {
+  @Test public void testAnalyticalFunctionInAggregate1() {
     final String query = "select\n"
         + "MAX(\"rnk\") AS \"rnk1\""
         + "  from ("
@@ -775,8 +775,7 @@ public class RelToSqlConverterTest {
         + "    else 200"
         + "    end as \"rnk\""
         + "    from \"foodmart\".\"employee\"\n)";
-    final String expectedSql = "SELECT MAX(RANK() OVER (ORDER BY \"hire_date\")) AS \"rnk1\"\n"
-        + "FROM \"foodmart\".\"employee\"";
+    final String expectedSql = "";
     final String expectedHive = "SELECT MAX(rnk) rnk1\n"
         + "FROM (SELECT CASE WHEN (RANK() OVER (ORDER BY hire_date NULLS LAST)) = 1 THEN 100 ELSE 200 END rnk\n"
         + "FROM foodmart.employee) t";

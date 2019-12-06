@@ -1135,21 +1135,21 @@ public abstract class SqlImplementor {
         needNew = true;
       }
 
-      if (rel instanceof Aggregate
-          && !dialect.supportsAnalyticalFunctionInAggregate()
-          && hasAnalyticalFunctionInAggregate((Aggregate) rel)) {
-        needNew = true;
-      }
-
       if (rel instanceof Project && rel.getInput(0) instanceof Aggregate
-          && dialect.getConformance().isGroupByAlias()
-          && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)) {
+        && dialect.getConformance().isGroupByAlias()
+        && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)) {
         needNew = true;
       }
 
       if (rel instanceof Aggregate && rel.getInput(0) instanceof Project
-          && dialect.getConformance().isGroupByAlias()
-          && hasAnalyticalFunctionUsedInGroupBy((Aggregate) rel)) {
+        && dialect.getConformance().isGroupByAlias()
+        && hasAnalyticalFunctionUsedInGroupBy((Aggregate) rel)) {
+        needNew = true;
+      }
+
+      if (rel instanceof Aggregate
+          && !dialect.supportsAnalyticalFunctionInAggregate()
+          && hasAnalyticalFunctionInAggregate((Aggregate) rel)) {
         needNew = true;
       }
 
@@ -1246,13 +1246,15 @@ public abstract class SqlImplementor {
           for (int aggregatesArg : aggregatesArgs) {
             if (selectList.get(aggregatesArg) instanceof SqlBasicCall) {
               final SqlBasicCall call =
-                  (SqlBasicCall) selectList.get(aggregatesArg);
+                (SqlBasicCall) selectList.get(aggregatesArg);
               present = hasAnalyticalFunction(call);
-              SqlNode sqlNode = call.operand(0);
-              if (sqlNode instanceof SqlCall) {
-                if (((SqlCall) sqlNode).getOperator() instanceof SqlCaseOperator) {
-                  for (SqlNode whenOperand : ((SqlCase) sqlNode).getWhenOperands()) {
-                    present = hasAnalyticalFunction((SqlBasicCall) whenOperand);
+              if (!present) {
+                SqlNode sqlNode = call.operand(0);
+                if (sqlNode instanceof SqlCall) {
+                  if (((SqlCall) sqlNode).getOperator() instanceof SqlCaseOperator) {
+                    for (SqlNode whenOperand : ((SqlCase) sqlNode).getWhenOperands()) {
+                      present = hasAnalyticalFunction((SqlBasicCall) whenOperand);
+                    }
                   }
                 }
               }
@@ -1283,7 +1285,7 @@ public abstract class SqlImplementor {
           int i = 0;
           for (String proj : projectRel.getRowType().getFieldNames()) {
             if (grp.equals(proj)) {
-              present = isAnalyticalFunction(projectRel.getChildExps().get(i));
+              present = isAnalyticalRex(projectRel.getChildExps().get(i));
             }
             i++;
           }
@@ -1292,7 +1294,7 @@ public abstract class SqlImplementor {
       return present;
     }
 
-    boolean isAnalyticalFunction(RexNode rexNode) {
+    boolean isAnalyticalRex(RexNode rexNode) {
       return rexNode instanceof RexOver;
     }
 
@@ -1328,15 +1330,14 @@ public abstract class SqlImplementor {
       if (selectList != null && grpList != null) {
         for (SqlNode grpNode : grpList) {
           if (grpNode instanceof SqlIdentifier) {
-            SqlIdentifier grpCall = (SqlIdentifier) grpNode;
-            List<SqlNode> selectNodeList = selectList.getList();
-            for (SqlNode selectNode : selectNodeList) {
+            String grpCall = ((SqlIdentifier) grpNode).names.get(0);
+            for (SqlNode selectNode : selectList.getList()) {
               if (selectNode instanceof SqlBasicCall) {
                 SqlBasicCall selectCall = (SqlBasicCall) selectNode;
                 if (selectCall.getOperator() instanceof SqlAsOperator) {
-                  if (grpCall.names.get(0).equals(selectCall.operand(1).toString())
+                  if (grpCall.equals(selectCall.operand(1).toString())
                       && !grpCallPresentInFinalProjection
-                      (grpCall.names.get(0), rel.getRowType().getFieldNames())) {
+                      (grpCall, rel.getRowType().getFieldNames())) {
                     return true;
                   }
                 }
