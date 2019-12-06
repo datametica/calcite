@@ -1136,14 +1136,14 @@ public abstract class SqlImplementor {
       }
 
       if (rel instanceof Project && rel.getInput(0) instanceof Aggregate
-        && dialect.getConformance().isGroupByAlias()
-        && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)) {
+          && dialect.getConformance().isGroupByAlias()
+          && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)) {
         needNew = true;
       }
 
       if (rel instanceof Aggregate && rel.getInput(0) instanceof Project
-        && dialect.getConformance().isGroupByAlias()
-        && hasAnalyticalFunctionUsedInGroupBy((Aggregate) rel)) {
+          && dialect.getConformance().isGroupByAlias()
+          && hasAnalyticalFunctionUsedInGroupBy((Aggregate) rel)) {
         needNew = true;
       }
 
@@ -1246,7 +1246,7 @@ public abstract class SqlImplementor {
           for (int aggregatesArg : aggregatesArgs) {
             if (selectList.get(aggregatesArg) instanceof SqlBasicCall) {
               final SqlBasicCall call =
-                (SqlBasicCall) selectList.get(aggregatesArg);
+                  (SqlBasicCall) selectList.get(aggregatesArg);
               present = hasAnalyticalFunction(call);
               if (!present) {
                 SqlNode sqlNode = call.operand(0);
