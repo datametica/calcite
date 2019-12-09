@@ -4766,7 +4766,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testAsciiFunctionHandling() {
     String query = "select ASCII('V')";
-    final String expectedBigQuery = "SELECT TO_CODE_POINTS('V') [offset(0)]";
+    final String expectedBigQuery = "SELECT TO_CODE_POINTS('V') [OFFSET(0)]";
     final String expected = "SELECT ASCII('V')";
     sql(query)
         .withBigQuery()
