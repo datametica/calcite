@@ -245,7 +245,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         operand.unparse(writer, leftPrec, rightPrec);
       }
       writer.endFunCall(asciiFrame);
-      writer.print("[offset(0)]");
+      writer.literal("[OFFSET(0)]");
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
