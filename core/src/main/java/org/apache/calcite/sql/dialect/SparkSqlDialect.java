@@ -186,6 +186,9 @@ public class SparkSqlDialect extends SqlDialect {
       case TO_NUMBER:
         ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
         break;
+      case TRIM:
+        SqlLibraryOperators.REGEXP_REPLACE_TRIM.unparse(writer, call, leftPrec, rightPrec);
+        break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
