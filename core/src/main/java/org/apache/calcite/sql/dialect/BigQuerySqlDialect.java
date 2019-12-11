@@ -22,19 +22,25 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
+import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
 
@@ -234,14 +240,43 @@ public class BigQuerySqlDialect extends SqlDialect {
     case TO_NUMBER:
       ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
       break;
+    case ITEM:
+      call.operand(0).unparse(writer, leftPrec, 0);
+      SqlWriter.Frame itemFrame = writer.startList("[", "]");
+      SqlWriter.Frame offsetFrame = writer.startFunCall("OFFSET");
+      call.operand(1).unparse(writer, 0, 0);
+      writer.endFunCall(offsetFrame);
+      writer.endList(itemFrame);
+      break;
     case ASCII:
-      final SqlWriter.Frame asciiFrame = writer.startFunCall("TO_CODE_POINTS");
-      for (SqlNode operand : call.getOperandList()) {
-        writer.sep(",");
-        operand.unparse(writer, leftPrec, rightPrec);
-      }
-      writer.endFunCall(asciiFrame);
-      writer.literal("[OFFSET(0)]");
+      SqlParserPos pos = call.getParserPosition();
+
+      SqlNodeList whenList = new SqlNodeList(pos);
+      SqlNodeList thenList = new SqlNodeList(pos);
+
+      List<SqlNode> operands = call.getOperandList();
+
+      SqlNode operand = operands.get(0);
+
+      SqlNode[] sqlNodes = new SqlNode[]{operand, SqlLiteral.createCharString("",
+          SqlParserPos.ZERO)};
+
+      whenList.add(
+          SqlStdOperatorTable.NOT_EQUALS.createCall(pos, sqlNodes));
+
+      SqlNode node = SqlStdOperatorTable.ITEM.createCall(pos, SqlLibraryOperators.TO_CODE_POINTS.
+          createCall(pos, call.getOperandList()), SqlLiteral.createExactNumeric("0", pos));
+
+      thenList.add(node);
+
+      SqlNode elseExpr = new SqlDataTypeSpec(new
+          SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+          SqlParserPos.ZERO);
+
+      assert call.getFunctionQuantifier() == null;
+
+      SqlNode sqlNode = SqlCase.createSwitched(pos, null, whenList, thenList, elseExpr);
+      sqlNode.unparse(writer, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);

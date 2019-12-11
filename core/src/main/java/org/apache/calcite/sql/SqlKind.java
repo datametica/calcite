@@ -143,6 +143,11 @@ public enum SqlKind {
   ASCII,
 
   /**
+   * TO_CODE_POINTS Function
+   * */
+  TO_CODE_POINTS,
+
+  /**
    * EXPLAIN statement
    */
   EXPLAIN,
@@ -1165,8 +1170,12 @@ public enum SqlKind {
   /**
    * format standard function.
    */
-  FORMAT;
+  FORMAT,
 
+  /**
+   * Item operators
+   */
+  ITEM;
   //~ Static fields/initializers ---------------------------------------------
 
   // Most of the static fields are categories, aggregating several kinds into

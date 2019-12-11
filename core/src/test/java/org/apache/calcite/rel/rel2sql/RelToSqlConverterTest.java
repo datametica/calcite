@@ -4641,9 +4641,31 @@ public class RelToSqlConverterTest {
 
   @Test
   public void testAsciiFunctionHandling() {
-    String query = "select ASCII('V')";
-    final String expectedBigQuery = "SELECT TO_CODE_POINTS('V') [OFFSET(0)]";
-    final String expected = "SELECT ASCII('V')";
+    String query = "select ASCII(SUBSTRING('V',7,1))";
+
+    final String expectedBigQuery = "SELECT CASE WHEN SUBSTR('V', 7, 1) <> '' "
+        + "THEN TO_CODE_POINTS(SUBSTR('V', 7, 1))[OFFSET(0)] ELSE NULL END";
+
+    final String expected = "SELECT CASE WHEN SUBSTR('V', 7, 1) <> ''"
+        + " THEN ASCII(SUBSTR('V', 7, 1)) ELSE NULL END";
+
+    final String expectedSpark = "SELECT CASE WHEN SUBSTRING('V', 7, 1) <> ''"
+        + " THEN ASCII(SUBSTRING('V', 7, 1)) ELSE NULL END";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expectedSpark);
+  }
+
+  @Test
+  public void testAsciiFunctionHandlingBlank() {
+    String query = "select ASCII('')";
+    final String expectedBigQuery = "SELECT CASE WHEN '' <> '' "
+        + "THEN TO_CODE_POINTS('')[OFFSET(0)] ELSE NULL END";
+    final String expected = "SELECT CASE WHEN '' <> '' THEN ASCII('') ELSE NULL END";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)

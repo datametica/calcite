@@ -431,6 +431,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING_STRING,
           OperandTypes.family(SqlTypeFamily.NULL)),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction TO_CODE_POINTS =
+      new SqlFunction(
+          "TO_CODE_POINTS",
+          SqlKind.TO_CODE_POINTS,
+          ReturnTypes.BIGINT_FORCE_NULLABLE,
+          null, OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
 }
 
 // End SqlLibraryOperators.java
