@@ -180,7 +180,7 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {MYSQL})
   public static final SqlFunction JSON_STORAGE_SIZE = new SqlJsonStorageSizeFunction();
 
-  @LibraryOperator(libraries = {MYSQL, ORACLE})
+  @LibraryOperator(libraries = {MYSQL, ORACLE, HIVE, SPARK})
   public static final SqlFunction REGEXP_REPLACE = new SqlRegexpReplaceFunction();
 
   /**
