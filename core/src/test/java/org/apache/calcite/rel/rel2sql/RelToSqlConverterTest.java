@@ -775,13 +775,17 @@ public class RelToSqlConverterTest {
         + "    else 200"
         + "    end as \"rnk\""
         + "    from \"foodmart\".\"employee\"\n)";
-    final String expectedSql = "";
+    final String expectedSql = "SELECT MAX(CASE WHEN (RANK() OVER (ORDER BY \"hire_date\")) = 1 "
+        + "THEN 100 ELSE 200 END) AS \"rnk1\"\n"
+        + "FROM \"foodmart\".\"employee\"";
     final String expectedHive = "SELECT MAX(rnk) rnk1\n"
-        + "FROM (SELECT CASE WHEN (RANK() OVER (ORDER BY hire_date NULLS LAST)) = 1 THEN 100 ELSE 200 END rnk\n"
+        + "FROM (SELECT CASE WHEN (RANK() OVER (ORDER BY hire_date NULLS LAST)) = 1"
+        + " THEN 100 ELSE 200 END rnk\n"
         + "FROM foodmart.employee) t";
     final String expectedSpark = expectedHive;
     final String expectedBigQuery = "SELECT MAX(rnk) AS rnk1\n"
-        + "FROM (SELECT CASE WHEN (RANK() OVER (ORDER BY hire_date NULLS LAST)) = 1 THEN 100 ELSE 200 END AS rnk\n"
+        + "FROM (SELECT CASE WHEN (RANK() OVER (ORDER BY hire_date NULLS LAST)) = 1 "
+        + "THEN 100 ELSE 200 END AS rnk\n"
         + "FROM foodmart.employee) AS t";
     sql(query)
       .ok(expectedSql)
