@@ -31,11 +31,13 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.dialect.AnsiSqlDialect;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
+import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
@@ -931,6 +933,43 @@ public class SqlDialect {
       offset.unparse(writer, -1, -1);
       writer.endList(offsetFrame);
     }
+  }
+
+  protected SqlNode getSqlNodeForAscii(SqlCall call) {
+    SqlParserPos pos = call.getParserPosition();
+    SqlNode sqlFunction = new SqlFunction("ASCII", SqlKind.OTHER_FUNCTION,
+        null, null, null,
+        SqlFunctionCategory.STRING).createCall(pos, call.getOperandList());
+    return sqlFunction;
+  }
+
+  protected void unparseAscii(SqlWriter writer, SqlNode node, SqlCall call,
+                              int leftPrec, int rightPrec) {
+    SqlParserPos pos = call.getParserPosition();
+
+    SqlNodeList whenList = new SqlNodeList(pos);
+    SqlNodeList thenList = new SqlNodeList(pos);
+
+    List<SqlNode> operands = call.getOperandList();
+
+    SqlNode operand = operands.get(0);
+
+    SqlNode[] sqlNodes = new SqlNode[]{operand, SqlLiteral.createCharString("",
+        SqlParserPos.ZERO)};
+
+    whenList.add(
+        SqlStdOperatorTable.NOT_EQUALS.createCall(pos, sqlNodes));
+
+    thenList.add(node);
+
+    SqlNode elseExpr = new SqlDataTypeSpec(new
+        SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+        SqlParserPos.ZERO);
+
+    assert call.getFunctionQuantifier() == null; //Why do we need this......
+
+    SqlNode sqlNode = SqlCase.createSwitched(pos, null, whenList, thenList, elseExpr);
+    sqlNode.unparse(writer, leftPrec, rightPrec);
   }
 
   /**

@@ -18,30 +18,21 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
 
-import java.util.List;
 
 /**
  * A <code>SqlDialect</code> implementation for the Apache Hive database.
@@ -180,36 +171,8 @@ public class HiveSqlDialect extends SqlDialect {
       ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
       break;
     case ASCII:
-      SqlParserPos pos = call.getParserPosition();
-
-      SqlNodeList whenList = new SqlNodeList(pos);
-      SqlNodeList thenList = new SqlNodeList(pos);
-
-      List<SqlNode> operands = call.getOperandList();
-
-      SqlNode operand = operands.get(0);
-
-      SqlNode[] sqlNodes = new SqlNode[]{operand, SqlLiteral.createCharString("",
-          SqlParserPos.ZERO)};
-
-      whenList.add(
-          SqlStdOperatorTable.NOT_EQUALS.createCall(pos, sqlNodes));
-
-      SqlNode sqlFunction = new SqlFunction("ASCII", SqlKind.OTHER_FUNCTION,
-          null, null, null,
-          SqlFunctionCategory.STRING).createCall(pos, call.getOperandList());
-
-      thenList.add(sqlFunction);
-
-      SqlNode elseExpr = new SqlDataTypeSpec(new
-          SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
-          SqlParserPos.ZERO);
-
-      assert call.getFunctionQuantifier() == null;
-
-      SqlNode sqlNode = SqlCase.createSwitched(pos, null, whenList, thenList, elseExpr);
-      sqlNode.unparse(writer, leftPrec, rightPrec);
-
+      SqlNode sqlNode = getSqlNodeForAscii(call);
+      unparseAscii(writer, sqlNode, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
