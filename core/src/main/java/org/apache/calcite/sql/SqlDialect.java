@@ -946,28 +946,18 @@ public class SqlDialect {
   protected void unparseAscii(SqlWriter writer, SqlNode node, SqlCall call,
                               int leftPrec, int rightPrec) {
     SqlParserPos pos = call.getParserPosition();
-
     SqlNodeList whenList = new SqlNodeList(pos);
     SqlNodeList thenList = new SqlNodeList(pos);
-
     List<SqlNode> operands = call.getOperandList();
-
     SqlNode operand = operands.get(0);
-
     SqlNode[] sqlNodes = new SqlNode[]{operand, SqlLiteral.createCharString("",
         SqlParserPos.ZERO)};
-
     whenList.add(
         SqlStdOperatorTable.NOT_EQUALS.createCall(pos, sqlNodes));
-
     thenList.add(node);
-
     SqlNode elseExpr = new SqlDataTypeSpec(new
         SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
         SqlParserPos.ZERO);
-
-    assert call.getFunctionQuantifier() == null; //Why do we need this......
-
     SqlNode sqlNode = SqlCase.createSwitched(pos, null, whenList, thenList, elseExpr);
     sqlNode.unparse(writer, leftPrec, rightPrec);
   }
