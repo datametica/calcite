@@ -431,6 +431,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING_STRING,
           OperandTypes.family(SqlTypeFamily.NULL)),
           SqlFunctionCategory.STRING);
+
+  public static final SqlFunction IF =
+      new SqlFunction(
+          "IF",
+          SqlKind.IF,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.ANY_ANY_ANY,
+          SqlFunctionCategory.STRING);
 }
 
 // End SqlLibraryOperators.java
