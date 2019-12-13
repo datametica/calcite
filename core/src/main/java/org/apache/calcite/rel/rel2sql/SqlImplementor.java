@@ -1249,20 +1249,28 @@ public abstract class SqlImplementor {
                   (SqlBasicCall) selectList.get(aggregatesArg);
               present = hasAnalyticalFunction(call);
               if (!present) {
-                SqlNode sqlNode = call.operand(0);
-                if (sqlNode instanceof SqlCall) {
-                  if (((SqlCall) sqlNode).getOperator() instanceof SqlCaseOperator) {
-                    for (SqlNode whenOperand : ((SqlCase) sqlNode).getWhenOperands()) {
-                      present = hasAnalyticalFunction((SqlBasicCall) whenOperand);
-                    }
-                  }
-                }
+                present = hasAnalyticalFunctionInWhenClauseOfCase(call);
               }
             }
           }
         }
       }
       return present;
+    }
+
+    private boolean hasAnalyticalFunctionInWhenClauseOfCase(SqlBasicCall call) {
+      SqlNode sqlNode = call.operand(0);
+      if (sqlNode instanceof SqlCall) {
+        if (((SqlCall) sqlNode).getOperator() instanceof SqlCaseOperator) {
+          for (SqlNode whenOperand : ((SqlCase) sqlNode).getWhenOperands()) {
+            boolean present = hasAnalyticalFunction((SqlBasicCall) whenOperand);
+            if (present) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
     }
 
     private boolean hasAnalyticalFunction(SqlBasicCall call) {
@@ -1332,13 +1340,9 @@ public abstract class SqlImplementor {
             String grpCall = ((SqlIdentifier) grpNode).names.get(0);
             for (SqlNode selectNode : selectList.getList()) {
               if (selectNode instanceof SqlBasicCall) {
-                SqlBasicCall selectCall = (SqlBasicCall) selectNode;
-                if (selectCall.getOperator() instanceof SqlAsOperator) {
-                  if (grpCall.equals(selectCall.operand(1).toString())
-                      && !grpCallPresentInFinalProjection
-                      (grpCall, rel.getRowType().getFieldNames())) {
-                    return true;
-                  }
+                if (grpCallIsAlias(grpCall, (SqlBasicCall) selectNode)
+                    && !grpCallPresentInFinalProjection(grpCall, rel)) {
+                  return true;
                 }
               }
             }
@@ -1348,8 +1352,14 @@ public abstract class SqlImplementor {
       return false;
     }
 
-    boolean grpCallPresentInFinalProjection(String grpCall, List<String> projFieldList) {
-      for (String finalProj  : projFieldList) {
+    boolean grpCallIsAlias(String grpCall, SqlBasicCall selectCall) {
+      return selectCall.getOperator() instanceof SqlAsOperator
+        && grpCall.equals(selectCall.operand(1).toString());
+    }
+
+    boolean grpCallPresentInFinalProjection(String grpCall, Project rel) {
+      List<String> projFieldList = rel.getRowType().getFieldNames();
+      for (String finalProj : projFieldList) {
         if (grpCall.equals(finalProj)) {
           return true;
         }
