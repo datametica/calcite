@@ -231,8 +231,8 @@ public abstract class OperandTypes {
   public static final FamilyOperandTypeChecker STRING_STRING_STRING =
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.STRING);
 
-  public static final FamilyOperandTypeChecker ANY_ANY_ANY =
-      family(SqlTypeFamily.ANY, SqlTypeFamily.ANY, SqlTypeFamily.ANY);
+  public static final FamilyOperandTypeChecker BOOLEAN_ANY_ANY =
+      family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY, SqlTypeFamily.ANY);
 
   public static final SqlSingleOperandTypeChecker CHARACTER =
       family(SqlTypeFamily.CHARACTER);
