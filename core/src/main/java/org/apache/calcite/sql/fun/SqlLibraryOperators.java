@@ -438,7 +438,7 @@ public abstract class SqlLibraryOperators {
           SqlKind.IF,
           ReturnTypes.INTEGER_NULLABLE,
           null,
-          OperandTypes.BOOLEAN_ANY_ANY,
+          OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY, SqlTypeFamily.ANY),
           SqlFunctionCategory.STRING);
 }
 
