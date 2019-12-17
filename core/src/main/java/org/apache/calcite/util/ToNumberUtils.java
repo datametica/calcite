@@ -38,6 +38,8 @@ public class ToNumberUtils {
   private ToNumberUtils() {
   }
 
+  private static String regExRemove = "[',$A-Za-z]+";
+
   private static void handleCasting(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
       SqlTypeName sqlTypeName) {
@@ -115,8 +117,7 @@ public class ToNumberUtils {
         handleNullOperand(writer, leftPrec, rightPrec);
       } else {
         if (call.operand(0) instanceof SqlCharStringLiteral) {
-          String regEx = "[',A-Za-z]+";
-          String firstOperand = call.operand(0).toString().replaceAll(regEx, "");
+          String firstOperand = call.operand(0).toString().replaceAll(regExRemove, "");
           SqlNode[] sqlNode = new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(),
               SqlParserPos.ZERO)};
           call.setOperand(0, sqlNode[0]);
