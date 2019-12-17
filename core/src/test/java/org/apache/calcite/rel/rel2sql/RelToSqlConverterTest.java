@@ -4305,8 +4305,8 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingHexaToInt() {
     String query = "select TO_NUMBER('03ea02653f6938ba','XXXXXXXXXXXXXXXX')";
-    final String expectedBigQuery = "SELECT CAST(CONCAT('0x', '03ea02653f6938ba') AS INTEGER)";
-    final String expected = "SELECT CONV('03ea02653f6938ba', 16, 10)";
+    final String expectedBigQuery = "SELECT CAST(CONCAT('0x', '03ea02653f6938ba') AS BIGINT)";
+    final String expected = "SELECT CAST(CONV('03ea02653f6938ba', 16, 10) AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
@@ -4318,8 +4318,8 @@ public class RelToSqlConverterTest {
 
   @Test
   public void testToNumberFunctionHandlingFloatingPoint() {
-    String query = "select TO_NUMBER('1.789','9.999')";
-    final String expected = "SELECT CAST('1.789' AS FLOAT)";
+    String query = "select TO_NUMBER('-1.789','9.999')";
+    final String expected = "SELECT CAST('-1.789' AS FLOAT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4345,7 +4345,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithComma() {
     String query = "SELECT TO_NUMBER ('1,789', '9,999')";
-    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    final String expected = "SELECT CAST('1789' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4358,7 +4358,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithCurrency() {
     String query = "SELECT TO_NUMBER ('$1789', '$9999')";
-    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    final String expected = "SELECT CAST('1789' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4371,7 +4371,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithCurrencyAndL() {
     String query = "SELECT TO_NUMBER ('$1789', 'L9999')";
-    final String expected = "SELECT CAST('1789' AS INTEGER)";
+    final String expected = "SELECT CAST('1789' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4384,7 +4384,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithMinus() {
     String query = "SELECT TO_NUMBER ('-12334', 'S99999')";
-    final String expected = "SELECT CAST('-12334' AS INTEGER)";
+    final String expected = "SELECT CAST('-12334' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4397,7 +4397,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithMinusLast() {
     String query = "SELECT TO_NUMBER ('12334-', '99999S')";
-    final String expected = "SELECT CAST('-12334' AS INTEGER)";
+    final String expected = "SELECT CAST('-12334' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4423,7 +4423,46 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithCurrencyName() {
     String query = "SELECT TO_NUMBER('dollar1234','L9999','NLS_CURRENCY=''dollar''')";
-    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    final String expected = "SELECT CAST('1234' AS BIGINT)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithCurrencyNameFloat() {
+    String query = "SELECT TO_NUMBER('dollar12.34','L99D99','NLS_CURRENCY=''dollar''')";
+    final String expected = "SELECT CAST('12.34' AS FLOAT)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithCurrencyNameNull() {
+    String query = "SELECT TO_NUMBER('dollar12.34','L99D99',null)";
+    final String expected = "SELECT CAST(NULL AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test
+  public void testToNumberFunctionHandlingWithCurrencyNameMinus() {
+    String query = "SELECT TO_NUMBER('-dollar1234','L9999','NLS_CURRENCY=''dollar''')";
+    final String expected = "SELECT CAST('-1234' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4436,7 +4475,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithG() {
     String query = "SELECT TO_NUMBER ('1,2345', '9G9999')";
-    final String expected = "SELECT CAST('12345' AS INTEGER)";
+    final String expected = "SELECT CAST('12345' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4449,7 +4488,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithU() {
     String query = "SELECT TO_NUMBER ('$1234', 'U9999')";
-    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    final String expected = "SELECT CAST('1234' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4462,7 +4501,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithPR() {
     String query = "SELECT TO_NUMBER (' 123 ', '999PR')";
-    final String expected = "SELECT CAST('123' AS INTEGER)";
+    final String expected = "SELECT CAST('123' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4475,7 +4514,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithMI() {
     String query = "SELECT TO_NUMBER ('1234-', '9999MI')";
-    final String expected = "SELECT CAST('-1234' AS INTEGER)";
+    final String expected = "SELECT CAST('-1234' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4501,7 +4540,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithZero() {
     String query = "select TO_NUMBER('01234','09999')";
-    final String expected = "SELECT CAST('01234' AS INTEGER)";
+    final String expected = "SELECT CAST('01234' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4514,7 +4553,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithB() {
     String query = "select TO_NUMBER('1234','B9999')";
-    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    final String expected = "SELECT CAST('1234' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4527,7 +4566,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingWithC() {
     String query = "select TO_NUMBER('USD1234','C9999')";
-    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    final String expected = "SELECT CAST('1234' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4540,7 +4579,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandling() {
     final String query = "SELECT TO_NUMBER ('1234', '9999')";
-    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    final String expected = "SELECT CAST('1234' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4553,7 +4592,7 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingSingleArgumentInt() {
     final String query = "SELECT TO_NUMBER ('1234')";
-    final String expected = "SELECT CAST('1234' AS INTEGER)";
+    final String expected = "SELECT CAST('1234' AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4605,8 +4644,8 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingFunctionAsArgument() {
     final String query = "SELECT TO_NUMBER(SUBSTRING('12345',2))";
-    final String expected = "SELECT CAST(SUBSTR('12345', 2) AS INTEGER)";
-    final String expectedSpark = "SELECT CAST(SUBSTRING('12345', 2) AS INTEGER)";
+    final String expected = "SELECT CAST(SUBSTR('12345', 2) AS BIGINT)";
+    final String expectedSpark = "SELECT CAST(SUBSTRING('12345', 2) AS BIGINT)";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -4657,31 +4696,6 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithCurrencyNameFloat() {
-    String query = "SELECT TO_NUMBER('dollar12.34','L99D99','NLS_CURRENCY=''dollar''')";
-    final String expected = "SELECT CAST('12.34' AS FLOAT)";
-    sql(query)
-        .withBigQuery()
-        .ok(expected)
-        .withHive()
-        .ok(expected)
-        .withSpark()
-        .ok(expected);
-  }
-
-  @Test
-  public void testToNumberFunctionHandlingWithCurrencyNameNull() {
-    String query = "SELECT TO_NUMBER('dollar12.34','L99D99',null)";
-    final String expected = "SELECT CAST(NULL AS INTEGER)";
-    sql(query)
-        .withBigQuery()
-        .ok(expected)
-        .withHive()
-        .ok(expected)
-        .withSpark()
-        .ok(expected);
-  }
 
   /** Fluid interface to run tests. */
   static class Sql {

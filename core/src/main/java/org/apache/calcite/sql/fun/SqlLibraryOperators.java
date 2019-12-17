@@ -431,6 +431,16 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING_STRING,
           OperandTypes.family(SqlTypeFamily.NULL)),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {STANDARD})
+  public static final SqlFunction CONV =
+      new SqlFunction(
+          "CONV",
+          SqlKind.CONV,
+          ReturnTypes.VARCHAR_4_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+          SqlFunctionCategory.STRING);
+
 }
 
 // End SqlLibraryOperators.java
