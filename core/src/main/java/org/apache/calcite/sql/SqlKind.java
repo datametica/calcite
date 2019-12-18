@@ -786,11 +786,6 @@ public enum SqlKind {
   ASCII,
 
   /**
-   * The "IF" function.
-   */
-  IF,
-
-  /**
    * The "REVERSE" function (SQL Server, MySQL).
    */
   REVERSE,

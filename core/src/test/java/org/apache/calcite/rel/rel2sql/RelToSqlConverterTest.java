@@ -4701,6 +4701,20 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test
+  public void testAscii() {
+    String query = "SELECT ASCII ('ABC')";
+    final String expected = "SELECT ASCII('ABC')";
+    final String expectedBigQuery = "SELECT TO_CODE_POINTS('ABC') [OFFSET(0)]";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;
