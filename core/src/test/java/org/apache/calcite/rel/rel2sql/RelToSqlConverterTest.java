@@ -372,11 +372,11 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testSimpleSelectWithGroupByAliasAndAggregate() {
-    final String query = "select 'literal' as \"a\", sku + 1 as b, sum(\"product_id\") from"
+    final String query = "select 'literal' as \"a\", sku + 1 as \"b\", sum(\"product_id\") from"
         + " \"product\" group by sku + 1, 'literal'";
-    final String bigQueryExpected = "SELECT 'literal' AS a, SKU + 1 AS B, SUM(product_id)\n"
+    final String bigQueryExpected = "SELECT 'literal' AS a, SKU + 1 AS b, SUM(product_id)\n"
         + "FROM foodmart.product\n"
-        + "GROUP BY B, 1";
+        + "GROUP BY b, 1";
     sql(query)
         .withBigQuery()
         .ok(bigQueryExpected);
@@ -739,6 +739,64 @@ public class RelToSqlConverterTest {
         .ok(expectedPostgresql);
   }
 
+  @Test public void testAnalyticalFunctionInAggregate() {
+    final String query = "select\n"
+        + "MAX(\"rnk\") AS \"rnk1\""
+        + "  from ("
+        + "    select\n"
+        + "    rank() over (order by \"hire_date\") AS \"rnk\""
+        + "    from \"foodmart\".\"employee\"\n)";
+    final String expectedSql = "SELECT MAX(RANK() OVER (ORDER BY \"hire_date\")) AS \"rnk1\"\n"
+        + "FROM \"foodmart\".\"employee\"";
+    final String expectedHive = "SELECT MAX(rnk) rnk1\n"
+        + "FROM (SELECT RANK() OVER (ORDER BY hire_date NULLS LAST) rnk\n"
+        + "FROM foodmart.employee) t";
+    final String expectedSpark = expectedHive;
+    final String expectedBigQuery = "SELECT MAX(rnk) AS rnk1\n"
+        + "FROM (SELECT RANK() OVER (ORDER BY hire_date NULLS LAST) AS rnk\n"
+        + "FROM foodmart.employee) AS t";
+    sql(query)
+      .ok(expectedSql)
+      .withHive()
+      .ok(expectedHive)
+      .withSpark()
+      .ok(expectedSpark)
+      .withBigQuery()
+      .ok(expectedBigQuery);
+  }
+
+  @Test public void testAnalyticalFunctionInAggregate1() {
+    final String query = "select\n"
+        + "MAX(\"rnk\") AS \"rnk1\""
+        + "  from ("
+        + "    select\n"
+        + "    case when rank() over (order by \"hire_date\") = 1"
+        + "    then 100"
+        + "    else 200"
+        + "    end as \"rnk\""
+        + "    from \"foodmart\".\"employee\"\n)";
+    final String expectedSql = "SELECT MAX(CASE WHEN (RANK() OVER (ORDER BY \"hire_date\")) = 1 "
+        + "THEN 100 ELSE 200 END) AS \"rnk1\"\n"
+        + "FROM \"foodmart\".\"employee\"";
+    final String expectedHive = "SELECT MAX(rnk) rnk1\n"
+        + "FROM (SELECT CASE WHEN (RANK() OVER (ORDER BY hire_date NULLS LAST)) = 1"
+        + " THEN 100 ELSE 200 END rnk\n"
+        + "FROM foodmart.employee) t";
+    final String expectedSpark = expectedHive;
+    final String expectedBigQuery = "SELECT MAX(rnk) AS rnk1\n"
+        + "FROM (SELECT CASE WHEN (RANK() OVER (ORDER BY hire_date NULLS LAST)) = 1 "
+        + "THEN 100 ELSE 200 END AS rnk\n"
+        + "FROM foodmart.employee) AS t";
+    sql(query)
+      .ok(expectedSql)
+      .withHive()
+      .ok(expectedHive)
+      .withSpark()
+      .ok(expectedSpark)
+      .withBigQuery()
+      .ok(expectedBigQuery);
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2628">[CALCITE-2628]
    * JDBC adapter throws NullPointerException while generating GROUP BY query
@@ -940,9 +998,9 @@ public class RelToSqlConverterTest {
    * HiveSqlDialect should transform the SQL-standard TRIM function to TRIM,
    * LTRIM or RTRIM</a>. */
   @Test public void testTrim() {
-    final String query = "SELECT TRIM(' str ')\n"
+    final String query = "SELECT TRIM(\"full_name\")\n"
         + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT TRIM(' str ')\n"
+    final String expected = "SELECT TRIM(full_name)\n"
         + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
@@ -954,9 +1012,9 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testTrimWithBoth() {
-    final String query = "SELECT TRIM(both ' ' from ' str ')\n"
+    final String query = "SELECT TRIM(both ' ' from \"full_name\")\n"
         + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT TRIM(' str ')\n"
+    final String expected = "SELECT TRIM(full_name)\n"
         + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
@@ -996,11 +1054,11 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testTrimWithLeadingCharacter() {
-    final String query = "SELECT TRIM(LEADING 'A' from 'AABCAADCAA')\n"
+    final String query = "SELECT TRIM(LEADING 'A' from \"first_name\")\n"
         + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT LTRIM('AABCAADCAA','A')\n"
+    final String expected = "SELECT LTRIM(first_name, 'A')\n"
         + "FROM foodmart.reserve_employee";
-    final String expectedHS = "SELECT REGEXP_REPLACE('AABCAADCAA', '^(A)+|\\$', '')\n"
+    final String expectedHS = "SELECT REGEXP_REPLACE(first_name, '^(A)*', '')\n"
         + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
@@ -1014,9 +1072,9 @@ public class RelToSqlConverterTest {
   @Test public void testTrimWithTrailingCharacter() {
     final String query = "SELECT TRIM(TRAILING 'A' from 'AABCAADCAA')\n"
         + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT RTRIM('AABCAADCAA','A')\n"
+    final String expected = "SELECT RTRIM('AABCAADCAA', 'A')\n"
         + "FROM foodmart.reserve_employee";
-    final String expectedHS = "SELECT REGEXP_REPLACE('AABCAADCAA', '^|(A)*\\$', '')\n"
+    final String expectedHS = "SELECT REGEXP_REPLACE('AABCAADCAA', '(A)*$', '')\n"
         + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
@@ -1030,9 +1088,9 @@ public class RelToSqlConverterTest {
   @Test public void testTrimWithBothCharacter() {
     final String query = "SELECT TRIM(BOTH 'A' from 'AABCAADCAA')\n"
         + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT TRIM('AABCAADCAA','A')\n"
+    final String expected = "SELECT TRIM('AABCAADCAA', 'A')\n"
         + "FROM foodmart.reserve_employee";
-    final String expectedHS = "SELECT REGEXP_REPLACE('AABCAADCAA', '^(A)+|\\(A)+$', '')\n"
+    final String expectedHS = "SELECT REGEXP_REPLACE('AABCAADCAA', '^(A)*|(A)*$', '')\n"
         + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
@@ -1046,10 +1104,10 @@ public class RelToSqlConverterTest {
   @Test public void testTrimWithLeadingSpecialCharacter() {
     final String query = "SELECT TRIM(LEADING 'A$@*' from 'A$@*AABCA$@*AADCAA$@*')\n"
         + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT LTRIM('A$@*AABCA$@*AADCAA$@*','A$@*')\n"
+    final String expected = "SELECT LTRIM('A$@*AABCA$@*AADCAA$@*', 'A$@*')\n"
         + "FROM foodmart.reserve_employee";
     final String expectedHS =
-        "SELECT REGEXP_REPLACE('A$@*AABCA$@*AADCAA$@*', '^(A\\$\\@\\*)+|\\$', '')\n"
+        "SELECT REGEXP_REPLACE('A$@*AABCA$@*AADCAA$@*', '^(A\\$\\@\\*)*', '')\n"
         + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
@@ -1063,10 +1121,10 @@ public class RelToSqlConverterTest {
   @Test public void testTrimWithTrailingSpecialCharacter() {
     final String query = "SELECT TRIM(TRAILING '$A@*' from '$A@*AABC$@*AADCAA$A@*')\n"
         + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT RTRIM('$A@*AABC$@*AADCAA$A@*','$A@*')\n"
+    final String expected = "SELECT RTRIM('$A@*AABC$@*AADCAA$A@*', '$A@*')\n"
         + "FROM foodmart.reserve_employee";
     final String expectedHS =
-        "SELECT REGEXP_REPLACE('$A@*AABC$@*AADCAA$A@*', '^|(\\$A\\@\\*)*\\$', '')\n"
+        "SELECT REGEXP_REPLACE('$A@*AABC$@*AADCAA$A@*', '(\\$A\\@\\*)*$', '')\n"
         + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
@@ -1077,14 +1135,15 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+
   @Test public void testTrimWithBothSpecialCharacter() {
     final String query = "SELECT TRIM(BOTH '$@*A' from '$@*AABC$@*AADCAA$@*A')\n"
         + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT TRIM('$@*AABC$@*AADCAA$@*A','$@*A')\n"
+    final String expected = "SELECT TRIM('$@*AABC$@*AADCAA$@*A', '$@*A')\n"
         + "FROM foodmart.reserve_employee";
     final String expectedHS =
         "SELECT REGEXP_REPLACE('$@*AABC$@*AADCAA$@*A',"
-            + " '^(\\$\\@\\*A)+|\\(\\$\\@\\*A)+$', '')\n"
+            + " '^(\\$\\@\\*A)*|(\\$\\@\\*A)*$', '')\n"
         + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
@@ -4316,14 +4375,18 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test public void testSelectQueryWithGroupByOrdinal() {
-    String query = "select '100', \"product_id\"  from \"product\" group by '100', \"product_id\"";
-    final String expected = "SELECT '100', product_id\n"
-        + "FROM foodmart.product\n"
-        + "GROUP BY 1, product_id";
-    sql(query)
-        .withBigQuery()
-        .ok(expected);
+
+  @Test public void testSelectWithGroupByOnColumnNotPresentInProjection() {
+    String query = "select \"t1\".\"department_id\" from\n"
+        + "\"foodmart\".\"employee\" as \"t1\" inner join \"foodmart\".\"department\" as \"t2\"\n"
+        + "on \"t1\".\"department_id\" = \"t2\".\"department_id\"\n"
+        + "group by \"t2\".\"department_id\", \"t1\".\"department_id\"";
+    final String expected = "SELECT t0.department_id\n"
+        + "FROM (SELECT department.department_id AS department_id0, employee.department_id\n"
+        + "FROM foodmart.employee\n"
+        + "INNER JOIN foodmart.department ON employee.department_id = department.department_id\n"
+        + "GROUP BY department_id0, employee.department_id) AS t0";
+    sql(query).withBigQuery().ok(expected);
   }
 
   @Test public void testSupportsDataType() {

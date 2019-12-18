@@ -116,6 +116,14 @@ public class BigQuerySqlDialect extends SqlDialect {
     return false;
   }
 
+  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+    return false;
+  }
+
+  @Override public boolean supportsAnalyticalFunctionInGroupBy() {
+    return false;
+  }
+
   @Override public boolean supportsColumnAliasInSort() {
     return true;
   }
@@ -347,7 +355,6 @@ public class BigQuerySqlDialect extends SqlDialect {
     call.operand(2).unparse(writer, leftPrec, rightPrec);
     if (!valueToTrim.toValue().matches("\\s+")) {
       writer.literal(",");
-      writer.setNeedWhitespace(false);
       call.operand(1).unparse(writer, leftPrec, rightPrec);
     }
     writer.endFunCall(trimFrame);

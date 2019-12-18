@@ -80,6 +80,14 @@ public class HiveSqlDialect extends SqlDialect {
     return true;
   }
 
+  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+    return false;
+  }
+
+  @Override public boolean supportsAnalyticalFunctionInGroupBy() {
+    return false;
+  }
+
   @Override public void unparseOffsetFetch(SqlWriter writer, SqlNode offset,
       SqlNode fetch) {
     unparseFetchUsingLimit(writer, offset, fetch);
@@ -216,24 +224,24 @@ public class HiveSqlDialect extends SqlDialect {
 
   private SqlCharStringLiteral makeRegexNodeFromCall(SqlNode call, SqlLiteral trimFlag) {
     String regexPattern = ((SqlCharStringLiteral) call).toValue();
-    regexPattern = modifySpecialCharIfAny(regexPattern);
+    regexPattern = escapeSpecialChar(regexPattern);
     switch (trimFlag.getValueAs(SqlTrimFunction.Flag.class)) {
     case LEADING:
-      regexPattern = "^(".concat(regexPattern).concat(")+|\\$");
+      regexPattern = "^(".concat(regexPattern).concat(")*");
       break;
     case TRAILING:
-      regexPattern = "^|(".concat(regexPattern).concat(")*\\$");
+      regexPattern = "(".concat(regexPattern).concat(")*$");
       break;
     default:
-      regexPattern = "^(".concat(regexPattern).concat(")+|\\(")
-          .concat(regexPattern).concat(")+$");
+      regexPattern = "^(".concat(regexPattern).concat(")*|(")
+          .concat(regexPattern).concat(")*$");
       break;
     }
     return SqlLiteral.createCharString(regexPattern,
         call.getParserPosition());
   }
 
-  private String modifySpecialCharIfAny(String inputString) {
+  private String escapeSpecialChar(String inputString) {
     final String[] specialCharacters = {"\\", "^", "$", "{", "}", "[", "]", "(", ")", ".",
         "*", "+", "?", "|", "<", ">", "-", "&", "%", "@"};
 
