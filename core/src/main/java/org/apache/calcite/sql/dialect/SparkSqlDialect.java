@@ -246,35 +246,46 @@ public class SparkSqlDialect extends SqlDialect {
   /**
    * For usage of TRIM, LTRIM and RTRIM in Spark
    */
-  private void unparseTrim(SqlWriter writer, SqlCall call, int leftPrec,
-                           int rightPrec) {
+  private void unparseTrim(
+      SqlWriter writer, SqlCall call, int leftPrec,
+      int rightPrec) {
     assert call.operand(0) instanceof SqlLiteral : call.operand(0);
     SqlLiteral trimFlag = call.operand(0);
     SqlLiteral valueToTrim = call.operand(1);
     if (valueToTrim.toValue().matches("\\s+")) {
-      final String operatorName;
-      switch (trimFlag.getValueAs(SqlTrimFunction.Flag.class)) {
-      case LEADING:
-        operatorName = "LTRIM";
-        break;
-      case TRAILING:
-        operatorName = "RTRIM";
-        break;
-      default:
-        operatorName = call.getOperator().getName();
-        break;
-      }
-      final SqlWriter.Frame trimFrame = writer.startFunCall(operatorName);
-      call.operand(2).unparse(writer, leftPrec, rightPrec);
-      writer.endFunCall(trimFrame);
+      handleTrimWithSpace(writer, call, leftPrec, rightPrec, trimFlag);
     } else {
-      SqlCharStringLiteral regexNode = makeRegexNodeFromCall(call.operand(1), trimFlag);
-      SqlCharStringLiteral blankLiteral = SqlLiteral.createCharString("",
-          call.getParserPosition());
-      SqlNode[] trimOperands = new SqlNode[]{call.operand(2), regexNode, blankLiteral};
-      SqlCall regexReplaceCall = new SqlBasicCall(REGEXP_REPLACE, trimOperands, SqlParserPos.ZERO);
-      REGEXP_REPLACE.unparse(writer, regexReplaceCall, leftPrec, rightPrec);
+      handleTrimWithChar(writer, call, leftPrec, rightPrec, trimFlag);
     }
+  }
+
+  private void handleTrimWithSpace(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlLiteral trimFlag) {
+    final String operatorName;
+    switch (trimFlag.getValueAs(SqlTrimFunction.Flag.class)) {
+    case LEADING:
+      operatorName = "LTRIM";
+      break;
+    case TRAILING:
+      operatorName = "RTRIM";
+      break;
+    default:
+      operatorName = call.getOperator().getName();
+      break;
+    }
+    final SqlWriter.Frame trimFrame = writer.startFunCall(operatorName);
+    call.operand(2).unparse(writer, leftPrec, rightPrec);
+    writer.endFunCall(trimFrame);
+  }
+
+  private void handleTrimWithChar(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlLiteral trimFlag) {
+    SqlCharStringLiteral regexNode = makeRegexNodeFromCall(call.operand(1), trimFlag);
+    SqlCharStringLiteral blankLiteral = SqlLiteral.createCharString("",
+        call.getParserPosition());
+    SqlNode[] trimOperands = new SqlNode[]{call.operand(2), regexNode, blankLiteral};
+    SqlCall regexReplaceCall = new SqlBasicCall(REGEXP_REPLACE, trimOperands, SqlParserPos.ZERO);
+    REGEXP_REPLACE.unparse(writer, regexReplaceCall, leftPrec, rightPrec);
   }
 
   private SqlCharStringLiteral makeRegexNodeFromCall(SqlNode call, SqlLiteral trimFlag) {
