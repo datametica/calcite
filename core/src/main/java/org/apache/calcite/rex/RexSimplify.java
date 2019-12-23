@@ -2304,9 +2304,10 @@ public class RexSimplify {
   private RexNode simplifyIf(RexCall e, RexUnknownAs unknownAs) {
     List<RexNode> operands = RelOptUtil.conjunctions(e);
     List<RexNode> resultRexNode = new ArrayList<>();
-    resultRexNode.add(simplify(((RexCall) operands.get(0)).getOperands().get(0), unknownAs));
-    resultRexNode.add(simplify(((RexCall) operands.get(0)).getOperands().get(1), unknownAs));
-    resultRexNode.add(simplify(((RexCall) operands.get(0)).getOperands().get(2), unknownAs));
+
+    for (RexNode operand : ((RexCall) operands.get(0)).getOperands()) {
+      resultRexNode.add(simplify(operand, unknownAs));
+    }
 
     if (resultRexNode.get(0).equals(rexBuilder.makeLiteral(true))) {
       return resultRexNode.get(1);
