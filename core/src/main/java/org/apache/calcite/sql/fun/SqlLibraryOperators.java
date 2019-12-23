@@ -435,7 +435,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction IF =
       new SqlFunction(
           "IF",
-          SqlKind.OTHER_FUNCTION,
+          SqlKind.IF,
           ReturnTypes.INTEGER_NULLABLE,
           null,
           OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY, SqlTypeFamily.ANY),

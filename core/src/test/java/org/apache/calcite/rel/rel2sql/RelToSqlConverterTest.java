@@ -4715,6 +4715,20 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test
+  public void testIf() {
+    String query = "SELECT if ('ABC'='' or 'ABC' is null, null, ASCII('ABC'))";
+    final String expected = "SELECT CAST(ASCII('ABC') AS INTEGER)";
+    final String expectedBigQuery = "SELECT CAST(TO_CODE_POINTS('ABC') [OFFSET(0)] AS INTEGER)";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;
