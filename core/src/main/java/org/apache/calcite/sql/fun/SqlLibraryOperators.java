@@ -27,11 +27,14 @@ import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SameOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -436,10 +439,19 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "IF",
           SqlKind.IF,
-          ReturnTypes.INTEGER_NULLABLE,
+          ReturnTypes.ARG2_NULLABLE,
           null,
-          OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY, SqlTypeFamily.ANY),
-          SqlFunctionCategory.STRING);
+          OperandTypes.and(
+              OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY,
+                  SqlTypeFamily.ANY),
+              // Arguments 1 and 2 must have same type
+              new SameOperandTypeChecker(3) {
+                @Override protected List<Integer>
+                getOperandList(int operandCount) {
+                  return ImmutableList.of(1, 2);
+                }
+              }),
+          SqlFunctionCategory.SYSTEM);
 }
 
 // End SqlLibraryOperators.java
