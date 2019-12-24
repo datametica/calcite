@@ -435,6 +435,7 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NULL)),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {BIGQUERY,HIVE,SPARK})
   public static final SqlFunction IF =
       new SqlFunction(
           "IF",
