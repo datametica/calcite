@@ -2302,16 +2302,16 @@ public class RexSimplify {
   }
 
   private RexNode simplifyIf(RexCall e, RexUnknownAs unknownAs) {
-    List<RexNode> operands = RelOptUtil.conjunctions(e);
+    List<RexNode> operands = e.getOperands();
     List<RexNode> resultRexNode = new ArrayList<>();
 
-    for (RexNode operand : ((RexCall) operands.get(0)).getOperands()) {
+    for (RexNode operand : operands) {
       resultRexNode.add(simplify(operand, unknownAs));
     }
 
-    if (resultRexNode.get(0).equals(rexBuilder.makeLiteral(true))) {
+    if (resultRexNode.get(0).isAlwaysTrue()) {
       return resultRexNode.get(1);
-    } else if (resultRexNode.get(0).equals(rexBuilder.makeLiteral(false))) {
+    } else if (resultRexNode.get(0).isAlwaysFalse()) {
       return resultRexNode.get(2);
     }
     return e;
