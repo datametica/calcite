@@ -3979,12 +3979,12 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testDatePlusIntervalMonthFunctionWithArthOps() {
-    String query = "select \"birth_date\" + 10 * INTERVAL '1' MONTH from \"employee\"";
-    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, 10) AS DATE)\n"
+    String query = "select \"birth_date\" + -10 * INTERVAL '1' MONTH from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, -10) AS DATE)\n"
         + "FROM foodmart.employee";
-    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, 10)\n"
+    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, -10)\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 MONTH)\n"
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL -10 MONTH)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()

@@ -20,13 +20,17 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.JoinType;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlUtil;
@@ -34,9 +38,9 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.ToNumberUtils;
-import org.apache.calcite.util.UnparseCommonUtil;
 
 /**
  * A <code>SqlDialect</code> implementation for the APACHE SPARK database.
@@ -187,11 +191,6 @@ public class SparkSqlDialect extends SqlDialect {
       case FORMAT:
         unparseFormat(writer, call, leftPrec, rightPrec);
         break;
-      case DATE_ADD:
-      case DATE_SUB:
-      case ADD_MONTHS:
-        UnparseCommonUtil.unparseHiveSparkDateAddAndSub(call, writer, leftPrec, rightPrec);
-        break;
       case TO_NUMBER:
         ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
         break;
@@ -212,6 +211,83 @@ public class SparkSqlDialect extends SqlDialect {
       call.operand(1).unparse(writer, leftPrec, rightPrec);
       writer.endFunCall(dateDiffFrame);
       break;
+    }
+  }
+
+  @Override public void unparseIntervalOperandsBasedFunctions(
+      SqlWriter writer,
+      SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.operand(1).getKind()) {
+    case LITERAL:
+    case TIMES:
+      makeDateAddCall(call, writer, leftPrec, rightPrec);
+      break;
+    default:
+      throw new AssertionError(call.operand(1).getKind() + " is not valid");
+    }
+  }
+
+  private void makeDateAddCall(SqlCall call, SqlWriter writer, int leftPrec, int rightPrec) {
+    writer.print(call.getOperator().toString());
+    writer.print("(");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(",");
+    SqlNode intervalValue = modifyIntervalCall(writer, call.operand(1));
+    writer.print(intervalValue.toString().replace("`", ""));
+    writer.print(")");
+  }
+
+  private SqlNode modifyIntervalCall(SqlWriter writer, SqlNode intervalOperand) {
+
+    if (intervalOperand.getKind() == SqlKind.LITERAL) {
+      return modifiedIntervalForLiteral(writer, intervalOperand);
+    }
+    return modifiedIntervalForBasicCall(writer, intervalOperand);
+  }
+
+  private SqlNode modifiedIntervalForBasicCall(SqlWriter writer, SqlNode intervalOperand) {
+    SqlLiteral intervalLiteralValue = getLiteralValue(intervalOperand);
+    SqlNode identifierValue = getIdentifierValue(intervalOperand);
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
+    writeNegativeLiteral(interval, writer);
+    if (interval.getIntervalLiteral().equals("1")) {
+      return identifierValue;
+    }
+    SqlNode intervalValue = new SqlIdentifier(interval.toString(),
+        intervalOperand.getParserPosition());
+    SqlNode[] sqlNodes = new SqlNode[]{identifierValue,
+        intervalValue};
+    return new SqlBasicCall(SqlStdOperatorTable.MULTIPLY, sqlNodes, SqlParserPos.ZERO);
+  }
+
+  public SqlLiteral getLiteralValue(SqlNode intervalOperand) {
+    if ((((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER)
+        || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
+      return ((SqlBasicCall) intervalOperand).operand(0);
+    }
+    return ((SqlBasicCall) intervalOperand).operand(1);
+  }
+
+  public SqlNode getIdentifierValue(SqlNode intervalOperand) {
+    if (((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER
+        || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
+      return ((SqlBasicCall) intervalOperand).operand(1);
+    }
+    return ((SqlBasicCall) intervalOperand).operand(0);
+  }
+
+  private  SqlNode modifiedIntervalForLiteral(SqlWriter writer, SqlNode intervalOperand) {
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) intervalOperand).getValue();
+    writeNegativeLiteral(interval, writer);
+    return new SqlIdentifier(interval.toString(), intervalOperand.getParserPosition());
+  }
+
+  private  void writeNegativeLiteral(SqlIntervalLiteral.IntervalValue interval,
+                                     SqlWriter writer) {
+    if (interval.signum() == -1) {
+      writer.print("-");
     }
   }
 }

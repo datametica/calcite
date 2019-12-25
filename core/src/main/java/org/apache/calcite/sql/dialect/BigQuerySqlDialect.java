@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
@@ -38,7 +39,6 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
-import org.apache.calcite.util.UnparseCommonUtil;
 
 import com.google.common.collect.ImmutableList;
 
@@ -116,6 +116,14 @@ public class BigQuerySqlDialect extends SqlDialect {
   @Override public boolean supportsNestedAggregations() {
     return false;
   }
+
+//  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+//    return false;
+//  }
+//
+//  @Override public boolean supportsAnalyticalFunctionInGroupBy() {
+//    return false;
+//  }
 
   @Override public boolean supportsColumnAliasInSort() {
     return true;
@@ -237,10 +245,6 @@ public class BigQuerySqlDialect extends SqlDialect {
     case REGEXP_SUBSTR:
       unparseRegexSubstr(writer, call, leftPrec, rightPrec);
       break;
-    case DATE_ADD:
-    case DATE_SUB:
-      unparseDateAddAndSub(writer, call, leftPrec, rightPrec);
-      break;
     case TO_NUMBER:
       ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
       break;
@@ -327,7 +331,8 @@ public class BigQuerySqlDialect extends SqlDialect {
     return new SqlBasicCall(SUBSTR, sqlNodes, SqlParserPos.ZERO);
   }
 
-  public void unparseDateAddAndSub(SqlWriter writer,
+  @Override public void unparseIntervalOperandsBasedFunctions(
+      SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
     final SqlWriter.Frame frame = writer.startFunCall(call.getOperator().toString());
     call.operand(0).unparse(writer, leftPrec, rightPrec);
@@ -342,21 +347,37 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseBasicLiteral(
       SqlBasicCall call, SqlWriter writer, int leftPrec, int rightPrec) {
-    SqlLiteral intervalLiteralValue = UnparseCommonUtil.getLiteralValue(call);
-    SqlNode identifierValue = UnparseCommonUtil.getIdentifierValue(call);
+    SqlLiteral intervalLiteralValue = getLiteralValue(call);
+    SqlNode identifierValue = getIdentifierValue(call);
     SqlIntervalLiteral.IntervalValue literalValue =
         (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
     writer.sep("INTERVAL");
     if (call.getKind() == SqlKind.TIMES) {
       if (!literalValue.getIntervalLiteral().equals("1")) {
         identifierValue.unparse(writer, leftPrec, rightPrec);
-        writer.sep("*");
+        writer.sep ("*");
         writer.sep(literalValue.toString());
       } else {
         identifierValue.unparse(writer, leftPrec, rightPrec);
       }
-      writer.sep(literalValue.getIntervalQualifier().toString());
+      writer.print(literalValue.getIntervalQualifier().toString());
     }
+  }
+
+  private SqlLiteral getLiteralValue(SqlNode intervalOperand) {
+    if ((((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER)
+        || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
+      return ((SqlBasicCall) intervalOperand).operand(0);
+    }
+    return ((SqlBasicCall) intervalOperand).operand(1);
+  }
+
+  private SqlNode getIdentifierValue(SqlNode intervalOperand) {
+    if (((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER
+        || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
+      return ((SqlBasicCall) intervalOperand).operand(1);
+    }
+    return ((SqlBasicCall) intervalOperand).operand(0);
   }
 }
 

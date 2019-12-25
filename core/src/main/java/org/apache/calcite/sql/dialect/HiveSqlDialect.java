@@ -18,20 +18,24 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
-import org.apache.calcite.util.UnparseCommonUtil;
 
 
 /**
@@ -47,14 +51,16 @@ public class HiveSqlDialect extends SqlDialect {
   private final boolean emulateNullDirection;
   private final boolean isHiveLowerVersion;
 
-  /** Creates a HiveSqlDialect. */
+  /**
+   * Creates a HiveSqlDialect.
+   */
   public HiveSqlDialect(Context context) {
     super(context);
     // Since 2.1.0, Hive natively supports "NULLS FIRST" and "NULLS LAST".
     // See https://issues.apache.org/jira/browse/HIVE-12994.
     emulateNullDirection = (context.databaseMajorVersion() < 2)
         || (context.databaseMajorVersion() == 2
-            && context.databaseMinorVersion() < 1);
+        && context.databaseMinorVersion() < 1);
 
     isHiveLowerVersion = (context.databaseMajorVersion() < 2)
         || (context.databaseMajorVersion() == 2
@@ -81,12 +87,22 @@ public class HiveSqlDialect extends SqlDialect {
     return true;
   }
 
-  @Override public void unparseOffsetFetch(SqlWriter writer, SqlNode offset,
+//  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+//    return false;
+//  }
+//
+//  @Override public boolean supportsAnalyticalFunctionInGroupBy() {
+//    return false;
+//  }
+
+  @Override public void unparseOffsetFetch(
+      SqlWriter writer, SqlNode offset,
       SqlNode fetch) {
     unparseFetchUsingLimit(writer, offset, fetch);
   }
 
-  @Override public SqlNode emulateNullDirection(SqlNode node,
+  @Override public SqlNode emulateNullDirection(
+      SqlNode node,
       boolean nullsFirst, boolean desc) {
     if (emulateNullDirection) {
       return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
@@ -113,7 +129,8 @@ public class HiveSqlDialect extends SqlDialect {
     }
   }
 
-  @Override public void unparseCall(final SqlWriter writer, final SqlCall call,
+  @Override public void unparseCall(
+      final SqlWriter writer, final SqlCall call,
       final int leftPrec, final int rightPrec) {
     switch (call.getKind()) {
     case POSITION:
@@ -176,11 +193,6 @@ public class HiveSqlDialect extends SqlDialect {
     case FORMAT:
       unparseFormat(writer, call, leftPrec, rightPrec);
       break;
-    case DATE_ADD:
-    case DATE_SUB:
-    case ADD_MONTHS:
-      unparseDateAddAndSub(writer, call, leftPrec, rightPrec);
-      break;
     case TO_NUMBER:
       ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
       break;
@@ -191,9 +203,11 @@ public class HiveSqlDialect extends SqlDialect {
 
   /**
    * For usage of TRIM, LTRIM and RTRIM in Hive, see
-   * <a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF">Hive UDF usage</a>.
+   * <a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF">Hive UDF
+   * usage</a>.
    */
-  private void unparseTrim(SqlWriter writer, SqlCall call, int leftPrec,
+  private void unparseTrim(
+      SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
     assert call.operand(0) instanceof SqlLiteral : call.operand(0);
     SqlLiteral flag = call.operand(0);
@@ -218,7 +232,8 @@ public class HiveSqlDialect extends SqlDialect {
     return false;
   }
 
-  @Override public void unparseSqlDatetimeArithmetic(SqlWriter writer,
+  @Override public void unparseSqlDatetimeArithmetic(
+      SqlWriter writer,
       SqlCall call, SqlKind sqlKind, int leftPrec, int rightPrec) {
     switch (sqlKind) {
     case MINUS:
@@ -232,16 +247,94 @@ public class HiveSqlDialect extends SqlDialect {
     }
   }
 
-  public void unparseDateAddAndSub(SqlWriter writer,
+  @Override public void unparseIntervalOperandsBasedFunctions(
+      SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
     if (isHiveLowerVersion) {
       final SqlWriter.Frame castFrame = writer.startFunCall("CAST");
-      UnparseCommonUtil.unparseHiveSparkDateAddAndSub(call, writer, leftPrec, rightPrec);
+      unparseDateAddAndSub(call, writer, leftPrec, rightPrec);
       writer.sep("AS");
       writer.literal("DATE");
       writer.endFunCall(castFrame);
     } else {
-      UnparseCommonUtil.unparseHiveSparkDateAddAndSub(call, writer, leftPrec, rightPrec);
+      unparseDateAddAndSub(call, writer, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseDateAddAndSub(
+      SqlCall call, SqlWriter writer,
+      int leftPrec, int rightPrec) {
+    switch (call.operand(1).getKind()) {
+    case LITERAL:
+    case TIMES:
+      makeDateAddCall(call, writer, leftPrec, rightPrec);
+      break;
+    default:
+      throw new AssertionError(call.operand(1).getKind() + " is not valid");
+    }
+  }
+
+  private void makeDateAddCall(SqlCall call, SqlWriter writer, int leftPrec, int rightPrec) {
+    writer.print(call.getOperator().toString());
+    writer.print("(");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(",");
+    SqlNode intervalValue = modifyIntervalCall(writer, call.operand(1));
+    writer.print(intervalValue.toString().replace("`", ""));
+    writer.sep(")");
+  }
+
+  private SqlNode modifyIntervalCall(SqlWriter writer, SqlNode intervalOperand) {
+
+    if (intervalOperand.getKind() == SqlKind.LITERAL) {
+      return modifiedIntervalForLiteral(writer, intervalOperand);
+    }
+    return modifiedIntervalForBasicCall(writer, intervalOperand);
+  }
+
+  private SqlNode modifiedIntervalForBasicCall(SqlWriter writer, SqlNode intervalOperand) {
+    SqlLiteral intervalLiteralValue = getLiteralValue(intervalOperand);
+    SqlNode identifierValue = getIdentifierValue(intervalOperand);
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
+    writeNegativeLiteral(interval, writer);
+    if (interval.getIntervalLiteral().equals("1")) {
+      return identifierValue;
+    }
+    SqlNode intervalValue = new SqlIdentifier(interval.toString(),
+        intervalOperand.getParserPosition());
+    SqlNode[] sqlNodes = new SqlNode[]{identifierValue,
+        intervalValue};
+    return new SqlBasicCall(SqlStdOperatorTable.MULTIPLY, sqlNodes, SqlParserPos.ZERO);
+  }
+
+  private SqlLiteral getLiteralValue(SqlNode intervalOperand) {
+    if ((((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER)
+        || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
+      return ((SqlBasicCall) intervalOperand).operand(0);
+    }
+    return ((SqlBasicCall) intervalOperand).operand(1);
+  }
+
+  private SqlNode getIdentifierValue(SqlNode intervalOperand) {
+    if (((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER
+        || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
+      return ((SqlBasicCall) intervalOperand).operand(1);
+    }
+    return ((SqlBasicCall) intervalOperand).operand(0);
+  }
+
+  private  SqlNode modifiedIntervalForLiteral(SqlWriter writer, SqlNode intervalOperand) {
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) intervalOperand).getValue();
+    writeNegativeLiteral(interval, writer);
+    return new SqlIdentifier(interval.toString(), intervalOperand.getParserPosition());
+  }
+
+  private  void writeNegativeLiteral(SqlIntervalLiteral.IntervalValue interval,
+                                           SqlWriter writer) {
+    if (interval.signum() == -1) {
+      writer.print("-");
     }
   }
 }
