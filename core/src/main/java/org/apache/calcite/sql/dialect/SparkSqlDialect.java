@@ -22,6 +22,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -38,9 +39,12 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.ToNumberUtils;
+
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
 
 /**
  * A <code>SqlDialect</code> implementation for the APACHE SPARK database.
@@ -68,6 +72,14 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   @Override public boolean supportsNestedAggregations() {
+    return false;
+  }
+
+  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+    return false;
+  }
+
+  @Override public boolean supportsAnalyticalFunctionInGroupBy() {
     return false;
   }
 
@@ -103,9 +115,8 @@ public class SparkSqlDialect extends SqlDialect {
       case INTERVAL_DAY:
         if (call.op.kind == SqlKind.MINUS) {
           return SqlLibraryOperators.DATE_SUB;
-        } else {
-          return SqlLibraryOperators.DATE_ADD;
         }
+        return SqlLibraryOperators.DATE_ADD;
       case INTERVAL_MONTH:
         return SqlLibraryOperators.ADD_MONTHS;
       }
@@ -194,6 +205,9 @@ public class SparkSqlDialect extends SqlDialect {
       case TO_NUMBER:
         ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
         break;
+      case TRIM:
+        unparseTrim(writer, call, leftPrec, rightPrec);
+        break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
@@ -214,38 +228,51 @@ public class SparkSqlDialect extends SqlDialect {
     }
   }
 
+  /**
+   * For usage of DATE_ADD,DATE_SUB,ADD_MONTH in Spark
+   * eg:select date + Store_id * INTERVAL '1' DAY
+   * o/p query: select DATE_ADD(date , Store_id)
+   * eg:select date + Store_id * INTERVAL '2' MONTH
+   * o/p query: select ADD_MONTH(date , Store_id * 2)
+   */
   @Override public void unparseIntervalOperandsBasedFunctions(
       SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
     switch (call.operand(1).getKind()) {
     case LITERAL:
     case TIMES:
-      makeDateAddCall(call, writer, leftPrec, rightPrec);
+      makeIntervalOperandCall(call, writer, leftPrec, rightPrec);
       break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
   }
 
-  private void makeDateAddCall(SqlCall call, SqlWriter writer, int leftPrec, int rightPrec) {
+  private void makeIntervalOperandCall(
+      SqlCall call, SqlWriter writer, int leftPrec, int rightPrec) {
     writer.print(call.getOperator().toString());
     writer.print("(");
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.print(",");
-    SqlNode intervalValue = modifyIntervalCall(writer, call.operand(1));
+    SqlNode intervalValue = modifyIntervalOperandCall(writer, call.operand(1));
     writer.print(intervalValue.toString().replace("`", ""));
     writer.print(")");
   }
 
-  private SqlNode modifyIntervalCall(SqlWriter writer, SqlNode intervalOperand) {
+  private SqlNode modifyIntervalOperandCall(SqlWriter writer, SqlNode intervalOperand) {
 
     if (intervalOperand.getKind() == SqlKind.LITERAL) {
-      return modifiedIntervalForLiteral(writer, intervalOperand);
+      return modifyIntervalForLiteral(writer, intervalOperand);
     }
-    return modifiedIntervalForBasicCall(writer, intervalOperand);
+    return modifyIntervalForBasicCall(writer, intervalOperand);
   }
 
-  private SqlNode modifiedIntervalForBasicCall(SqlWriter writer, SqlNode intervalOperand) {
+  /**
+   * This Method will unparse the Basic calls obtained in input Query
+   * i/p:Store_id * INTERVAL '1' DAY o/p: store_id
+   * 10 * INTERVAL '2' DAY o/p: 10 * 2
+   */
+  private SqlNode modifyIntervalForBasicCall(SqlWriter writer, SqlNode intervalOperand) {
     SqlLiteral intervalLiteralValue = getLiteralValue(intervalOperand);
     SqlNode identifierValue = getIdentifierValue(intervalOperand);
     SqlIntervalLiteral.IntervalValue interval =
@@ -261,6 +288,22 @@ public class SparkSqlDialect extends SqlDialect {
     return new SqlBasicCall(SqlStdOperatorTable.MULTIPLY, sqlNodes, SqlParserPos.ZERO);
   }
 
+  /**
+   * This Method will unparse the Literal call in input Query like
+   * INTERVAL '1' DAY, INTERVAL '1' MONTH
+   */
+  private SqlNode modifyIntervalForLiteral(SqlWriter writer, SqlNode intervalOperand) {
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) intervalOperand).getValue();
+    writeNegativeLiteral(interval, writer);
+    return new SqlIdentifier(interval.toString(), intervalOperand.getParserPosition());
+  }
+
+  /**
+   * This Method will return the literal value from the intervalOperand
+   * I/P: INTERVAL '1' DAY
+   * o/p: 1
+   */
   public SqlLiteral getLiteralValue(SqlNode intervalOperand) {
     if ((((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER)
         || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
@@ -269,6 +312,11 @@ public class SparkSqlDialect extends SqlDialect {
     return ((SqlBasicCall) intervalOperand).operand(1);
   }
 
+  /**
+   * This Method will return the Identifer value from the intervalOperand
+   * I/P: Store_id * INTERVAL '1' DAY
+   * o/p: Store_id
+   */
   public SqlNode getIdentifierValue(SqlNode intervalOperand) {
     if (((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER
         || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
@@ -277,18 +325,88 @@ public class SparkSqlDialect extends SqlDialect {
     return ((SqlBasicCall) intervalOperand).operand(0);
   }
 
-  private  SqlNode modifiedIntervalForLiteral(SqlWriter writer, SqlNode intervalOperand) {
-    SqlIntervalLiteral.IntervalValue interval =
-        (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) intervalOperand).getValue();
-    writeNegativeLiteral(interval, writer);
-    return new SqlIdentifier(interval.toString(), intervalOperand.getParserPosition());
-  }
-
-  private  void writeNegativeLiteral(SqlIntervalLiteral.IntervalValue interval,
-                                     SqlWriter writer) {
+  private void writeNegativeLiteral(
+      SqlIntervalLiteral.IntervalValue interval,
+      SqlWriter writer) {
     if (interval.signum() == -1) {
       writer.print("-");
     }
+  }
+
+  /**
+   * For usage of TRIM, LTRIM and RTRIM in Spark
+   */
+  private void unparseTrim(
+      SqlWriter writer, SqlCall call, int leftPrec,
+      int rightPrec) {
+    assert call.operand(0) instanceof SqlLiteral : call.operand(0);
+    SqlLiteral trimFlag = call.operand(0);
+    SqlLiteral valueToTrim = call.operand(1);
+    if (valueToTrim.toValue().matches("\\s+")) {
+      handleTrimWithSpace(writer, call, leftPrec, rightPrec, trimFlag);
+    } else {
+      handleTrimWithChar(writer, call, leftPrec, rightPrec, trimFlag);
+    }
+  }
+
+  private void handleTrimWithSpace(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlLiteral trimFlag) {
+    final String operatorName;
+    switch (trimFlag.getValueAs(SqlTrimFunction.Flag.class)) {
+    case LEADING:
+      operatorName = "LTRIM";
+      break;
+    case TRAILING:
+      operatorName = "RTRIM";
+      break;
+    default:
+      operatorName = call.getOperator().getName();
+      break;
+    }
+    final SqlWriter.Frame trimFrame = writer.startFunCall(operatorName);
+    call.operand(2).unparse(writer, leftPrec, rightPrec);
+    writer.endFunCall(trimFrame);
+  }
+
+  private void handleTrimWithChar(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlLiteral trimFlag) {
+    SqlCharStringLiteral regexNode = makeRegexNodeFromCall(call.operand(1), trimFlag);
+    SqlCharStringLiteral blankLiteral = SqlLiteral.createCharString("",
+        call.getParserPosition());
+    SqlNode[] trimOperands = new SqlNode[]{call.operand(2), regexNode, blankLiteral};
+    SqlCall regexReplaceCall = new SqlBasicCall(REGEXP_REPLACE, trimOperands, SqlParserPos.ZERO);
+    REGEXP_REPLACE.unparse(writer, regexReplaceCall, leftPrec, rightPrec);
+  }
+
+  private SqlCharStringLiteral makeRegexNodeFromCall(SqlNode call, SqlLiteral trimFlag) {
+    String regexPattern = ((SqlCharStringLiteral) call).toValue();
+    regexPattern = escapeSpecialChar(regexPattern);
+    switch (trimFlag.getValueAs(SqlTrimFunction.Flag.class)) {
+    case LEADING:
+      regexPattern = "^(".concat(regexPattern).concat(")*");
+      break;
+    case TRAILING:
+      regexPattern = "(".concat(regexPattern).concat(")*$");
+      break;
+    default:
+      regexPattern = "^(".concat(regexPattern).concat(")*|(")
+          .concat(regexPattern).concat(")*$");
+      break;
+    }
+    return SqlLiteral.createCharString(regexPattern,
+        call.getParserPosition());
+  }
+
+  private String escapeSpecialChar(String inputString) {
+    final String[] specialCharacters = {"\\", "^", "$", "{", "}", "[", "]", "(", ")", ".",
+        "*", "+", "?", "|", "<", ">", "-", "&", "%", "@"};
+
+    for (int i = 0; i < specialCharacters.length; i++) {
+      if (inputString.contains(specialCharacters[i])) {
+        inputString = inputString.replace(specialCharacters[i], "\\" + specialCharacters[i]);
+      }
+    }
+    return inputString;
   }
 }
 

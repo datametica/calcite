@@ -35,6 +35,7 @@ import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
@@ -117,13 +118,13 @@ public class BigQuerySqlDialect extends SqlDialect {
     return false;
   }
 
-//  @Override public boolean supportsAnalyticalFunctionInAggregate() {
-//    return false;
-//  }
-//
-//  @Override public boolean supportsAnalyticalFunctionInGroupBy() {
-//    return false;
-//  }
+  @Override public boolean supportsAnalyticalFunctionInAggregate() {
+    return false;
+  }
+
+  @Override public boolean supportsAnalyticalFunctionInGroupBy() {
+    return false;
+  }
 
   @Override public boolean supportsColumnAliasInSort() {
     return true;
@@ -161,9 +162,8 @@ public class BigQuerySqlDialect extends SqlDialect {
       case INTERVAL_MONTH:
         if (call.op.kind == SqlKind.MINUS) {
           return SqlLibraryOperators.DATE_SUB;
-        } else {
-          return SqlLibraryOperators.DATE_ADD;
         }
+        return SqlLibraryOperators.DATE_ADD;
       }
     default:
       return super.getTargetFunc(call);
@@ -211,6 +211,9 @@ public class BigQuerySqlDialect extends SqlDialect {
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       writer.endFunCall(lengthFrame);
       break;
+    case TRIM:
+      unparseTrim(writer, call, leftPrec, rightPrec);
+      break;
     case SUBSTRING:
       final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTR");
       for (SqlNode operand : call.getOperandList()) {
@@ -247,6 +250,15 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     case TO_NUMBER:
       ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
+      break;
+    case ASCII:
+      SqlWriter.Frame toCodePointsFrame = writer.startFunCall("TO_CODE_POINTS");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(toCodePointsFrame);
+      writer.literal("[OFFSET(0)]");
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -331,21 +343,70 @@ public class BigQuerySqlDialect extends SqlDialect {
     return new SqlBasicCall(SUBSTR, sqlNodes, SqlParserPos.ZERO);
   }
 
+
+  /**
+   * For usage of TRIM, LTRIM and RTRIM in BQ
+   */
+  private void unparseTrim(
+      SqlWriter writer, SqlCall call, int leftPrec,
+      int rightPrec) {
+    assert call.operand(0) instanceof SqlLiteral : call.operand(0);
+    final String operatorName;
+    SqlLiteral trimFlag = call.operand(0);
+    SqlLiteral valueToTrim = call.operand(1);
+    switch (trimFlag.getValueAs(SqlTrimFunction.Flag.class)) {
+    case LEADING:
+      operatorName = "LTRIM";
+      break;
+    case TRAILING:
+      operatorName = "RTRIM";
+      break;
+    default:
+      operatorName = call.getOperator().getName();
+      break;
+    }
+    final SqlWriter.Frame trimFrame = writer.startFunCall(operatorName);
+    call.operand(2).unparse(writer, leftPrec, rightPrec);
+    if (!valueToTrim.toValue().matches("\\s+")) {
+      writer.literal(",");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+    }
+    writer.endFunCall(trimFrame);
+  }
+
+  /**
+   * For usage of DATE_ADD,DATE_SUB in BQ
+   * eg:select date + INTERVAL '1' DAY
+   * o/p query: select DATE_ADD(date , INTERVAL 1 DAY)
+   * eg:select date + Store_id * INTERVAL '2' DAY
+   * o/p query: select DATE_ADD(date , INTERVAL Store_id * 2 DAY)
+   *
+   */
   @Override public void unparseIntervalOperandsBasedFunctions(
       SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
     final SqlWriter.Frame frame = writer.startFunCall(call.getOperator().toString());
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.print(",");
-    if (call.operand(1).getKind() == SqlKind.TIMES) {
-      unparseBasicLiteral(call.operand(1), writer, leftPrec, rightPrec);
-    } else {
-      call.operand(1).unparse(writer, leftPrec, rightPrec);
+    switch (call.operand(1).getKind()) {
+    case LITERAL:
+      unparseLiteralCall(call.operand(1), writer);
+      break;
+    case TIMES:
+      unparseBasicCall(call.operand(1), writer, leftPrec, rightPrec);
+      break;
+    default:
+      throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
     writer.endFunCall(frame);
   }
 
-  private void unparseBasicLiteral(
+  /**
+   * This Method will unparse the Basic calls obtained in input Query
+   * i/p:Store_id * INTERVAL '1' DAY o/p: store_id
+   * 10 * INTERVAL '2' DAY o/p: 10 * 2
+   */
+  private void unparseBasicCall(
       SqlBasicCall call, SqlWriter writer, int leftPrec, int rightPrec) {
     SqlLiteral intervalLiteralValue = getLiteralValue(call);
     SqlNode identifierValue = getIdentifierValue(call);
@@ -355,7 +416,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     if (call.getKind() == SqlKind.TIMES) {
       if (!literalValue.getIntervalLiteral().equals("1")) {
         identifierValue.unparse(writer, leftPrec, rightPrec);
-        writer.sep ("*");
+        writer.sep("*");
         writer.sep(literalValue.toString());
       } else {
         identifierValue.unparse(writer, leftPrec, rightPrec);
@@ -364,20 +425,44 @@ public class BigQuerySqlDialect extends SqlDialect {
     }
   }
 
-  private SqlLiteral getLiteralValue(SqlNode intervalOperand) {
-    if ((((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER)
-        || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
+  /**
+   * This Method will unparse the Literal call in input Query like
+   * INTERVAL '1' DAY, INTERVAL '1' MONTH
+   */
+  private void unparseLiteralCall(
+      SqlLiteral call, SqlWriter writer) {
+    SqlIntervalLiteral intervalLiteralValue = (SqlIntervalLiteral) call;
+    SqlIntervalLiteral.IntervalValue literalValue =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
+    writer.sep("INTERVAL");
+    writer.sep(literalValue.getIntervalLiteral());
+    writer.print(literalValue.getIntervalQualifier().toString());
+  }
+
+  /**
+   * This Method will return the literal value from the intervalOperand
+   * I/P: INTERVAL '1' DAY
+   * o/p: 1
+   */
+  private SqlLiteral getLiteralValue(SqlBasicCall intervalOperand) {
+    if (intervalOperand.operand(1).getKind() == SqlKind.IDENTIFIER
+        || (intervalOperand.operand(1) instanceof SqlNumericLiteral)) {
       return ((SqlBasicCall) intervalOperand).operand(0);
     }
     return ((SqlBasicCall) intervalOperand).operand(1);
   }
 
-  private SqlNode getIdentifierValue(SqlNode intervalOperand) {
-    if (((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER
-        || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
-      return ((SqlBasicCall) intervalOperand).operand(1);
+  /**
+   * This Method will return the Identifer value from the intervalOperand
+   * I/P: Store_id * INTERVAL '1' DAY
+   * o/p: Store_id
+   */
+  private SqlNode getIdentifierValue(SqlBasicCall intervalOperand) {
+    if (intervalOperand.operand(1).getKind() == SqlKind.IDENTIFIER
+        || (intervalOperand.operand(1) instanceof SqlNumericLiteral)) {
+      return intervalOperand.operand(1);
     }
-    return ((SqlBasicCall) intervalOperand).operand(0);
+    return intervalOperand.operand(0);
   }
 }
 

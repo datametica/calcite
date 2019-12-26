@@ -28,7 +28,6 @@ import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Util;
 
-import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -42,7 +41,7 @@ import javax.annotation.Nonnull;
  * {@link SqlOperator operator}, {@link SqlLiteral literal},
  * {@link SqlIdentifier identifier}, and so forth.
  */
-public abstract class SqlNode implements Cloneable, Serializable {
+public abstract class SqlNode implements Cloneable {
   //~ Static fields/initializers ---------------------------------------------
 
   public static final SqlNode[] EMPTY_ARRAY = new SqlNode[0];
