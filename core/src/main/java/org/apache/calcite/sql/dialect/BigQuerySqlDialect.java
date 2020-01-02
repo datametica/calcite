@@ -255,6 +255,14 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.endFunCall(toCodePointsFrame);
       writer.literal("[OFFSET(0)]");
       break;
+    case NVL:
+      SqlWriter.Frame ifNullFrame = writer.startFunCall("IFNULL");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(ifNullFrame);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }

@@ -4938,6 +4938,45 @@ public class RelToSqlConverterTest {
         .ok(hiveExpected);
   }
 
+  @Test public void testNVLFunctionwithNullArgument() {
+    final String query = "SELECT NVL(null,'abc')";
+    final String expectedBigQuery = "SELECT 'abc'";
+    final String expected = "SELECT 'abc'";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test public void testNVLFunctionwithStringArgument() {
+    final String query = "SELECT NVL('xyz','abc')";
+    final String expectedBigQuery = "SELECT 'xyz'";
+    final String expected = "SELECT 'xyz'";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
+  @Test public void testNVLFunctionwithMethodArgument() {
+    final String query = "SELECT NVL(SUBSTRING('xyz',1,7),'abc')";
+    final String expectedBigQuery = "SELECT 'xyz'";
+    final String expected = "SELECT 'xyz'";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;
