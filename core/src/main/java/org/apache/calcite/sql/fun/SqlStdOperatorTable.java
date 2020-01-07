@@ -1766,8 +1766,6 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
 
   public static final SqlFunction NULLIF = new SqlNullifFunction();
 
-  public static final SqlFunction NVL = SqlLibraryOperators.NVL;
-
   public static final SqlFunction REGEXP_SUBSTR = new SqlRegexpSubstrFunction();
 
   /**

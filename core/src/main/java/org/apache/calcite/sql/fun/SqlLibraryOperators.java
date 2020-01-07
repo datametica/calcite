@@ -101,7 +101,7 @@ public abstract class SqlLibraryOperators {
           OperandTypes.VARIADIC, SqlFunctionCategory.SYSTEM);
 
   /** The "NVL(value, value)" function. */
-  @LibraryOperator(libraries = {ORACLE})
+  @LibraryOperator(libraries = {ORACLE, HIVE, SPARK})
   public static final SqlFunction NVL =
       new SqlFunction("NVL", SqlKind.NVL,
           ReturnTypes.cascade(ReturnTypes.LEAST_RESTRICTIVE,
@@ -453,7 +453,6 @@ public abstract class SqlLibraryOperators {
                 }
               }),
           SqlFunctionCategory.SYSTEM);
-
 }
 
 // End SqlLibraryOperators.java
