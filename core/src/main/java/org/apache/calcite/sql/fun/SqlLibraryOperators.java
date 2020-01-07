@@ -108,6 +108,14 @@ public abstract class SqlLibraryOperators {
               SqlTypeTransforms.TO_NULLABLE_ALL),
           null, OperandTypes.SAME_SAME, SqlFunctionCategory.SYSTEM);
 
+  /** The "IFNULL(value, value)" function. */
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction IFNULL =
+      new SqlFunction("IFNULL", SqlKind.IFNULL,
+          ReturnTypes.cascade(ReturnTypes.LEAST_RESTRICTIVE,
+              SqlTypeTransforms.TO_NULLABLE_ALL),
+          null, OperandTypes.SAME_SAME, SqlFunctionCategory.SYSTEM);
+
   /** The "LTRIM(string)" function. */
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction LTRIM =
