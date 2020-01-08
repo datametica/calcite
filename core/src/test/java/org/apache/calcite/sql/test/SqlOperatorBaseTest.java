@@ -352,6 +352,28 @@ public abstract class SqlOperatorBaseTest {
                 .with("fun", library.name()));
   }
 
+  protected SqlTester hiveTester() {
+    return tester.withOperatorTable(
+        SqlLibraryOperatorTableFactory.INSTANCE
+            .getOperatorTable(SqlLibrary.STANDARD, SqlLibrary.HIVE))
+        .withConnectionFactory(
+            CalciteAssert.EMPTY_CONNECTION_FACTORY
+                .with(new CalciteAssert
+                    .AddSchemaSpecPostProcessor(CalciteAssert.SchemaSpec.HR))
+                .with(CalciteConnectionProperty.FUN, "hive"));
+  }
+
+  protected SqlTester sparkTester() {
+    return tester.withOperatorTable(
+        SqlLibraryOperatorTableFactory.INSTANCE
+            .getOperatorTable(SqlLibrary.STANDARD, SqlLibrary.SPARK))
+        .withConnectionFactory(
+            CalciteAssert.EMPTY_CONNECTION_FACTORY
+                .with(new CalciteAssert
+                    .AddSchemaSpecPostProcessor(CalciteAssert.SchemaSpec.HR))
+                .with(CalciteConnectionProperty.FUN, "spark"));
+  }
+
   //--- Tests -----------------------------------------------------------
 
   /**
@@ -6390,6 +6412,18 @@ public abstract class SqlOperatorBaseTest {
         "VARCHAR(20) NOT NULL");
     tester2.checkNull(
         "nvl(CAST(NULL AS VARCHAR(6)), cast(NULL AS VARCHAR(4)))");
+
+    final SqlTester tester3 = hiveTester();
+    tester3.checkScalar("nvl(1, 2)", "1", "INTEGER NOT NULL");
+    tester3.checkScalar("nvl(null,'abc')", "abc", "CHAR(3) NOT NULL");
+    tester3.checkScalar("nvl('xyz','abc')", "xyz", "CHAR(3) NOT NULL");
+    tester3.checkScalar("nvl(SUBSTRING('xyz',1,7),'abc')", "xyz", "VARCHAR(3) NOT NULL");
+
+    final SqlTester tester4 = sparkTester();
+    tester4.checkScalar("nvl(1, 2)", "1", "INTEGER NOT NULL");
+    tester4.checkScalar("nvl(null,'abc')", "abc", "CHAR(3) NOT NULL");
+    tester4.checkScalar("nvl('xyz','abc')", "xyz", "CHAR(3) NOT NULL");
+    tester4.checkScalar("nvl(SUBSTRING('xyz',1,7),'abc')", "xyz", "VARCHAR(3) NOT NULL");
   }
 
   @Test public void testDecodeFunc() {
