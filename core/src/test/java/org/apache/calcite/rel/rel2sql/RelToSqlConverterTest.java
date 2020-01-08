@@ -48,6 +48,7 @@ import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.dialect.OracleSqlDialect;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
@@ -4954,6 +4955,28 @@ public class RelToSqlConverterTest {
         + "FROM scott.EMP";
     final String expectedHive = "SELECT IF(EMPNO = 20, NULL, EMPNO) NI\n"
         + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
+    assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
+  }
+
+  @Test public void testNvlFunctionRelToSql() {
+    final RelBuilder builder = relBuilder();
+    final RexNode nullifRexNode = builder.call(SqlLibraryOperators.NVL,
+            builder.scan("EMP").field(0), builder.literal(20));
+    final RelNode root = builder
+            .scan("EMP")
+            .project(builder.alias(nullifRexNode, "NI"))
+            .build();
+    final String expectedSql = "SELECT NVL(\"EMPNO\", 20) AS \"NI\"\n"
+            + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT IFNULL(EMPNO, 20) AS NI\n"
+            + "FROM scott.EMP";
+    final String expectedSpark = "SELECT NVL(EMPNO, 20) NI\n"
+            + "FROM scott.EMP";
+    final String expectedHive = "SELECT NVL(EMPNO, 20) NI\n"
+            + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));

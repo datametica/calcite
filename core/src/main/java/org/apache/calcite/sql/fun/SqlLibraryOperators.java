@@ -111,7 +111,7 @@ public abstract class SqlLibraryOperators {
   /** The "IFNULL(value, value)" function. */
   @LibraryOperator(libraries = {BIGQUERY})
   public static final SqlFunction IFNULL =
-      new SqlFunction("IFNULL", SqlKind.IFNULL,
+      new SqlFunction("IFNULL", SqlKind.OTHER_FUNCTION,
           ReturnTypes.cascade(ReturnTypes.LEAST_RESTRICTIVE,
               SqlTypeTransforms.TO_NULLABLE_ALL),
           null, OperandTypes.SAME_SAME, SqlFunctionCategory.SYSTEM);

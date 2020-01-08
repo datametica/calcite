@@ -260,7 +260,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
       SqlCall sqlCall = new SqlBasicCall(IFNULL, extractNodeOperands,
           SqlParserPos.ZERO);
-      IFNULL.unparse(writer, sqlCall, leftPrec, rightPrec);
+      unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);

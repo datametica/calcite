@@ -489,11 +489,6 @@ public enum SqlKind {
   NVL,
 
   /**
-   * The "IFNULL" function (BigQuery).
-   */
-  IFNULL,
-
-  /**
    * The "GREATEST" function (Oracle).
    */
   GREATEST,
