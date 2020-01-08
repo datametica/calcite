@@ -4973,14 +4973,12 @@ public class RelToSqlConverterTest {
             + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT IFNULL(EMPNO, 20) AS NI\n"
             + "FROM scott.EMP";
-    final String expectedSpark = "SELECT NVL(EMPNO, 20) NI\n"
-            + "FROM scott.EMP";
-    final String expectedHive = "SELECT NVL(EMPNO, 20) NI\n"
+    final String expected = "SELECT NVL(EMPNO, 20) NI\n"
             + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
-    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
-    assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expected));
+    assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expected));
   }
 
   /** Fluid interface to run tests. */
