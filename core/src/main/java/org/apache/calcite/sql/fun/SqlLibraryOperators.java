@@ -27,11 +27,14 @@ import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SameOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +46,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.ORACLE;
 import static org.apache.calcite.sql.fun.SqlLibrary.POSTGRESQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
+import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
 
@@ -124,7 +128,7 @@ public abstract class SqlLibraryOperators {
    *
    * <p>It has similar semantics to standard SQL's
    * {@link SqlStdOperatorTable#SUBSTRING} function but different syntax. */
-  @LibraryOperator(libraries = {ORACLE})
+  @LibraryOperator(libraries = {ORACLE, BIGQUERY})
   public static final SqlFunction SUBSTR =
       new SqlFunction("SUBSTR", SqlKind.OTHER_FUNCTION,
           ReturnTypes.ARG0_NULLABLE_VARYING, null, null,
@@ -181,6 +185,29 @@ public abstract class SqlLibraryOperators {
 
   @LibraryOperator(libraries = {MYSQL, ORACLE})
   public static final SqlFunction REGEXP_REPLACE = new SqlRegexpReplaceFunction();
+
+  /**
+   * The REGEXP_EXTRACT(source_string, regex_pattern) returns the first substring in source_string
+   * that matches the regex_pattern. Returns NULL if there is no match.
+   *
+   * The REGEXP_EXTRACT_ALL(source_string, regex_pattern) returns an array of all substrings of
+   * source_string that match the regex_pattern.
+   */
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction REGEXP_EXTRACT = new SqlFunction("REGEXP_EXTRACT",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR),
+          SqlTypeTransforms.TO_NULLABLE),
+      null, OperandTypes.STRING_STRING,
+      SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction REGEXP_EXTRACT_ALL = new SqlFunction("REGEXP_EXTRACT_ALL",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR),
+          SqlTypeTransforms.TO_NULLABLE),
+      null, OperandTypes.STRING_STRING,
+      SqlFunctionCategory.STRING);
 
   /** The "MONTHNAME(datetime)" function; returns the name of the month,
    * in the current locale, of a TIMESTAMP or DATE argument. */
@@ -389,10 +416,43 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "FORMAT",
           SqlKind.FORMAT,
-          ReturnTypes.VARCHAR_2000, null,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.STRING);
 
+  /** The "TO_NUMBER(string1, string2)" function; casts string1
+   * as hexadecimal to a NUMBER using the format specified in string2. */
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TO_NUMBER =
+      new SqlFunction(
+          "TO_NUMBER",
+          SqlKind.TO_NUMBER,
+          ReturnTypes.BIGINT_FORCE_NULLABLE,
+          null, OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING,
+          OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.NULL),
+          OperandTypes.family(SqlTypeFamily.NULL, SqlTypeFamily.STRING),
+          OperandTypes.STRING_STRING_STRING,
+          OperandTypes.family(SqlTypeFamily.NULL)),
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
+  public static final SqlFunction IF =
+      new SqlFunction(
+          "IF",
+          SqlKind.IF,
+          ReturnTypes.ARG2_NULLABLE,
+          null,
+          OperandTypes.and(
+              OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY,
+                  SqlTypeFamily.ANY),
+              // Arguments 1 and 2 must have same type
+              new SameOperandTypeChecker(3) {
+                @Override protected List<Integer>
+                getOperandList(int operandCount) {
+                  return ImmutableList.of(1, 2);
+                }
+              }),
+          SqlFunctionCategory.SYSTEM);
 }
 
 // End SqlLibraryOperators.java

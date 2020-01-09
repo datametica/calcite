@@ -460,6 +460,11 @@ public enum SqlKind {
   POSIX_REGEX_CASE_INSENSITIVE,
 
   /**
+   * The "REGEXP_SUBSTR" function.
+   */
+  REGEXP_SUBSTR,
+
+  /**
    * The "BETWEEN" operator.
    */
   BETWEEN,
@@ -775,6 +780,21 @@ public enum SqlKind {
    * The "EXTRACT" function.
    */
   EXTRACT,
+
+  /**
+   * The "TO_NUMBER" function.
+   */
+  TO_NUMBER,
+
+  /**
+   * The "IF" function.
+   */
+  IF,
+
+  /**
+   * The "ASCII" function.
+   */
+  ASCII,
 
   /**
    * The "REVERSE" function (SQL Server, MySQL).

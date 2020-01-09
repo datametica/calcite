@@ -142,6 +142,11 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlMultisetSetOperator MULTISET_INTERSECT =
       new SqlMultisetSetOperator("MULTISET INTERSECT ALL", 18, true);
 
+  /** Converts string_expr to a NUMBER data type. */
+  public static final SqlFunction TO_NUMBER = SqlLibraryOperators.TO_NUMBER;
+
+  public static final SqlFunction IF = SqlLibraryOperators.IF;
+
   //-------------------------------------------------------------
   //                   BINARY OPERATORS
   //-------------------------------------------------------------
@@ -1516,7 +1521,7 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlFunction ASCII =
       new SqlFunction(
           "ASCII",
-          SqlKind.OTHER_FUNCTION,
+          SqlKind.ASCII,
           ReturnTypes.INTEGER_NULLABLE,
           null,
           OperandTypes.CHARACTER,
@@ -1760,6 +1765,8 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           null, OperandTypes.NILADIC, SqlFunctionCategory.MATCH_RECOGNIZE);
 
   public static final SqlFunction NULLIF = new SqlNullifFunction();
+
+  public static final SqlFunction REGEXP_SUBSTR = new SqlRegexpSubstrFunction();
 
   /**
    * The COALESCE builtin function.
