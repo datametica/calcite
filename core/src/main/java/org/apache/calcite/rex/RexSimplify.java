@@ -288,6 +288,8 @@ public class RexSimplify {
       return simplifyComparison((RexCall) e, unknownAs);
     case IF:
       return simplifyIf((RexCall) e, unknownAs);
+    case NVL:
+      return simplifyNvl((RexCall) e, unknownAs);
     default:
       if (e.getClass() == RexCall.class) {
         return simplifyGenericNode((RexCall) e);
@@ -2313,6 +2315,21 @@ public class RexSimplify {
       return resultRexNode.get(1);
     } else if (resultRexNode.get(0).isAlwaysFalse()) {
       return resultRexNode.get(2);
+    }
+    return e;
+  }
+
+  private RexNode simplifyNvl(RexCall e, RexUnknownAs unknownAs) {
+    List<RexNode> operands = e.getOperands();
+    List<RexNode> resultRexNode = new ArrayList<>();
+    for (RexNode operand : operands) {
+      resultRexNode.add(simplify(operand, unknownAs));
+    }
+    RexNode rexNode = simplifyIsNotNull(resultRexNode.get(0));
+    if (rexNode != null && rexNode.isAlwaysTrue()) {
+      return resultRexNode.get(0);
+    } else if (rexNode != null && rexNode.isAlwaysFalse()) {
+      return resultRexNode.get(1);
     }
     return e;
   }
