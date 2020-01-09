@@ -4963,17 +4963,19 @@ public class RelToSqlConverterTest {
 
   @Test public void testNvlFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode nullifRexNode = builder.call(SqlLibraryOperators.NVL,
-            builder.scan("EMP").field(0), builder.literal(20));
+    final RexNode nvlRexNode = builder.call(SqlLibraryOperators.NVL,
+            builder.scan("EMP").field(1), builder.literal("20"));
+    final RexNode nvlSecondRexNode = builder.call(SqlLibraryOperators.NVL, builder.literal(2),
+            builder.literal(1));
     final RelNode root = builder
             .scan("EMP")
-            .project(builder.alias(nullifRexNode, "NI"))
+            .project(builder.alias(nvlRexNode, "NI"), builder.alias(nvlSecondRexNode, "NV"))
             .build();
-    final String expectedSql = "SELECT NVL(\"EMPNO\", 20) AS \"NI\"\n"
+    final String expectedSql = "SELECT NVL(\"ENAME\", '20') AS \"NI\", 2 AS \"NV\"\n"
             + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT IFNULL(EMPNO, 20) AS NI\n"
+    final String expectedBiqQuery = "SELECT IFNULL(ENAME, '20') AS NI, 2 AS NV\n"
             + "FROM scott.EMP";
-    final String expected = "SELECT NVL(EMPNO, 20) NI\n"
+    final String expected = "SELECT NVL(ENAME, '20') NI, 2 NV\n"
             + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
