@@ -39,6 +39,8 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IF;
 
 /**
  * A <code>SqlDialect</code> implementation for the Apache Hive database.
@@ -194,6 +196,9 @@ public class HiveSqlDialect extends SqlDialect {
     case TO_NUMBER:
       ToNumberUtils.handleToNumber(writer, call, leftPrec, rightPrec);
       break;
+    case NULLIF:
+      unparseNullIf(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -296,11 +301,19 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   /**
-   * For usage of DATE_ADD,DATE_SUB,ADD_MONTH in HIVE
-   * eg:select date + Store_id * INTERVAL '1' DAY
-   * o/p query: select DATE_ADD(date , Store_id)
-   * eg:select date + Store_id * INTERVAL '2' MONTH
-   * o/p query: select ADD_MONTH(date , Store_id * 2)
+   * For usage of DATE_ADD,DATE_SUB,ADD_MONTH function in HIVE. It will unparse the SqlCall and
+   * write it into HIVE format, below are few examples:
+   * Example 1:
+   * Input: select date + INTERVAL 1 DAY
+   * It will write the output query as: select DATE_ADD(date , 1)
+   * Example 2:
+   * Input: select date + Store_id * INTERVAL 2 MONTH
+   * It will write the output query as: select ADD_MONTH(date , Store_id * 2)
+   *
+   * @param writer    Target SqlWriter to write the call
+   * @param call      SqlCall : date + Store_id * INTERVAL 2 MONTH
+   * @param leftPrec  Indicate left precision
+   * @param rightPrec Indicate right precision
    */
   @Override public void unparseIntervalOperandsBasedFunctions(
       SqlWriter writer,
@@ -312,6 +325,17 @@ public class HiveSqlDialect extends SqlDialect {
     }
   }
 
+  /**
+   * Cast the SqlCall into date format for HIVE 2.0 below version
+   * Below is an example :
+   * Input: select date + INTERVAL 1 DAY
+   * It will write it as: select CAST(DATE_ADD(date , 1)) AS DATE
+   *
+   * @param writer    Target SqlWriter to write the call
+   * @param call      SqlCall : date + INTERVAL 1 DAY
+   * @param leftPrec  Indicate left precision
+   * @param rightPrec Indicate right precision
+   */
   private void castIntervalOperandToDate(
       SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
@@ -328,36 +352,64 @@ public class HiveSqlDialect extends SqlDialect {
     switch (call.operand(1).getKind()) {
     case LITERAL:
     case TIMES:
-      makeIntervalOperandCall(call, writer, leftPrec, rightPrec);
+      unparseIntervalOperandCall(call, writer, leftPrec, rightPrec);
       break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
   }
 
-  private void makeIntervalOperandCall(
+  private void unparseIntervalOperandCall(
       SqlCall call, SqlWriter writer, int leftPrec, int rightPrec) {
     writer.print(call.getOperator().toString());
     writer.print("(");
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.print(",");
-    SqlNode intervalValue = modifyIntervalOperandCall(writer, call.operand(1));
+    SqlNode intervalValue = modifySqlNode(writer, call.operand(1));
     writer.print(intervalValue.toString().replace("`", ""));
     writer.sep(")");
   }
 
-  private SqlNode modifyIntervalOperandCall(SqlWriter writer, SqlNode intervalOperand) {
+
+  /**
+   * Modify the SqlNode to expected output form.
+   * If SqlNode Kind is Literal then it will return the literal value and for
+   * the Kind TIMES it will modify it to expression if required else return the
+   * identifer part.Below are few examples:
+   *
+   * For SqlKind LITERAL:
+   * Input: INTERVAL 1 DAY
+   * Output: 1
+   *
+   * For SqlKind TIMES:
+   * Input: store_id * INTERVAL 2 DAY
+   * Output: store_id * 2
+   *
+   * @param writer Target SqlWriter to write the call
+   * @param intervalOperand SqlNode
+   * @return Modified SqlNode
+   */
+
+  private SqlNode modifySqlNode(SqlWriter writer, SqlNode intervalOperand) {
     if (intervalOperand.getKind() == SqlKind.LITERAL) {
-      return modifyIntervalForLiteral(writer, intervalOperand);
+      return modifySqlNodeForLiteral(writer, intervalOperand);
     }
-    return modifyIntervalForBasicCall(writer, intervalOperand);
+    return modifySqlNodeForExpression(writer, intervalOperand);
   }
 
   /**
-   * This Method will unparse the Literal call in input Query like INTERVAL '1' DAY, INTERVAL '1'
-   * MONTH
+   * Modify the SqlNode Literal call to desired output form.
+   * For example :
+   * Input: INTERVAL 1 DAY
+   * Output: 1
+   * Input: INTERVAL -1 DAY
+   * Output: -1
+   *
+   * @param writer Target SqlWriter to write the call
+   * @param intervalOperand INTERVAL 1 DAY
+   * @return Modified SqlNode 1
    */
-  private SqlNode modifyIntervalForLiteral(SqlWriter writer, SqlNode intervalOperand) {
+  private SqlNode modifySqlNodeForLiteral(SqlWriter writer, SqlNode intervalOperand) {
     SqlIntervalLiteral.IntervalValue interval =
         (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) intervalOperand).getValue();
     writeNegativeLiteral(interval, writer);
@@ -365,32 +417,42 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   /**
-   * This Method will unparse the Basic calls obtained in input Query
-   * i/p:Store_id * INTERVAL '1' DAY o/p: store_id
-   * 10 * INTERVAL '2' DAY o/p: 10 * 2
+   * Modify the SqlNode Expression call to desired output form.
+   * Below are the few examples:
+   * Example 1:
+   * Input: store_id * INTERVAL 1 DAY
+   * Output: store_id
+   * Example 2:
+   * Input: 10 * INTERVAL 2 DAY
+   * Output: 10 * 2
+   *
+   * @param writer  Target SqlWriter to write the call
+   * @param intervalOperand store_id * INTERVAL 2 DAY
+   * @return Modified SqlNode store_id * 2
    */
-  private SqlNode modifyIntervalForBasicCall(SqlWriter writer, SqlNode intervalOperand) {
-    SqlLiteral intervalLiteralValue = getLiteralValue(intervalOperand);
-    SqlNode identifierValue = getIdentifierValue(intervalOperand);
-    SqlIntervalLiteral.IntervalValue interval =
-        (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
-    writeNegativeLiteral(interval, writer);
-    if (interval.getIntervalLiteral().equals("1")) {
-      return identifierValue;
+  private SqlNode modifySqlNodeForExpression(SqlWriter writer, SqlNode intervalOperand) {
+    SqlLiteral intervalLiteral = getIntervalLiteral(intervalOperand);
+    SqlNode identifier = getIdentifier(intervalOperand);
+    SqlIntervalLiteral.IntervalValue literalValue =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    writeNegativeLiteral(literalValue, writer);
+    if (literalValue.getIntervalLiteral().equals("1")) {
+      return identifier;
     }
-    SqlNode intervalValue = new SqlIdentifier(interval.toString(),
+    SqlNode intervalValue = new SqlIdentifier(literalValue.toString(),
         intervalOperand.getParserPosition());
-    SqlNode[] sqlNodes = new SqlNode[]{identifierValue,
+    SqlNode[] sqlNodes = new SqlNode[]{identifier,
         intervalValue};
     return new SqlBasicCall(SqlStdOperatorTable.MULTIPLY, sqlNodes, SqlParserPos.ZERO);
   }
 
   /**
-   * This Method will return the literal value from the intervalOperand
-   * I/P: INTERVAL '1' DAY
-   * o/p: 1
+   * Return the SqlLiteral from the SqlNode.
+   *
+   * @param intervalOperand store_id * INTERVAL 1 DAY
+   * @return SqlLiteral INTERVAL 1 DAY
    */
-  private SqlLiteral getLiteralValue(SqlNode intervalOperand) {
+  private SqlLiteral getIntervalLiteral(SqlNode intervalOperand) {
     if ((((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER)
         || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
       return ((SqlBasicCall) intervalOperand).operand(0);
@@ -399,11 +461,12 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   /**
-   * This Method will return the Identifer value from the intervalOperand
-   * I/P: Store_id * INTERVAL '1' DAY
-   * o/p: Store_id
+   * Return the identifer from the SqlNode.
+   *
+   * @param intervalOperand Store_id * INTERVAL 1 DAY
+   * @return SqlIdentifier Store_id
    */
-  private SqlNode getIdentifierValue(SqlNode intervalOperand) {
+  private SqlNode getIdentifier(SqlNode intervalOperand) {
     if (((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER
         || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
       return ((SqlBasicCall) intervalOperand).operand(1);
@@ -411,11 +474,23 @@ public class HiveSqlDialect extends SqlDialect {
     return ((SqlBasicCall) intervalOperand).operand(0);
   }
 
-  private  void writeNegativeLiteral(SqlIntervalLiteral.IntervalValue interval,
-                                           SqlWriter writer) {
+  private void writeNegativeLiteral(
+      SqlIntervalLiteral.IntervalValue interval,
+      SqlWriter writer) {
     if (interval.signum() == -1) {
       writer.print("-");
     }
   }
+
+  private void unparseNullIf(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlNode[] operands = new SqlNode[call.getOperandList().size()];
+    call.getOperandList().toArray(operands);
+    SqlParserPos pos = call.getParserPosition();
+    SqlNode[] ifOperands = new SqlNode[]{new SqlBasicCall(EQUALS, operands, pos),
+        SqlLiteral.createNull(SqlParserPos.ZERO), operands[0]};
+    SqlCall ifCall = new SqlBasicCall(IF, ifOperands, pos);
+    unparseCall(writer, ifCall, leftPrec, rightPrec);
+  }
+
 }
 // End HiveSqlDialect.java

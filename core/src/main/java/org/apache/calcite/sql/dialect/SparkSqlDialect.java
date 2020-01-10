@@ -229,11 +229,19 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   /**
-   * For usage of DATE_ADD,DATE_SUB,ADD_MONTH in Spark
-   * eg:select date + Store_id * INTERVAL '1' DAY
-   * o/p query: select DATE_ADD(date , Store_id)
-   * eg:select date + Store_id * INTERVAL '2' MONTH
-   * o/p query: select ADD_MONTH(date , Store_id * 2)
+   * For usage of DATE_ADD,DATE_SUB,ADD_MONTH function in SPARK. It will unparse the SqlCall and
+   * write it into SPARK format, below are few examples:
+   * Example 1:
+   * Input: select date + INTERVAL 1 DAY
+   * It will write the output query as: select DATE_ADD(date , 1)
+   * Example 2:
+   * Input: select date + Store_id * INTERVAL 2 MONTH
+   * It will write the output query as: select ADD_MONTH(date , Store_id * 2)
+   *
+   * @param writer Target SqlWriter to write the call
+   * @param call SqlCall : date + Store_id * INTERVAL 2 MONTH
+   * @param leftPrec Indicate left precision
+   * @param rightPrec Indicate right precision
    */
   @Override public void unparseIntervalOperandsBasedFunctions(
       SqlWriter writer,
@@ -241,40 +249,68 @@ public class SparkSqlDialect extends SqlDialect {
     switch (call.operand(1).getKind()) {
     case LITERAL:
     case TIMES:
-      makeIntervalOperandCall(call, writer, leftPrec, rightPrec);
+      unparseIntervalOperandCall(call, writer, leftPrec, rightPrec);
       break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
   }
 
-  private void makeIntervalOperandCall(
+  private void unparseIntervalOperandCall(
       SqlCall call, SqlWriter writer, int leftPrec, int rightPrec) {
     writer.print(call.getOperator().toString());
     writer.print("(");
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.print(",");
-    SqlNode intervalValue = modifyIntervalOperandCall(writer, call.operand(1));
+    SqlNode intervalValue = modifySqlNode(writer, call.operand(1));
     writer.print(intervalValue.toString().replace("`", ""));
     writer.print(")");
   }
 
-  private SqlNode modifyIntervalOperandCall(SqlWriter writer, SqlNode intervalOperand) {
+  /**
+   * Modify the SqlNode to expected output form.
+   * If SqlNode Kind is Literal then it will return the literal value and for
+   * the Kind TIMES it will modify it to expression if required else return the
+   * identifer part.Below are few examples:
+   *
+   * For SqlKind LITERAL:
+   * Input: INTERVAL 1 DAY
+   * Output: 1
+   *
+   * For SqlKind TIMES:
+   * Input: store_id * INTERVAL 2 DAY
+   * Output: store_id * 2
+   *
+   * @param writer Target SqlWriter to write the call
+   * @param intervalOperand SqlNode
+   * @return Modified SqlNode
+   */
+
+  private SqlNode modifySqlNode(SqlWriter writer, SqlNode intervalOperand) {
 
     if (intervalOperand.getKind() == SqlKind.LITERAL) {
-      return modifyIntervalForLiteral(writer, intervalOperand);
+      return modifySqlNodeForLiteral(writer, intervalOperand);
     }
-    return modifyIntervalForBasicCall(writer, intervalOperand);
+    return modifySqlNodeForExpression(writer, intervalOperand);
   }
 
   /**
-   * This Method will unparse the Basic calls obtained in input Query
-   * i/p:Store_id * INTERVAL '1' DAY o/p: store_id
-   * 10 * INTERVAL '2' DAY o/p: 10 * 2
+   * Modify the SqlNode Expression call to desired output form.
+   * Below are the few examples:
+   * Example 1:
+   * Input: store_id * INTERVAL 1 DAY
+   * Output: store_id
+   * Example 2:
+   * Input: 10 * INTERVAL 2 DAY
+   * Output: 10 * 2
+   *
+   * @param writer  Target SqlWriter to write the call
+   * @param intervalOperand store_id * INTERVAL 2 DAY
+   * @return Modified SqlNode store_id * 2
    */
-  private SqlNode modifyIntervalForBasicCall(SqlWriter writer, SqlNode intervalOperand) {
-    SqlLiteral intervalLiteralValue = getLiteralValue(intervalOperand);
-    SqlNode identifierValue = getIdentifierValue(intervalOperand);
+  private SqlNode modifySqlNodeForExpression(SqlWriter writer, SqlNode intervalOperand) {
+    SqlLiteral intervalLiteralValue = getIntervalLiteral(intervalOperand);
+    SqlNode identifierValue = getIdentifier(intervalOperand);
     SqlIntervalLiteral.IntervalValue interval =
         (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
     writeNegativeLiteral(interval, writer);
@@ -289,10 +325,18 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   /**
-   * This Method will unparse the Literal call in input Query like
-   * INTERVAL '1' DAY, INTERVAL '1' MONTH
+   * Modify the SqlNode Literal call to desired output form.
+   * For example :
+   * Input: INTERVAL 1 DAY
+   * Output: 1
+   * Input: INTERVAL -1 DAY
+   * Output: -1
+   *
+   * @param writer Target SqlWriter to write the call
+   * @param intervalOperand INTERVAL 1 DAY
+   * @return Modified SqlNode 1
    */
-  private SqlNode modifyIntervalForLiteral(SqlWriter writer, SqlNode intervalOperand) {
+  private SqlNode modifySqlNodeForLiteral(SqlWriter writer, SqlNode intervalOperand) {
     SqlIntervalLiteral.IntervalValue interval =
         (SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) intervalOperand).getValue();
     writeNegativeLiteral(interval, writer);
@@ -300,11 +344,12 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   /**
-   * This Method will return the literal value from the intervalOperand
-   * I/P: INTERVAL '1' DAY
-   * o/p: 1
+   * Return the SqlLiteral from the SqlNode.
+   *
+   * @param intervalOperand store_id * INTERVAL 1 DAY
+   * @return SqlLiteral INTERVAL 1 DAY
    */
-  public SqlLiteral getLiteralValue(SqlNode intervalOperand) {
+  public SqlLiteral getIntervalLiteral(SqlNode intervalOperand) {
     if ((((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER)
         || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
       return ((SqlBasicCall) intervalOperand).operand(0);
@@ -313,11 +358,12 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   /**
-   * This Method will return the Identifer value from the intervalOperand
-   * I/P: Store_id * INTERVAL '1' DAY
-   * o/p: Store_id
+   * Return the identifer from the SqlNode.
+   *
+   * @param intervalOperand Store_id * INTERVAL 1 DAY
+   * @return SqlIdentifier Store_id
    */
-  public SqlNode getIdentifierValue(SqlNode intervalOperand) {
+  public SqlNode getIdentifier(SqlNode intervalOperand) {
     if (((SqlBasicCall) intervalOperand).operand(1).getKind() == SqlKind.IDENTIFIER
         || (((SqlBasicCall) intervalOperand).operand(1) instanceof SqlNumericLiteral)) {
       return ((SqlBasicCall) intervalOperand).operand(1);

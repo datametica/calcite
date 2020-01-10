@@ -375,12 +375,19 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   /**
-   * For usage of DATE_ADD,DATE_SUB in BQ
-   * eg:select date + INTERVAL '1' DAY
-   * o/p query: select DATE_ADD(date , INTERVAL 1 DAY)
-   * eg:select date + Store_id * INTERVAL '2' DAY
-   * o/p query: select DATE_ADD(date , INTERVAL Store_id * 2 DAY)
+   * For usage of DATE_ADD,DATE_SUB function in BQ. It will unparse the SqlCall and write it into BQ
+   * format. Below are few examples:
+   * Example 1:
+   * Input: select date + INTERVAL 1 DAY
+   * It will write output query as: select DATE_ADD(date , INTERVAL 1 DAY)
+   * Example 2:
+   * Input: select date + Store_id * INTERVAL 2 DAY
+   * It will write output query as: select DATE_ADD(date , INTERVAL Store_id * 2 DAY)
    *
+   * @param writer Target SqlWriter to write the call
+   * @param call SqlCall : date + Store_id * INTERVAL 2 DAY
+   * @param leftPrec Indicate left precision
+   * @param rightPrec Indicate left precision
    */
   @Override public void unparseIntervalOperandsBasedFunctions(
       SqlWriter writer,
@@ -390,10 +397,10 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.print(",");
     switch (call.operand(1).getKind()) {
     case LITERAL:
-      unparseLiteralCall(call.operand(1), writer);
+      unparseLiteralIntervalCall(call.operand(1), writer);
       break;
     case TIMES:
-      unparseBasicCall(call.operand(1), writer, leftPrec, rightPrec);
+      unparseExpressionIntervalCall(call.operand(1), writer, leftPrec, rightPrec);
       break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
@@ -402,34 +409,14 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   /**
-   * This Method will unparse the Basic calls obtained in input Query
-   * i/p:Store_id * INTERVAL '1' DAY o/p: store_id
-   * 10 * INTERVAL '2' DAY o/p: 10 * 2
+   * Unparse the literal call from input query and write the INTERVAL part. Below is an example:
+   * Input: date + INTERVAL 1 DAY
+   * It will write this as: INTERVAL 1 DAY
+   *
+   * @param call SqlCall :INTERVAL 1 DAY
+   * @param writer Target SqlWriter to write the call
    */
-  private void unparseBasicCall(
-      SqlBasicCall call, SqlWriter writer, int leftPrec, int rightPrec) {
-    SqlLiteral intervalLiteralValue = getLiteralValue(call);
-    SqlNode identifierValue = getIdentifierValue(call);
-    SqlIntervalLiteral.IntervalValue literalValue =
-        (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
-    writer.sep("INTERVAL");
-    if (call.getKind() == SqlKind.TIMES) {
-      if (!literalValue.getIntervalLiteral().equals("1")) {
-        identifierValue.unparse(writer, leftPrec, rightPrec);
-        writer.sep("*");
-        writer.sep(literalValue.toString());
-      } else {
-        identifierValue.unparse(writer, leftPrec, rightPrec);
-      }
-      writer.print(literalValue.getIntervalQualifier().toString());
-    }
-  }
-
-  /**
-   * This Method will unparse the Literal call in input Query like
-   * INTERVAL '1' DAY, INTERVAL '1' MONTH
-   */
-  private void unparseLiteralCall(
+  private void unparseLiteralIntervalCall(
       SqlLiteral call, SqlWriter writer) {
     SqlIntervalLiteral intervalLiteralValue = (SqlIntervalLiteral) call;
     SqlIntervalLiteral.IntervalValue literalValue =
@@ -440,11 +427,45 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   /**
-   * This Method will return the literal value from the intervalOperand
-   * I/P: INTERVAL '1' DAY
-   * o/p: 1
+   * Unparse the SqlBasic call and write INTERVAL with expression. Below are the examples:
+   * Example 1:
+   * Input: store_id * INTERVAL 1 DAY
+   * It will write this as: INTERVAL store_id DAY
+   * Example 2:
+   * Input: 10 * INTERVAL 2 DAY
+   * It will write this as: INTERVAL 10 * 2 DAY
+   *
+   * @param call SqlCall : store_id * INTERVAL 1 DAY
+   * @param writer Target SqlWriter to write the call
+   * @param leftPrec Indicate left precision
+   * @param rightPrec Indicate right precision
    */
-  private SqlLiteral getLiteralValue(SqlBasicCall intervalOperand) {
+  private void unparseExpressionIntervalCall(
+      SqlBasicCall call, SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlLiteral intervalLiteral = getIntervalLiteral(call);
+    SqlNode identifier = getIdentifier(call);
+    SqlIntervalLiteral.IntervalValue literalValue =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    writer.sep("INTERVAL");
+    if (call.getKind() == SqlKind.TIMES) {
+      if (!literalValue.getIntervalLiteral().equals("1")) {
+        identifier.unparse(writer, leftPrec, rightPrec);
+        writer.sep("*");
+        writer.sep(literalValue.toString());
+      } else {
+        identifier.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.print(literalValue.getIntervalQualifier().toString());
+    }
+  }
+
+  /**
+   * Return the SqlLiteral from the SqlBasicCall.
+   *
+   * @param intervalOperand store_id * INTERVAL 1 DAY
+   * @return SqlLiteral INTERVAL 1 DAY
+   */
+  private SqlLiteral getIntervalLiteral(SqlBasicCall intervalOperand) {
     if (intervalOperand.operand(1).getKind() == SqlKind.IDENTIFIER
         || (intervalOperand.operand(1) instanceof SqlNumericLiteral)) {
       return ((SqlBasicCall) intervalOperand).operand(0);
@@ -453,11 +474,12 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   /**
-   * This Method will return the Identifer value from the intervalOperand
-   * I/P: Store_id * INTERVAL '1' DAY
-   * o/p: Store_id
+   * Return the identifer from the SqlBasicCall.
+   *
+   * @param intervalOperand Store_id * INTERVAL 1 DAY
+   * @return SqlIdentifier Store_id
    */
-  private SqlNode getIdentifierValue(SqlBasicCall intervalOperand) {
+  private SqlNode getIdentifier(SqlBasicCall intervalOperand) {
     if (intervalOperand.operand(1).getKind() == SqlKind.IDENTIFIER
         || (intervalOperand.operand(1) instanceof SqlNumericLiteral)) {
       return intervalOperand.operand(1);
