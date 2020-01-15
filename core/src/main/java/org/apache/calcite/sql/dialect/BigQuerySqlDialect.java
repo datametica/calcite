@@ -46,9 +46,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 
 /**
  * A <code>SqlDialect</code> implementation for Google BigQuery's "Standard SQL"
@@ -255,6 +257,14 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.endFunCall(toCodePointsFrame);
       writer.literal("[OFFSET(0)]");
       break;
+    case OTHER_FUNCTION:
+      if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
+        SqlCall formatTimestampCall = makeFormatTimestampCall(call);
+        FORMAT_TIMESTAMP.unparse(writer, formatTimestampCall, leftPrec, rightPrec);
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -308,6 +318,30 @@ public class BigQuerySqlDialect extends SqlDialect {
     default:
       REGEXP_EXTRACT.unparse(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private SqlCall makeFormatTimestampCall(SqlCall call) {
+    SqlCharStringLiteral formatNode = makeDateFormatSqlCall(call);
+    SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
+        SqlParserPos.ZERO) {
+      @Override
+      public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+        SqlSyntax.FUNCTION.unparse(writer, CURRENT_TIMESTAMP, getEmptyCall(), leftPrec, rightPrec);
+      }
+    };
+    SqlNode[] formatTimestampOperands = new SqlNode[]{formatNode, timestampCall};
+    return new SqlBasicCall(FORMAT_TIMESTAMP, formatTimestampOperands, SqlParserPos.ZERO);
+  }
+
+  private SqlBasicCall getEmptyCall() {
+    return new SqlBasicCall(CURRENT_TIMESTAMP, SqlBasicCall.EMPTY_ARRAY, SqlParserPos.ZERO);
+  }
+
+  private SqlCharStringLiteral makeDateFormatSqlCall(SqlCall call) {
+    String precision = call.operandCount() > 0 ?
+        ((SqlLiteral) call.operand(0)).getValue().toString() : "6";
+    String dateFormat = "%F %H:%M:%E" + precision + "S";
+    return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
   }
 
   private void writeOffset(SqlWriter writer, SqlCall call) {
