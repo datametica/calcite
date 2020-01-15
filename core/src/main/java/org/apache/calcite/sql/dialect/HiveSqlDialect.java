@@ -34,11 +34,11 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
+import org.apache.calcite.util.CurrentTimestampUtils;
 import org.apache.calcite.util.ToNumberUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IF;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.*;
 
 /**
  * A <code>SqlDialect</code> implementation for the Apache Hive database.
@@ -186,6 +186,13 @@ public class HiveSqlDialect extends SqlDialect {
       break;
     case NULLIF:
       unparseNullIf(writer, call, leftPrec, rightPrec);
+      break;
+    case OTHER_FUNCTION:
+      if(call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
+        CurrentTimestampUtils.unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
+      } else  {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);

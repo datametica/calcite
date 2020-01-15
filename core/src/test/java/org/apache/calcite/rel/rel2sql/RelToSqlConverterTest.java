@@ -4133,6 +4133,78 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test public void testCurrentTimestampFunctionWithoutPrecision() {
+    final String query = "select current_timestamp from \"product\"";
+    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.ssssss') CURRENT_TIMESTAMP\n" +
+            "FROM foodmart.product";
+    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E6S', CURRENT_TIMESTAMP) AS CURRENT_TIMESTAMP\n" +
+            "FROM foodmart.product";
+    sql(query)
+            .withHive().ok(expectedHiveAndSpark)
+            .withBigQuery().ok(expectedBigQuery)
+            .withSpark().ok(expectedHiveAndSpark);
+  }
+
+  @Test public void testCurrentTimestampFunctionWith0Precision() {
+    final String query = "select current_timestamp(0) from \"product\"";
+    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss')\n" +
+            "FROM foodmart.product";
+    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E0S', CURRENT_TIMESTAMP)\n" +
+            "FROM foodmart.product";
+    sql(query)
+            .withHive().ok(expectedHiveAndSpark)
+            .withBigQuery().ok(expectedBigQuery)
+            .withSpark().ok(expectedHiveAndSpark);
+  }
+
+  @Test public void testCurrentTimestampFunctionWith1Precision() {
+    final String query = "select current_timestamp(1) from \"product\"";
+    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.s')\n" +
+            "FROM foodmart.product";
+    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E1S', CURRENT_TIMESTAMP)\n" +
+            "FROM foodmart.product";
+    sql(query)
+            .withHive().ok(expectedHiveAndSpark)
+            .withBigQuery().ok(expectedBigQuery)
+            .withSpark().ok(expectedHiveAndSpark);
+  }
+
+  @Test public void testCurrentTimestampFunctionWith2Precision() {
+    final String query = "select current_timestamp(2) from \"product\"";
+    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.ss')\n" +
+            "FROM foodmart.product";
+    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E2S', CURRENT_TIMESTAMP)\n" +
+            "FROM foodmart.product";
+    sql(query)
+            .withHive().ok(expectedHiveAndSpark)
+            .withBigQuery().ok(expectedBigQuery)
+            .withSpark().ok(expectedHiveAndSpark);
+  }
+
+  @Test public void testCurrentTimestampFunctionWith4Precision() {
+    final String query = "select current_timestamp(4) from \"product\"";
+    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.ssss')\n" +
+            "FROM foodmart.product";
+    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E4S', CURRENT_TIMESTAMP)\n" +
+            "FROM foodmart.product";
+    sql(query)
+            .withHive().ok(expectedHiveAndSpark)
+            .withBigQuery().ok(expectedBigQuery)
+            .withSpark().ok(expectedHiveAndSpark);
+  }
+
+  @Test public void testCurrentTimestampFunctionWith6Precision() {
+    final String query = "select current_timestamp(6) from \"product\"";
+    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.ssssss')\n" +
+            "FROM foodmart.product";
+    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E6S', CURRENT_TIMESTAMP)\n" +
+            "FROM foodmart.product";
+    sql(query)
+            .withHive().ok(expectedHiveAndSpark)
+            .withBigQuery().ok(expectedBigQuery)
+            .withSpark().ok(expectedHiveAndSpark);
+  }
+
   @Test public void testJsonType() {
     String query = "select json_type(\"product_name\") from \"product\"";
     final String expected = "SELECT "
@@ -4254,9 +4326,9 @@ public class RelToSqlConverterTest {
 
   @Test public void currentTimestampFunctionForHiveAndSparkAndBigquery() {
     String query = "select current_timestamp";
-    final String expectedHiveQuery = "SELECT CURRENT_TIMESTAMP `CURRENT_TIMESTAMP`";
-    final String expectedSparkQuery = "SELECT CURRENT_TIMESTAMP `CURRENT_TIMESTAMP`";
-    final String expectedBigQuery = "SELECT CURRENT_TIMESTAMP AS CURRENT_TIMESTAMP";
+    final String expectedHiveQuery = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.ssssss') `CURRENT_TIMESTAMP`";
+    final String expectedSparkQuery = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.ssssss') `CURRENT_TIMESTAMP`";
+    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E6S', CURRENT_TIMESTAMP) AS CURRENT_TIMESTAMP";
 
     sql(query)
         .withHiveIdentifierQuoteString()

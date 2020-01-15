@@ -40,9 +40,11 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.util.CurrentTimestampUtils;
 import org.apache.calcite.util.ToNumberUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 
 /**
  * A <code>SqlDialect</code> implementation for the APACHE SPARK database.
@@ -202,6 +204,13 @@ public class SparkSqlDialect extends SqlDialect {
         break;
       case TRIM:
         unparseTrim(writer, call, leftPrec, rightPrec);
+        break;
+        case OTHER_FUNCTION:
+          if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
+            CurrentTimestampUtils.unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
+          } else {
+            super.unparseCall(writer, call, leftPrec, rightPrec);
+          }
         break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
