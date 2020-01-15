@@ -96,8 +96,7 @@ public class SqlBasicCall extends SqlCall {
     return getOperator().createCall(getFunctionQuantifier(), pos, operands);
   }
 
-  @Override
-  public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+  @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
     super.unparse(writer, leftPrec, rightPrec);
   }
 }

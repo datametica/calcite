@@ -38,7 +38,9 @@ import org.apache.calcite.util.CurrentTimestampUtils;
 import org.apache.calcite.util.ToNumberUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.*;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IF;
 
 /**
  * A <code>SqlDialect</code> implementation for the Apache Hive database.
@@ -188,9 +190,9 @@ public class HiveSqlDialect extends SqlDialect {
       unparseNullIf(writer, call, leftPrec, rightPrec);
       break;
     case OTHER_FUNCTION:
-      if(call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
+      if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
         CurrentTimestampUtils.unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
-      } else  {
+      } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
       break;

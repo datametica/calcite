@@ -258,7 +258,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.literal("[OFFSET(0)]");
       break;
     case OTHER_FUNCTION:
-      if(call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
+      if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
         SqlCall formatTimestampCall = makeFormatTimestampCall(call);
         FORMAT_TIMESTAMP.unparse(writer, formatTimestampCall, leftPrec, rightPrec);
       } else {
@@ -322,9 +322,9 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private SqlCall makeFormatTimestampCall(SqlCall call) {
     SqlCharStringLiteral formatNode = makeDateFormatSqlCall(call);
-    SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY, SqlParserPos.ZERO) {
-      @Override
-      public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
+        SqlParserPos.ZERO) {
+      @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         SqlSyntax.FUNCTION.unparse(writer, CURRENT_TIMESTAMP, getEmptyCall(), leftPrec, rightPrec);
       }
     };
@@ -337,7 +337,8 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private SqlCharStringLiteral makeDateFormatSqlCall(SqlCall call) {
-    String precision = call.operandCount() > 0 ? ((SqlLiteral)call.operand(0)).getValue().toString() : "6";
+    String precision = call.operandCount() > 0
+            ? ((SqlLiteral) call.operand(0)).getValue().toString() : "6";
     String dateFormat = "%F %H:%M:%E" + precision + "S";
     return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
   }

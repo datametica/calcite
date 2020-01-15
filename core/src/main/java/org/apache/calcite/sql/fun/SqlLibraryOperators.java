@@ -211,17 +211,17 @@ public abstract class SqlLibraryOperators {
 
   @LibraryOperator(libraries = {BIGQUERY})
   public static final SqlFunction FORMAT_TIMESTAMP = new SqlFunction("FORMAT_TIMESTAMP",
-                  SqlKind.OTHER_FUNCTION,
-                  ReturnTypes.ARG0, null,
-                  OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.DATETIME),
-                  SqlFunctionCategory.STRING);
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.ARG0, null,
+      OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.DATETIME),
+      SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {HIVE})
   public static final SqlFunction DATE_FORMAT = new SqlFunction("DATE_FORMAT",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0, null,
-          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER),
-          SqlFunctionCategory.STRING);
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.ARG0, null,
+      OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER),
+      SqlFunctionCategory.STRING);
 
   /** The "MONTHNAME(datetime)" function; returns the name of the month,
    * in the current locale, of a TIMESTAMP or DATE argument. */
