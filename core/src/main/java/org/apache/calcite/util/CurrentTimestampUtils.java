@@ -25,6 +25,8 @@ import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 
+import org.apache.commons.lang.StringUtils;
+
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FORMAT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 
@@ -32,6 +34,8 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
  * This class is specific to Hive and Spark to unparse CURRENT_TIMESTAMP function
  */
 public class CurrentTimestampUtils {
+
+  private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
   private CurrentTimestampUtils() {
   }
@@ -58,31 +62,14 @@ public class CurrentTimestampUtils {
   private static SqlCharStringLiteral makeDateFormatSqlCall(SqlCall call) {
     String precision = call.operandCount() > 0
             ? ((SqlLiteral) call.operand(0)).getValue().toString() : "6";
-    String fractionPart = getSecondFractionPart(precision);
-    String dateFormat = "yyyy-MM-dd HH:mm:ss" + fractionPart;
-    return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
+    String fractionPart = StringUtils.repeat("s", Integer.parseInt(precision));
+    return SqlLiteral.createCharString
+            (buildDatetimeFormat(precision, fractionPart), SqlParserPos.ZERO);
   }
 
-  private static String getSecondFractionPart(String precision) {
-    switch (precision) {
-    case "0":
-      return "";
-    case "1":
-      return ".s";
-    case "2":
-      return ".ss";
-    case "3":
-      return ".sss";
-    case "4":
-      return ".ssss";
-    case "5":
-      return ".sssss";
-    case "6":
-      return ".ssssss";
-    default:
-      throw new AssertionError("Handling of precision: " + precision + "not available in HiveSQL "
-          + "Dialect");
-    }
+  private static String buildDatetimeFormat(String precision, String fractionPart) {
+    return Integer.parseInt(precision) > 0
+            ? DEFAULT_DATE_FORMAT + "." + fractionPart : DEFAULT_DATE_FORMAT;
   }
 }
 

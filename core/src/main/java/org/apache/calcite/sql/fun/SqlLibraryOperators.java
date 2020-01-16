@@ -212,14 +212,14 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIGQUERY})
   public static final SqlFunction FORMAT_TIMESTAMP = new SqlFunction("FORMAT_TIMESTAMP",
       SqlKind.OTHER_FUNCTION,
-      ReturnTypes.ARG0, null,
+      ReturnTypes.ARG0_NULLABLE, null,
       OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.DATETIME),
       SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {HIVE})
   public static final SqlFunction DATE_FORMAT = new SqlFunction("DATE_FORMAT",
       SqlKind.OTHER_FUNCTION,
-      ReturnTypes.ARG0, null,
+      ReturnTypes.ARG1_NULLABLE, null,
       OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER),
       SqlFunctionCategory.STRING);
 
