@@ -48,7 +48,6 @@ import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.dialect.OracleSqlDialect;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
-import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
@@ -4959,28 +4958,6 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
     assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
-  }
-
-  @Test public void testNvlFunctionRelToSql() {
-    final RelBuilder builder = relBuilder();
-    final RexNode nvlRexNode = builder.call(SqlLibraryOperators.NVL,
-            builder.scan("EMP").field(1), builder.literal("20"));
-    final RexNode nvlSecondRexNode = builder.call(SqlLibraryOperators.NVL, builder.literal(2),
-            builder.literal(1));
-    final RelNode root = builder
-            .scan("EMP")
-            .project(builder.alias(nvlRexNode, "NI"), builder.alias(nvlSecondRexNode, "NV"))
-            .build();
-    final String expectedSql = "SELECT NVL(\"ENAME\", '20') AS \"NI\", 2 AS \"NV\"\n"
-            + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT IFNULL(ENAME, '20') AS NI, 2 AS NV\n"
-            + "FROM scott.EMP";
-    final String expected = "SELECT NVL(ENAME, '20') NI, 2 NV\n"
-            + "FROM scott.EMP";
-    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
-    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
-    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expected));
-    assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expected));
   }
 
   /** Fluid interface to run tests. */

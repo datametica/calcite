@@ -2319,6 +2319,13 @@ public class RexSimplify {
     return e;
   }
 
+  /***
+   * Simplifying NVL function, If first operand is not null then return
+   * first operand else return second operand.
+   * And return whole NVL function if first operand is not simplifiable.
+   * @param e RexCall
+   * @return RexNode
+   */
   private RexNode simplifyNvl(RexCall e) {
     final List<RexNode> operands = new ArrayList<>(e.operands);
     simplifyList(operands, UNKNOWN);
