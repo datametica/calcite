@@ -6237,26 +6237,38 @@ public class JdbcTest {
             "C=250",
             "C=500");
 
-    CalciteAssert.that(CalciteAssert.Config.REGULAR)
-        .with(CalciteConnectionProperty.FUN, "hive")
-        .query("select nvl(\"commission\", -99) as c from \"hr\".\"emps\"")
-        .returnsUnordered("C=-99",
-            "C=1000",
-            "C=250",
-            "C=500");
-
-    CalciteAssert.that(CalciteAssert.Config.REGULAR)
-        .with(CalciteConnectionProperty.FUN, "spark")
-        .query("select nvl(\"commission\", -99) as c from \"hr\".\"emps\"")
-        .returnsUnordered("C=-99",
-            "C=1000",
-            "C=250",
-            "C=500");
-
     // NVL is not present in the default operator table
     CalciteAssert.that(CalciteAssert.Config.REGULAR)
         .query("select nvl(\"commission\", -99) as c from \"hr\".\"emps\"")
         .throws_("No match found for function signature NVL(<NUMERIC>, <NUMERIC>)");
+  }
+
+  @Test public void testNvl() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+            .with(CalciteConnectionProperty.FUN, "hive")
+            .query("select nvl(\"commission\", -99) as c from \"hr\".\"emps\"")
+            .returnsUnordered("C=-99",
+                    "C=1000",
+                    "C=250",
+                    "C=500");
+
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+            .with(CalciteConnectionProperty.FUN, "spark")
+            .query("select nvl(\"commission\", -99) as c from \"hr\".\"emps\"")
+            .returnsUnordered("C=-99",
+                    "C=1000",
+                    "C=250",
+                    "C=500");
+  }
+
+  @Test public void testIfNull() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+            .with(CalciteConnectionProperty.FUN, "bigquery")
+            .query("select ifnull(\"commission\", -99) as c from \"hr\".\"emps\"")
+            .returnsUnordered("C=-99",
+                    "C=1000",
+                    "C=250",
+                    "C=500");
   }
 
   /** Test case for
