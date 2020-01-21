@@ -206,7 +206,8 @@ public class SparkSqlDialect extends SqlDialect {
         unparseTrim(writer, call, leftPrec, rightPrec);
         break;
       case OTHER_FUNCTION:
-        if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
+        if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())
+                && ((SqlBasicCall) call).getOperands().length > 0) {
           CurrentTimestampUtils.unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
         } else {
           super.unparseCall(writer, call, leftPrec, rightPrec);

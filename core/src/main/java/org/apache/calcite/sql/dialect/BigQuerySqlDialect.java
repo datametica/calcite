@@ -258,9 +258,10 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.literal("[OFFSET(0)]");
       break;
     case OTHER_FUNCTION:
-      if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())) {
+      if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())
+              && ((SqlBasicCall) call).getOperands().length > 0) {
         SqlCall formatTimestampCall = makeFormatTimestampCall(call);
-        FORMAT_TIMESTAMP.unparse(writer, formatTimestampCall, leftPrec, rightPrec);
+        unparseCall(writer, formatTimestampCall, leftPrec, rightPrec);
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
@@ -323,22 +324,13 @@ public class BigQuerySqlDialect extends SqlDialect {
   private SqlCall makeFormatTimestampCall(SqlCall call) {
     SqlCharStringLiteral formatNode = makeDateFormatSqlCall(call);
     SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
-        SqlParserPos.ZERO) {
-      @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        SqlSyntax.FUNCTION.unparse(writer, CURRENT_TIMESTAMP, getEmptyCall(), leftPrec, rightPrec);
-      }
-    };
+            SqlParserPos.ZERO);
     SqlNode[] formatTimestampOperands = new SqlNode[]{formatNode, timestampCall};
     return new SqlBasicCall(FORMAT_TIMESTAMP, formatTimestampOperands, SqlParserPos.ZERO);
   }
 
-  private SqlBasicCall getEmptyCall() {
-    return new SqlBasicCall(CURRENT_TIMESTAMP, SqlBasicCall.EMPTY_ARRAY, SqlParserPos.ZERO);
-  }
-
   private SqlCharStringLiteral makeDateFormatSqlCall(SqlCall call) {
-    String precision = call.operandCount() > 0
-            ? ((SqlLiteral) call.operand(0)).getValue().toString() : "6";
+    String precision = ((SqlLiteral) call.operand(0)).getValue().toString();
     String dateFormat = "%F %H:%M:%E" + precision + "S";
     return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
   }

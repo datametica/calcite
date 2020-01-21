@@ -21,7 +21,6 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 
@@ -44,24 +43,15 @@ public class CurrentTimestampUtils {
           SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     SqlCharStringLiteral formatNode = makeDateFormatSqlCall(call);
     SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
-        SqlParserPos.ZERO) {
-      @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        SqlSyntax.FUNCTION.unparse(writer, CURRENT_TIMESTAMP, getEmptyCall(), leftPrec, rightPrec);
-      }
-    };
+            SqlParserPos.ZERO);
     SqlNode[] formatTimestampOperands = new SqlNode[]{timestampCall, formatNode};
     SqlCall dateFormatCall = new SqlBasicCall(DATE_FORMAT, formatTimestampOperands,
         SqlParserPos.ZERO);
     DATE_FORMAT.unparse(writer, dateFormatCall, leftPrec, rightPrec);
   }
 
-  private static SqlBasicCall getEmptyCall() {
-    return new SqlBasicCall(CURRENT_TIMESTAMP, SqlBasicCall.EMPTY_ARRAY, SqlParserPos.ZERO);
-  }
-
   private static SqlCharStringLiteral makeDateFormatSqlCall(SqlCall call) {
-    String precision = call.operandCount() > 0
-            ? ((SqlLiteral) call.operand(0)).getValue().toString() : "6";
+    String precision = ((SqlLiteral) call.operand(0)).getValue().toString();
     String fractionPart = StringUtils.repeat("s", Integer.parseInt(precision));
     return SqlLiteral.createCharString
             (buildDatetimeFormat(precision, fractionPart), SqlParserPos.ZERO);
