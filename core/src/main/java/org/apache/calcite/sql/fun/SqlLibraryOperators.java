@@ -187,7 +187,8 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction REGEXP_REPLACE = new SqlRegexpReplaceFunction();
 
   @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
-  public static final SqlFunction CURRENT_TIMESTAMP = new SqlCurrentTimestampFunction("CURRENT_TIMESTAMP", SqlTypeName.TIMESTAMP);
+  public static final SqlFunction CURRENT_TIMESTAMP = new SqlCurrentTimestampFunction(
+          "CURRENT_TIMESTAMP", SqlTypeName.TIMESTAMP);
 
   /**
    * The REGEXP_EXTRACT(source_string, regex_pattern) returns the first substring in source_string

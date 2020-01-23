@@ -324,7 +324,8 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   private SqlCall makeCastCall(SqlCall call) {
-    SqlNode sqlTypeNode = super.getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
+    SqlNode sqlTypeNode = super.getCastSpec(
+            new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
     SqlNode[] castOperands = new SqlNode[]{call, sqlTypeNode};
     return new SqlBasicCall(CAST, castOperands, SqlParserPos.ZERO);
   }

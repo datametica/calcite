@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -42,6 +41,8 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.Arrays;
 import java.util.List;
@@ -334,8 +335,8 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private SqlCall makeCastCall(SqlCall call) {
-    SqlNode sqlTypeNode = super.getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT,
-        SqlTypeName.TIMESTAMP));
+    SqlNode sqlTypeNode = super.getCastSpec(
+            new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
     SqlNode[] castOperands = new SqlNode[]{call, sqlTypeNode};
     return new SqlBasicCall(CAST, castOperands, SqlParserPos.ZERO);
   }
