@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.rel.rel2sql;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
@@ -48,6 +50,7 @@ import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.dialect.OracleSqlDialect;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
@@ -65,10 +68,6 @@ import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 import org.apache.calcite.util.TestUtil;
 import org.apache.calcite.util.Util;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-
 import org.junit.Test;
 
 import java.util.List;
@@ -78,7 +77,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.apache.calcite.test.Matchers.isLinux;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertFalse;
@@ -4133,88 +4131,27 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test public void testCurrentTimestampFunctionWithoutPrecision() {
-    final String query = "select current_timestamp from \"product\"";
-    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd "
-        + "HH:mm:ss.ssssss') CURRENT_TIMESTAMP\n"
-        + "FROM foodmart.product";
-    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E6S', CURRENT_TIMESTAMP) "
-        + "AS CURRENT_TIMESTAMP\n"
-        + "FROM foodmart.product";
-    sql(query)
-        .withHive().ok(expectedHiveAndSpark)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedHiveAndSpark);
-  }
-
-  @Test public void testCurrentTimestampFunctionWith0Precision() {
-    final String query = "select current_timestamp(0) from \"product\"";
-    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd "
-        + "HH:mm:ss')\n"
-        + "FROM foodmart.product";
-    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E0S', CURRENT_TIMESTAMP)"
-        + "\n"
-        + "FROM foodmart.product";
-    sql(query)
-        .withHive().ok(expectedHiveAndSpark)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedHiveAndSpark);
-  }
-
-  @Test public void testCurrentTimestampFunctionWith1Precision() {
-    final String query = "select current_timestamp(1) from \"product\"";
-    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd "
-        + "HH:mm:ss.s')\n"
-        + "FROM foodmart.product";
-    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E1S', CURRENT_TIMESTAMP)"
-        + "\n"
-        + "FROM foodmart.product";
-    sql(query)
-        .withHive().ok(expectedHiveAndSpark)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedHiveAndSpark);
-  }
-
-  @Test public void testCurrentTimestampFunctionWith2Precision() {
-    final String query = "select current_timestamp(2) from \"product\"";
-    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd "
-        + "HH:mm:ss.ss')\n"
-        + "FROM foodmart.product";
-    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E2S', CURRENT_TIMESTAMP)"
-        + "\n"
-        + "FROM foodmart.product";
-    sql(query)
-        .withHive().ok(expectedHiveAndSpark)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedHiveAndSpark);
-  }
-
-  @Test public void testCurrentTimestampFunctionWith4Precision() {
-    final String query = "select current_timestamp(4) from \"product\"";
-    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd "
-        + "HH:mm:ss.ssss')\n"
-        + "FROM foodmart.product";
-    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E4S', CURRENT_TIMESTAMP)"
-        + "\n"
-        + "FROM foodmart.product";
-    sql(query)
-        .withHive().ok(expectedHiveAndSpark)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedHiveAndSpark);
-  }
-
-  @Test public void testCurrentTimestampFunctionWith6Precision() {
-    final String query = "select current_timestamp(6) from \"product\"";
-    final String expectedHiveAndSpark = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd "
-        + "HH:mm:ss.ssssss')\n"
-        + "FROM foodmart.product";
-    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E6S', CURRENT_TIMESTAMP)"
-        + "\n"
-        + "FROM foodmart.product";
-    sql(query)
-        .withHive().ok(expectedHiveAndSpark)
-        .withBigQuery().ok(expectedBigQuery)
-        .withSpark().ok(expectedHiveAndSpark);
+  @Test
+  public void testTimestampFunctionRelToSql() {
+    final RelBuilder builder = relBuilder();
+    final RexNode currentTimestampRexNode = builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP
+            , builder.literal(6));
+    final RelNode root = builder
+            .scan("EMP")
+            .project(builder.alias(currentTimestampRexNode, "CT"))
+            .build();
+    final String expectedSql = "SELECT CURRENT_TIMESTAMP(6) AS \"CT\"\n"
+            + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT CAST(FORMAT_TIMESTAMP('%F %H:%M:%E6S', CURRENT_TIMESTAMP) AS TIMESTAMP(0)) AS CT\n"
+            + "FROM scott.EMP";
+    final String expectedSpark = "SELECT CAST(DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.ssssss') AS TIMESTAMP(0)) CT\n"
+            + "FROM scott.EMP";
+    final String expectedHive = "SELECT CAST(DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss.ssssss') AS TIMESTAMP(0)) CT\n"
+            + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
+    assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
   }
 
   @Test public void testJsonType() {
@@ -4338,12 +4275,9 @@ public class RelToSqlConverterTest {
 
   @Test public void currentTimestampFunctionForHiveAndSparkAndBigquery() {
     String query = "select current_timestamp";
-    final String expectedHiveQuery = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss"
-        + ".ssssss') `CURRENT_TIMESTAMP`";
-    final String expectedSparkQuery = "SELECT DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss"
-        + ".ssssss') `CURRENT_TIMESTAMP`";
-    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%F %H:%M:%E6S', CURRENT_TIMESTAMP) "
-        + "AS CURRENT_TIMESTAMP";
+    final String expectedHiveQuery = "SELECT CURRENT_TIMESTAMP `CURRENT_TIMESTAMP`";
+    final String expectedSparkQuery = "SELECT CURRENT_TIMESTAMP `CURRENT_TIMESTAMP`";
+    final String expectedBigQuery = "SELECT CURRENT_TIMESTAMP AS CURRENT_TIMESTAMP";
 
     sql(query)
         .withHiveIdentifierQuoteString()

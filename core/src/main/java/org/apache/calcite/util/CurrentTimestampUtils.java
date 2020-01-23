@@ -21,9 +21,7 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
-
 import org.apache.commons.lang.StringUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FORMAT;
@@ -39,15 +37,13 @@ public class CurrentTimestampUtils {
   private CurrentTimestampUtils() {
   }
 
-  public static void unparseCurrentTimestamp(
-          SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+  public static SqlBasicCall makeDateFormatCall(SqlCall call) {
     SqlCharStringLiteral formatNode = makeDateFormatSqlCall(call);
     SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
             SqlParserPos.ZERO);
     SqlNode[] formatTimestampOperands = new SqlNode[]{timestampCall, formatNode};
-    SqlCall dateFormatCall = new SqlBasicCall(DATE_FORMAT, formatTimestampOperands,
+    return new SqlBasicCall(DATE_FORMAT, formatTimestampOperands,
         SqlParserPos.ZERO);
-    DATE_FORMAT.unparse(writer, dateFormatCall, leftPrec, rightPrec);
   }
 
   private static SqlCharStringLiteral makeDateFormatSqlCall(SqlCall call) {

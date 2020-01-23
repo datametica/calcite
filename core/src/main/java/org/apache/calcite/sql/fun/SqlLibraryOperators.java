@@ -186,6 +186,9 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {MYSQL, ORACLE})
   public static final SqlFunction REGEXP_REPLACE = new SqlRegexpReplaceFunction();
 
+  @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
+  public static final SqlFunction CURRENT_TIMESTAMP = new SqlCurrentTimestampFunction("CURRENT_TIMESTAMP", SqlTypeName.TIMESTAMP);
+
   /**
    * The REGEXP_EXTRACT(source_string, regex_pattern) returns the first substring in source_string
    * that matches the regex_pattern. Returns NULL if there is no match.
@@ -212,14 +215,14 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIGQUERY})
   public static final SqlFunction FORMAT_TIMESTAMP = new SqlFunction("FORMAT_TIMESTAMP",
       SqlKind.OTHER_FUNCTION,
-      ReturnTypes.ARG0_NULLABLE, null,
+      ReturnTypes.VARCHAR_2000_NULLABLE, null,
       OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.DATETIME),
       SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {HIVE})
   public static final SqlFunction DATE_FORMAT = new SqlFunction("DATE_FORMAT",
       SqlKind.OTHER_FUNCTION,
-      ReturnTypes.ARG1_NULLABLE, null,
+      ReturnTypes.VARCHAR_2000_NULLABLE, null,
       OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER),
       SqlFunctionCategory.STRING);
 
