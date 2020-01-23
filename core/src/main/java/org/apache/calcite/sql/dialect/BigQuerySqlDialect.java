@@ -23,7 +23,17 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.*;
+import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlSetOperator;
+import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -318,13 +328,14 @@ public class BigQuerySqlDialect extends SqlDialect {
   private SqlCall makeFormatTimestampCall(SqlCall call) {
     SqlCharStringLiteral formatNode = makeDateFormatSqlCall(call);
     SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
-            SqlParserPos.ZERO);
+        SqlParserPos.ZERO);
     SqlNode[] formatTimestampOperands = new SqlNode[]{formatNode, timestampCall};
     return new SqlBasicCall(FORMAT_TIMESTAMP, formatTimestampOperands, SqlParserPos.ZERO);
   }
 
   private SqlCall makeCastCall(SqlCall call) {
-    SqlNode sqlTypeNode = super.getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
+    SqlNode sqlTypeNode = super.getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT,
+        SqlTypeName.TIMESTAMP));
     SqlNode[] castOperands = new SqlNode[]{call, sqlTypeNode};
     return new SqlBasicCall(CAST, castOperands, SqlParserPos.ZERO);
   }

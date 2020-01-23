@@ -211,8 +211,8 @@ public class SparkSqlDialect extends SqlDialect {
         break;
       case OTHER_FUNCTION:
         if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())
-                && ((SqlBasicCall) call).getOperands().length > 0) {
-          SqlBasicCall dateFormatCall = CurrentTimestampUtils.makeDateFormatCall(call);
+            && ((SqlBasicCall) call).getOperands().length > 0) {
+          SqlCall dateFormatCall = CurrentTimestampUtils.makeDateFormatCall(call);
           SqlCall castTimestampCall = makeCastCall(dateFormatCall);
           unparseCall(writer, castTimestampCall, leftPrec, rightPrec);
         } else {

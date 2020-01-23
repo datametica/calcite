@@ -195,8 +195,8 @@ public class HiveSqlDialect extends SqlDialect {
       break;
     case OTHER_FUNCTION:
       if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())
-              && ((SqlBasicCall) call).getOperands().length > 0) {
-        SqlBasicCall dateFormatCall = CurrentTimestampUtils.makeDateFormatCall(call);
+          && ((SqlBasicCall) call).getOperands().length > 0) {
+        SqlCall dateFormatCall = CurrentTimestampUtils.makeDateFormatCall(call);
         SqlCall castTimestampCall = makeCastCall(dateFormatCall);
         unparseCall(writer, castTimestampCall, leftPrec, rightPrec);
       } else {
@@ -273,7 +273,8 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   private SqlCall makeCastCall(SqlCall call) {
-    SqlNode sqlTypeNode = super.getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
+    SqlNode sqlTypeNode = super.getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT,
+        SqlTypeName.TIMESTAMP));
     SqlNode[] castOperands = new SqlNode[]{call, sqlTypeNode};
     return new SqlBasicCall(CAST, castOperands, SqlParserPos.ZERO);
   }
