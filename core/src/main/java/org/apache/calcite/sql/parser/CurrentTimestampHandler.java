@@ -14,14 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.util;
+package org.apache.calcite.sql.parser;
 
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.parser.SqlParserPos;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -31,11 +30,11 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 /**
  * This class is specific to Hive and Spark to unparse CURRENT_TIMESTAMP function
  */
-public class CurrentTimestampUtils {
+public class CurrentTimestampHandler {
 
   private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
-  private CurrentTimestampUtils() {
+  private CurrentTimestampHandler() {
   }
 
   public static SqlCall makeDateFormatCall(SqlCall call) {
@@ -60,4 +59,4 @@ public class CurrentTimestampUtils {
   }
 }
 
-// End CurrentTimestampUtils.java
+// End CurrentTimestampHandler.java
