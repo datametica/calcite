@@ -37,7 +37,8 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 public class CurrentTimestampHandler {
 
   private SqlDialect sqlDialect;
-
+  public static final String DEFAULT_DATE_FORMAT_FOR_HIVE = "yyyy-MM-dd HH:mm:ss";
+  public static final String DEFAULT_DATE_FORMAT_FOR_BIGQUERY = "%F %H:%M:%E";
   public CurrentTimestampHandler(SqlDialect sqlDialect) {
     this.sqlDialect = sqlDialect;
   }
@@ -62,8 +63,8 @@ public class CurrentTimestampHandler {
   }
 
   private String buildDatetimeFormat(Integer precision, String fractionPart) {
-    String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
-    return precision > 0 ? DEFAULT_DATE_FORMAT + "." + fractionPart : DEFAULT_DATE_FORMAT;
+    return precision > 0
+            ? DEFAULT_DATE_FORMAT_FOR_HIVE + "." + fractionPart : DEFAULT_DATE_FORMAT_FOR_HIVE;
   }
 
   public SqlCall makeFormatTimestampCall(SqlCall call) {
@@ -76,7 +77,7 @@ public class CurrentTimestampHandler {
 
   private SqlCharStringLiteral makeSqlNodeForFormatTimestamp(SqlCall call) {
     String precision = ((SqlLiteral) call.operand(0)).getValue().toString();
-    String dateFormat = "%F %H:%M:%E" + precision + "S";
+    String dateFormat = DEFAULT_DATE_FORMAT_FOR_BIGQUERY + precision + "S";
     return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
   }
 
