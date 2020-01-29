@@ -18,7 +18,6 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -37,10 +36,9 @@ import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
+import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
 
@@ -51,12 +49,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 
 /**
@@ -276,9 +272,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     case OTHER_FUNCTION:
       if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())
               && ((SqlBasicCall) call).getOperands().length > 0) {
-        SqlCall formatTimestampCall = makeFormatTimestampCall(call);
-        SqlCall castCall = makeCastCall(formatTimestampCall);
-        unparseCall(writer, castCall, leftPrec, rightPrec);
+        unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
@@ -338,25 +332,12 @@ public class BigQuerySqlDialect extends SqlDialect {
     }
   }
 
-  private SqlCall makeFormatTimestampCall(SqlCall call) {
-    SqlCharStringLiteral formatNode = makeDateFormatSqlCall(call);
-    SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
-        SqlParserPos.ZERO);
-    SqlNode[] formatTimestampOperands = new SqlNode[]{formatNode, timestampCall};
-    return new SqlBasicCall(FORMAT_TIMESTAMP, formatTimestampOperands, SqlParserPos.ZERO);
-  }
-
-  private SqlCall makeCastCall(SqlCall call) {
-    SqlNode sqlTypeNode = super.getCastSpec(
-            new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
-    SqlNode[] castOperands = new SqlNode[]{call, sqlTypeNode};
-    return new SqlBasicCall(CAST, castOperands, SqlParserPos.ZERO);
-  }
-
-  private SqlCharStringLiteral makeDateFormatSqlCall(SqlCall call) {
-    String precision = ((SqlLiteral) call.operand(0)).getValue().toString();
-    String dateFormat = "%F %H:%M:%E" + precision + "S";
-    return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
+  private void unparseCurrentTimestamp(SqlWriter writer, SqlCall call, int leftPrec,
+                                       int rightPrec) {
+    CurrentTimestampHandler timestampHandler = new CurrentTimestampHandler(this);
+    SqlCall formatTimestampCall = timestampHandler.makeFormatTimestampCall(call);
+    SqlCall castCall = timestampHandler.makeCastCall(formatTimestampCall);
+    unparseCall(writer, castCall, leftPrec, rightPrec);
   }
 
   private void writeOffset(SqlWriter writer, SqlCall call) {

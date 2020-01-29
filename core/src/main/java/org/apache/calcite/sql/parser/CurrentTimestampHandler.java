@@ -16,29 +16,34 @@
  */
 package org.apache.calcite.sql.parser;
 
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
+import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-
-import org.apache.commons.lang.StringUtils;
+import org.apache.calcite.sql.type.BasicSqlType;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FORMAT;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIMESTAMP;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 
 /**
- * This class is specific to Hive and Spark to unparse CURRENT_TIMESTAMP function
+ * This class is specific to Hive, Spark and bigQuery to unparse CURRENT_TIMESTAMP function
  */
 public class CurrentTimestampHandler {
 
-  private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+  private SqlDialect sqlDialect;
 
-  private CurrentTimestampHandler() {
+  public CurrentTimestampHandler(SqlDialect sqlDialect) {
+    this.sqlDialect = sqlDialect;
   }
 
-  public static SqlCall makeDateFormatCall(SqlCall call) {
-    SqlCharStringLiteral formatNode = makeDateFormatSqlCall(call);
+  public SqlCall makeDateFormatCall(SqlCall call) {
+    SqlCharStringLiteral formatNode = makeSqlNodeForDateFormat(call);
     SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
             SqlParserPos.ZERO);
     SqlNode[] formatTimestampOperands = new SqlNode[]{timestampCall, formatNode};
@@ -46,16 +51,40 @@ public class CurrentTimestampHandler {
         SqlParserPos.ZERO);
   }
 
-  private static SqlCharStringLiteral makeDateFormatSqlCall(SqlCall call) {
-    String precision = ((SqlLiteral) call.operand(0)).getValue().toString();
-    String fractionPart = StringUtils.repeat("s", Integer.parseInt(precision));
+  private SqlCharStringLiteral makeSqlNodeForDateFormat(SqlCall call) {
+    Integer precision = Integer.parseInt(((SqlLiteral) call.operand(0)).getValue().toString());
+    StringBuilder fractionPart = new StringBuilder();
+    for (int i = 0; i < precision; i++) {
+      fractionPart.append('s');
+    }
     return SqlLiteral.createCharString
-            (buildDatetimeFormat(precision, fractionPart), SqlParserPos.ZERO);
+            (buildDatetimeFormat(precision, fractionPart.toString()), SqlParserPos.ZERO);
   }
 
-  private static String buildDatetimeFormat(String precision, String fractionPart) {
-    return Integer.parseInt(precision) > 0
-            ? DEFAULT_DATE_FORMAT + "." + fractionPart : DEFAULT_DATE_FORMAT;
+  private String buildDatetimeFormat(Integer precision, String fractionPart) {
+    String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+    return precision > 0 ? DEFAULT_DATE_FORMAT + "." + fractionPart : DEFAULT_DATE_FORMAT;
+  }
+
+  public SqlCall makeFormatTimestampCall(SqlCall call) {
+    SqlCharStringLiteral formatNode = makeSqlNodeForFormatTimestamp(call);
+    SqlNode timestampCall = new SqlBasicCall(CURRENT_TIMESTAMP, SqlNode.EMPTY_ARRAY,
+            SqlParserPos.ZERO);
+    SqlNode[] formatTimestampOperands = new SqlNode[]{formatNode, timestampCall};
+    return new SqlBasicCall(FORMAT_TIMESTAMP, formatTimestampOperands, SqlParserPos.ZERO);
+  }
+
+  private SqlCharStringLiteral makeSqlNodeForFormatTimestamp(SqlCall call) {
+    String precision = ((SqlLiteral) call.operand(0)).getValue().toString();
+    String dateFormat = "%F %H:%M:%E" + precision + "S";
+    return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
+  }
+
+  public SqlCall makeCastCall(SqlCall call) {
+    SqlNode sqlTypeNode = sqlDialect.getCastSpec(
+            new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
+    SqlNode[] castOperands = new SqlNode[]{call, sqlTypeNode};
+    return new SqlBasicCall(CAST, castOperands, SqlParserPos.ZERO);
   }
 }
 
