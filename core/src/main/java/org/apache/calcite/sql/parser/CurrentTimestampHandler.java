@@ -26,6 +26,8 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import java.util.Locale;
+
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FORMAT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
@@ -77,7 +79,8 @@ public class CurrentTimestampHandler {
 
   private SqlCharStringLiteral makeSqlNodeForFormatTimestamp(SqlCall call) {
     String precision = ((SqlLiteral) call.operand(0)).getValue().toString();
-    String dateFormat = String.format("%s%s%s", DEFAULT_DATE_FORMAT_FOR_BIGQUERY, precision, "S");
+    String dateFormat = String.format
+            (Locale.ROOT, "%s%s%s", DEFAULT_DATE_FORMAT_FOR_BIGQUERY, precision, "S");
     return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
   }
 
