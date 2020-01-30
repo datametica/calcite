@@ -77,7 +77,7 @@ public class CurrentTimestampHandler {
 
   private SqlCharStringLiteral makeSqlNodeForFormatTimestamp(SqlCall call) {
     String precision = ((SqlLiteral) call.operand(0)).getValue().toString();
-    String dateFormat = DEFAULT_DATE_FORMAT_FOR_BIGQUERY + precision + "S";
+    String dateFormat = String.format("%s%s%s", DEFAULT_DATE_FORMAT_FOR_BIGQUERY, precision, "S");
     return SqlLiteral.createCharString(dateFormat, SqlParserPos.ZERO);
   }
 
