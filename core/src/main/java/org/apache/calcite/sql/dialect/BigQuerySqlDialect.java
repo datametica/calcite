@@ -272,19 +272,29 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
     case OTHER_FUNCTION:
-      if (call.getOperator().equals(CURRENT_TIMESTAMP)
-              && ((SqlBasicCall) call).getOperands().length > 0) {
-        unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
-      } else if (call.getOperator().equals(CURRENT_USER)
-              || call.getOperator().equals(SESSION_USER)) {
-        final SqlWriter.Frame sessionUserFunc = writer.startFunCall(SESSION_USER.getName());
-        writer.endFunCall(sessionUserFunc);
-      } else {
-        super.unparseCall(writer, call, leftPrec, rightPrec);
-      }
+      unparseOtherFunction(writer, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.getOperator().getName()) {
+      case "CURRENT_TIMESTAMP":
+        if (((SqlBasicCall) call).getOperands().length > 0) {
+          unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
+        } else {
+          super.unparseCall(writer, call, leftPrec, rightPrec);
+        }
+        break;
+      case "CURRENT_USER":
+      case "SESSION_USER":
+        final SqlWriter.Frame sessionUserFunc = writer.startFunCall(SESSION_USER.getName());
+        writer.endFunCall(sessionUserFunc);
+        break;
+      default:
+        super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
