@@ -40,7 +40,6 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.ToNumberUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_USER;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IF;
@@ -211,20 +210,20 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    switch(call.getOperator().getName()) {
-      case "CURRENT_TIMESTAMP":
-        if (((SqlBasicCall) call).getOperands().length > 0) {
-          unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
-        } else {
-          super.unparseCall(writer, call, leftPrec, rightPrec);
-        }
-        break;
-      case "CURRENT_USER":
-        final SqlWriter.Frame currUserFrame = writer.startFunCall(CURRENT_USER.getName());
-        writer.endFunCall(currUserFrame);
-        break;
-      default:
+    switch (call.getOperator().getName()) {
+    case "CURRENT_TIMESTAMP":
+      if (((SqlBasicCall) call).getOperands().length > 0) {
+        unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
+      } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
+    case "CURRENT_USER":
+      final SqlWriter.Frame currUserFrame = writer.startFunCall(CURRENT_USER.getName());
+      writer.endFunCall(currUserFrame);
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
