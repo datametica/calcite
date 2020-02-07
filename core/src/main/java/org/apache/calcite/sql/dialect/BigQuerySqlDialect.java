@@ -50,6 +50,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_USER;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
 
 /**
  * A <code>SqlDialect</code> implementation for Google BigQuery's "Standard SQL"
@@ -241,9 +242,9 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.literal("INT64");
       writer.endFunCall(castFrame);
       break;
-    case SYSTEM_FUNCTION:
-      if (call.getOperator().equals(CURRENT_USER)) {
-        final SqlWriter.Frame sessionUserFrame = writer.startFunCall("SESSION_USER");
+    case OTHER_FUNCTION:
+      if (call.getOperator().equals(CURRENT_USER) || call.getOperator().equals(SESSION_USER)) {
+        final SqlWriter.Frame sessionUserFrame = writer.startFunCall(SESSION_USER.getName());
         writer.endFunCall(sessionUserFrame);
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);

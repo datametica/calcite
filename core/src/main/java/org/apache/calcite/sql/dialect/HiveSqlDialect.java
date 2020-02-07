@@ -188,9 +188,9 @@ public class HiveSqlDialect extends SqlDialect {
     case NULLIF:
       unparseNullIf(writer, call, leftPrec, rightPrec);
       break;
-    case SYSTEM_FUNCTION:
+    case OTHER_FUNCTION:
       if (call.getOperator().equals(CURRENT_USER)) {
-        final SqlWriter.Frame currUserFrame = writer.startFunCall("CURRENT_USER");
+        final SqlWriter.Frame currUserFrame = writer.startFunCall(CURRENT_USER.getName());
         writer.endFunCall(currUserFrame);
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);

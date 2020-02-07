@@ -118,12 +118,6 @@ public enum SqlKind {
   OTHER_FUNCTION,
 
   /**
-   * SYSTEM Function
-   *
-   */
-  SYSTEM_FUNCTION,
-
-  /**
    * POSITION Function
    */
   POSITION,
@@ -1307,8 +1301,7 @@ public enum SqlKind {
    */
   public static final Set<SqlKind> FUNCTION =
       EnumSet.of(OTHER_FUNCTION, ROW, TRIM, LTRIM, RTRIM, CAST,
-                 JDBC_FN, POSITION, REVERSE, CHAR_LENGTH, CHARACTER_LENGTH, SUBSTRING, TRUNCATE,
-                SYSTEM_FUNCTION);
+                 JDBC_FN, POSITION, REVERSE, CHAR_LENGTH, CHARACTER_LENGTH, SUBSTRING, TRUNCATE);
 
   /**
    * Category of SqlAvgAggFunction.

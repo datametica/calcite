@@ -34,7 +34,7 @@ public class SqlBaseContextVariable extends SqlFunction {
   /** Creates a SqlBaseContextVariable. */
   protected SqlBaseContextVariable(String name,
       SqlReturnTypeInference returnType, SqlFunctionCategory category) {
-    super(name, SqlKind.SYSTEM_FUNCTION, returnType, null, OperandTypes.NILADIC,
+    super(name, SqlKind.OTHER_FUNCTION, returnType, null, OperandTypes.NILADIC,
         category);
   }
 
