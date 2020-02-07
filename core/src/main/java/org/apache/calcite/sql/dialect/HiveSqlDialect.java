@@ -203,18 +203,28 @@ public class HiveSqlDialect extends SqlDialect {
       unparseNullIf(writer, call, leftPrec, rightPrec);
       break;
     case OTHER_FUNCTION:
-      if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())
-          && ((SqlBasicCall) call).getOperands().length > 0) {
-        unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
-      } else if (call.getOperator().equals(CURRENT_USER)) {
-        final SqlWriter.Frame currUserFrame = writer.startFunCall(CURRENT_USER.getName());
-        writer.endFunCall(currUserFrame);
-      } else {
-        super.unparseCall(writer, call, leftPrec, rightPrec);
-      }
+      unparseOtherFunction(writer, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch(call.getOperator().getName()) {
+      case "CURRENT_TIMESTAMP":
+        if (((SqlBasicCall) call).getOperands().length > 0) {
+          unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
+        } else {
+          super.unparseCall(writer, call, leftPrec, rightPrec);
+        }
+        break;
+      case "CURRENT_USER":
+        final SqlWriter.Frame currUserFrame = writer.startFunCall(CURRENT_USER.getName());
+        writer.endFunCall(currUserFrame);
+        break;
+      default:
+        super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
