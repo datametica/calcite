@@ -101,9 +101,17 @@ public abstract class SqlLibraryOperators {
           OperandTypes.VARIADIC, SqlFunctionCategory.SYSTEM);
 
   /** The "NVL(value, value)" function. */
-  @LibraryOperator(libraries = {ORACLE})
+  @LibraryOperator(libraries = {ORACLE, HIVE, SPARK})
   public static final SqlFunction NVL =
       new SqlFunction("NVL", SqlKind.NVL,
+          ReturnTypes.cascade(ReturnTypes.LEAST_RESTRICTIVE,
+              SqlTypeTransforms.TO_NULLABLE_ALL),
+          null, OperandTypes.SAME_SAME, SqlFunctionCategory.SYSTEM);
+
+  /** The "IFNULL(value, value)" function. */
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction IFNULL =
+      new SqlFunction("IFNULL", SqlKind.OTHER_FUNCTION,
           ReturnTypes.cascade(ReturnTypes.LEAST_RESTRICTIVE,
               SqlTypeTransforms.TO_NULLABLE_ALL),
           null, OperandTypes.SAME_SAME, SqlFunctionCategory.SYSTEM);
@@ -186,6 +194,10 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {MYSQL, ORACLE})
   public static final SqlFunction REGEXP_REPLACE = new SqlRegexpReplaceFunction();
 
+  @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
+  public static final SqlFunction CURRENT_TIMESTAMP = new SqlCurrentTimestampFunction(
+          "CURRENT_TIMESTAMP", SqlTypeName.TIMESTAMP);
+
   /**
    * The REGEXP_EXTRACT(source_string, regex_pattern) returns the first substring in source_string
    * that matches the regex_pattern. Returns NULL if there is no match.
@@ -208,6 +220,20 @@ public abstract class SqlLibraryOperators {
           SqlTypeTransforms.TO_NULLABLE),
       null, OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction FORMAT_TIMESTAMP = new SqlFunction("FORMAT_TIMESTAMP",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.VARCHAR_2000_NULLABLE, null,
+      OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.TIMESTAMP),
+      SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {HIVE})
+  public static final SqlFunction DATE_FORMAT = new SqlFunction("DATE_FORMAT",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.VARCHAR_2000_NULLABLE, null,
+      OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
+      SqlFunctionCategory.TIMEDATE);
 
   /** The "MONTHNAME(datetime)" function; returns the name of the month,
    * in the current locale, of a TIMESTAMP or DATE argument. */
@@ -232,6 +258,23 @@ public abstract class SqlLibraryOperators {
                 writer, call, leftPrec, rightPrec);
         }
       };
+
+  @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
+  public static final SqlFunction DATE_SUB =
+      new SqlFunction(
+          "DATE_SUB",
+          SqlKind.MINUS,
+          ReturnTypes.DATE,
+          null,
+          OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
+          SqlFunctionCategory.TIMEDATE) {
+
+    @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+      writer.getDialect().unparseIntervalOperandsBasedFunctions(
+          writer, call, leftPrec, rightPrec);
+    }
+  };
+
 
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction ADD_MONTHS =
@@ -453,6 +496,20 @@ public abstract class SqlLibraryOperators {
                 }
               }),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
+  public static final SqlFunction RPAD =
+      new SqlFunction("RPAD", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.STRING_INTEGER_OPTIONAL_STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
+  public static final SqlFunction LPAD =
+      new SqlFunction("LPAD", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.STRING_INTEGER_OPTIONAL_STRING,
+          SqlFunctionCategory.STRING);
 }
 
 // End SqlLibraryOperators.java

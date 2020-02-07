@@ -25,15 +25,18 @@ import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
+import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
@@ -46,9 +49,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_USER;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
 
@@ -160,6 +165,9 @@ public class BigQuerySqlDialect extends SqlDialect {
       switch (call.getOperands().get(1).getType().getSqlTypeName()) {
       case INTERVAL_DAY:
       case INTERVAL_MONTH:
+        if (call.op.kind == SqlKind.MINUS) {
+          return SqlLibraryOperators.DATE_SUB;
+        }
         return SqlLibraryOperators.DATE_ADD;
       }
     default:
@@ -242,14 +250,6 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.literal("INT64");
       writer.endFunCall(castFrame);
       break;
-    case OTHER_FUNCTION:
-      if (call.getOperator().equals(CURRENT_USER) || call.getOperator().equals(SESSION_USER)) {
-        final SqlWriter.Frame sessionUserFrame = writer.startFunCall(SESSION_USER.getName());
-        writer.endFunCall(sessionUserFrame);
-      } else {
-        super.unparseCall(writer, call, leftPrec, rightPrec);
-      }
-      break;
     case REGEXP_SUBSTR:
       unparseRegexSubstr(writer, call, leftPrec, rightPrec);
       break;
@@ -264,6 +264,24 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       writer.endFunCall(toCodePointsFrame);
       writer.literal("[OFFSET(0)]");
+      break;
+    case NVL:
+      SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
+      SqlCall sqlCall = new SqlBasicCall(IFNULL, extractNodeOperands,
+          SqlParserPos.ZERO);
+      unparseCall(writer, sqlCall, leftPrec, rightPrec);
+      break;
+    case OTHER_FUNCTION:
+      if (call.getOperator().equals(CURRENT_TIMESTAMP)
+              && ((SqlBasicCall) call).getOperands().length > 0) {
+        unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
+      } else if (call.getOperator().equals(CURRENT_USER)
+              || call.getOperator().equals(SESSION_USER)) {
+        final SqlWriter.Frame sessionUserFunc = writer.startFunCall(SESSION_USER.getName());
+        writer.endFunCall(sessionUserFunc);
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -318,6 +336,14 @@ public class BigQuerySqlDialect extends SqlDialect {
     default:
       REGEXP_EXTRACT.unparse(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseCurrentTimestamp(SqlWriter writer, SqlCall call, int leftPrec,
+                                       int rightPrec) {
+    CurrentTimestampHandler timestampHandler = new CurrentTimestampHandler(this);
+    SqlCall formatTimestampCall = timestampHandler.makeFormatTimestampCall(call);
+    SqlCall castCall = timestampHandler.makeCastCall(formatTimestampCall);
+    unparseCall(writer, castCall, leftPrec, rightPrec);
   }
 
   private void writeOffset(SqlWriter writer, SqlCall call) {
@@ -377,6 +403,119 @@ public class BigQuerySqlDialect extends SqlDialect {
       call.operand(1).unparse(writer, leftPrec, rightPrec);
     }
     writer.endFunCall(trimFrame);
+  }
+
+  /**
+   * For usage of DATE_ADD,DATE_SUB function in BQ. It will unparse the SqlCall and write it into BQ
+   * format. Below are few examples:
+   * Example 1:
+   * Input: select date + INTERVAL 1 DAY
+   * It will write output query as: select DATE_ADD(date , INTERVAL 1 DAY)
+   * Example 2:
+   * Input: select date + Store_id * INTERVAL 2 DAY
+   * It will write output query as: select DATE_ADD(date , INTERVAL Store_id * 2 DAY)
+   *
+   * @param writer Target SqlWriter to write the call
+   * @param call SqlCall : date + Store_id * INTERVAL 2 DAY
+   * @param leftPrec Indicate left precision
+   * @param rightPrec Indicate left precision
+   */
+  @Override public void unparseIntervalOperandsBasedFunctions(
+      SqlWriter writer,
+      SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWriter.Frame frame = writer.startFunCall(call.getOperator().toString());
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(",");
+    switch (call.operand(1).getKind()) {
+    case LITERAL:
+      unparseLiteralIntervalCall(call.operand(1), writer);
+      break;
+    case TIMES:
+      unparseExpressionIntervalCall(call.operand(1), writer, leftPrec, rightPrec);
+      break;
+    default:
+      throw new AssertionError(call.operand(1).getKind() + " is not valid");
+    }
+    writer.endFunCall(frame);
+  }
+
+  /**
+   * Unparse the literal call from input query and write the INTERVAL part. Below is an example:
+   * Input: date + INTERVAL 1 DAY
+   * It will write this as: INTERVAL 1 DAY
+   *
+   * @param call SqlCall :INTERVAL 1 DAY
+   * @param writer Target SqlWriter to write the call
+   */
+  private void unparseLiteralIntervalCall(
+      SqlLiteral call, SqlWriter writer) {
+    SqlIntervalLiteral intervalLiteralValue = (SqlIntervalLiteral) call;
+    SqlIntervalLiteral.IntervalValue literalValue =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
+    writer.sep("INTERVAL");
+    writer.sep(literalValue.getIntervalLiteral());
+    writer.print(literalValue.getIntervalQualifier().toString());
+  }
+
+  /**
+   * Unparse the SqlBasic call and write INTERVAL with expression. Below are the examples:
+   * Example 1:
+   * Input: store_id * INTERVAL 1 DAY
+   * It will write this as: INTERVAL store_id DAY
+   * Example 2:
+   * Input: 10 * INTERVAL 2 DAY
+   * It will write this as: INTERVAL 10 * 2 DAY
+   *
+   * @param call SqlCall : store_id * INTERVAL 1 DAY
+   * @param writer Target SqlWriter to write the call
+   * @param leftPrec Indicate left precision
+   * @param rightPrec Indicate right precision
+   */
+  private void unparseExpressionIntervalCall(
+      SqlBasicCall call, SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlLiteral intervalLiteral = getIntervalLiteral(call);
+    SqlNode identifier = getIdentifier(call);
+    SqlIntervalLiteral.IntervalValue literalValue =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    writer.sep("INTERVAL");
+    if (call.getKind() == SqlKind.TIMES) {
+      if (!literalValue.getIntervalLiteral().equals("1")) {
+        identifier.unparse(writer, leftPrec, rightPrec);
+        writer.sep("*");
+        writer.sep(literalValue.toString());
+      } else {
+        identifier.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.print(literalValue.getIntervalQualifier().toString());
+    }
+  }
+
+  /**
+   * Return the SqlLiteral from the SqlBasicCall.
+   *
+   * @param intervalOperand store_id * INTERVAL 1 DAY
+   * @return SqlLiteral INTERVAL 1 DAY
+   */
+  private SqlLiteral getIntervalLiteral(SqlBasicCall intervalOperand) {
+    if (intervalOperand.operand(1).getKind() == SqlKind.IDENTIFIER
+        || (intervalOperand.operand(1) instanceof SqlNumericLiteral)) {
+      return ((SqlBasicCall) intervalOperand).operand(0);
+    }
+    return ((SqlBasicCall) intervalOperand).operand(1);
+  }
+
+  /**
+   * Return the identifer from the SqlBasicCall.
+   *
+   * @param intervalOperand Store_id * INTERVAL 1 DAY
+   * @return SqlIdentifier Store_id
+   */
+  private SqlNode getIdentifier(SqlBasicCall intervalOperand) {
+    if (intervalOperand.operand(1).getKind() == SqlKind.IDENTIFIER
+        || (intervalOperand.operand(1) instanceof SqlNumericLiteral)) {
+      return intervalOperand.operand(1);
+    }
+    return intervalOperand.operand(0);
   }
 }
 
