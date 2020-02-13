@@ -90,6 +90,8 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
+
 
 /**
  * A <code>SqlDialect</code> implementation for Google BigQuery's "Standard SQL"
@@ -597,6 +599,11 @@ public class BigQuerySqlDialect extends SqlDialect {
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
+      break;
+    case "CURRENT_USER":
+    case "SESSION_USER":
+      final SqlWriter.Frame sessionUserFunc = writer.startFunCall(SESSION_USER.getName());
+      writer.endFunCall(sessionUserFunc);
       break;
     case "FORMAT_TIMESTAMP":
     case "FORMAT_TIME":

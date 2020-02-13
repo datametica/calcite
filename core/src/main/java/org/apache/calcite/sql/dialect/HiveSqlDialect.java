@@ -83,6 +83,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SPLIT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_USER;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IF;
 
@@ -599,6 +600,10 @@ public class HiveSqlDialect extends SqlDialect {
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
+      break;
+    case "CURRENT_USER":
+      final SqlWriter.Frame currUserFrame = writer.startFunCall(CURRENT_USER.getName());
+      writer.endFunCall(currUserFrame);
       break;
     case "STRING_SPLIT":
       SqlCall splitCall = SPLIT.createCall(SqlParserPos.ZERO, call.getOperandList());
