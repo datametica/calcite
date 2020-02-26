@@ -19,6 +19,7 @@ package org.apache.calcite.sql.dialect;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.util.ToNumberUtils;
 
@@ -41,14 +42,14 @@ public class SnowflakeSqlDialect extends SqlDialect {
   int leftPrec,
                                     final int rightPrec) {
     switch (call.getKind()) {
-      /*case SUBSTRING:
-        final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTR");
-        for (SqlNode operand : call.getOperandList()) {
-          writer.sep(",");
-          operand.unparse(writer, leftPrec, rightPrec);
-        }
-        writer.endFunCall(substringFrame);
-        break;*/
+    case SUBSTRING:
+      final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTR");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(substringFrame);
+      break;
     case TO_NUMBER:
       if (ToNumberUtils.needsCustomUnparsing(call)) {
         ToNumberUtils.unparseToNumberSnowFlake(writer, call, leftPrec, rightPrec);

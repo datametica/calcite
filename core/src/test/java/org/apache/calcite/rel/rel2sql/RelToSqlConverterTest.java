@@ -2476,7 +2476,8 @@ public class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"";
     final String expectedPostgresql = "SELECT SUBSTRING(\"brand_name\" FROM 2)\n"
         + "FROM \"foodmart\".\"product\"";
-    final String expectedSnowflake = expectedPostgresql;
+    final String expectedSnowflake = "SELECT SUBSTR(\"brand_name\", 2)\n"
+            + "FROM \"foodmart\".\"product\"";
     final String expectedRedshift = expectedPostgresql;
     final String expectedMysql = "SELECT SUBSTRING(`brand_name` FROM 2)\n"
         + "FROM `foodmart`.`product`";
@@ -2515,7 +2516,8 @@ public class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"";
     final String expectedPostgresql = "SELECT SUBSTRING(\"brand_name\" FROM 2 FOR 3)\n"
         + "FROM \"foodmart\".\"product\"";
-    final String expectedSnowflake = expectedPostgresql;
+    final String expectedSnowflake = "SELECT SUBSTR(\"brand_name\", 2, 3)\n"
+            + "FROM \"foodmart\".\"product\"";
     final String expectedRedshift = expectedPostgresql;
     final String expectedMysql = "SELECT SUBSTRING(`brand_name` FROM 2 FOR 3)\n"
         + "FROM `foodmart`.`product`";

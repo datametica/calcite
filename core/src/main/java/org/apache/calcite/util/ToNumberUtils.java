@@ -28,7 +28,6 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-import java.util.List;
 import java.util.regex.Pattern;
 
 /**
