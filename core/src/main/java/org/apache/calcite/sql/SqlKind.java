@@ -208,6 +208,11 @@ public enum SqlKind {
   INTERSECT,
 
   /**
+   * Conv
+   */
+  CONV,
+
+  /**
    * AS operator
    */
   AS,
