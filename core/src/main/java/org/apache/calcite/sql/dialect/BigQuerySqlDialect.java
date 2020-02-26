@@ -272,6 +272,12 @@ public class BigQuerySqlDialect extends SqlDialect {
     case OTHER_FUNCTION:
       unparseOtherFunction(writer, call, leftPrec, rightPrec);
       break;
+    case COLLECTION_TABLE:
+      if (call.operandCount() > 1) {
+        throw new RuntimeException("Table function supports only one argument in Big Query");
+      }
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
