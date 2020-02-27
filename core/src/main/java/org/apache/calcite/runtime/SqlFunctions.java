@@ -2803,7 +2803,7 @@ public class SqlFunctions {
    * @return Object
    */
   public static Object format(Object format, Object value) {
-    return String.format((String)format, value);
+    return String.format(Locale.ENGLISH, (String) format, value);
   }
 
 }
