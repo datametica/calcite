@@ -510,6 +510,19 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_2000_NULLABLE, null,
           OperandTypes.STRING_INTEGER_OPTIONAL_STRING,
           SqlFunctionCategory.STRING);
+
+  /** The "TO_NUMBER(string1, string2)" function; casts string1
+   * as hexadecimal to a NUMBER using the format specified in string2. */
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TO_VARCHAR =
+      new SqlFunction(
+          "TO_VARCHAR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null, OperandTypes.or(
+              OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.STRING),
+          OperandTypes.family(SqlTypeFamily.NULL)),
+          SqlFunctionCategory.STRING);
 }
 
 // End SqlLibraryOperators.java
