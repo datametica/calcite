@@ -5341,9 +5341,9 @@ public class RelToSqlConverterTest {
             .withHive()
             .ok(expected)
             .withSpark()
-            .ok(expectedSpark)/*
+            .ok(expectedSpark)
             .withSnowflake()
-            .ok(expectedSnowFlake)*/;
+            .ok(expectedSnowFlake);
   }
 
   @Test
