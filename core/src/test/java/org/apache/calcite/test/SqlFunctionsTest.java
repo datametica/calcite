@@ -31,27 +31,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.apache.calcite.avatica.util.DateTimeUtils.ymdToUnixDate;
-import static org.apache.calcite.runtime.SqlFunctions.addMonths;
-import static org.apache.calcite.runtime.SqlFunctions.charLength;
-import static org.apache.calcite.runtime.SqlFunctions.concat;
-import static org.apache.calcite.runtime.SqlFunctions.fromBase64;
-import static org.apache.calcite.runtime.SqlFunctions.greater;
-import static org.apache.calcite.runtime.SqlFunctions.ifNull;
-import static org.apache.calcite.runtime.SqlFunctions.initcap;
-import static org.apache.calcite.runtime.SqlFunctions.lesser;
-import static org.apache.calcite.runtime.SqlFunctions.lower;
-import static org.apache.calcite.runtime.SqlFunctions.ltrim;
-import static org.apache.calcite.runtime.SqlFunctions.md5;
-import static org.apache.calcite.runtime.SqlFunctions.nvl;
-import static org.apache.calcite.runtime.SqlFunctions.posixRegex;
-import static org.apache.calcite.runtime.SqlFunctions.regexpReplace;
-import static org.apache.calcite.runtime.SqlFunctions.rtrim;
-import static org.apache.calcite.runtime.SqlFunctions.sha1;
-import static org.apache.calcite.runtime.SqlFunctions.substring;
-import static org.apache.calcite.runtime.SqlFunctions.subtractMonths;
-import static org.apache.calcite.runtime.SqlFunctions.toBase64;
-import static org.apache.calcite.runtime.SqlFunctions.trim;
-import static org.apache.calcite.runtime.SqlFunctions.upper;
+import static org.apache.calcite.runtime.SqlFunctions.*;
 import static org.apache.calcite.test.Matchers.within;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -963,6 +943,12 @@ public class SqlFunctionsTest {
     assertThat(ifNull(null, null), nullValue());
     assertThat(ifNull(1, 1), is(1));
     assertThat(ifNull(substring("abc", 1, 1), "b"), is("a"));
+  }
+
+  /** Test for {@link SqlFunctions#format}. */
+  @Test public void testFormat() {
+    assertThat(format("%4d", 23), is("  23"));
+    assertThat(format("%4.1f", 1.5), is(" 1.5"));
   }
 }
 

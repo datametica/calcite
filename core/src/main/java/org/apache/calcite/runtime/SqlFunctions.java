@@ -2796,6 +2796,16 @@ public class SqlFunctions {
     }
   }
 
+  /***
+   * Format string as per the {format} defined
+   * @param format operand
+   * @param value operand
+   * @return Object
+   */
+  public static Object format(Object format, Object value) {
+    return String.format((String)format, value);
+  }
+
 }
 
 // End SqlFunctions.java

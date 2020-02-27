@@ -313,6 +313,7 @@ public enum BuiltInMethod {
   DIFFERENCE(SqlFunctions.class, "difference", String.class, String.class),
   REVERSE(SqlFunctions.class, "reverse", String.class),
   IFNULL(SqlFunctions.class, "ifNull", Object.class, Object.class),
+  FORMAT(SqlFunctions.class, "format", Object.class, Object.class),
   LEFT(SqlFunctions.class, "left", String.class, int.class),
   RIGHT(SqlFunctions.class, "right", String.class, int.class),
   TO_BASE64(SqlFunctions.class, "toBase64", String.class),
