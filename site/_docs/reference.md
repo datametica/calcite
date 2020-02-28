@@ -50,6 +50,8 @@ here to appease testAllFunctionsAreDocumented:
 | TABLE          | Documented as part of FROM syntax
 | VARIANCE()     | In SqlStdOperatorTable, but not fully implemented
 | TO_NUMBER()    | Converts string_expr to a NUMBER data type
+| FORMAT         | Format the value as per the pattern defined
+| TO_VARCHAR     | Derives the value as per the pattern defined
 {% endcomment %}
 -->
 

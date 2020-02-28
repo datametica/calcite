@@ -347,6 +347,10 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * <td>format the value</td>
  * </tr>
  * <tr>
+ * <td>TO_VARCHAR(value, format)</td>
+ * <td>format the value</td>
+ * </tr>
+ * <tr>
  * <td>USER()</td>
  * <td>User name in the DBMS
  *
@@ -751,6 +755,7 @@ public class SqlJdbcFunctionCall extends SqlFunction {
             }
           });
       map.put("FORMAT", simple(SqlLibraryOperators.FORMAT));
+      map.put("TO_VARCHAR", simple(SqlLibraryOperators.TO_VARCHAR));
       map.put("USER", simple(SqlStdOperatorTable.CURRENT_USER));
       map.put("CONVERT",
           new SimpleMakeCall(SqlStdOperatorTable.CAST) {

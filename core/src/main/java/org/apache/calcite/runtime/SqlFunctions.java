@@ -2806,6 +2806,30 @@ public class SqlFunctions {
     return String.format(Locale.ENGLISH, (String) format, value);
   }
 
+  /***
+   * Format string as per the {format} defined
+   * @param value operand
+   * @param format operand
+   * @return Object
+   */
+  public static Object toVarchar(Object value, Object format) {
+    if (null == value || null == format) {
+      return null;
+    }
+    String[] formatStore = ((String) format).split("\\.");
+    StringBuilder pattern = new StringBuilder();
+    pattern.append("%");
+    pattern.append(formatStore[0].length());
+    if (formatStore.length > 1) {
+      pattern.append(".");
+      pattern.append(formatStore[1].length());
+      pattern.append("f");
+    } else {
+      pattern.append("d");
+    }
+    return String.format(Locale.ENGLISH, pattern.toString(), value);
+  }
+
 }
 
 // End SqlFunctions.java

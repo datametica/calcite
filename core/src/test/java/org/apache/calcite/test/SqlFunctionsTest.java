@@ -51,6 +51,7 @@ import static org.apache.calcite.runtime.SqlFunctions.sha1;
 import static org.apache.calcite.runtime.SqlFunctions.substring;
 import static org.apache.calcite.runtime.SqlFunctions.subtractMonths;
 import static org.apache.calcite.runtime.SqlFunctions.toBase64;
+import static org.apache.calcite.runtime.SqlFunctions.toVarchar;
 import static org.apache.calcite.runtime.SqlFunctions.trim;
 import static org.apache.calcite.runtime.SqlFunctions.upper;
 import static org.apache.calcite.test.Matchers.within;
@@ -970,6 +971,15 @@ public class SqlFunctionsTest {
   @Test public void testFormat() {
     assertThat(format("%4d", 23), is("  23"));
     assertThat(format("%4.1f", 1.5), is(" 1.5"));
+  }
+
+  /** Test for {@link SqlFunctions#toVarchar}. */
+  @Test public void testToVarchar() {
+    assertThat(toVarchar(null, null), nullValue());
+    assertThat(toVarchar(23, "99"), is("23"));
+    assertThat(toVarchar(123, "999"), is("123"));
+    assertThat(toVarchar(1.5, "9.99"), is("1.50"));
+    assertThat(toVarchar(1.5, "9.99"), is("1.50"));
   }
 }
 
