@@ -68,13 +68,16 @@ import org.apache.calcite.sql.SqlMatchRecognize;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
 import org.apache.calcite.sql.fun.SqlRowOperator;
 import org.apache.calcite.sql.fun.SqlSingleValueAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
@@ -91,6 +94,7 @@ import com.google.common.collect.Ordering;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -685,6 +689,10 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   public Result visit(TableFunctionScan e) {
+    List<RelDataTypeField> fieldList = e.getRowType().getFieldList();
+    if (fieldList == null || fieldList.size() > 1) {
+      throw new RuntimeException("Table function supports only one argument");
+    }
     final List<SqlNode> inputSqlNodes = new ArrayList<>();
     final int inputSize = e.getInputs().size();
     for (int i = 0; i < inputSize; i++) {
@@ -694,15 +702,20 @@ public class RelToSqlConverter extends SqlImplementor
     final Context context = tableFunctionScanContext(inputSqlNodes);
     SqlNode callNode = context.toSql(null, e.getCall());
     // Convert to table function call, "TABLE($function_name(xxx))"
+    SqlSpecialOperator collectionTable = new SqlCollectionTableOperator("TABLE",
+            SqlModality.RELATION, true, e.getRowType().getFieldNames().get(0));
     SqlNode tableCall = new SqlBasicCall(
-            SqlStdOperatorTable.COLLECTION_TABLE,
+            collectionTable,
             new SqlNode[]{callNode},
             SqlParserPos.ZERO);
     SqlNode select = new SqlSelect(
             SqlParserPos.ZERO, null, null, tableCall,
             null, null, null, null, null, null, null);
+    Map<String, RelDataType> aliasesMap = new HashMap<>();
+    RelDataTypeField relDataTypeField = fieldList.get(0);
+    aliasesMap.put(relDataTypeField.getName(), relDataTypeField.getType());
     Result x = new Result(select,
-            ImmutableList.of(Clause.SELECT), null, e.getRowType(), null);
+            ImmutableList.of(Clause.SELECT), relDataTypeField.getName(), e.getRowType(), aliasesMap);
     return x;
   }
 
