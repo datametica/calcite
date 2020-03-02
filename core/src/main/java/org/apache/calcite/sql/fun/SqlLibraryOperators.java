@@ -512,17 +512,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_INTEGER_OPTIONAL_STRING,
           SqlFunctionCategory.STRING);
 
-  /** The "TO_VARCHAR(string, numeric)" function; casts string
+  /** The "TO_VARCHAR(numeric, string)" function; casts string
    * Format first_operand to specified in second operand. */
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction TO_VARCHAR =
       new SqlFunction(
           "TO_VARCHAR",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.VARCHAR_2000_NULLABLE,
-          null, OperandTypes.or(
-              OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.STRING),
-          OperandTypes.family(SqlTypeFamily.NULL)),
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
           SqlFunctionCategory.STRING);
 }
 

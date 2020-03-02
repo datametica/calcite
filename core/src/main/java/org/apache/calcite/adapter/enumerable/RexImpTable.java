@@ -322,7 +322,7 @@ public class RexImpTable {
     defineMethod(REVERSE, BuiltInMethod.REVERSE.method, NullPolicy.STRICT);
     defineMethod(IFNULL, BuiltInMethod.IFNULL.method, NullPolicy.NONE);
     defineMethod(FORMAT, BuiltInMethod.FORMAT.method, NullPolicy.ARG0);
-    defineMethod(TO_VARCHAR, BuiltInMethod.FORMAT.method, NullPolicy.ARG0);
+    defineMethod(TO_VARCHAR, BuiltInMethod.TO_VARCHAR.method, NullPolicy.ARG0);
 
     final TrimImplementor trimImplementor = new TrimImplementor();
     defineImplementor(TRIM, NullPolicy.STRICT, trimImplementor, false);

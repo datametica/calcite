@@ -979,7 +979,6 @@ public class SqlFunctionsTest {
     assertThat(toVarchar(23, "99"), is("23"));
     assertThat(toVarchar(123, "999"), is("123"));
     assertThat(toVarchar(1.5, "9.99"), is("1.50"));
-    assertThat(toVarchar(1.5, "9.99"), is("1.50"));
   }
 }
 
