@@ -17,22 +17,11 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.Casing;
-import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
-
-import org.apache.commons.lang3.StringUtils;
-
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_VARCHAR;
+import org.apache.calcite.util.FormatFunctionUtil;
 
 /**
  * A <code>SqlDialect</code> implementation for the Snowflake database.
@@ -55,81 +44,13 @@ public class SnowflakeSqlDialect extends SqlDialect {
       final int rightPrec) {
     switch (call.getKind()) {
     case FORMAT:
-      unparseFormatFunction(writer, call, leftPrec, rightPrec);
+      FormatFunctionUtil ffu = new FormatFunctionUtil();
+      SqlCall sqlCall = ffu.fetchSqlCallForFormat(call);
+      super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
-  }
-
-  private void unparseFormatFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    switch (call.getOperandList().size()) {
-    case 1:
-      if (call.operand(0).toString().equalsIgnoreCase("null")) {
-        SqlNode[] extractNodeOperands = new SqlNode[] {
-            new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
-                SqlParserPos.ZERO)
-        };
-        SqlCall sqlCall = new SqlBasicCall(TO_VARCHAR, extractNodeOperands, SqlParserPos.ZERO);
-        super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
-      }
-      break;
-    case 2:
-      SqlNode[] sqlNode;
-      if (call.operand(1) instanceof SqlIdentifier) {
-        sqlNode = handleColumnOperand(call);
-      } else {
-        sqlNode = handleLiteralOperand(call);
-      }
-      SqlCall sqlCall = new SqlBasicCall(TO_VARCHAR, sqlNode, SqlParserPos.ZERO);
-      super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
-      break;
-    }
-  }
-
-  private SqlNode[] handleLiteralOperand(SqlCall call) {
-    String modifiedOperand;
-    SqlNode[] sqlNode;
-    if (call.operand(1).toString().contains(".")) {
-      modifiedOperand = call.operand(1).toString()
-          .replaceAll("[0-9]", "9")
-          .replaceAll("'", "");
-    } else {
-      int firstOperand = Integer.valueOf(call.operand(0).toString()
-          .replaceAll("[^0-9]", "")) - 1;
-      modifiedOperand = StringUtils.repeat("9", firstOperand);
-    }
-    sqlNode = new SqlNode[]{
-        SqlLiteral.createExactNumeric(
-            call.operand(1).toString().replaceAll("'", ""),
-            SqlParserPos.ZERO),
-        SqlLiteral.createCharString(modifiedOperand.trim(),
-            SqlParserPos.ZERO)};
-    return sqlNode;
-  }
-
-  private SqlNode[] handleColumnOperand(SqlCall call) {
-    String modifiedOperand;
-    SqlNode[] sqlNode;
-    if (call.operand(0).toString().contains(".")) {
-      modifiedOperand = call.operand(0).toString()
-          .replaceAll("%|f|'", "");
-      String[] modifiedOperandArry = modifiedOperand.split("\\.");
-      int intValue = Integer.valueOf(modifiedOperandArry[0]) - 1;
-      modifiedOperand = StringUtils.repeat("9",
-          intValue - 1 - Integer.valueOf(modifiedOperandArry[1]));
-      int decimalValue = Integer.valueOf(modifiedOperandArry[1]);
-      modifiedOperand += "." + StringUtils.repeat("0", decimalValue);
-    } else {
-      int intValue = Integer.valueOf(call.operand(0).toString()
-          .replaceAll("[^0-9]", ""));
-      modifiedOperand = StringUtils.repeat("9", intValue - 1);
-    }
-    sqlNode = new SqlNode[]{
-        call.operand(1),
-        SqlLiteral.createCharString(modifiedOperand.trim(),
-            SqlParserPos.ZERO)};
-    return sqlNode;
   }
 
   @Override public boolean supportsAliasedValues() {

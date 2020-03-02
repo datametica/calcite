@@ -72,7 +72,6 @@ import com.google.common.collect.ImmutableMap;
 
 import org.junit.Test;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -5324,25 +5323,6 @@ public class RelToSqlConverterTest {
         .ok(expectedSql)
         .withBigQuery()
         .ok(expected);
-  }
-
-  @Test
-  public void testFormatRelToSql() {
-    final RelBuilder builder = relBuilder();
-    final RexNode formatRexNode = builder.call(SqlLibraryOperators.FORMAT,
-        builder.literal("%4d"), builder.literal(BigDecimal.valueOf(12)));
-    final RexNode concat = builder.call(SqlLibraryOperators.CONCAT_FUNCTION,
-        formatRexNode, builder.literal("test"));
-    final RelNode root = builder
-        .scan("EMP")
-        .project(builder.alias(concat, "result"))
-        .build();
-    final String expectedSql = "SELECT CONCAT(TO_VARCHAR(12, '999'), 'test') AS \"result\"\n"
-        + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT CONCAT(FORMAT('%4d', 12), 'test') AS result\n"
-        + "FROM scott.EMP";
-    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
-    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
   /** Fluid interface to run tests. */
