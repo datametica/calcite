@@ -4859,14 +4859,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('03ea02653f6938ba', 'XXXXXXXXXXXXXXXX')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expectedBigQuery)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expectedBigQuery)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -4876,14 +4876,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.7892', 38, 4)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -4893,14 +4893,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1.789', 38, 3)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -4910,14 +4910,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1.789', 38, 3)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -4927,14 +4927,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1,789', '9,999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -4944,14 +4944,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('$1789', '$9999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -4961,14 +4961,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('$1789', '$9999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -4978,14 +4978,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('-12334', 'S99999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -4995,14 +4995,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('12334-', '99999S')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5012,14 +5012,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('12E3', '99EEEE')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5029,14 +5029,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5046,14 +5046,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('12.34', 38, 2)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5063,14 +5063,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5080,14 +5080,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1234')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5097,14 +5097,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1,2345', '9G9999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5114,14 +5114,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('$1234', '$9999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5131,14 +5131,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('123')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5148,14 +5148,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234-', '9999MI')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5165,14 +5165,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.234', 38, 3)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5182,14 +5182,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('01234', '09999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5199,14 +5199,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234', 'B9999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5216,14 +5216,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5233,14 +5233,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234', '9999')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5250,14 +5250,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234')"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5267,14 +5267,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.234', 38, 3)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5284,14 +5284,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5301,14 +5301,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5318,14 +5318,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5336,14 +5336,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER(SUBSTR('12345', 2))"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expectedSpark)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expectedSpark)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5353,14 +5353,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5373,14 +5373,14 @@ public class RelToSqlConverterTest {
             + " 'is_numeric    ' ELSE 'is not numeric' END\n"
             + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test
@@ -5390,14 +5390,14 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT TO_NUMBER('-12454.8', 38, 1)"
             + "\nFROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query)
-            .withBigQuery()
-            .ok(expected)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
+        .withBigQuery()
+        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withSpark()
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
   }
 
   @Test

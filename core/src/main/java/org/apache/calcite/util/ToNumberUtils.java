@@ -96,48 +96,42 @@ public class ToNumberUtils {
     case 1:
     case 3:
       SqlNode[] extractNodeOperands;
-      if (isOperandLiteral(call)) {
-        extractNodeOperands = prepareSqlNodes(call);
-        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
-      }
+      extractNodeOperands = prepareSqlNodes(call);
+      parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
       break;
     case 2:
-      if (isOperandLiteral(call)) {
-        if (isFirstOperandCurrencyType(call)) {
+      if (isFirstOperandCurrencyType(call)) {
+        String secondOperand = call.operand(1).toString().replaceAll("[UL]", "\\$")
+                .replace("'", "");
+        extractNodeOperands = new SqlNode[]{call.operand(0),
+                SqlLiteral.createCharString(secondOperand.trim(), SqlParserPos.ZERO)};
+        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
 
-          String secondOperand = call.operand(1).toString().replaceAll("[UL]", "\\$")
-                  .replace("'", "");
-          extractNodeOperands = new SqlNode[]{call.operand(0),
-                  SqlLiteral.createCharString(secondOperand.trim(), SqlParserPos.ZERO)};
+      } else if (isOperandNull(call)) {
 
-          parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
+        extractNodeOperands = new SqlNode[]{new SqlDataTypeSpec(new
+                SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+                SqlParserPos.ZERO)};
 
-        } else if (isOperandNull(call)) {
+        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
 
-          extractNodeOperands = new SqlNode[]{new SqlDataTypeSpec(new
-                  SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
-                  SqlParserPos.ZERO)};
+      } else if (isOperandTypeOfCurrencyOrContainSpace(call)) {
 
-          parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
+        extractNodeOperands = prepareSqlNodes(call);
+        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
 
-        } else if (isOperandTypeOfCurrencyOrContainSpace(call)) {
+      } else if (call.operand(0).toString().contains(".")) {
 
-          extractNodeOperands = prepareSqlNodes(call);
-          parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
+        String firstOperand = removeSignFromLastOfStringAndAddInBeginning(call,
+                call.operand(0).toString().replaceAll("[',]", ""));
+        int scale = firstOperand.split("\\.")[1].length();
+        extractNodeOperands = new SqlNode[]{SqlLiteral
+            .createCharString(firstOperand.trim(), SqlParserPos.ZERO),
+            SqlLiteral.createExactNumeric
+            ("38", SqlParserPos.ZERO), SqlLiteral.createExactNumeric(scale + "",
+            SqlParserPos.ZERO)};
+        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
 
-        } else if (call.operand(0).toString().contains(".")) {
-
-          String firstOperand = removeSignFromLastOfStringAndAddInBeginning(call,
-                  call.operand(0).toString().replaceAll("[',]", ""));
-          int scale = firstOperand.split("\\.")[1].length();
-          extractNodeOperands = new SqlNode[]{SqlLiteral
-              .createCharString(firstOperand.trim(), SqlParserPos.ZERO),
-              SqlLiteral.createExactNumeric
-              ("38", SqlParserPos.ZERO), SqlLiteral.createExactNumeric(scale + "",
-              SqlParserPos.ZERO)};
-          parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
-
-        }
       }
       break;
     default:
@@ -153,7 +147,7 @@ public class ToNumberUtils {
             SqlParserPos.ZERO)};
     SqlCall extractCallCast = new SqlBasicCall(SqlStdOperatorTable.CAST,
             extractNodeOperands, SqlParserPos.ZERO);
-    SqlStdOperatorTable.CAST.unparse(writer, extractCallCast, leftPrec, rightPrec);
+    writer.getDialect().unparseCall(writer, extractCallCast, leftPrec, rightPrec);
   }
 
   private static void modifyOperand(SqlCall call) {
@@ -194,7 +188,7 @@ public class ToNumberUtils {
     SqlCall extractCallCast = new SqlBasicCall(SqlStdOperatorTable.CAST,
             extractNodeOperands, SqlParserPos.ZERO);
 
-    SqlStdOperatorTable.CAST.unparse(writer, extractCallCast, leftPrec, rightPrec);
+    writer.getDialect().unparseCall(writer, extractCallCast, leftPrec, rightPrec);
     return true;
   }
 
