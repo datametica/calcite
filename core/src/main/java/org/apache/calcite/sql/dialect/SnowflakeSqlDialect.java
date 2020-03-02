@@ -118,6 +118,10 @@ public class SnowflakeSqlDialect extends SqlDialect {
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
+
+  @Override public boolean supportsAliasedValues() {
+    return false;
+  }
 }
 
 // End SnowflakeSqlDialect.java
