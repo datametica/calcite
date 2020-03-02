@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.validate.SqlConformanceEnum;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -41,7 +42,8 @@ public class SnowflakeSqlDialect extends SqlDialect {
       new SnowflakeSqlDialect(EMPTY_CONTEXT
           .withDatabaseProduct(DatabaseProduct.SNOWFLAKE)
           .withIdentifierQuoteString("\"")
-          .withUnquotedCasing(Casing.TO_UPPER));
+          .withUnquotedCasing(Casing.TO_UPPER)
+          .withConformance(SqlConformanceEnum.SNOWFLAKE));
 
   /** Creates a SnowflakeSqlDialect. */
   public SnowflakeSqlDialect(Context context) {
