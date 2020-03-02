@@ -3688,10 +3688,10 @@ public class RelToSqlConverterTest {
         + "FROM (SELECT 1 AS a, 'x ' AS b\n"
         + "UNION ALL\n"
         + "SELECT 2 AS a, 'yy' AS b)";
-    final String expectedSnowflake = "SELECT \"a\"\n" +
-            "FROM (SELECT 1 AS \"a\", 'x ' AS \"b\"\n" +
-            "UNION ALL\n" +
-            "SELECT 2 AS \"a\", 'yy' AS \"b\")";
+    final String expectedSnowflake = "SELECT \"a\"\n"
+        + "FROM (SELECT 1 AS \"a\", 'x ' AS \"b\"\n"
+        + "UNION ALL\n"
+        + "SELECT 2 AS \"a\", 'yy' AS \"b\")";
     final String expectedRedshift = expectedPostgresql;
     sql(sql)
         .withHsqldb()
