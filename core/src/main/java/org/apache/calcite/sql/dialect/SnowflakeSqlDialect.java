@@ -55,65 +55,81 @@ public class SnowflakeSqlDialect extends SqlDialect {
       final int rightPrec) {
     switch (call.getKind()) {
     case FORMAT:
-      switch (call.getOperandList().size()) {
-      case 1:
-        if (call.operand(0).toString().equalsIgnoreCase("null")) {
-          SqlNode[] extractNodeOperands = new SqlNode[]{
-              new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
-                  SqlParserPos.ZERO)
-          };
-          SqlCall sqlCall = new SqlBasicCall(TO_VARCHAR, extractNodeOperands, SqlParserPos.ZERO);
-          super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
-        }
-        break;
-      case 2:
-        SqlNode[] sqlNode;
-        String modifiedOperand;
-        if (call.operand(1) instanceof SqlIdentifier) {
-          if (call.operand(0).toString().contains(".")) {
-            modifiedOperand = call.operand(0).toString()
-                .replaceAll("%|f|'", "");
-            String[] modifiedOperandArry = modifiedOperand.split("\\.");
-            int intValue = Integer.valueOf(modifiedOperandArry[0]) - 1;
-            // total length
-            modifiedOperand = StringUtils.repeat("9",
-                intValue - 1 - Integer.valueOf(modifiedOperandArry[1]));
-            int decimalValue = Integer.valueOf(modifiedOperandArry[1]);
-            modifiedOperand += "." + StringUtils.repeat("0", decimalValue);
-          } else {
-            int intValue = Integer.valueOf(call.operand(0).toString()
-                .replaceAll("[^0-9]", ""));
-            modifiedOperand = StringUtils.repeat("9", intValue - 1);
-          }
-          sqlNode = new SqlNode[]{
-              call.operand(1),
-              SqlLiteral.createCharString(modifiedOperand.trim(),
-                  SqlParserPos.ZERO)};
-        } else {
-          if (call.operand(1).toString().contains(".")) {
-            modifiedOperand = call.operand(1).toString()
-                .replaceAll("[0-9]", "9")
-                .replaceAll("'", "");
-          } else {
-            int firstOperand = Integer.valueOf(call.operand(0).toString()
-                .replaceAll("[^0-9]", "")) - 1;
-            modifiedOperand = StringUtils.repeat("9", firstOperand);
-          }
-          sqlNode = new SqlNode[]{
-              SqlLiteral.createExactNumeric(
-                  call.operand(1).toString().replaceAll("'", ""),
-                  SqlParserPos.ZERO),
-              SqlLiteral.createCharString(modifiedOperand.trim(),
-                  SqlParserPos.ZERO)};
-        }
-        SqlCall sqlCall = new SqlBasicCall(TO_VARCHAR, sqlNode, SqlParserPos.ZERO);
-        super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
-        break;
-      }
+      unparseFormatFunction(writer, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseFormatFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.getOperandList().size()) {
+    case 1:
+      if (call.operand(0).toString().equalsIgnoreCase("null")) {
+        SqlNode[] extractNodeOperands = new SqlNode[] {
+            new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+                SqlParserPos.ZERO)
+        };
+        SqlCall sqlCall = new SqlBasicCall(TO_VARCHAR, extractNodeOperands, SqlParserPos.ZERO);
+        super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
+      }
+      break;
+    case 2:
+      SqlNode[] sqlNode;
+      if (call.operand(1) instanceof SqlIdentifier) {
+        sqlNode = handleColumnOperand(call);
+      } else {
+        sqlNode = handleLiteralOperand(call);
+      }
+      SqlCall sqlCall = new SqlBasicCall(TO_VARCHAR, sqlNode, SqlParserPos.ZERO);
+      super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
+      break;
+    }
+  }
+
+  private SqlNode[] handleLiteralOperand(SqlCall call) {
+    String modifiedOperand;
+    SqlNode[] sqlNode;
+    if (call.operand(1).toString().contains(".")) {
+      modifiedOperand = call.operand(1).toString()
+          .replaceAll("[0-9]", "9")
+          .replaceAll("'", "");
+    } else {
+      int firstOperand = Integer.valueOf(call.operand(0).toString()
+          .replaceAll("[^0-9]", "")) - 1;
+      modifiedOperand = StringUtils.repeat("9", firstOperand);
+    }
+    sqlNode = new SqlNode[]{
+        SqlLiteral.createExactNumeric(
+            call.operand(1).toString().replaceAll("'", ""),
+            SqlParserPos.ZERO),
+        SqlLiteral.createCharString(modifiedOperand.trim(),
+            SqlParserPos.ZERO)};
+    return sqlNode;
+  }
+
+  private SqlNode[] handleColumnOperand(SqlCall call) {
+    String modifiedOperand;
+    SqlNode[] sqlNode;
+    if (call.operand(0).toString().contains(".")) {
+      modifiedOperand = call.operand(0).toString()
+          .replaceAll("%|f|'", "");
+      String[] modifiedOperandArry = modifiedOperand.split("\\.");
+      int intValue = Integer.valueOf(modifiedOperandArry[0]) - 1;
+      modifiedOperand = StringUtils.repeat("9",
+          intValue - 1 - Integer.valueOf(modifiedOperandArry[1]));
+      int decimalValue = Integer.valueOf(modifiedOperandArry[1]);
+      modifiedOperand += "." + StringUtils.repeat("0", decimalValue);
+    } else {
+      int intValue = Integer.valueOf(call.operand(0).toString()
+          .replaceAll("[^0-9]", ""));
+      modifiedOperand = StringUtils.repeat("9", intValue - 1);
+    }
+    sqlNode = new SqlNode[]{
+        call.operand(1),
+        SqlLiteral.createCharString(modifiedOperand.trim(),
+            SqlParserPos.ZERO)};
+    return sqlNode;
   }
 
   @Override public boolean supportsAliasedValues() {
