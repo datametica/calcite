@@ -70,12 +70,9 @@ public class SnowflakeSqlDialect extends SqlDialect {
         SqlNode[] sqlNode;
         String modifiedOperand;
         if (call.operand(1) instanceof SqlIdentifier) {
-          // %12.3f
           if (call.operand(0).toString().contains(".")) {
             modifiedOperand = call.operand(0).toString()
-                .replaceAll("%", "")
-                .replaceAll("f", "")
-                .replaceAll("'", "");
+                .replaceAll("%|f|'", "");
             String[] modifiedOperandArry = modifiedOperand.split("\\.");
             int intValue = Integer.valueOf(modifiedOperandArry[0]) - 1;
             // total length
