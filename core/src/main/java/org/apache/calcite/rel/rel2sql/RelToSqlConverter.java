@@ -703,7 +703,7 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNode callNode = context.toSql(null, e.getCall());
     // Convert to table function call, "TABLE($function_name(xxx))"
     SqlSpecialOperator collectionTable = new SqlCollectionTableOperator("TABLE",
-            SqlModality.RELATION, true, e.getRowType().getFieldNames().get(0));
+            SqlModality.RELATION, e.getRowType().getFieldNames().get(0));
     SqlNode tableCall = new SqlBasicCall(
             collectionTable,
             new SqlNode[]{callNode},

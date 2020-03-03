@@ -279,9 +279,10 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       SqlCollectionTableOperator operator = (SqlCollectionTableOperator) call.getOperator();
-      if (operator.isAliasRequired()) {
-        writer.sep("as " + operator.getAliasName());
+      if (operator.getAliasName() == null) {
+        throw new RuntimeException("Table function must have alias in Big Query");
       }
+      writer.sep("as " + operator.getAliasName());
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);

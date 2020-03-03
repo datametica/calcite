@@ -32,7 +32,6 @@ import org.apache.calcite.sql.validate.SqlModality;
  */
 public class SqlCollectionTableOperator extends SqlFunctionalOperator {
   private final SqlModality modality;
-  private final boolean aliasRequired;
   private final String aliasName;
 
 
@@ -42,16 +41,13 @@ public class SqlCollectionTableOperator extends SqlFunctionalOperator {
     super(name, SqlKind.COLLECTION_TABLE, 200, true, ReturnTypes.ARG0, null,
             OperandTypes.ANY);
     this.modality = modality;
-    this.aliasRequired = false;
     this.aliasName = null;
   }
 
-  public SqlCollectionTableOperator(String name, SqlModality modality,
-                                    boolean aliasRequired, String aliasName) {
+  public SqlCollectionTableOperator(String name, SqlModality modality, String aliasName) {
     super(name, SqlKind.COLLECTION_TABLE, 200, true, ReturnTypes.ARG0, null,
             OperandTypes.ANY);
     this.modality = modality;
-    this.aliasRequired = aliasRequired;
     this.aliasName = aliasName;
   }
 
@@ -59,10 +55,6 @@ public class SqlCollectionTableOperator extends SqlFunctionalOperator {
 
   public SqlModality getModality() {
     return modality;
-  }
-
-  public boolean isAliasRequired() {
-    return aliasRequired;
   }
 
   public String getAliasName() {
