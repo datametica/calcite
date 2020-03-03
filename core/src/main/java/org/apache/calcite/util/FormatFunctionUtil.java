@@ -40,7 +40,7 @@ public class FormatFunctionUtil {
     switch (call.getOperandList().size()) {
     case 1:
       if (call.operand(0).toString().equalsIgnoreCase("null")) {
-        SqlNode[] extractNodeOperands = new SqlNode[] {
+        SqlNode[] extractNodeOperands = new SqlNode[]{
             new SqlDataTypeSpec(new SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
                 SqlParserPos.ZERO)
         };
@@ -90,9 +90,11 @@ public class FormatFunctionUtil {
       modifiedOperand = call.operand(0).toString()
           .replaceAll("%|f|'", "");
       String[] modifiedOperandArry = modifiedOperand.split("\\.");
-      int intValue = Integer.valueOf(modifiedOperandArry[0]) - 1;
-      modifiedOperand = StringUtils.repeat("9",
-          intValue - 1 - Integer.valueOf(modifiedOperandArry[1]));
+      int patternRepeatNumber = Integer.valueOf(modifiedOperandArry[0]) - 1;
+      if (Integer.valueOf(modifiedOperandArry[1]) != 0) {
+        patternRepeatNumber = patternRepeatNumber - 1 - Integer.valueOf(modifiedOperandArry[1]);
+      }
+      modifiedOperand = StringUtils.repeat("9", patternRepeatNumber);
       int decimalValue = Integer.valueOf(modifiedOperandArry[1]);
       modifiedOperand += "." + StringUtils.repeat("0", decimalValue);
     } else {
