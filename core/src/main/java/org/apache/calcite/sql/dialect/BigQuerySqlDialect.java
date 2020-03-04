@@ -461,6 +461,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     SqlIntervalLiteral.IntervalValue literalValue =
         (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
     writer.sep("INTERVAL");
+    if (literalValue.getSign() == -1) {
+      writer.print("-");
+    }
     writer.sep(literalValue.getIntervalLiteral());
     writer.print(literalValue.getIntervalQualifier().toString());
   }
