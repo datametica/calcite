@@ -38,6 +38,14 @@ public class SnowflakeSqlDialect extends SqlDialect {
     super(context);
   }
 
+  @Override public boolean supportsAliasedValues() {
+    return false;
+  }
+
+  @Override public boolean supportsCharSet() {
+    return false;
+  }
+
   @Override public void unparseCall(final SqlWriter writer, final SqlCall call, final
   int leftPrec,
                                     final int rightPrec) {
@@ -60,10 +68,6 @@ public class SnowflakeSqlDialect extends SqlDialect {
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
-  }
-
-  @Override public boolean supportsAliasedValues() {
-    return false;
   }
 }
 
