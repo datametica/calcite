@@ -43,12 +43,13 @@ import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
-import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.RelToSqlConverterUtil;
+import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.ToNumberUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 
 import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATEDDAYOFWEEK;
@@ -80,8 +81,6 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FORMAT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FROM_UNIXTIME;
-import java.util.regex.Pattern;
-
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SPLIT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_TIMESTAMP;
