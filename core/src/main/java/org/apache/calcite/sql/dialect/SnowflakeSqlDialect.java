@@ -46,6 +46,14 @@ public class SnowflakeSqlDialect extends SqlDialect {
     super(context);
   }
 
+  @Override public boolean supportsAliasedValues() {
+    return false;
+  }
+
+  @Override public boolean supportsCharSet() {
+    return false;
+  }
+
   @Override public SqlOperator getTargetFunc(RexCall call) {
     switch (call.type.getSqlTypeName()) {
     case DATE:
@@ -62,8 +70,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
   }
 
   @Override public void unparseCall(final SqlWriter writer, final SqlCall call, final
-  int leftPrec,
-                                    final int rightPrec) {
+  int leftPrec, final int rightPrec) {
     switch (call.getKind()) {
     case SUBSTRING:
       final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTR");
@@ -83,10 +90,6 @@ public class SnowflakeSqlDialect extends SqlDialect {
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
-  }
-
-  @Override public boolean supportsAliasedValues() {
-    return false;
   }
 
   /**
