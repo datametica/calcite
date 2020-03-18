@@ -5325,6 +5325,58 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test public void testRPAD() {
+    String query = "select RPAD('12345.', 10) res_row";
+    final String expectedSql = "SELECT RPAD('12345.', 10 , ' ') RES_ROW";
+    final String expected = "SELECT RPAD('12345.', 10) AS RES_ROW";
+    sql(query)
+        .withHive()
+        .ok(expectedSql)
+        .withSpark()
+        .ok(expectedSql)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testRPADWithOptionalParameters() {
+    String query = "select RPAD('12345.', 10, '%') res_row";
+    final String expectedSql = "SELECT RPAD('12345.', 10, '%') RES_ROW";
+    final String expected = "SELECT RPAD('12345.', 10, '%') AS RES_ROW";
+    sql(query)
+        .withHive()
+        .ok(expectedSql)
+        .withSpark()
+        .ok(expectedSql)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testLPAD() {
+    String query = "select LPAD('12345.', 10) res_row";
+    final String expectedSql = "SELECT LPAD('12345.', 10 , ' ') RES_ROW";
+    final String expected = "SELECT LPAD('12345.', 10) AS RES_ROW";
+    sql(query)
+        .withHive()
+        .ok(expectedSql)
+        .withSpark()
+        .ok(expectedSql)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test public void testLPADWithOptionalParameters() {
+    String query = "select LPAD('12345.', 10, '%') res_row";
+    final String expectedSql = "SELECT LPAD('12345.', 10, '%') RES_ROW";
+    final String expected = "SELECT LPAD('12345.', 10, '%') AS RES_ROW";
+    sql(query)
+        .withHive()
+        .ok(expectedSql)
+        .withSpark()
+        .ok(expectedSql)
+        .withBigQuery()
+        .ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;

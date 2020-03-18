@@ -43,11 +43,11 @@ import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
 import org.apache.calcite.util.ToNumberUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_REPLACE;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_TIMESTAMP;
 
 /**
  * A <code>SqlDialect</code> implementation for the APACHE SPARK database.
@@ -212,17 +212,37 @@ public class SparkSqlDialect extends SqlDialect {
         unparseTrim(writer, call, leftPrec, rightPrec);
         break;
       case OTHER_FUNCTION:
-        if (call.getOperator().getName().equals(CURRENT_TIMESTAMP.getName())
-            && ((SqlBasicCall) call).getOperands().length > 0) {
-          unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
-        } else {
-          super.unparseCall(writer, call, leftPrec, rightPrec);
-        }
+        unparseOtherFunctionCall(writer, call, leftPrec, rightPrec);
         break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
     }
+  }
+
+  private void unparseOtherFunctionCall(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.getOperator().getName()) {
+    case "CURRENT_TIMESTAMP":
+      if (((SqlBasicCall) call).getOperands().length > 0) {
+        unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
+    case "RPAD":
+    case "LPAD":
+      if (((SqlBasicCall) call).operands.length == 2) {
+        PaddingFunctionUtil.unparseCall(call.getOperator().getName(), writer, call, leftPrec,
+            rightPrec);
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+    return;
   }
 
   @Override public void unparseSqlDatetimeArithmetic(SqlWriter writer,

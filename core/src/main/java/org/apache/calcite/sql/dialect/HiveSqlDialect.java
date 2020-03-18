@@ -37,6 +37,7 @@ import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
+import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
 import org.apache.calcite.util.ToNumberUtils;
 
@@ -222,6 +223,15 @@ public class HiveSqlDialect extends SqlDialect {
     case "CURRENT_USER":
       final SqlWriter.Frame currUserFrame = writer.startFunCall(CURRENT_USER.getName());
       writer.endFunCall(currUserFrame);
+      break;
+    case "RPAD":
+    case "LPAD":
+      if (((SqlBasicCall) call).operands.length == 2) {
+        PaddingFunctionUtil.unparseCall(call.getOperator().getName(), writer, call, leftPrec,
+            rightPrec);
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
