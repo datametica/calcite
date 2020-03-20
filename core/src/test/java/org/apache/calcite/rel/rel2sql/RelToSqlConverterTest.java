@@ -9536,9 +9536,8 @@ class RelToSqlConverterTest {
 
   @Test public void testFormatTimestampRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode formatTimestampRexNode =
-        builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
-                builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"), builder.scan("EMP").field(4));
+    final RexNode formatTimestampRexNode = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"), builder.scan("EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatTimestampRexNode, "FD"))
