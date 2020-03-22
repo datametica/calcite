@@ -50,6 +50,9 @@ here to appease testAllFunctionsAreDocumented:
 | TABLE          | Documented as part of FROM syntax
 | VARIANCE()     | In SqlStdOperatorTable, but not fully implemented
 | TO_NUMBER()    | Converts string_expr to a NUMBER data type
+| CONV()         | Converts the given number n from one base to another base
+| LPAD()         | Append paddingString to the beginning of the string
+| RPAD()         | Append paddingString to the end of the string
 {% endcomment %}
 -->
 

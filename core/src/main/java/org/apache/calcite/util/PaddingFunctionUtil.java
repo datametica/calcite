@@ -17,28 +17,33 @@
 package org.apache.calcite.util;
 
 import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlCharStringLiteral;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.parser.SqlParserPos;
+
+import org.apache.commons.lang3.StringUtils;
+
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.LPAD;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.RPAD;
 
 /**
  * Handle rpad and ldap formatting
  */
 public class PaddingFunctionUtil {
 
-  private static final String OPTIONAL_VALUE = "' '";
-
   private PaddingFunctionUtil() {
   }
 
-  public static void unparseCall(String functionName, SqlWriter writer, SqlCall call,
-                                 int leftPrec, int rightPrec) {
-    SqlWriter.Frame paddingFrame = writer.startFunCall(functionName);
-    for (SqlNode operand : call.getOperandList()) {
-      writer.sep(",");
-      operand.unparse(writer, leftPrec, rightPrec);
-    }
-    writer.sep(", " + OPTIONAL_VALUE);
-    writer.endFunCall(paddingFrame);
+  public static void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
+    SqlFunction sqlFunction = call.getOperator().getName() == RPAD.getName() ? RPAD : LPAD;
+    SqlCharStringLiteral blankLiteral = SqlLiteral.createCharString(StringUtils.SPACE,
+        SqlParserPos.ZERO);
+    SqlCall paddingFunctionCall = sqlFunction.createCall(SqlParserPos.ZERO, call.operand(0),
+        call.operand(1), blankLiteral);
+    sqlFunction.unparse(writer, paddingFunctionCall, leftPrec, rightPrec);
   }
 }
 // End PaddingFunctionUtil.java
