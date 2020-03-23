@@ -57,16 +57,21 @@ public class SnowflakeSqlDialect extends SqlDialect {
   @Override public SqlOperator getTargetFunc(RexCall call) {
     switch (call.type.getSqlTypeName()) {
     case DATE:
-      switch (call.getOperands().get(1).getType().getSqlTypeName()) {
-      case INTERVAL_DAY:
-        if (call.op.kind == SqlKind.MINUS) {
-          return SqlLibraryOperators.DATE_SUB;
-        }
-        return SqlLibraryOperators.DATE_ADD;
-      }
+      return getTargetFunctionForDateOperations(call);
     default:
       return super.getTargetFunc(call);
     }
+  }
+
+  private SqlOperator getTargetFunctionForDateOperations(RexCall call) {
+    switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+    case INTERVAL_DAY:
+      if (call.op.kind == SqlKind.MINUS) {
+        return SqlLibraryOperators.DATE_SUB;
+      }
+      return SqlLibraryOperators.DATE_ADD;
+    }
+    return super.getTargetFunc(call);
   }
 
   @Override public void unparseCall(final SqlWriter writer, final SqlCall call, final
