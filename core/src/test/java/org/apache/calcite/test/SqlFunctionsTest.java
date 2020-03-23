@@ -973,7 +973,7 @@ public class SqlFunctionsTest {
     assertThat(lpad("123", 6), is("   123"));
     assertThat(lpad("123", 6, "456"), is("456123"));
     assertThat(lpad("pilot", 4, "auto"), is("pilo"));
-    assertThat(lpad("pilot", 13, "auto"), is("autopilot"));
+    assertThat(lpad("pilot", 9, "auto"), is("autopilot"));
   }
 
   /** Test for {@link SqlFunctions#rpad}. */
@@ -982,7 +982,7 @@ public class SqlFunctionsTest {
     assertThat(rpad("123", 6), is("123   "));
     assertThat(rpad("123", 6, "456"), is("123456"));
     assertThat(rpad("pilot", 4, "auto"), is("pilo"));
-    assertThat(rpad("auto", 13, "pilot"), is("autopilot"));
+    assertThat(rpad("auto", 9, "pilot"), is("autopilot"));
   }
 }
 
