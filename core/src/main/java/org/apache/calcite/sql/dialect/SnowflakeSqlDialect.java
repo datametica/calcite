@@ -65,7 +65,6 @@ public class SnowflakeSqlDialect extends SqlDialect {
       }
       break;
     case CHAR_LENGTH:
-    case CHARACTER_LENGTH:
       final SqlWriter.Frame lengthFrame = writer.startFunCall("LENGTH");
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       writer.endFunCall(lengthFrame);
