@@ -20,6 +20,8 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIntervalLiteral;
@@ -33,6 +35,7 @@ import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.FormatFunctionUtil;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.util.ToNumberUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
