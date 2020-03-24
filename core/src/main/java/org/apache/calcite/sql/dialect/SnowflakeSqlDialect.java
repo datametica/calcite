@@ -17,12 +17,16 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.Casing;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ToNumberUtils;
-
 /**
  * A <code>SqlDialect</code> implementation for the Snowflake database.
  */
@@ -69,6 +73,62 @@ public class SnowflakeSqlDialect extends SqlDialect {
     }
   }
 
+  @Override public SqlOperator getTargetFunc(RexCall call) {
+    switch (call.type.getSqlTypeName()) {
+    case DATE:
+    case TIMESTAMP:
+      switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+      case INTERVAL_DAY:
+      case INTERVAL_MONTH:
+        return SqlLibraryOperators.DATE_ADD;
+      }
+    default:
+      return super.getTargetFunc(call);
+    }
+  }
+
+  @Override public void unparseIntervalOperandsBasedFunctions(
+      SqlWriter writer,
+      SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWriter.Frame frame;
+    switch (call.getOperator().toString()) {
+    case "DATE_ADD":
+      frame = writer.startFunCall("DATEADD");
+      break;
+    default:
+      frame = writer.startFunCall(call.getOperator().toString());
+    }
+    SqlIntervalLiteral intervalLiteral = call.operand(1);
+
+    switch (intervalLiteral.getKind()) {
+    case LITERAL:
+      SqlTypeName typeName = intervalLiteral.getTypeName();
+      switch (typeName) {
+      case INTERVAL_MONTH:
+        writer.print("MONTH");
+        break;
+      case INTERVAL_DAY:
+        writer.print("DAY");
+        break;
+      default:
+        throw new AssertionError(typeName + " is not handled/invalid");
+      }
+      break;
+    default:
+      throw new AssertionError(intervalLiteral.getKind() + " is not valid");
+    }
+    writer.print(", ");
+    SqlIntervalLiteral.IntervalValue literalValue =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    ((SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue()).getSign();
+    int intLiteral = Integer.parseInt(literalValue.getIntervalLiteral());
+    int sign = literalValue.getSign();
+    int intervalValue = intLiteral * sign;
+    writer.print(intervalValue);
+    writer.print(",");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.endFunCall(frame);
+  }
 }
 
 // End SnowflakeSqlDialect.java
