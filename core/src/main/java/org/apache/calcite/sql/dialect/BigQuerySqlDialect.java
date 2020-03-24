@@ -195,10 +195,6 @@ public class BigQuerySqlDialect extends SqlDialect {
     return false;
   }
 
-  @Override public boolean supportsAnalyticalFunctionInOverClause() {
-    return false;
-  }
-
   @Override public boolean supportsAnalyticalFunctionInGroupBy() {
     return false;
   }

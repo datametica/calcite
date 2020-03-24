@@ -102,6 +102,10 @@ public abstract class SqlAbstractConformance implements SqlConformance {
   public boolean allowExtendedTrim() {
     return SqlConformanceEnum.DEFAULT.allowExtendedTrim();
   }
+
+  @Override public boolean allowAnalyticalFunctionInOverClause() {
+    return SqlConformanceEnum.DEFAULT.allowAnalyticalFunctionInOverClause();
+  }
 }
 
 // End SqlAbstractConformance.java

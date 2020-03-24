@@ -1192,7 +1192,7 @@ public abstract class SqlImplementor {
       }
 
       if (rel instanceof Project
-          && !dialect.supportsAnalyticalFunctionInOverClause()
+          && !dialect.getConformance().allowAnalyticalFunctionInOverClause()
           && hasAnalyticalFunctionInOverClause((Project) rel)) {
         needNew = true;
       }
@@ -1308,7 +1308,7 @@ public abstract class SqlImplementor {
           return true;
         }
         return call.getOperandList().stream()
-            .map(node -> node.accept(this))
+            .map(node -> Boolean.TRUE.equals(node.accept(this)))
             .findFirst()
             .orElse(false);
       }
