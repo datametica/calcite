@@ -149,8 +149,6 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlFunction CONV = SqlLibraryOperators.CONV;
 
   public static final SqlFunction IF = SqlLibraryOperators.IF;
-  public static final SqlFunction RPAD = SqlLibraryOperators.RPAD;
-  public static final SqlFunction LPAD = SqlLibraryOperators.LPAD;
 
   //-------------------------------------------------------------
   //                   BINARY OPERATORS

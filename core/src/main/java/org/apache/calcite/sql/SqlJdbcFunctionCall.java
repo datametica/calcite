@@ -770,8 +770,8 @@ public class SqlJdbcFunctionCall extends SqlFunction {
               return super.createCall(pos, operands[0], jdbcType.createDataType(typeOperand.pos));
             }
           });
-      map.put("LPAD", simple(SqlStdOperatorTable.LPAD));
-      map.put("RPAD", simple(SqlStdOperatorTable.RPAD));
+      map.put("LPAD", simple(SqlLibraryOperators.LPAD));
+      map.put("RPAD", simple(SqlLibraryOperators.RPAD));
       this.map = map.build();
     }
 
