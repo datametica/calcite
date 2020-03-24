@@ -537,6 +537,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     SqlIntervalLiteral.IntervalValue literalValue =
         (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
     writer.sep("INTERVAL");
+    if (literalValue.getSign() == -1) {
+      writer.print("-");
+    }
     writer.sep(literalValue.getIntervalLiteral());
     writer.print(literalValue.getIntervalQualifier().toString());
   }
@@ -643,7 +646,6 @@ public class BigQuerySqlDialect extends SqlDialect {
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     String dateTimeFormat = super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
     return dateTimeFormat
-        .replaceAll("(?i)B", " ")
         .replace("%Y-%m-%d", "%F")
         .replace("%S.", "%E");
   }
