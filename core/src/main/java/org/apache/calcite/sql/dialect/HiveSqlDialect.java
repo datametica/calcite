@@ -619,17 +619,9 @@ public class HiveSqlDialect extends SqlDialect {
       break;
     case "RPAD":
     case "LPAD":
-      unparsePadding(writer, call, leftPrec, rightPrec);
+      PaddingFunctionUtil.unparseCall(writer, call, leftPrec, rightPrec);
       break;
     default:
-      super.unparseCall(writer, call, leftPrec, rightPrec);
-    }
-  }
-
-  private void unparsePadding(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    if (((SqlBasicCall) call).operands.length == 2) {
-      PaddingFunctionUtil.unparseCall(writer, call, leftPrec, rightPrec);
-    } else {
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }

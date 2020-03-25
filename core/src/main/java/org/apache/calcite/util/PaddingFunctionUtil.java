@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.util;
 
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlFunction;
@@ -39,11 +40,15 @@ public class PaddingFunctionUtil {
   public static void unparseCall(SqlWriter writer, SqlCall call,
       int leftPrec, int rightPrec) {
     SqlFunction sqlFunction = call.getOperator().getName() == RPAD.getName() ? RPAD : LPAD;
-    SqlCharStringLiteral blankLiteral = SqlLiteral.createCharString(StringUtils.SPACE,
-        SqlParserPos.ZERO);
-    SqlCall paddingFunctionCall = sqlFunction.createCall(SqlParserPos.ZERO, call.operand(0),
-        call.operand(1), blankLiteral);
-    sqlFunction.unparse(writer, paddingFunctionCall, leftPrec, rightPrec);
+    if (((SqlBasicCall) call).operands.length == 2) {
+      SqlCharStringLiteral blankLiteral = SqlLiteral.createCharString(StringUtils.SPACE,
+          SqlParserPos.ZERO);
+      SqlCall paddingFunctionCall = sqlFunction.createCall(SqlParserPos.ZERO, call.operand(0),
+          call.operand(1), blankLiteral);
+      sqlFunction.unparse(writer, paddingFunctionCall, leftPrec, rightPrec);
+    } else {
+      sqlFunction.unparse(writer, call, leftPrec, rightPrec);
+    }
   }
 }
 // End PaddingFunctionUtil.java
