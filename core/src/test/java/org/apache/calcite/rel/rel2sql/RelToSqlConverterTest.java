@@ -4657,7 +4657,7 @@ public class RelToSqlConverterTest {
         + "INNER JOIN (SELECT \"t1\".\"department_id\" \"department_id0\", MIN(\"t1\".\"department_id\")\n"
         + "FROM (SELECT NULL \"department_id\", NULL \"department_description\"\nFROM \"DUAL\"\nWHERE 1 = 0) \"t\",\n"
         + "(SELECT \"department_id\"\nFROM \"foodmart\".\"employee\"\nGROUP BY \"department_id\") \"t1\"\n"
-        + "GROUP BY \"t1\".\"department_id\") \"t4\" ON \"employee\".\"department_id\" = \"t4\".\"department_id0\""
+        + "GROUP BY \"t1\".\"department_id\") \"t3\" ON \"employee\".\"department_id\" = \"t3\".\"department_id0\""
         + " AND \"employee\".\"department_id\" = MIN(\"t1\".\"department_id\")";
     sql(query).withOracle().ok(expected);
   }
@@ -4675,8 +4675,8 @@ public class RelToSqlConverterTest {
         + "\nWHERE 1 = 0) AS \"t\","
         + "\n(SELECT \"department_id\"\nFROM \"foodmart\".\"employee\""
         + "\nGROUP BY \"department_id\") AS \"t1\""
-        + "\nGROUP BY \"t1\".\"department_id\") AS \"t4\" "
-        + "ON \"employee\".\"department_id\" = \"t4\".\"department_id0\""
+        + "\nGROUP BY \"t1\".\"department_id\") AS \"t3\" "
+        + "ON \"employee\".\"department_id\" = \"t3\".\"department_id0\""
         + " AND \"employee\".\"department_id\" = MIN(\"t1\".\"department_id\")";
     sql(query).ok(expected);
   }

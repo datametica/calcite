@@ -1279,24 +1279,25 @@ public abstract class SqlImplementor {
     }
 
     private boolean hasAnalyticalFunctionInOverClause(Project rel) {
-      if (node instanceof SqlSelect) {
-        final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
-        if (selectList != null) {
-          RexOverVisitor visitor = new RexOverVisitor();
-          Set<Integer> ordinals = rel.getProjects().stream()
-              .flatMap(rex -> visitor.getInputRefOrdinals(rex).stream())
-              .collect(Collectors.toSet());
-          AnalyticalFunctionChecker functionChecker = new AnalyticalFunctionChecker();
-          List<SqlNode> sqlNodes = selectList.getList();
-          List<Integer> inputOrdinals = IntStream.range(0, sqlNodes.size())
-              .filter(index -> Boolean.TRUE.equals(sqlNodes.get(index).accept(functionChecker)))
-              .boxed()
-              .collect(Collectors.toList());
-          inputOrdinals.retainAll(ordinals);
-          return inputOrdinals.size() > 0;
-        }
+      if (!(node instanceof SqlSelect)) {
+        return false;
       }
-      return false;
+      final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
+      if (selectList == null) {
+        return false;
+      }
+      RexOverVisitor visitor = new RexOverVisitor();
+      Set<Integer> ordinals = rel.getProjects().stream()
+          .flatMap(rex -> visitor.getInputRefOrdinals(rex).stream())
+          .collect(Collectors.toSet());
+      AnalyticalFunctionChecker functionChecker = new AnalyticalFunctionChecker();
+      List<SqlNode> sqlNodes = selectList.getList();
+      List<Integer> inputOrdinals = IntStream.range(0, sqlNodes.size())
+          .filter(index -> Boolean.TRUE.equals(sqlNodes.get(index).accept(functionChecker)))
+          .boxed()
+          .collect(Collectors.toList());
+      inputOrdinals.retainAll(ordinals);
+      return inputOrdinals.size() > 0;
     }
 
     /**
