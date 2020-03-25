@@ -113,10 +113,10 @@ public class RelToSqlConverterTest {
   }
 
   private static Planner getPlanner(List<RelTraitDef> traitDefs,
-                                    SqlParser.Config parserConfig, SchemaPlus schema,
-                                    SqlToRelConverter.Config sqlToRelConf, Program... programs) {
+      SqlParser.Config parserConfig, SchemaPlus schema,
+      SqlToRelConverter.Config sqlToRelConf, Program... programs) {
     final MockSqlOperatorTable operatorTable =
-        new MockSqlOperatorTable(SqlStdOperatorTable.instance());
+            new MockSqlOperatorTable(SqlStdOperatorTable.instance());
     MockSqlOperatorTable.addRamp(operatorTable);
     final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
     final FrameworkConfig config = Frameworks.newConfigBuilder()
@@ -512,9 +512,9 @@ public class RelToSqlConverterTest {
         + "GROUP BY `product_class_id` WITH ROLLUP\n"
         + "LIMIT 5";
     final String expectedHive = "SELECT product_class_id, COUNT(*) C\n"
-        + "FROM foodmart.product\n"
-        + "GROUP BY product_class_id WITH ROLLUP\n"
-        + "LIMIT 5";
+            + "FROM foodmart.product\n"
+            + "GROUP BY product_class_id WITH ROLLUP\n"
+            + "LIMIT 5";
     sql(query)
         .ok(expected)
         .withMysql()
@@ -795,13 +795,13 @@ public class RelToSqlConverterTest {
         + "THEN 100 ELSE 200 END AS rnk\n"
         + "FROM foodmart.employee) AS t";
     sql(query)
-        .ok(expectedSql)
-        .withHive()
-        .ok(expectedHive)
-        .withSpark()
-        .ok(expectedSpark)
-        .withBigQuery()
-        .ok(expectedBigQuery);
+      .ok(expectedSql)
+      .withHive()
+      .ok(expectedHive)
+      .withSpark()
+      .ok(expectedSpark)
+      .withBigQuery()
+      .ok(expectedBigQuery);
   }
 
   /** Test case for
@@ -848,7 +848,7 @@ public class RelToSqlConverterTest {
     final RelBuilder builder = relBuilder();
     String[] array = {"abc", "bcd", "fdc"};
     RelNode root = builder.functionScan(SqlStdOperatorTable.UNNEST, 0,
-        builder.literal(Arrays.asList(array))).project(builder.field(0)).build();
+            builder.literal(Arrays.asList(array))).project(builder.field(0)).build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\nFROM UNNEST(ARRAY['abc', 'bcd', 'fdc'])\nAS EXPR$0";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
@@ -868,9 +868,9 @@ public class RelToSqlConverterTest {
                 builder.call(SqlStdOperatorTable.EQUALS,
                     builder.field(2, 0, "DEPTNO"),
                     builder.field(2, 1, "DEPTNO")),
-                builder.call(SqlStdOperatorTable.LIKE,
-                    builder.field(2, 1, "DNAME"),
-                    builder.literal("ACCOUNTING"))))
+            builder.call(SqlStdOperatorTable.LIKE,
+                builder.field(2, 1, "DNAME"),
+                builder.literal("ACCOUNTING"))))
         .build();
     final String sql = toSql(rel);
     final String expectedSql = "SELECT *\n"
@@ -1126,7 +1126,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.reserve_employee";
     final String expectedHS =
         "SELECT REGEXP_REPLACE('A$@*AABCA$@*AADCAA$@*', '^(A\\$\\@\\*)*', '')\n"
-            + "FROM foodmart.reserve_employee";
+        + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
         .ok(expectedHS)
@@ -1143,7 +1143,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.reserve_employee";
     final String expectedHS =
         "SELECT REGEXP_REPLACE('$A@*AABC$@*AADCAA$A@*', '(\\$A\\@\\*)*$', '')\n"
-            + "FROM foodmart.reserve_employee";
+        + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
         .ok(expectedHS)
@@ -1162,7 +1162,7 @@ public class RelToSqlConverterTest {
     final String expectedHS =
         "SELECT REGEXP_REPLACE('$@*AABC$@*AADCAA$@*A',"
             + " '^(\\$\\@\\*A)*|(\\$\\@\\*A)*$', '')\n"
-            + "FROM foodmart.reserve_employee";
+        + "FROM foodmart.reserve_employee";
     sql(query)
         .withHive()
         .ok(expectedHS)
@@ -1453,12 +1453,12 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT LENGTH('xyz')\n"
         + "FROM foodmart.product";
     sql(query)
-        .withHive()
-        .ok(expected)
-        .withBigQuery()
-        .ok(expected)
-        .withSpark()
-        .ok(expected);
+      .withHive()
+      .ok(expected)
+      .withBigQuery()
+      .ok(expected)
+      .withSpark()
+      .ok(expected);
   }
 
   @Test
@@ -1467,12 +1467,12 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT LENGTH('xyz')\n"
         + "FROM foodmart.product";
     sql(query)
-        .withHive()
-        .ok(expected)
-        .withBigQuery()
-        .ok(expected)
-        .withSpark()
-        .ok(expected);
+      .withHive()
+      .ok(expected)
+      .withBigQuery()
+      .ok(expected)
+      .withSpark()
+      .ok(expected);
   }
 
   @Test public void testMysqlCastToBigint() {
@@ -2494,7 +2494,7 @@ public class RelToSqlConverterTest {
     final String expectedPostgresql = "SELECT SUBSTRING(\"brand_name\" FROM 2)\n"
         + "FROM \"foodmart\".\"product\"";
     final String expectedSnowflake = "SELECT SUBSTR(\"brand_name\", 2)\n"
-        + "FROM \"foodmart\".\"product\"";
+            + "FROM \"foodmart\".\"product\"";
     final String expectedRedshift = expectedPostgresql;
     final String expectedMysql = "SELECT SUBSTRING(`brand_name` FROM 2)\n"
         + "FROM `foodmart`.`product`";
@@ -2534,7 +2534,7 @@ public class RelToSqlConverterTest {
     final String expectedPostgresql = "SELECT SUBSTRING(\"brand_name\" FROM 2 FOR 3)\n"
         + "FROM \"foodmart\".\"product\"";
     final String expectedSnowflake = "SELECT SUBSTR(\"brand_name\", 2, 3)\n"
-        + "FROM \"foodmart\".\"product\"";
+            + "FROM \"foodmart\".\"product\"";
     final String expectedRedshift = expectedPostgresql;
     final String expectedMysql = "SELECT SUBSTRING(`brand_name` FROM 2 FOR 3)\n"
         + "FROM `foodmart`.`product`";
@@ -3814,7 +3814,7 @@ public class RelToSqlConverterTest {
     final boolean[] callsUnparseCallOnSqlSelect = {false};
     final SqlDialect dialect = new SqlDialect(SqlDialect.EMPTY_CONTEXT) {
       @Override public void unparseCall(SqlWriter writer, SqlCall call,
-                                        int leftPrec, int rightPrec) {
+          int leftPrec, int rightPrec) {
         if (call instanceof SqlSelect) {
           callsUnparseCallOnSqlSelect[0] = true;
         }
@@ -4160,7 +4160,7 @@ public class RelToSqlConverterTest {
   public void testTimestampFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode currentTimestampRexNode = builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP,
-        builder.literal(6));
+         builder.literal(6));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(currentTimestampRexNode, "CT"))
@@ -4581,7 +4581,7 @@ public class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT TRUNC(2.30259)\n"
         + "FROM foodmart.employee";
     sql(query)
-        .withBigQuery().ok(expectedBigQuery);
+      .withBigQuery().ok(expectedBigQuery);
   }
 
   @Test public void extractFunctionEmulationForHiveAndSparkAndBigQuery() {
@@ -4644,7 +4644,7 @@ public class RelToSqlConverterTest {
   @Test public void testJsonRemove() {
     String query = "select json_remove(\"product_name\", '$[0]') from \"product\"";
     final String expected = "SELECT JSON_REMOVE(\"product_name\", '$[0]')\n"
-        + "FROM \"foodmart\".\"product\"";
+           + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
   }
 
@@ -4766,7 +4766,7 @@ public class RelToSqlConverterTest {
   @Test public void testSelectNull() {
     String query = "SELECT CAST(NULL AS INT)";
     final String expected = "SELECT CAST(NULL AS INTEGER)\n"
-        + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
+            + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query).ok(expected);
     // validate
     sql(expected).exec();
@@ -4775,7 +4775,7 @@ public class RelToSqlConverterTest {
   @Test public void testSelectNullWithCount() {
     String query = "SELECT COUNT(CAST(NULL AS INT))";
     final String expected = "SELECT COUNT(CAST(NULL AS INTEGER))\n"
-        + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
+            + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
     sql(query).ok(expected);
     // validate
     sql(expected).exec();
@@ -4783,10 +4783,10 @@ public class RelToSqlConverterTest {
 
   @Test public void testSelectNullWithGroupByNull() {
     String query = "SELECT COUNT(CAST(NULL AS INT)) FROM (VALUES  (0))\n"
-        + "AS \"t\" GROUP BY CAST(NULL AS VARCHAR CHARACTER SET \"ISO-8859-1\")";
+            + "AS \"t\" GROUP BY CAST(NULL AS VARCHAR CHARACTER SET \"ISO-8859-1\")";
     final String expected = "SELECT COUNT(CAST(NULL AS INTEGER))\n"
-        + "FROM (VALUES  (0)) AS \"t\" (\"EXPR$0\")\nGROUP BY CAST(NULL "
-        + "AS VARCHAR CHARACTER SET \"ISO-8859-1\")";
+            + "FROM (VALUES  (0)) AS \"t\" (\"EXPR$0\")\nGROUP BY CAST(NULL "
+            + "AS VARCHAR CHARACTER SET \"ISO-8859-1\")";
     sql(query).ok(expected);
     // validate
     sql(expected).exec();
@@ -4794,10 +4794,10 @@ public class RelToSqlConverterTest {
 
   @Test public void testSelectNullWithGroupByVar() {
     String query = "SELECT COUNT(CAST(NULL AS INT)) FROM \"account\"\n"
-        + "AS \"t\" GROUP BY \"account_type\"";
+            + "AS \"t\" GROUP BY \"account_type\"";
     final String expected = "SELECT COUNT(CAST(NULL AS INTEGER))\n"
-        + "FROM \"foodmart\".\"account\"\n"
-        + "GROUP BY \"account_type\"";
+            + "FROM \"foodmart\".\"account\"\n"
+            + "GROUP BY \"account_type\"";
     sql(query).ok(expected);
     // validate
     sql(expected).exec();
@@ -4805,17 +4805,17 @@ public class RelToSqlConverterTest {
 
   @Test public void testSelectNullWithInsert() {
     String query = "insert into\n"
-        + "\"account\"(\"account_id\",\"account_parent\",\"account_type\",\"account_rollup\")\n"
-        + "select 1, cast(NULL AS INT), cast(123 as varchar), cast(123 as varchar)";
+            + "\"account\"(\"account_id\",\"account_parent\",\"account_type\",\"account_rollup\")\n"
+            + "select 1, cast(NULL AS INT), cast(123 as varchar), cast(123 as varchar)";
     final String expected = "INSERT INTO \"foodmart\".\"account\" ("
-        + "\"account_id\", \"account_parent\", \"account_description\", "
-        + "\"account_type\", \"account_rollup\", \"Custom_Members\")\n"
-        + "(SELECT 1 AS \"account_id\", CAST(NULL AS INTEGER) AS \"account_parent\","
-        + " CAST(NULL AS VARCHAR(30) CHARACTER SET "
-        + "\"ISO-8859-1\") AS \"account_description\", '123' AS \"account_type\", "
-        + "'123' AS \"account_rollup\", CAST(NULL AS VARCHAR"
-        + "(255) CHARACTER SET \"ISO-8859-1\") AS \"Custom_Members\"\n"
-        + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\"))";
+            + "\"account_id\", \"account_parent\", \"account_description\", "
+            + "\"account_type\", \"account_rollup\", \"Custom_Members\")\n"
+            + "(SELECT 1 AS \"account_id\", CAST(NULL AS INTEGER) AS \"account_parent\","
+            + " CAST(NULL AS VARCHAR(30) CHARACTER SET "
+            + "\"ISO-8859-1\") AS \"account_description\", '123' AS \"account_type\", "
+            + "'123' AS \"account_rollup\", CAST(NULL AS VARCHAR"
+            + "(255) CHARACTER SET \"ISO-8859-1\") AS \"Custom_Members\"\n"
+            + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\"))";
     sql(query).ok(expected);
     // validate
     sql(expected).exec();
@@ -4823,29 +4823,29 @@ public class RelToSqlConverterTest {
 
   @Test public void testSelectNullWithInsertFromJoin() {
     String query = "insert into \n"
-        + "\"account\"(\"account_id\",\"account_parent\",\n"
-        + "\"account_type\",\"account_rollup\")\n"
-        + "select \"product\".\"product_id\", \n"
-        + "cast(NULL AS INT),\n"
-        + "cast(\"product\".\"product_id\" as varchar),\n"
-        + "cast(\"sales_fact_1997\".\"store_id\" as varchar)\n"
-        + "from \"product\"\n"
-        + "inner join \"sales_fact_1997\"\n"
-        + "on \"product\".\"product_id\" = \"sales_fact_1997\".\"product_id\"";
+            + "\"account\"(\"account_id\",\"account_parent\",\n"
+            + "\"account_type\",\"account_rollup\")\n"
+            + "select \"product\".\"product_id\", \n"
+            + "cast(NULL AS INT),\n"
+            + "cast(\"product\".\"product_id\" as varchar),\n"
+            + "cast(\"sales_fact_1997\".\"store_id\" as varchar)\n"
+            + "from \"product\"\n"
+            + "inner join \"sales_fact_1997\"\n"
+            + "on \"product\".\"product_id\" = \"sales_fact_1997\".\"product_id\"";
     final String expected = "INSERT INTO \"foodmart\".\"account\" "
-        + "(\"account_id\", \"account_parent\", \"account_description\", "
-        + "\"account_type\", \"account_rollup\", \"Custom_Members\")\n"
-        + "(SELECT \"product\".\"product_id\" AS \"account_id\", "
-        + "CAST(NULL AS INTEGER) AS \"account_parent\", CAST(NULL AS VARCHAR"
-        + "(30) CHARACTER SET \"ISO-8859-1\") AS \"account_description\", "
-        + "CAST(\"product\".\"product_id\" AS VARCHAR CHARACTER SET "
-        + "\"ISO-8859-1\") AS \"account_type\", "
-        + "CAST(\"sales_fact_1997\".\"store_id\" AS VARCHAR CHARACTER SET \"ISO-8859-1\") AS "
-        + "\"account_rollup\", "
-        + "CAST(NULL AS VARCHAR(255) CHARACTER SET \"ISO-8859-1\") AS \"Custom_Members\"\n"
-        + "FROM \"foodmart\".\"product\"\n"
-        + "INNER JOIN \"foodmart\".\"sales_fact_1997\" "
-        + "ON \"product\".\"product_id\" = \"sales_fact_1997\".\"product_id\")";
+            + "(\"account_id\", \"account_parent\", \"account_description\", "
+            + "\"account_type\", \"account_rollup\", \"Custom_Members\")\n"
+            + "(SELECT \"product\".\"product_id\" AS \"account_id\", "
+            + "CAST(NULL AS INTEGER) AS \"account_parent\", CAST(NULL AS VARCHAR"
+            + "(30) CHARACTER SET \"ISO-8859-1\") AS \"account_description\", "
+            + "CAST(\"product\".\"product_id\" AS VARCHAR CHARACTER SET "
+            + "\"ISO-8859-1\") AS \"account_type\", "
+            + "CAST(\"sales_fact_1997\".\"store_id\" AS VARCHAR CHARACTER SET \"ISO-8859-1\") AS "
+            + "\"account_rollup\", "
+            + "CAST(NULL AS VARCHAR(255) CHARACTER SET \"ISO-8859-1\") AS \"Custom_Members\"\n"
+            + "FROM \"foodmart\".\"product\"\n"
+            + "INNER JOIN \"foodmart\".\"sales_fact_1997\" "
+            + "ON \"product\".\"product_id\" = \"sales_fact_1997\".\"product_id\")";
     sql(query).ok(expected);
     // validate
     sql(expected).exec();
@@ -5356,11 +5356,11 @@ public class RelToSqlConverterTest {
   @Test
   public void testToNumberFunctionHandlingCaseWhenThen() {
     final String query = "select case when TO_NUMBER('12.77') is not null then "
-        + "'is_numeric' else 'is not numeric' end";
+            + "'is_numeric' else 'is not numeric' end";
     final String expected = "SELECT CASE WHEN CAST('12.77' AS FLOAT) IS NOT NULL THEN "
-        + "'is_numeric    ' ELSE 'is not numeric' END";
+            + "'is_numeric    ' ELSE 'is not numeric' END";
     final String expectedSnowFlake = "SELECT CASE WHEN TO_NUMBER('12.77', 38, 2) IS NOT NULL THEN"
-        + " 'is_numeric    ' ELSE 'is not numeric' END";
+            + " 'is_numeric    ' ELSE 'is not numeric' END";
     sql(query)
         .withBigQuery()
         .ok(expected)
@@ -5817,8 +5817,8 @@ public class RelToSqlConverterTest {
     Sql withHiveIdentifierQuoteString() {
       final HiveSqlDialect hiveSqlDialect =
           new HiveSqlDialect((SqlDialect.EMPTY_CONTEXT)
-              .withDatabaseProduct(DatabaseProduct.HIVE)
-              .withIdentifierQuoteString("`"));
+          .withDatabaseProduct(DatabaseProduct.HIVE)
+          .withIdentifierQuoteString("`"));
       return dialect(hiveSqlDialect);
     }
 
@@ -5839,10 +5839,10 @@ public class RelToSqlConverterTest {
               .withDataTypeSystem(new RelDataTypeSystemImpl() {
                 @Override public int getMaxPrecision(SqlTypeName typeName) {
                   switch (typeName) {
-                    case VARCHAR:
-                      return 256;
-                    default:
-                      return super.getMaxPrecision(typeName);
+                  case VARCHAR:
+                    return 256;
+                  default:
+                    return super.getMaxPrecision(typeName);
                   }
                 }
               }));
@@ -5925,37 +5925,37 @@ public class RelToSqlConverterTest {
 
   @Test public void testTableFunctionScan() {
     final String query = "SELECT *\n"
-        + "FROM TABLE(DEDUP(CURSOR ((SELECT \"product_id\", \"product_name\"\n"
-        + "FROM \"foodmart\".\"product\")), CURSOR ((SELECT \"employee_id\", \"full_name\"\n"
-        + "FROM \"foodmart\".\"employee\")), 'NAME'))";
+            + "FROM TABLE(DEDUP(CURSOR ((SELECT \"product_id\", \"product_name\"\n"
+            + "FROM \"foodmart\".\"product\")), CURSOR ((SELECT \"employee_id\", \"full_name\"\n"
+            + "FROM \"foodmart\".\"employee\")), 'NAME'))";
 
     final String expected = "SELECT *\n"
-        + "FROM TABLE(DEDUP(CURSOR ((SELECT \"product_id\", \"product_name\"\n"
-        + "FROM \"foodmart\".\"product\")), CURSOR ((SELECT \"employee_id\", \"full_name\"\n"
-        + "FROM \"foodmart\".\"employee\")), 'NAME'))";
+            + "FROM TABLE(DEDUP(CURSOR ((SELECT \"product_id\", \"product_name\"\n"
+            + "FROM \"foodmart\".\"product\")), CURSOR ((SELECT \"employee_id\", \"full_name\"\n"
+            + "FROM \"foodmart\".\"employee\")), 'NAME'))";
     sql(query).ok(expected);
 
     final String query2 = "select * from table(ramp(3))";
     sql(query2).ok("SELECT *\n"
-        + "FROM TABLE(RAMP(3))");
+            + "FROM TABLE(RAMP(3))");
   }
 
   @Test public void testTableFunctionScanWithComplexQuery() {
     final String query = "SELECT *\n"
-        + "FROM TABLE(DEDUP(CURSOR(select \"product_id\", \"product_name\"\n"
-        + "from \"product\"\n"
-        + "where \"net_weight\" > 100 and \"product_name\" = 'Hello World')\n"
-        + ",CURSOR(select  \"employee_id\", \"full_name\"\n"
-        + "from \"employee\"\n"
-        + "group by \"employee_id\", \"full_name\"), 'NAME'))";
+            + "FROM TABLE(DEDUP(CURSOR(select \"product_id\", \"product_name\"\n"
+            + "from \"product\"\n"
+            + "where \"net_weight\" > 100 and \"product_name\" = 'Hello World')\n"
+            + ",CURSOR(select  \"employee_id\", \"full_name\"\n"
+            + "from \"employee\"\n"
+            + "group by \"employee_id\", \"full_name\"), 'NAME'))";
 
     final String expected = "SELECT *\n"
-        + "FROM TABLE(DEDUP(CURSOR ((SELECT \"product_id\", \"product_name\"\n"
-        + "FROM \"foodmart\".\"product\"\n"
-        + "WHERE \"net_weight\" > 100 AND \"product_name\" = 'Hello World')), "
-        + "CURSOR ((SELECT \"employee_id\", \"full_name\"\n"
-        + "FROM \"foodmart\".\"employee\"\n"
-        + "GROUP BY \"employee_id\", \"full_name\")), 'NAME'))";
+            + "FROM TABLE(DEDUP(CURSOR ((SELECT \"product_id\", \"product_name\"\n"
+            + "FROM \"foodmart\".\"product\"\n"
+            + "WHERE \"net_weight\" > 100 AND \"product_name\" = 'Hello World')), "
+            + "CURSOR ((SELECT \"employee_id\", \"full_name\"\n"
+            + "FROM \"foodmart\".\"employee\"\n"
+            + "GROUP BY \"employee_id\", \"full_name\")), 'NAME'))";
     sql(query).ok(expected);
   }
 }
