@@ -49,6 +49,7 @@ import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.CastCallBuilder;
+import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.ToNumberUtils;
@@ -244,7 +245,6 @@ public class SparkSqlDialect extends SqlDialect {
         SqlSyntax.BINARY.unparse(writer, op, call, leftPrec, rightPrec);
         break;
       case CHAR_LENGTH:
-      case CHARACTER_LENGTH:
         final SqlWriter.Frame lengthFrame = writer.startFunCall("LENGTH");
         call.operand(0).unparse(writer, leftPrec, rightPrec);
         writer.endFunCall(lengthFrame);
@@ -316,6 +316,7 @@ public class SparkSqlDialect extends SqlDialect {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
     }
+    return;
   }
 
   @Override public void unparseSqlDatetimeArithmetic(SqlWriter writer,
@@ -572,6 +573,10 @@ public class SparkSqlDialect extends SqlDialect {
       break;
     case "STR_TO_DATE":
       unparseStrToDate(writer, call, leftPrec, rightPrec);
+      break;
+    case "RPAD":
+    case "LPAD":
+      PaddingFunctionUtil.unparseCall(writer, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);

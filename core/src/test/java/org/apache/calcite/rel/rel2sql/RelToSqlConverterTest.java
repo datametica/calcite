@@ -1452,13 +1452,17 @@ public class RelToSqlConverterTest {
     final String query = "select char_length('xyz') from \"product\"";
     final String expected = "SELECT LENGTH('xyz')\n"
         + "FROM foodmart.product";
+    final String expectedSnowFlake = "SELECT LENGTH('xyz')\n"
+            + "FROM \"foodmart\".\"product\"";
     sql(query)
       .withHive()
       .ok(expected)
       .withBigQuery()
       .ok(expected)
       .withSpark()
-      .ok(expected);
+      .ok(expected)
+      .withSnowflake()
+      .ok(expectedSnowFlake);
   }
 
   @Test
@@ -1466,13 +1470,17 @@ public class RelToSqlConverterTest {
     final String query = "select character_length('xyz') from \"product\"";
     final String expected = "SELECT LENGTH('xyz')\n"
         + "FROM foodmart.product";
+    final String expectedSnowFlake = "SELECT LENGTH('xyz')\n"
+            + "FROM \"foodmart\".\"product\"";
     sql(query)
       .withHive()
       .ok(expected)
       .withBigQuery()
       .ok(expected)
       .withSpark()
-      .ok(expected);
+      .ok(expected)
+      .withSnowflake()
+      .ok(expectedSnowFlake);
   }
 
   @Test public void testMysqlCastToBigint() {
@@ -4222,13 +4230,17 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL -1 MONTH)\n"
         + "FROM foodmart.employee";
+    final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH, -1,\"birth_date\")\n"
+        + "FROM \"foodmart\".\"employee\"" ;
     sql(query)
         .withHive()
         .ok(expectedHive)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withSpark()
-        .ok(expectedSpark);
+        .ok(expectedSpark)
+        .withSnowflake()
+        .ok(expectedSnowflakeQuery);
   }
 
   @Test public void testDatePlusIntervalMonthFunctionWithArthOps() {
@@ -4239,13 +4251,17 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL -10 MONTH)\n"
         + "FROM foodmart.employee";
+    final String expectedSnowflakeQuery ="SELECT DATEADD(MONTH,-10, \"birth_date\")\n"
+        + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
         .ok(expectedHive)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withSpark()
-        .ok(expectedSpark);
+        .ok(expectedSpark)
+        .withSnowflake()
+        .ok(expectedSnowflakeQuery);
   }
 
   @Test public void testDatePlusIntervalMonthFunctionWithCol() {
@@ -4256,13 +4272,17 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id * 10 MONTH)\n"
         + "FROM foodmart.employee";
+    final String expectedSnowflakeQuery= "SELECT DATEADD(MONTH,\"store_id\" * 10, \"birth_date\")\n"
+        + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
         .ok(expectedHive)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withSpark()
-        .ok(expectedSpark);
+        .ok(expectedSpark)
+        .withSnowflake()
+        .ok(expectedSnowflakeQuery);
   }
 
   @Test public void testDatePlusIntervalMonthFunctionWithArithOp() {
@@ -4273,13 +4293,17 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 * 2 MONTH)\n"
         + "FROM foodmart.employee";
+    final String expectedSnowflakeQuery="SELECT DATEADD(MONTH,10 * 2, \"birth_date\")\n"
+        + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
         .ok(expectedHive)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withSpark()
-        .ok(expectedSpark);
+        .ok(expectedSpark)
+        .withSnowflake()
+        .ok(expectedSnowflakeQuery);
   }
 
   @Test public void testDatePlusColumnFunction() {
