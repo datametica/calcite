@@ -22,6 +22,7 @@ import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIntervalLiteral;
+import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -29,6 +30,7 @@ import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.FormatFunctionUtil;
 import org.apache.calcite.util.ToNumberUtils;
@@ -60,6 +62,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
   @Override public SqlOperator getTargetFunc(RexCall call) {
     switch (call.type.getSqlTypeName()) {
     case DATE:
+    case TIMESTAMP:
       return getTargetFunctionForDateOperations(call);
     default:
       return super.getTargetFunc(call);
@@ -69,6 +72,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
   private SqlOperator getTargetFunctionForDateOperations(RexCall call) {
     switch (call.getOperands().get(1).getType().getSqlTypeName()) {
     case INTERVAL_DAY:
+    case INTERVAL_MONTH:
       if (call.op.kind == SqlKind.MINUS) {
         return SqlLibraryOperators.DATE_SUB;
       }
@@ -126,21 +130,19 @@ public class SnowflakeSqlDialect extends SqlDialect {
    * @param rightPrec Indicate left precision
    */
   @Override public void unparseIntervalOperandsBasedFunctions(
-      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    final SqlWriter.Frame frame = writer.startList("(", ")");
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
-    writer.sep((SqlKind.PLUS == call.getKind()) ? "+" : "-");
+    SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+
     switch (call.operand(1).getKind()) {
     case LITERAL:
-      unparseSqlIntervalLiteral(writer, call.operand(1), leftPrec, rightPrec);
+      unparseSqlIntervalLiteral(writer, call, leftPrec, rightPrec);
       break;
     case TIMES:
-      unparseExpressionIntervalCall(writer, call.operand(1), leftPrec, rightPrec);
+      unparseExpressionIntervalCall(writer, call, leftPrec, rightPrec);
       break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
-    writer.endList(frame);
+
   }
 
   /**
@@ -148,20 +150,67 @@ public class SnowflakeSqlDialect extends SqlDialect {
    * Input: INTERVAL 2 DAY
    * It will write this as: 2
    *
-   * @param literal SqlIntervalLiteral :INTERVAL 1 DAY
+   //* @param literal SqlIntervalLiteral :INTERVAL 1 DAY
    * @param writer Target SqlWriter to write the call
    */
-  @Override public void unparseSqlIntervalLiteral(
-      SqlWriter writer, SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
+  public void unparseSqlIntervalLiteral(
+        SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWriter.Frame frame;
+    SqlIntervalLiteral literal = call.operand(1);
+    SqlTypeName type = literal.getTypeName();
     SqlIntervalLiteral.IntervalValue interval =
-        (SqlIntervalLiteral.IntervalValue) literal.getValue();
-    if (interval.getSign() == -1) {
-      writer.print("(-");
-      writer.literal(interval.getIntervalLiteral());
-      writer.print(")");
-    } else {
-      writer.literal(interval.getIntervalLiteral());
+          (SqlIntervalLiteral.IntervalValue) literal.getValue();
+    switch (type) {
+    case INTERVAL_DAY:
+      frame = writer.startList("(", ")");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.sep((SqlKind.PLUS == call.getKind()) ? "+" : "-");
+      if (interval.getSign() == -1) {
+        writer.print("(-");
+        writer.literal(interval.getIntervalLiteral());
+        writer.print(")");
+      } else {
+        writer.literal(interval.getIntervalLiteral());
+      }
+      writer.endList(frame);
+      break;
+
+    case INTERVAL_MONTH:
+      frame = writer.startFunCall("DATEADD");
+      handleIntervalLiteralForMonth(writer, call, leftPrec, rightPrec, frame, literal);
+      break;
+    default:
+      throw new IllegalArgumentException(call.getOperator().toString() + " is not handled");
     }
+
+
+  }
+
+  private void handleIntervalLiteralForMonth(SqlWriter writer, SqlCall call,
+                                             int leftPrec, int rightPrec,
+                                             SqlWriter.Frame frame,
+                                             SqlIntervalLiteral intervalLiteral) {
+    int intervalValue = getIntervalValue(intervalLiteral, call);
+    SqlIntervalLiteral.IntervalValue interval =
+          (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    SqlIntervalQualifier qualifier = interval.getIntervalQualifier();
+    writer.print(qualifier.toString());
+    writer.print(", ");
+    writer.print(intervalValue);
+    writer.print(",");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.endFunCall(frame);
+  }
+
+  private int getIntervalValue(SqlIntervalLiteral intervalLiteral, SqlCall call) {
+    SqlIntervalLiteral.IntervalValue literalValue =
+          (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    int intLiteral = Integer.parseInt(literalValue.getIntervalLiteral());
+    int sign = literalValue.getSign();
+    if (SqlKind.MINUS == call.getKind()) {
+      return intLiteral * sign * -1;
+    }
+    return intLiteral * sign;
   }
 
   /**
@@ -173,24 +222,62 @@ public class SnowflakeSqlDialect extends SqlDialect {
    * Input: 10 * INTERVAL 2 DAY
    * It will write this as: 10 * 2
    *
-   * @param call SqlCall : store_id * INTERVAL 1 DAY
+   //* @param call SqlCall : store_id * INTERVAL 1 DAY
    * @param writer Target SqlWriter to write the call
    * @param leftPrec Indicate left precision
    * @param rightPrec Indicate right precision
    */
   private void unparseExpressionIntervalCall(
-      SqlWriter writer, SqlBasicCall call, int leftPrec, int rightPrec) {
-    SqlLiteral intervalLiteral = getIntervalLiteral(call);
-    SqlNode identifier = getIdentifier(call);
+        SqlWriter writer, SqlCall sqlCall, int leftPrec, int rightPrec) {
+    SqlBasicCall secondOperand = sqlCall.operand(1);
+    SqlTypeName type = ((SqlIntervalLiteral) (secondOperand.operand(1))).getTypeName();
+    final SqlWriter.Frame frame;
+    SqlLiteral intervalLiteral = getIntervalLiteral(secondOperand);
     SqlIntervalLiteral.IntervalValue literalValue =
-        (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
-    if (call.getKind() == SqlKind.TIMES) {
-      identifier.unparse(writer, leftPrec, rightPrec);
-      if (!literalValue.getIntervalLiteral().equals("1")) {
-        writer.sep("*");
-        writer.sep(literalValue.toString());
+          (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    SqlNode identifier = getIdentifier(secondOperand);
+    switch (type) {
+    case INTERVAL_DAY:
+      frame = writer.startList("(", ")");
+      sqlCall.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.sep((SqlKind.PLUS == sqlCall.getKind()) ? "+" : "-");
+      if (secondOperand.getKind() == SqlKind.TIMES) {
+        identifier.unparse(writer, leftPrec, rightPrec);
+        if (!literalValue.getIntervalLiteral().equals("1")) {
+          writer.sep("*");
+          writer.sep(literalValue.toString());
+        }
       }
+      writer.endFunCall(frame);
+      break;
+
+    case INTERVAL_MONTH:
+      switch (sqlCall.getOperator().toString()) {
+      case "DATE_ADD":
+      case "DATE_SUB":
+        frame = writer.startFunCall("DATEADD");
+        SqlIntervalQualifier qualifier = literalValue.getIntervalQualifier();
+        writer.print(qualifier.toString());
+        writer.print(",");
+        identifier.unparse(writer, leftPrec, rightPrec);
+        if (!literalValue.getIntervalLiteral().equals("1")) {
+          writer.sep("*");
+          writer.sep(literalValue.toString());
+        }
+        writer.print(",");
+        sqlCall.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.endFunCall(frame);
+        break;
+
+      default:
+        throw new IllegalArgumentException(
+            secondOperand.getOperator().toString() + " is not handled for Snowflake");
+      }
+      break;
+
     }
+
+
   }
 
   /**
