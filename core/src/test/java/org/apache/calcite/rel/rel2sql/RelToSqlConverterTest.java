@@ -4222,6 +4222,91 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
+  @Test public void testTimestampSubIntervalMonthFunction() {
+    String query = "select \"hire_date\" - INTERVAL -'1' MONTH from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(hire_date, -1) AS DATE)\n"
+        + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(hire_date, -1)\n"
+        + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_SUB(hire_date, INTERVAL -1 MONTH)\n"
+        + "FROM foodmart.employee";
+    final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH, -1,\"hire_date\")\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+      .withHive()
+      .ok(expectedHive)
+      .withBigQuery()
+      .ok(expectedBigQuery)
+      .withSpark()
+      .ok(expectedSpark)
+      .withSnowflake()
+      .ok(expectedSnowflakeQuery);
+  }
+
+  @Test public void testTimestampPlusIntervalMonthFunctionWithArthOps() {
+    String query = "select \"hire_date\" + -10 * INTERVAL '1' MONTH from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(hire_date, -10) AS DATE)\n"
+          + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(hire_date, -10)\n"
+          + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(hire_date, INTERVAL -10 MONTH)\n"
+          + "FROM foodmart.employee";
+    final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH,-10, \"hire_date\")\n"
+          + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+      .withHive()
+      .ok(expectedHive)
+      .withBigQuery()
+      .ok(expectedBigQuery)
+      .withSpark()
+      .ok(expectedSpark)
+      .withSnowflake()
+      .ok(expectedSnowflakeQuery);
+  }
+
+  @Test public void testTimestampPlusIntervalMonthFunctionWithCol() {
+    String query = "select \"hire_date\" +  \"store_id\" * INTERVAL '10' MONTH from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(hire_date, store_id * 10) AS DATE)\n"
+          + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(hire_date, store_id * 10)\n"
+          + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(hire_date, INTERVAL store_id * 10 MONTH)\n"
+          + "FROM foodmart.employee";
+    final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH,\"store_id\" * 10, \"hire_date\")\n"
+          + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+      .withHive()
+      .ok(expectedHive)
+      .withBigQuery()
+      .ok(expectedBigQuery)
+      .withSpark()
+      .ok(expectedSpark)
+      .withSnowflake()
+      .ok(expectedSnowflakeQuery);
+  }
+
+  @Test public void testTimestampPlusIntervalMonthFunctionWithArithOp() {
+    String query = "select \"hire_date\" + 10 * INTERVAL '2' MONTH from \"employee\"";
+    final String expectedHive = "SELECT CAST(ADD_MONTHS(hire_date, 10 * 2) AS DATE)\n"
+          + "FROM foodmart.employee";
+    final String expectedSpark = "SELECT ADD_MONTHS(hire_date, 10 * 2)\n"
+          + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT DATE_ADD(hire_date, INTERVAL 10 * 2 MONTH)\n"
+          + "FROM foodmart.employee";
+    final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH,10 * 2, \"hire_date\")\n"
+          + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+      .withHive()
+      .ok(expectedHive)
+      .withBigQuery()
+      .ok(expectedBigQuery)
+      .withSpark()
+      .ok(expectedSpark)
+      .withSnowflake()
+      .ok(expectedSnowflakeQuery);
+  }
+
+  ///=====================
   @Test public void testDateSubIntervalMonthFunction() {
     String query = "select \"birth_date\" - INTERVAL -'1' MONTH from \"employee\"";
     final String expectedHive = "SELECT CAST(ADD_MONTHS(birth_date, -1) AS DATE)\n"
@@ -4231,16 +4316,16 @@ public class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL -1 MONTH)\n"
         + "FROM foodmart.employee";
     final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH, -1,\"birth_date\")\n"
-        + "FROM \"foodmart\".\"employee\"" ;
+        + "FROM \"foodmart\".\"employee\"";
     sql(query)
-        .withHive()
-        .ok(expectedHive)
-        .withBigQuery()
-        .ok(expectedBigQuery)
-        .withSpark()
-        .ok(expectedSpark)
-        .withSnowflake()
-        .ok(expectedSnowflakeQuery);
+      .withHive()
+      .ok(expectedHive)
+      .withBigQuery()
+      .ok(expectedBigQuery)
+      .withSpark()
+      .ok(expectedSpark)
+      .withSnowflake()
+      .ok(expectedSnowflakeQuery);
   }
 
   @Test public void testDatePlusIntervalMonthFunctionWithArthOps() {
@@ -4251,7 +4336,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL -10 MONTH)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflakeQuery ="SELECT DATEADD(MONTH,-10, \"birth_date\")\n"
+    final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH,-10, \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -4272,7 +4357,8 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id * 10 MONTH)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflakeQuery= "SELECT DATEADD(MONTH,\"store_id\" * 10, \"birth_date\")\n"
+    final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH,\"store_id\" * 10,"
+        + " \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -4293,7 +4379,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 * 2 MONTH)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflakeQuery="SELECT DATEADD(MONTH,10 * 2, \"birth_date\")\n"
+    final String expectedSnowflakeQuery = "SELECT DATEADD(MONTH,10 * 2, \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -4335,8 +4421,8 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL 1 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT DATEADD(DAY, 1,\"birth_date\")\n"
-        + " FROM \"foodmart\".\"employee\"";
+    final String expectedSnowflake = "SELECT DATEADD(DAY, -1,\"birth_date\")\n"
+        + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
         .ok(expectedHive)
@@ -4377,7 +4463,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_SUB(DATE '2018-01-01', INTERVAL 1 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT DATEADD(DAY, 1,DATE '2018-01-01')\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, -1,DATE '2018-01-01')\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -4419,7 +4505,7 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL 2 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT DATEADD(DAY, 2,\"birth_date\")\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, -2,\"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -4483,7 +4569,7 @@ public class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 DAY)\n"
         + "FROM foodmart.employee";
     final String expectedSnowflake = "SELECT DATEADD(DAY,10, \"birth_date\")\n"
-      + "FROM \"foodmart\".\"employee\"";
+        + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
         .ok(expectedHive)
