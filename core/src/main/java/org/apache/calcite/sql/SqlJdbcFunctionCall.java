@@ -343,6 +343,14 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * <td>value if expression is null; expression if expression is not null</td>
  * </tr>
  * <tr>
+ * <td>FORMAT(format, value)</td>
+ * <td>format the value</td>
+ * </tr>
+ * <tr>
+ * <td>TO_VARCHAR(value, format)</td>
+ * <td>format the value</td>
+ * </tr>
+ * <tr>
  * <td>USER()</td>
  * <td>User name in the DBMS
  *
@@ -358,6 +366,14 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * types: BIGINT, BINARY, BIT, CHAR, DATE, DECIMAL, DOUBLE, FLOAT, INTEGER,
  * LONGVARBINARY, LONGVARCHAR, REAL, SMALLINT, TIME, TIMESTAMP, TINYINT,
  * VARBINARY, or VARCHAR</td>
+ * </tr>
+ * <tr>
+ * <td>LPAD(value, paddingLength, pattern[optional])</td>
+ * <td>Append padding of pattern to the beginning of the value</td>
+ * </tr>
+ * <tr>
+ * <td>RPAD(value, paddingLength, pattern[optional])</td>
+ * <td>Append padding of pattern to the end of the value</td>
  * </tr>
  * </table>
  */
@@ -737,7 +753,6 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       map.put("TIMESTAMPDIFF", simple(SqlStdOperatorTable.TIMESTAMP_DIFF));
       map.put("TO_DATE", simple(SqlLibraryOperators.TO_DATE));
       map.put("TO_TIMESTAMP", simple(SqlLibraryOperators.TO_TIMESTAMP));
-
       map.put("DATABASE", simple(SqlStdOperatorTable.CURRENT_CATALOG));
       map.put("IFNULL",
           new SimpleMakeCall(SqlStdOperatorTable.COALESCE) {
@@ -747,6 +762,8 @@ public class SqlJdbcFunctionCall extends SqlFunction {
               return super.createCall(pos, operands);
             }
           });
+      map.put("FORMAT", simple(SqlLibraryOperators.FORMAT));
+      map.put("TO_VARCHAR", simple(SqlLibraryOperators.TO_VARCHAR));
       map.put("USER", simple(SqlStdOperatorTable.CURRENT_USER));
       map.put("CONVERT",
           new SimpleMakeCall(SqlStdOperatorTable.CAST) {
@@ -762,6 +779,8 @@ public class SqlJdbcFunctionCall extends SqlFunction {
               return super.createCall(pos, operands[0], jdbcType.createDataType(typeOperand.pos));
             }
           });
+      map.put("LPAD", simple(SqlLibraryOperators.LPAD));
+      map.put("RPAD", simple(SqlLibraryOperators.RPAD));
       this.map = map.build();
     }
 
