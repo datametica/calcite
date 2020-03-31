@@ -689,7 +689,6 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   public Result visit(TableFunctionScan e) {
-    List<RelDataTypeField> fieldList = e.getRowType().getFieldList();
     final List<SqlNode> inputSqlNodes = new ArrayList<>();
     final int inputSize = e.getInputs().size();
     for (int i = 0; i < inputSize; i++) {
@@ -708,12 +707,9 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNode select = new SqlSelect(
             SqlParserPos.ZERO, null, null, tableCall,
             null, null, null, null, null, null, null);
-    Map<String, RelDataType> aliasesMap = new HashMap<>();
-    RelDataTypeField relDataTypeField = fieldList.get(0);
-    aliasesMap.put(relDataTypeField.getName(), e.getRowType());
     Result x = new Result(select,
             ImmutableList.of(Clause.SELECT),
-            relDataTypeField.getName(), e.getRowType(), aliasesMap);
+            null, e.getRowType(), null);
     return x;
   }
 
