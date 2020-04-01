@@ -366,7 +366,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     case COLLECTION_TABLE:
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       SqlCollectionTableOperator operator = (SqlCollectionTableOperator) call.getOperator();
-      if (call.operandCount() > 1 && operator.getAliasName() != null) {
+      if (call.operandCount() == 1 && operator.getAliasName() != null) {
         writer.sep("as " + operator.getAliasName());
       }
       break;
