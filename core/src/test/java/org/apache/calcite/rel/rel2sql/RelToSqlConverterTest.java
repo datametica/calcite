@@ -850,7 +850,7 @@ public class RelToSqlConverterTest {
     RelNode root = builder.functionScan(SqlStdOperatorTable.UNNEST, 0,
             builder.literal(Arrays.asList(array))).project(builder.field(0)).build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
-    final String expectedSql = "SELECT *\nFROM UNNEST(ARRAY['abc', 'bcd', 'fdc'])\nAS EXPR$0";
+    final String expectedSql = "SELECT *\nFROM UNNEST(ARRAY['abc', 'bcd', 'fdc'])";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
 
