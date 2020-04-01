@@ -88,7 +88,8 @@ public class FormatFunctionUtil {
     SqlNode[] sqlNode;
     if (call.operand(0).toString().contains(".")) {
       modifiedOperand = call.operand(0).toString()
-          .replaceAll("%|f|'", "");
+          .replaceAll("%|'", "")
+          .replaceAll("(?i)[a-z]", "");
       String[] modifiedOperandArry = modifiedOperand.split("\\.");
       int patternRepeatNumber = Integer.valueOf(modifiedOperandArry[0]) - 1;
       if (Integer.valueOf(modifiedOperandArry[1]) != 0) {
