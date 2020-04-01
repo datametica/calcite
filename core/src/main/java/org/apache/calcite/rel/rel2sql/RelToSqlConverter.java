@@ -68,16 +68,13 @@ import org.apache.calcite.sql.SqlMatchRecognize;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
-import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
-import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
 import org.apache.calcite.sql.fun.SqlRowOperator;
 import org.apache.calcite.sql.fun.SqlSingleValueAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
@@ -698,9 +695,9 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNode callNode = context.toSql(null, e.getCall());
     // Convert to table function call, "TABLE($function_name(xxx))"
     SqlNode tableCall = new SqlBasicCall(
-      SqlStdOperatorTable.COLLECTION_TABLE,
-      new SqlNode[]{callNode},
-      SqlParserPos.ZERO);
+          SqlStdOperatorTable.COLLECTION_TABLE,
+          new SqlNode[]{callNode},
+          SqlParserPos.ZERO);
     SqlNode select = new SqlSelect(
             SqlParserPos.ZERO, null, null, tableCall,
             null, null, null, null, null, null, null);
