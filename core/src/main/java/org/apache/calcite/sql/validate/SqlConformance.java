@@ -395,6 +395,13 @@ public interface SqlConformance {
    * false otherwise.
    */
   boolean allowExtendedTrim();
+
+  /**
+   * Returns whether the dialect supports nested analytical functions in over() clause,
+   * for instance <br>
+   * {@code SELECT LAG(emp_id) OVER( ORDER BY ROW_NUMBER() OVER() ) FROM employee }.
+   */
+  boolean allowAnalyticalFunctionInOverClause();
 }
 
 // End SqlConformance.java
