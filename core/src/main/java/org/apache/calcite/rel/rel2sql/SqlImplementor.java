@@ -102,6 +102,9 @@ import java.util.Set;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import javax.annotation.Nonnull;
 
 /**
  * State for generating a SQL statement.
@@ -1275,6 +1278,69 @@ public abstract class SqlImplementor {
       }
       return new Builder(rel, clauseList, select, newContext,
           needNew ? null : aliases);
+    }
+
+    private boolean hasAnalyticalFunctionInOverClause(Project rel) {
+      if (!(node instanceof SqlSelect)) {
+        return false;
+      }
+      final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
+      if (selectList == null) {
+        return false;
+      }
+      RexOverVisitor visitor = new RexOverVisitor();
+      Set<Integer> ordinals = rel.getProjects().stream()
+          .flatMap(rex -> visitor.getInputRefOrdinals(rex).stream())
+          .collect(Collectors.toSet());
+      AnalyticalFunctionChecker functionChecker = new AnalyticalFunctionChecker();
+      List<SqlNode> sqlNodes = selectList.getList();
+      List<Integer> inputOrdinals = IntStream.range(0, sqlNodes.size())
+          .filter(index -> Boolean.TRUE.equals(sqlNodes.get(index).accept(functionChecker)))
+          .boxed()
+          .collect(Collectors.toList());
+      inputOrdinals.retainAll(ordinals);
+      return inputOrdinals.size() > 0;
+    }
+
+    /**
+     * Visitor for checking whether a given {@link SqlCall} has {@link SqlOverOperator}.
+     */
+    class AnalyticalFunctionChecker extends SqlBasicVisitor<Boolean> {
+      @Override public Boolean visit(SqlCall call) {
+        if (call.getOperator() instanceof SqlOverOperator) {
+          return true;
+        }
+        return call.getOperandList().stream()
+            .map(node -> Boolean.TRUE.equals(node.accept(this)))
+            .findFirst()
+            .orElse(false);
+      }
+    }
+
+    /**
+     * RexVisitor for tracking ordinals of all {@link RexInputRef} present in a {@link RexOver}.
+     */
+    class RexOverVisitor extends org.apache.calcite.rex.RexVisitorImpl<Object> {
+      private List<Integer> inputRefOrdinals = new ArrayList<>();
+
+      RexOverVisitor() {
+        super(true);
+      }
+
+      @Override public Object visitOver(RexOver over) {
+        inputRefOrdinals.addAll(over.getWindow().orderKeys.stream()
+            .map(key -> key.left)
+            .filter(field -> field instanceof RexInputRef)
+            .map(field -> ((RexInputRef) field).getIndex())
+            .collect(Collectors.toSet()));
+        return over;
+      }
+
+      List<Integer> getInputRefOrdinals(RexNode rex) {
+        inputRefOrdinals.clear();
+        rex.accept(this);
+        return inputRefOrdinals;
+      }
     }
 
     private boolean hasAnalyticalFunctionInAggregate(Aggregate rel) {

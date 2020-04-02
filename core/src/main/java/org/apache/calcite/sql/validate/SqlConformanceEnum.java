@@ -316,6 +316,9 @@ public enum SqlConformanceEnum implements SqlConformance {
     }
   }
 
+  @Override public boolean allowAnalyticalFunctionInOverClause() {
+    return this != SqlConformanceEnum.BIG_QUERY;
+  }
 }
 
 // End SqlConformanceEnum.java

@@ -146,8 +146,6 @@ public class SqlDialect {
   private static final List<Character> DATE_FORMAT_SEPARATORS = new ArrayList<Character>() {{
       add('-');
       add('/');
-      add('B');
-      add('b');
       add(',');
       add('.');
       add(':');
@@ -972,7 +970,6 @@ public class SqlDialect {
   public boolean supportsAnalyticalFunctionInAggregate() {
     return true;
   }
-
 
   public boolean supportsAnalyticalFunctionInGroupBy() {
     return true;
