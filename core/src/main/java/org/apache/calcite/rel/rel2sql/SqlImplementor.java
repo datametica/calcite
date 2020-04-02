@@ -1355,6 +1355,10 @@ public abstract class SqlImplementor {
             .filter(field -> field instanceof RexInputRef)
             .map(field -> ((RexInputRef)field).getIndex())
             .collect(Collectors.toSet()));
+        inputRefOrdinals.addAll(over.getWindow().partitionKeys.stream()
+            .filter(field -> field instanceof RexInputRef)
+            .map(field -> ((RexInputRef)field).getIndex())
+            .collect(Collectors.toSet()));
         return over;
       }
 
