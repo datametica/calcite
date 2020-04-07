@@ -83,6 +83,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEZONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOUR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
+import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIME;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
@@ -129,34 +130,36 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private static final Map<SqlDateTimeFormat, String> DATE_TIME_FORMAT_MAP =
       new HashMap<SqlDateTimeFormat, String>() {{
-        put(DAYOFMONTH, "%d");
-        put(DAYOFYEAR, "%j");
-        put(NUMERICMONTH, "%m");
-        put(ABBREVIATEDMONTH, "%b");
-        put(MONTHNAME, "%B");
-        put(TWODIGITYEAR, "%y");
-        put(FOURDIGITYEAR, "%Y");
-        put(DDMMYYYY, "%d%m%Y");
-        put(DDMMYY, "%d%m%y");
-        put(MMDDYYYY, "%m%d%Y");
-        put(MMDDYY, "%m%d%y");
-        put(YYYYMMDD, "%Y%m%d");
-        put(YYMMDD, "%y%m%d");
-        put(DAYOFWEEK, "%A");
-        put(ABBREVIATEDDAYOFWEEK, "%a");
-        put(TWENTYFOURHOUR, "%H");
-        put(HOUR, "%I");
-        put(MINUTE, "%M");
-        put(SECOND, "%S");
-        put(FRACTIONONE, "1S");
-        put(FRACTIONTWO, "2S");
-        put(FRACTIONTHREE, "3S");
-        put(FRACTIONFOUR, "4S");
-        put(FRACTIONFIVE, "5S");
-        put(FRACTIONSIX, "6S");
-        put(AMPM, "%p");
-        put(TIMEZONE, "%Z");
-      }};
+      put(DAYOFMONTH, "%d");
+      put(DAYOFYEAR, "%j");
+      put(NUMERICMONTH, "%m");
+      put(ABBREVIATEDMONTH, "%b");
+      put(MONTHNAME, "%B");
+      put(TWODIGITYEAR, "%y");
+      put(FOURDIGITYEAR, "%Y");
+      put(DDMMYYYY, "%d%m%Y");
+      put(DDMMYY, "%d%m%y");
+      put(MMDDYYYY, "%m%d%Y");
+      put(MMDDYY, "%m%d%y");
+      put(YYYYMMDD, "%Y%m%d");
+      put(YYYYMMDD, "%Y%m%d");
+      put(YYMMDD, "%y%m%d");
+      put(DAYOFWEEK, "%A");
+      put(ABBREVIATEDDAYOFWEEK, "%a");
+      put(TWENTYFOURHOUR, "%H");
+      put(HOUR, "%I");
+      put(MINUTE, "%M");
+      put(SECOND, "%S");
+      put(FRACTIONONE, "1S");
+      put(FRACTIONTWO, "2S");
+      put(FRACTIONTHREE, "3S");
+      put(FRACTIONFOUR, "4S");
+      put(FRACTIONFIVE, "5S");
+      put(FRACTIONSIX, "6S");
+      put(AMPM, "%p");
+      put(TIMEZONE, "%Z");
+      put(YYYYMM, "%Y%m");
+    }};
 
   /** An unquoted BigQuery identifier must start with a letter and be followed
    * by zero or more letters, digits or _. */
