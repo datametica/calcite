@@ -566,7 +566,7 @@ public abstract class SqlImplementor {
           return SqlLiteral.createDate(literal.getValueAs(DateString.class),
               POS);
         case TIME:
-          return SqlLiteral.createTime(literal.getValueAs(TimeString.class),
+          return dialect.getTimeLiteral(literal.getValueAs(TimeString.class),
               literal.getType().getPrecision(), POS);
         case TIMESTAMP:
           return SqlLiteral.createTimestamp(
@@ -659,7 +659,18 @@ public abstract class SqlImplementor {
         default:
           return SqlStdOperatorTable.NOT.createCall(POS, node);
         }
-
+      case IS_NOT_TRUE:
+      case IS_TRUE:
+        if (!dialect.getConformance().allowIsTrue()) {
+          operand = ((RexCall) rex).operands.get(0);
+          final SqlNode nodes = toSql(program, operand);
+          SqlOperator op = dialect.getTargetFunc((RexCall) rex);
+          return op
+              .createCall(POS, ((SqlCall) nodes).getOperandList());
+        } else {
+          List<SqlNode> nodes = toSql(program, ((RexCall) rex).getOperands());
+          return ((RexCall) rex).getOperator().createCall(new SqlNodeList(nodes, POS));
+        }
       default:
         if (rex instanceof RexOver) {
           return toSql(program, (RexOver) rex);
@@ -674,16 +685,25 @@ public abstract class SqlImplementor {
         final List<SqlNode> nodeList = toSql(program, call.getOperands());
         switch (call.getKind()) {
         case CAST:
+          // CURSOR is used inside CAST, like 'CAST ($0): CURSOR NOT NULL',
+          // convert it to sql call of {@link SqlStdOperatorTable#CURSOR}.
+          RelDataType dataType = rex.getType();
+          if (dataType.getSqlTypeName() == SqlTypeName.CURSOR) {
+            RexNode operand0 = ((RexCall) rex).operands.get(0);
+            assert operand0 instanceof RexInputRef;
+            int ordinal = ((RexInputRef) operand0).getIndex();
+            SqlNode fieldOperand = field(ordinal);
+            return SqlStdOperatorTable.CURSOR.createCall(SqlParserPos.ZERO, fieldOperand);
+          }
+          assert nodeList.size() == 1;
           if (ignoreCast) {
-            assert nodeList.size() == 1;
             return nodeList.get(0);
           } else {
-            nodeList.add(dialect.getCastSpec(call.getType()));
+            RelDataType castFrom = call.operands.get(0).getType();
+            RelDataType castTo = call.getType();
+            return dialect.getCastCall(nodeList.get(0), castFrom, castTo);
           }
-          break;
         case PLUS:
-          op = dialect.getTargetFunc(call);
-          break;
         case MINUS:
           op = dialect.getTargetFunc(call);
           break;
@@ -991,6 +1011,29 @@ public abstract class SqlImplementor {
 
   public Context matchRecognizeContext(Context context) {
     return new MatchRecognizeContext(dialect, ((AliasContext) context).aliases);
+  }
+
+  public Context tableFunctionScanContext(List<SqlNode> inputSqlNodes) {
+    return new TableFunctionScanContext(dialect, inputSqlNodes);
+  }
+
+  /** Context for translating call of a TableFunctionScan from {@link RexNode} to
+   * {@link SqlNode}. */
+  class TableFunctionScanContext extends BaseContext {
+    private final List<SqlNode> inputSqlNodes;
+
+    TableFunctionScanContext(SqlDialect dialect, List<SqlNode> inputSqlNodes) {
+      super(dialect, inputSqlNodes.size());
+      this.inputSqlNodes = inputSqlNodes;
+    }
+
+    @Override public SqlNode field(int ordinal) {
+      return inputSqlNodes.get(ordinal);
+    }
+
+    public SqlNode field(int ordinal, boolean useAlias) {
+      throw new IllegalStateException("Shouldn't be here");
+    }
   }
 
   /**
