@@ -6030,6 +6030,50 @@ public class RelToSqlConverterTest {
             + "GROUP BY \"employee_id\", \"full_name\")), 'NAME'))";
     sql(query).ok(expected);
   }
+
+
+  @Test public void testCoorelatedQuery() {
+    final String query = "SELECT \"birth_date\"\n"
+        + "FROM \"foodmart\".\"employee\"\n"
+        + "intersect\n"
+        + "select\n"
+        + "T1.\"birth_date\"\n"
+        + "FROM \"foodmart\".\"employee\" T1\n"
+        + "WHERE NOT EXISTS ( SELECT '1' FROM \"foodmart\".\"department\" D\n"
+        + "WHERE T1.\"department_id\"=D.\"department_id\" )";
+        //+ "WHERE T1.\"department_id\"=1";
+
+    final String expected = "SELECT \"birth_date\"\n"
+        + "FROM \"foodmart\".\"employee\"\n"
+        + "INTERSECT\n"
+        + "SELECT \"birth_date\"\n"
+        + "FROM (SELECT *\n"
+        + "FROM \"foodmart\".\"employee\" AS \"employee0\"\n"
+        + "WHERE NOT EXISTS (SELECT *\n"
+        + "FROM \"foodmart\".\"department\"\n"
+        + "WHERE \"employee0\".\"department_id\" = \"department_id\")) AS \"t1\"";
+    //sql(query).ok(expected);
+    sql(query).config(NO_EXPAND_CONFIG).ok(expected);
+  }
+
+  @Test public void testCoorelatedQueryPure() {
+    final String query = "select\n"
+        + "T1.\"birth_date\"\n"
+        + "FROM \"foodmart\".\"employee\" T1\n"
+        + "WHERE NOT EXISTS ( SELECT '1' FROM \"foodmart\".\"department\" D\n"
+        + "WHERE T1.\"department_id\"=D.\"department_id\" )";
+
+    final String expected = "SELECT *\n"
+        + "FROM TABLE(DEDUP(CURSOR ((SELECT \"product_id\", \"product_name\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "WHERE \"net_weight\" > 100 AND \"product_name\" = 'Hello World')), "
+        + "CURSOR ((SELECT \"employee_id\", \"full_name\"\n"
+        + "FROM \"foodmart\".\"employee\"\n"
+        + "GROUP BY \"employee_id\", \"full_name\")), 'NAME'))";
+    sql(query).
+        withBigQuery().ok(expected);
+  }
+
 }
 
 // End RelToSqlConverterTest.java
