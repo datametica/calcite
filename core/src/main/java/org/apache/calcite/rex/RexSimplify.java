@@ -834,7 +834,8 @@ public class RexSimplify {
           && operandSet.add(operand)) {
         operands.add(operand);
       }
-      if (!operand.getType().isNullable() && operand.getKind() == SqlKind.LITERAL) {
+      if ((!operand.getType().isNullable() && operand.getKind() == SqlKind.LITERAL)
+              || (!operand.getType().isNullable() && operand instanceof RexInputRef)) {
         break;
       }
     }
