@@ -6041,23 +6041,7 @@ public class RelToSqlConverterTest {
         .withBigQuery()
         .ok(bigQueryExpected);
   }
-  @Test public void testCoalsece() {
-    final String query = "select coalesce(cast(\"product_id\" as VARCHAR(10)),\"brand_name\") \n"
-            + "from \"product\"";
-    final String expectedHive = "SELECT COALESCE(CAST(product_id AS VARCHAR(10)), brand_name)\n"
-            + "FROM foodmart.product";
-    final String expectedSpark = "SELECT COALESCE(CAST(product_id AS VARCHAR(10)), brand_name)\n"
-            + "FROM foodmart.product";
-    final String bigQueryExpected = "SELECT COALESCE(CAST(product_id AS VARCHAR(10)), brand_name)\n"
-            + "FROM foodmart.product";
-    sql(query)
-            .withHive()
-            .ok(expectedHive)
-            .withSpark()
-            .ok(expectedSpark)
-            .withBigQuery()
-            .ok(bigQueryExpected);
-  }
+
 
   @Test public void testCoalseceWithCast() {
     final String query = "Select coalesce(cast('2099-12-31 00:00:00.123' as TIMESTAMP),\n"
