@@ -105,6 +105,13 @@ public class SnowflakeSqlDialect extends SqlDialect {
       SqlCall sqlCall = ffu.fetchSqlCallForFormat(call);
       super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
+    case DIVIDE_INTEGER:
+      final SqlWriter.Frame castFrame = writer.startFunCall("CAST");
+      unparseDivideInteger(writer, call, leftPrec, rightPrec);
+      writer.sep("AS");
+      writer.literal("BIGINT");
+      writer.endFunCall(castFrame);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
