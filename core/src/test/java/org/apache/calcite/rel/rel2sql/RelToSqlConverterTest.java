@@ -5501,6 +5501,16 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
   }
 
+  @Test public void testNullIfZeroFunction() {
+    final String query = "SELECT NULLIF(\"first_name\", 0) AS \"NI\""
+        + " FROM \"foodmart\".\"employee\"";
+    final String bigQueryExpected = "SELECT CASE WHEN CAST(first_name AS INTEGER) = 0 THEN NULL ELSE first_name END AS NI\n"
+        + " FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(bigQueryExpected);
+  }
+
   @Test public void testCurrentUser() {
     String query = "select CURRENT_USER";
     final String expectedSql = "SELECT CURRENT_USER() CURRENT_USER";
