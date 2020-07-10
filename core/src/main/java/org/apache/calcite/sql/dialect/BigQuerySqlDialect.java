@@ -23,10 +23,8 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIntervalLiteral;
@@ -97,8 +95,6 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.*;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.*;
 
 
 /**
@@ -410,36 +406,6 @@ public class BigQuerySqlDialect extends SqlDialect {
         throw new RuntimeException("Table function must have alias in Big Query");
       }
       writer.sep("as " + operator.getAliasName());
-      break;
-    case NULLIF:
-      unparseNullIf(writer, call, leftPrec, rightPrec);
-      break;
-    default:
-      super.unparseCall(writer, call, leftPrec, rightPrec);
-    }
-  }
-
-  private void unparseNullIf(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    SqlBasicTypeNameSpec dataType = new SqlBasicTypeNameSpec(SqlTypeName.FLOAT, SqlParserPos.ZERO);
-    SqlNode dataTypeNode = new SqlDataTypeSpec(dataType, SqlParserPos.ZERO);
-    SqlNode[] operands = new SqlNode[]{call.operand(0), dataTypeNode};
-    SqlCall castCall = new SqlBasicCall(CAST, operands, SqlParserPos.ZERO);
-    NULLIF.unparse(writer, castCall, leftPrec, rightPrec);
-  }
-
-  private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    switch (call.getOperator().getName()) {
-    case "CURRENT_TIMESTAMP":
-      if (((SqlBasicCall) call).getOperands().length > 0) {
-        unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
-      } else {
-        super.unparseCall(writer, call, leftPrec, rightPrec);
-      }
-      break;
-    case "CURRENT_USER":
-    case "SESSION_USER":
-      final SqlWriter.Frame sessionUserFunc = writer.startFunCall(SESSION_USER.getName());
-      writer.endFunCall(sessionUserFunc);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
