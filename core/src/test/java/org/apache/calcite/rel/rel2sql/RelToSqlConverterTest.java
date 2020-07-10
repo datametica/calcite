@@ -5765,6 +5765,32 @@ public class RelToSqlConverterTest {
         .ok(expectedBigQuery);
   }
 
+  @Test public void testGroupByOrdinal() {
+    String query = "SELECT \"first_name\", COUNT(\"salary\"), \"department_id\","
+        + "MAX(\"employee_id\") OVER(PARTITION BY \"first_name\") as id, "
+        + "TRIM(\"last_name\") as l_name, 4 as literal, 'xyz', COALESCE(\"hire_date\")"
+        + "FROM \"foodmart\".\"employee\""
+        + "GROUP BY \"salary\", \"employee_id\", \"first_name\", \"department_id\", \"last_name\", "
+        + "\"hire_date\"";
+    final String expectedHive = "SELECT first_name, COUNT(*), department_id, MAX(employee_id) "
+        + "OVER (PARTITION BY first_name RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)"
+        + " ID, TRIM(last_name) L_NAME, 4 LITERAL, 'xyz', hire_date\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY salary, employee_id, first_name, department_id, last_name, hire_date";
+    final String expectedBigQuery = "SELECT first_name, COUNT(*), department_id, MAX(employee_id) "
+        + "OVER (PARTITION BY first_name RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)"
+        + " AS ID, TRIM(last_name) AS L_NAME, 4 AS LITERAL, 'xyz', hire_date\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY 1, 3, 5, 6, 7, 8";
+    sql(query)
+        .withHive()
+        .ok(expectedHive)
+        .withSpark()
+        .ok(expectedHive)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
   @Test public void testFormatDateRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode formatDateRexNode = builder.call(SqlLibraryOperators.FORMAT_DATE,

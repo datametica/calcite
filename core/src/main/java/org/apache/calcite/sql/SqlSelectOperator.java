@@ -23,7 +23,6 @@ import org.apache.calcite.sql.util.SqlVisitor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * An operator describing a query. (Not a query itself.)
@@ -216,42 +215,15 @@ public class SqlSelectOperator extends SqlOperator {
         writer.endList(frame);
       } else {
         if (writer.getDialect().getConformance().isGroupByOrdinal()) {
-          List<SqlNode> visitedLiteralNodeList = new ArrayList<>();
-          for (SqlNode groupKey : select.groupBy.getList()) {
-            if (!groupKey.toString().equalsIgnoreCase("NULL")) {
-              if (groupKey.getKind() == SqlKind.LITERAL
-                  || groupKey.getKind() == SqlKind.DYNAMIC_PARAM
-                  || groupKey.getKind() == SqlKind.MINUS_PREFIX) {
-                select.selectList.getList().
-                    forEach(new Consumer<SqlNode>() {
-                      @Override public void accept(SqlNode selectSqlNode) {
-                        SqlNode literalNode = selectSqlNode;
-                        if (literalNode.getKind() == SqlKind.AS) {
-                          literalNode = ((SqlBasicCall) selectSqlNode).getOperandList().get(0);
-                          if (SqlKind.CAST == literalNode.getKind()) {
-                            literalNode = ((SqlBasicCall) literalNode).getOperandList().get(0);
-                          }
-                        }
-                        if (SqlKind.CAST == literalNode.getKind()) {
-                          literalNode = ((SqlBasicCall) literalNode).getOperandList().get(0);
-                        }
-                        if (literalNode == groupKey
-                            && !visitedLiteralNodeList.contains(literalNode)) {
-                          writer.sep(",");
-                          String ordinal = String.valueOf(
-                              select.selectList.getList().indexOf(selectSqlNode) + 1);
-                          SqlLiteral.createExactNumeric(ordinal,
-                              SqlParserPos.ZERO).unparse(writer, 2, 3);
-                          visitedLiteralNodeList.add(literalNode);
-                        }
-                      }
-                    });
-              } else {
-                writer.sep(",");
-                groupKey.unparse(writer, 2, 3);
-              }
+          select.selectList.getList().forEach(node -> {
+            if (!hasAggregateOrAnalyticalFunction(node)) {
+              writer.sep(",");
+              String ordinal = String.valueOf(
+                  select.selectList.getList().indexOf(node) + 1);
+              SqlLiteral.createExactNumeric(ordinal,
+                  SqlParserPos.ZERO).unparse(writer, 2, 3);
             }
-          }
+          });
         } else {
           unparseListClause(writer, select.groupBy);
         }
@@ -281,6 +253,26 @@ public class SqlSelectOperator extends SqlOperator {
     }
     writer.fetchOffset(select.fetch, select.offset);
     writer.endList(selectFrame);
+  }
+
+  private boolean hasAggregateOrAnalyticalFunction(SqlNode node) {
+    if (node.getKind() == SqlKind.LITERAL
+        || node.getKind() == SqlKind.DYNAMIC_PARAM
+        || node.getKind() == SqlKind.MINUS) {
+      return false;
+    }
+    if (node instanceof SqlBasicCall) {
+      SqlBasicCall call = (SqlBasicCall) node;
+      if (call.getOperator() instanceof SqlAsOperator) {
+        if (call.operand(0) instanceof SqlBasicCall) {
+          call = call.operand(0);
+        }
+      }
+      if (call.getOperator() instanceof SqlAggFunction) {
+        return true;
+      } else return call.getOperator() instanceof SqlOverOperator;
+    }
+    return false;
   }
 
   public boolean argumentMustBeScalar(int ordinal) {
