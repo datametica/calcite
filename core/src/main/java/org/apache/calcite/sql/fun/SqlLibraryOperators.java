@@ -606,8 +606,7 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIGQUERY})
-  public static final SqlFunction TIMESTAMP_TO_DATE =
-    new SqlFunction(
+  public static final SqlFunction TIMESTAMP_TO_DATE = new SqlFunction(
       "DATE",
       SqlKind.OTHER_FUNCTION,
       ReturnTypes.ARG0_NULLABLE,

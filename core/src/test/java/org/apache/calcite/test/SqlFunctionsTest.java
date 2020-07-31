@@ -52,11 +52,11 @@ import static org.apache.calcite.runtime.SqlFunctions.rtrim;
 import static org.apache.calcite.runtime.SqlFunctions.sha1;
 import static org.apache.calcite.runtime.SqlFunctions.substring;
 import static org.apache.calcite.runtime.SqlFunctions.subtractMonths;
+import static org.apache.calcite.runtime.SqlFunctions.timestampToDate;
 import static org.apache.calcite.runtime.SqlFunctions.toBase64;
 import static org.apache.calcite.runtime.SqlFunctions.toVarchar;
 import static org.apache.calcite.runtime.SqlFunctions.trim;
 import static org.apache.calcite.runtime.SqlFunctions.upper;
-import static org.apache.calcite.runtime.SqlFunctions.timestampToDate;
 import static org.apache.calcite.test.Matchers.within;
 
 import static org.hamcrest.CoreMatchers.equalTo;
