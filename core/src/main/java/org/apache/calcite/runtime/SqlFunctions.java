@@ -2881,8 +2881,13 @@ public class SqlFunctions {
   }
 
   /** Return date value from Timestamp */
-  public static java.sql.Date timestampToDate(String str) {
-    long timestamp = DateTimeUtils.timestampStringToUnixDate(str); //Example -> in ms
+  public static java.sql.Date timestampToDate(Object obj) {
+    long timestamp = 0;
+    if (obj instanceof String) {
+      timestamp = DateTimeUtils.timestampStringToUnixDate(obj.toString()); //Example -> in ms
+    } else if (obj instanceof Timestamp) {
+      timestamp = ((Timestamp) obj).getTime();
+    }
     return new java.sql.Date(timestamp);
   }
 }

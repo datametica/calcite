@@ -25,6 +25,7 @@ import org.apache.calcite.runtime.Utilities;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1005,7 +1006,7 @@ public class SqlFunctionsTest {
   /** Test for {@link SqlFunctions#timestampToDate}. */
   @Test public void testTimestampToDate() {
     assertThat(timestampToDate("2020-12-12 12:12:12").toString(), is("2020-12-12"));
-    assertThat(timestampToDate("2001-01-11 00:43:30").toString(), is("2001-01-11"));
+    assertThat(timestampToDate(new Timestamp(1607731932)).toString(), is("1970-01-19"));
   }
 }
 
