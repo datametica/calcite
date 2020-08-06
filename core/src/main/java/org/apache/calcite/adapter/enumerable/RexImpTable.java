@@ -275,6 +275,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_TO_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIME_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_BASE32;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_TO_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_BASE64;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_CHAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_CODE_POINTS;
