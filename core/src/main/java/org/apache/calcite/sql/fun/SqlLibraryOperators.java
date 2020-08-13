@@ -604,6 +604,15 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_2000_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction PARSE_TIME = new SqlFunction(
+      "PARSE_TIME",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.TIME,
+      null,
+      OperandTypes.STRING_STRING,
+      SqlFunctionCategory.TIMEDATE);
 }
 
 // End SqlLibraryOperators.java

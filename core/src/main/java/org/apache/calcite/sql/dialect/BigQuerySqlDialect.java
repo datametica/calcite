@@ -73,6 +73,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONSIX;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTHREE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTWO;
+import static org.apache.calcite.sql.SqlDateTimeFormat.HHNNSS;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
@@ -162,6 +163,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(TIMEZONE, "%Z");
         put(YYYYMM, "%Y%m");
         put(MMYY, "%m%y");
+        put(HHNNSS, "%H:%M:%E*S");
       }};
 
   /** An unquoted BigQuery identifier must start with a letter and be followed
@@ -660,6 +662,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "FORMAT_TIMESTAMP":
     case "FORMAT_TIME":
     case "FORMAT_DATE":
+    case "PARSE_TIME":
       SqlCall formatCall = call.getOperator().createCall(SqlParserPos.ZERO,
           creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()), call.operand(1));
       super.unparseCall(writer, formatCall, leftPrec, rightPrec);
