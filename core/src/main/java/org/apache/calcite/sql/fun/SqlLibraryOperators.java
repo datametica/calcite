@@ -606,13 +606,21 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIGQUERY})
-  public static final SqlFunction PARSE_TIME = new SqlFunction(
-      "PARSE_TIME",
+  public static final SqlFunction TIMESTAMP_TO_DATE = new SqlFunction(
+      "DATE",
       SqlKind.OTHER_FUNCTION,
-      ReturnTypes.TIME,
+      ReturnTypes.ARG0_NULLABLE,
       null,
-      OperandTypes.STRING_STRING,
+      OperandTypes.DATETIME,
       SqlFunctionCategory.TIMEDATE);
-}
 
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction PARSE_TIME = new SqlFunction(
+    "PARSE_TIME",
+    SqlKind.OTHER_FUNCTION,
+    ReturnTypes.TIME,
+    null,
+    OperandTypes.STRING_STRING,
+    SqlFunctionCategory.TIMEDATE);
+}
 // End SqlLibraryOperators.java
