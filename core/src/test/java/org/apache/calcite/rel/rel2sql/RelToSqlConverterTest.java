@@ -5872,6 +5872,27 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
   }
 
+  @Test
+  public void testStrToTimeRelToSql() {
+    final RelBuilder builder = relBuilder();
+    final RexNode strToDateNode1 = builder.call(SqlLibraryOperators.PARSE_TIME,
+        builder.literal("HHNNSS"), builder.literal("20:30:32"));
+    final RexNode strToDateNode2 = builder.call(SqlLibraryOperators.PARSE_TIME,
+        builder.literal("MI"), builder.literal("15"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(strToDateNode1, "date1"), builder.alias(strToDateNode2, "date2"))
+        .build();
+    final String expectedSql = "SELECT PARSE_TIME('HHNNSS', '20:30:32') AS \"date1\", "
+        + "PARSE_TIME('MI', '15') AS \"date2\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT PARSE_TIME('%H:%M:%E*S', '20:30:32') AS date1, "
+        + "PARSE_TIME('%M', '15') AS date2\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;

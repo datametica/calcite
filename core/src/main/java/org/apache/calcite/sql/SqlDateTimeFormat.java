@@ -53,7 +53,8 @@ public enum SqlDateTimeFormat {
   FRACTIONFIVE("S(5)"),
   FRACTIONSIX("S(6)"),
   AMPM("T"),
-  TIMEZONE("Z");
+  TIMEZONE("Z"),
+  HHNNSS("HHNNSS");
 
   public final String value;
 
