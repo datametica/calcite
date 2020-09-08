@@ -5872,6 +5872,17 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
   }
 
+  @Test
+  public void testTimestampSubIntervalMonthFunction() {
+    String query = "select \"hire_date\" - INTERVAL -'1' SECOND - INTERVAL '2' "
+            + "MINUTE - INTERVAL '4' HOUR from \"employee\"";
+    final String expectedBigQuery = "SELECT TIMESTAMP_SUB(TIMESTAMP_SUB(TIMESTAMP_SUB(hire_date, "
+            + "INTERVAL -1 SECOND), INTERVAL 2 MINUTE), INTERVAL 4 HOUR)\nFROM foodmart.employee";
+    sql(query)
+            .withBigQuery()
+            .ok(expectedBigQuery);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;
