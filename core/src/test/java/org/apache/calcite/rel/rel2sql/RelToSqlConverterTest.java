@@ -6163,6 +6163,13 @@ public class RelToSqlConverterTest {
             .ok(bigQueryExpected);
   }
 
+  @Test public void testLog10Function() {
+    final String query = "SELECT LOG10(2) as dd";
+    final String expectedSnowFlake = "SELECT LOG(2, 10) AS \"DD\"";
+    sql(query)
+            .withSnowflake()
+            .ok(expectedSnowFlake);
+  }
 }
 
 // End RelToSqlConverterTest.java

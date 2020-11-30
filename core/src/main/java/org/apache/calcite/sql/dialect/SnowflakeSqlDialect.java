@@ -18,20 +18,18 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlIntervalLiteral;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNumericLiteral;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.parser.CurrentTimestampHandler;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.FormatFunctionUtil;
 import org.apache.calcite.util.ToNumberUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
 
 /**
  * A <code>SqlDialect</code> implementation for the Snowflake database.
@@ -105,6 +103,9 @@ public class SnowflakeSqlDialect extends SqlDialect {
       SqlCall sqlCall = ffu.fetchSqlCallForFormat(call);
       super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
+      case OTHER_FUNCTION:
+        unparseOtherFunction(writer, call, leftPrec, rightPrec);
+        break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -221,6 +222,23 @@ public class SnowflakeSqlDialect extends SqlDialect {
     return intervalOperand.operand(0);
   }
 
+  private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.getOperator().getName()) {
+      case "LOG10":
+        if (Integer.parseInt(call.operand(0).toString()) != 1) {
+          final SqlWriter.Frame logFrame = writer.startFunCall("LOG");
+          call.operand(0).unparse(writer, leftPrec, rightPrec);
+          writer.print(",");
+          writer.print("10");
+          writer.endFunCall(logFrame);
+        } else {
+          writer.print(0);
+        }
+        break;
+      default:
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
 }
 
 // End SnowflakeSqlDialect.java
