@@ -105,9 +105,9 @@ public class SnowflakeSqlDialect extends SqlDialect {
       SqlCall sqlCall = ffu.fetchSqlCallForFormat(call);
       super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
-      case OTHER_FUNCTION:
-        unparseOtherFunction(writer, call, leftPrec, rightPrec);
-        break;
+    case OTHER_FUNCTION:
+      unparseOtherFunction(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -226,19 +226,19 @@ public class SnowflakeSqlDialect extends SqlDialect {
 
   private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperator().getName()) {
-      case "LOG10":
-        if (Integer.parseInt(call.operand(0).toString()) != 1) {
-          final SqlWriter.Frame logFrame = writer.startFunCall("LOG");
-          call.operand(0).unparse(writer, leftPrec, rightPrec);
-          writer.print(",");
-          writer.print("10");
-          writer.endFunCall(logFrame);
-        } else {
-          writer.print(0);
-        }
-        break;
-      default:
-        super.unparseCall(writer, call, leftPrec, rightPrec);
+    case "LOG10":
+      if (Integer.parseInt(call.operand(0).toString()) != 1) {
+        final SqlWriter.Frame logFrame = writer.startFunCall("LOG");
+        call.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.print(",");
+        writer.print("10");
+        writer.endFunCall(logFrame);
+      } else {
+        writer.print(0);
+      }
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 }
