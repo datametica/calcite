@@ -2407,11 +2407,12 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
-  public static final SqlFunction TIMESTAMP_TO_DATE = new SqlFunction(
-      "DATE",
+  public static final SqlFunction TIMESTAMP_TO_DATE =
+      new SqlFunction("DATE",
       SqlKind.OTHER_FUNCTION,
       ReturnTypes.ARG0_NULLABLE,
       null,
       OperandTypes.DATETIME,
       SqlFunctionCategory.TIMEDATE);
+
 }
