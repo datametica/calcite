@@ -335,4 +335,9 @@ public class SnowflakeSqlDialect extends SqlDialect {
   @Override public boolean supportsApproxCountDistinct() {
     return true;
   }
+
+  public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
+    return ((SqlBasicCall) aggCall).operand(0);
+  }
+
 }

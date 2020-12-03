@@ -3128,6 +3128,12 @@ class RelToSqlConverterTest {
         + "WHERE \"DEPTNO\" = 40))) AS \"SC_DEPTNO\", COUNT(1) AS \"pid\"\n"
         + "FROM \"scott\".\"EMP\"\n"
         + "GROUP BY \"EMPNO\"";
+    String expectedSnowflake = "SELECT \"EMPNO\", (((SELECT \"DEPTNO\"\n"+
+    "FROM \"scott\".\"DEPT\"\n" +
+    "WHERE \"DEPTNO\" = 40))) AS \"SC_DEPTNO\", COUNT(1) AS \"pid\"\n" +
+    "FROM \"scott\".\"EMP\"\n" +
+    "GROUP BY \"EMPNO\"";
+
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()),
         isLinux(expectedBigQuery));
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
