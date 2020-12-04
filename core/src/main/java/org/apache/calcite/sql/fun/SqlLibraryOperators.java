@@ -290,6 +290,21 @@ public abstract class SqlLibraryOperators {
     }
   };
 
+  @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
+  public static final SqlFunction TIMESTAMP_SUB =
+      new SqlFunction(
+          "TIMESTAMP_SUB",
+          SqlKind.MINUS,
+          ReturnTypes.ARG0_NULLABLE,
+          null,
+          OperandTypes.DATETIME,
+          SqlFunctionCategory.TIMEDATE) {
+
+    @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+      writer.getDialect().unparseIntervalOperandsBasedFunctions(
+          writer, call, leftPrec, rightPrec);
+    }
+  };
 
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction ADD_MONTHS =
