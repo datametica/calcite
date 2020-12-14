@@ -100,13 +100,32 @@ public class FormatFunctionUtil {
       modifiedOperand = call.operand(0).toString()
           .replaceAll("%|f|'", "");
       String[] modifiedOperandArry = modifiedOperand.split("\\.");
-      if (StringUtils.isNotBlank(modifiedOperandArry[0])) {
-        modifiedOperand = getModifiedOperandForDecimal(modifiedOperandForSF, modifiedOperandArry);
-      } else {
-        modifiedOperand = "TM9";
+      int patternRepeatNumber = Integer.valueOf(modifiedOperandArry[0]) - 1;
+      if (modifiedOperandArry[1].contains("E")) {
+        modifiedOperandArry[1] = modifiedOperandArry[1].replaceAll("E", "");
+        int secondValue = Integer.valueOf(modifiedOperandArry[1]);
+        int firstValue = Integer.valueOf(modifiedOperandArry[0]);
+        modifiedOperandForSF = StringUtils.repeat("0", firstValue) + "d"
+                + StringUtils.repeat("0", secondValue) + StringUtils.repeat("E", 5);
+      } else if (Integer.valueOf(modifiedOperandArry[1]) != 0) {
+        patternRepeatNumber = patternRepeatNumber - 1 - Integer.valueOf(modifiedOperandArry[1]);
+      }
+      modifiedOperand = StringUtils.repeat("9", patternRepeatNumber);
+      int decimalValue = Integer.valueOf(modifiedOperandArry[1]);
+      modifiedOperand += "." + StringUtils.repeat("0", decimalValue);
+      if (modifiedOperandForSF != null) {
+        modifiedOperand = modifiedOperandForSF;
       }
     } else if (call.operand(0).toString().contains("d")) {
-      modifiedOperand = getModifiedOperandForInteger(call);
+      modifiedOperand = call.operand(0).toString()
+              .replaceAll("[^0-9]", "");
+      String[] modifiedOperandArry = modifiedOperand.split(",");
+      int patternRepeatNumber = Integer.valueOf(modifiedOperandArry[0]);
+      if (modifiedOperand.charAt(0) == '0') {
+        modifiedOperand = "FM" + StringUtils.repeat("0", patternRepeatNumber);
+      } else {
+        modifiedOperand = StringUtils.repeat("9", patternRepeatNumber - 1);
+      }
     } else {
       int intValue = Integer.valueOf(call.operand(0).toString()
           .replaceAll("[^0-9]", ""));
