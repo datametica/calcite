@@ -81,13 +81,7 @@ public class FormatFunctionUtil {
     } else {
       int firstOperand = Integer.valueOf(call.operand(0).toString()
           .replaceAll("[^0-9]", "")) - 1;
-      String modifiedString = call.operand(0).toString()
-              .replaceAll("[^0-9]", "");
-      if (modifiedString.charAt(0) == '0') {
-        modifiedOperand = "FM" + StringUtils.repeat("0", firstOperand + 1);
-      } else {
-        modifiedOperand = StringUtils.repeat("9", firstOperand);
-      }
+      modifiedOperand = StringUtils.repeat("9", firstOperand);
     }
     sqlNode = new SqlNode[]{
         SqlLiteral.createExactNumeric(
@@ -108,11 +102,7 @@ public class FormatFunctionUtil {
       String[] modifiedOperandArry = modifiedOperand.split("\\.");
       int patternRepeatNumber = Integer.valueOf(modifiedOperandArry[0]) - 1;
       if (modifiedOperandArry[1].contains("E")) {
-        modifiedOperandArry[1] = modifiedOperandArry[1].replaceAll("E", "");
-        int secondValue = Integer.valueOf(modifiedOperandArry[1]);
-        int firstValue = Integer.valueOf(modifiedOperandArry[0]);
-        modifiedOperandForSF = StringUtils.repeat("0", firstValue) + "d"
-                + StringUtils.repeat("0", secondValue) + StringUtils.repeat("E", 5);
+        modifiedOperandForSF = getModifiedOperandForFloat(modifiedOperandArry);
       } else if (Integer.valueOf(modifiedOperandArry[1]) != 0) {
         patternRepeatNumber = patternRepeatNumber - 1 - Integer.valueOf(modifiedOperandArry[1]);
       }
@@ -123,15 +113,7 @@ public class FormatFunctionUtil {
         modifiedOperand = modifiedOperandForSF;
       }
     } else if (call.operand(0).toString().contains("d")) {
-      modifiedOperand = call.operand(0).toString()
-              .replaceAll("[^0-9]", "");
-      String[] modifiedOperandArry = modifiedOperand.split(",");
-      int patternRepeatNumber = Integer.valueOf(modifiedOperandArry[0]);
-      if (modifiedOperand.charAt(0) == '0') {
-        modifiedOperand = "FM" + StringUtils.repeat("0", patternRepeatNumber);
-      } else {
-        modifiedOperand = StringUtils.repeat("9", patternRepeatNumber - 1);
-      }
+      modifiedOperand = getModifiedOperandForInteger(call);
     } else {
       int intValue = Integer.valueOf(call.operand(0).toString()
           .replaceAll("[^0-9]", ""));
