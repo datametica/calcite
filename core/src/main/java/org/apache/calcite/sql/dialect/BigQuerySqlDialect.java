@@ -414,7 +414,6 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.keyword("OVER");
       call.operand(1).unparse(writer, leftPrec, rightPrec);
       break;
-    case CHARACTER_LENGTH:
     case CHAR_LENGTH:
     case CHARACTER_LENGTH:
       final SqlWriter.Frame lengthFrame = writer.startFunCall("LENGTH");

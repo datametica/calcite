@@ -9549,8 +9549,9 @@ class RelToSqlConverterTest {
 
   @Test public void testFormatTimestampRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode formatTimestampRexNode = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
-        builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"), builder.scan("EMP").field(4));
+    final RexNode formatTimestampRexNode =
+        builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP, builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"),
+                builder.scan("EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatTimestampRexNode, "FD"))
@@ -10145,15 +10146,6 @@ class RelToSqlConverterTest {
 //            .withSnowflake()
 //            .ok(snowFlakeExpected);
 //  }
-
-  @Test public void testLog10ForColumn() {
-    final String query = "SELECT LOG10(\"product_id\") as dd from \"product\"";
-    final String expectedSnowFlake = "SELECT LOG(10, \"product_id\") AS \"DD\"\n"
-                      + "FROM \"foodmart\".\"product\"";
-    sql(query)
-        .withSnowflake()
-        .ok(expectedSnowFlake);
-  }
 
   @Test public void testRoundFunctionWithColumnPlaceHandling() {
     final String query = "SELECT ROUND(123.41445, \"product_id\") AS \"a\"\n"

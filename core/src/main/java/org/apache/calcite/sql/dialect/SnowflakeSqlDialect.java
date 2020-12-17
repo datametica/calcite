@@ -20,8 +20,6 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIntervalLiteral;
@@ -33,11 +31,8 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
-import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.FormatFunctionUtil;
-import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.util.ToNumberUtils;
 
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
@@ -179,34 +174,6 @@ public class SnowflakeSqlDialect extends SqlDialect {
       SqlCall parseDateCall =
           TO_DATE.createCall(SqlParserPos.ZERO, call.operand(0), call.operand(1));
       unparseCall(writer, parseDateCall, leftPrec, rightPrec);
-      break;
-    case OTHER_FUNCTION:
-      unparseOtherFunction(writer, call, leftPrec, rightPrec);
-      break;
-    default:
-      super.unparseCall(writer, call, leftPrec, rightPrec);
-    }
-  }
-
-  private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    switch (call.getOperator().getName()) {
-    case "FORMAT_DATE":
-      final SqlWriter.Frame formatDate = writer.startFunCall("TO_VARCHAR");
-      call.operand(1).unparse(writer, leftPrec, rightPrec);
-      writer.print(",");
-      call.operand(0).unparse(writer, leftPrec, rightPrec);
-      writer.endFunCall(formatDate);
-      break;
-    case "LOG10":
-      if (call.operand(0) instanceof SqlLiteral && "1".equals(call.operand(0).toString())) {
-        writer.print(0);
-      } else {
-        final SqlWriter.Frame logFrame = writer.startFunCall("LOG");
-        writer.print("10");
-        writer.print(", ");
-        call.operand(0).unparse(writer, leftPrec, rightPrec);
-        writer.endFunCall(logFrame);
-      }
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
