@@ -107,6 +107,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_SECONDS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.FLOOR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MINUS;
@@ -875,6 +876,20 @@ public class BigQuerySqlDialect extends SqlDialect {
           PARSE_DATE.createCall(SqlParserPos.ZERO,
                   creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
       unparseCall(writer, parseDateCall, leftPrec, rightPrec);
+      break;
+    case "TO_TIMESTAMP":
+      if (call.getOperandList().size() == 1) {
+        SqlCall timestampSecondsCall = TIMESTAMP_SECONDS.createCall(SqlParserPos.ZERO,
+                call.operand(0));
+        unparseCall(writer, timestampSecondsCall, leftPrec, rightPrec);
+        break;
+      }
+      final SqlWriter.Frame toTimestampFunction = writer.startFunCall("PARSE_TIMESTAMP");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(toTimestampFunction);
       break;
     case "INSTR":
       final SqlWriter.Frame regexpInstr = writer.startFunCall("STRPOS");
