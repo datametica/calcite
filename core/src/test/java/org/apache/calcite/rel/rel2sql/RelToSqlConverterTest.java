@@ -8405,9 +8405,9 @@ class RelToSqlConverterTest {
         + "FROM foodmart.product) AS t\n"
         + "GROUP BY product_id, ABC";
     final String expectedSnowFlake = "SELECT \"product_id\", MAX(\"product_id\") "
-        +  "OVER(PARTITION BY \"product_id\") AS \"ABC\"\n"
+        +  "OVER (PARTITION BY \"product_id\") AS \"ABC\"\n"
         + "FROM \"foodmart\".\"product\"\n"
-        + "GROUP BY \"product_id\", MAX(\"product_id\") OVER(PARTITION BY \"product_id\")";
+        + "GROUP BY \"product_id\", MAX(\"product_id\") OVER (PARTITION BY \"product_id\")";
     sql(query)
         .withHive()
         .ok(expected)
@@ -8428,7 +8428,7 @@ class RelToSqlConverterTest {
     String expectedBQ = "SELECT COUNT(*) OVER (RANGE BETWEEN UNBOUNDED PRECEDING "
         + "AND UNBOUNDED FOLLOWING)\n"
         + "FROM foodmart.product";
-    final String expectedSnowFlake = "SELECT COUNT(*) OVER()\n"
+    final String expectedSnowFlake = "SELECT COUNT(*) OVER ()\n"
         + "FROM \"foodmart\".\"product\"";
     sql(query)
         .withHive()
