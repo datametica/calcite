@@ -1328,6 +1328,8 @@ public class SqlDialect {
       return SqlConformanceEnum.SQL_SERVER_2008;
     case HIVE:
       return SqlConformanceEnum.HIVE;
+    case SNOWFLAKE:
+      return SqlConformanceEnum.SNOWFLAKE;
     default:
       return SqlConformanceEnum.PRAGMATIC_2003;
     }
