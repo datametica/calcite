@@ -55,6 +55,7 @@ import static org.apache.calcite.runtime.SqlFunctions.initcap;
 import static org.apache.calcite.runtime.SqlFunctions.internalToDate;
 import static org.apache.calcite.runtime.SqlFunctions.internalToTime;
 import static org.apache.calcite.runtime.SqlFunctions.internalToTimestamp;
+import static org.apache.calcite.runtime.SqlFunctions.instr;
 import static org.apache.calcite.runtime.SqlFunctions.lesser;
 import static org.apache.calcite.runtime.SqlFunctions.lower;
 import static org.apache.calcite.runtime.SqlFunctions.lpad;
@@ -1739,6 +1740,11 @@ class SqlFunctionsTest {
   @Test void testToLongOptionalWithLocalTimeZone() {
     assertThat(toLongOptional(Timestamp.valueOf("1970-01-01 00:00:00")), is(0L));
     assertThat(toLongOptional(null), is(nullValue()));
+  }
+
+  @Test public void testInStr() {
+    assertThat(instr("Choose a chocolate chip cookie", "ch", 2, 2), is(20));
+    assertThat(instr("Choose a chocolate chip cookie", "cc", 2, 2), is(0));
   }
 
   /**
