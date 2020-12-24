@@ -1742,6 +1742,7 @@ class SqlFunctionsTest {
     assertThat(toLongOptional(null), is(nullValue()));
   }
 
+  /** Test for {@link SqlFunctions#instr}. */
   @Test public void testInStr() {
     assertThat(instr("Choose a chocolate chip cookie", "ch", 2, 2), is(20));
     assertThat(instr("Choose a chocolate chip cookie", "cc", 2, 2), is(0));
