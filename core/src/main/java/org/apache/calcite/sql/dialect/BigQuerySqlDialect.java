@@ -479,6 +479,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
     case OTHER_FUNCTION:
+    case OTHER:
       unparseOtherFunction(writer, call, leftPrec, rightPrec);
       break;
     case COLLECTION_TABLE:
@@ -885,6 +886,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "WEEKNUMBER_OF_MONTH":
     case "WEEKNUMBER_OF_CALENDAR":
     case "DAYOCCURRENCE_OF_MONTH":
+    case "DAYOFYEAR":
       DateTimestampFormatUtil dateTimestampFormatUtil = new DateTimestampFormatUtil();
       dateTimestampFormatUtil.unparseCall(writer, call, leftPrec, rightPrec);
       break;

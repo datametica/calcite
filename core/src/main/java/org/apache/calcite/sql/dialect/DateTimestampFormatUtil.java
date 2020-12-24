@@ -32,6 +32,8 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.DateString;
 
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.parser.SqlParserPos;
 
 /**
  * Support unparse logic for DateTimestamp function
@@ -63,11 +65,24 @@ public class DateTimestampFormatUtil {
       break;
     case "DAYOCCURRENCE_OF_MONTH":
       extractCall = handleDayOccurrenceMonth(call, DateTimeUnit.DAY);
+    case "DAYOFYEAR":
+      extractCall = unparseDayNumber(call);
       break;
     }
     if (null != extractCall) {
       extractCall.unparse(writer, leftPrec, rightPrec);
     }
+  }
+
+  /** returns day of the year for given date */
+  private SqlCall unparseDayNumber(SqlCall call) {
+    return SqlStdOperatorTable.EXTRACT.createCall(SqlParserPos.ZERO,
+            getDayOfYearLiteral(),
+            call.operand(0));
+  }
+
+  SqlLiteral getDayOfYearLiteral() {
+    return SqlLiteral.createSymbol(DateTimeUnit.DAYOFYEAR, SqlParserPos.ZERO);
   }
 
   private SqlCall handleDayOccurrenceMonth(SqlCall call, DateTimeUnit dateTimeUnit) {
@@ -109,10 +124,10 @@ public class DateTimestampFormatUtil {
    * Parse week number based on value.*/
   protected SqlCall unparseWeekNumber(SqlNode operand, DateTimeUnit dateTimeUnit) {
     SqlNode[] operands = new SqlNode[] {
-        SqlLiteral.createSymbol(dateTimeUnit, SqlParserPos.ZERO), operand
+      SqlLiteral.createSymbol(dateTimeUnit, SqlParserPos.ZERO), operand
     };
     return new SqlBasicCall(SqlStdOperatorTable.EXTRACT, operands,
-        SqlParserPos.ZERO);
+      SqlParserPos.ZERO);
   }
 
   private SqlCall unparseMonthNumberQuarter(SqlCall call, DateTimeUnit dateTimeUnit) {
