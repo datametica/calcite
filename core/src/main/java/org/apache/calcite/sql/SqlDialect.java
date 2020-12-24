@@ -151,7 +151,6 @@ public class SqlDialect {
       add('-');
       add('/');
       add(',');
-      add('.');
       add(':');
       add(' ');
     }};
