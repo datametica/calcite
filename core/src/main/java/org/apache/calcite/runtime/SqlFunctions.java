@@ -89,6 +89,8 @@ import java.text.Normalizer;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -6019,6 +6021,13 @@ public class SqlFunctions {
       pattern.append("d");
     }
     return String.format(Locale.ENGLISH, pattern.toString(), value);
+  }
+
+  public static Timestamp timestampSeconds(Long value) {
+    if (null == value) {
+      return null;
+    }
+    return new Timestamp(value);
   }
 
   public static Object weekNumberOfYear(Object value) {

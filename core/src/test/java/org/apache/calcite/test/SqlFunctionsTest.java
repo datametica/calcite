@@ -74,6 +74,8 @@ import static org.apache.calcite.runtime.SqlFunctions.sha1;
 import static org.apache.calcite.runtime.SqlFunctions.sha256;
 import static org.apache.calcite.runtime.SqlFunctions.sha512;
 import static org.apache.calcite.runtime.SqlFunctions.substring;
+import static org.apache.calcite.runtime.SqlFunctions.subtractMonths;
+import static org.apache.calcite.runtime.SqlFunctions.timestampSeconds;
 import static org.apache.calcite.runtime.SqlFunctions.timestampToDate;
 import static org.apache.calcite.runtime.SqlFunctions.toBase64;
 import static org.apache.calcite.runtime.SqlFunctions.toInt;
@@ -1901,6 +1903,13 @@ class SqlFunctionsTest {
     final long ts1 = timestampStringToUnixDate("1500-04-30 12:00:00.123");
     assertThat(f.toChar(ts1, pattern1),
         is("1500-04-30 12:00:00.123"));
+  }
+
+  /** Test for {@link SqlFunctions#timestampSeconds(Long)}. */
+  @Test public void testTimestampSeconds() {
+    assertThat(timestampSeconds(255590L).toString(), is("1970-01-01 05:34:15.59"));
+    assertThat(timestampSeconds(new Timestamp(1609137707583L).getTime()).toString(),
+            is("2020-12-28 12:11:47.583"));
   }
 
   /**
