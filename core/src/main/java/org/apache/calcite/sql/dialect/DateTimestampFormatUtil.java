@@ -46,6 +46,7 @@ public class DateTimestampFormatUtil {
   public static final String WEEKNUMBER_OF_MONTH = "WEEKNUMBER_OF_MONTH";
   public static final String WEEKNUMBER_OF_CALENDAR = "WEEKNUMBER_OF_CALENDAR";
   public static final String DAYOCCURRENCE_OF_MONTH = "DAYOCCURRENCE_OF_MONTH";
+  public static final String DAYNUMBER_OF_CALENDAR = "DAYNUMBER_OF_CALENDAR";
 
   private static final String DEFAULT_DATE = "1900-01-01";
 
@@ -75,8 +76,12 @@ public class DateTimestampFormatUtil {
       break;
     case DAYOCCURRENCE_OF_MONTH:
       extractCall = handleDayOccurrenceMonth(call, DateTimeUnit.DAY);
+      break;
     case "DAYOFYEAR":
       extractCall = unparseDayNumber(call);
+      break;
+    case DAYNUMBER_OF_CALENDAR:
+      extractCall = handleDayNumberCalendar(call, DateTimeUnit.DAY);
       break;
     }
     if (null != extractCall) {
@@ -93,6 +98,14 @@ public class DateTimestampFormatUtil {
 
   SqlLiteral getDayOfYearLiteral() {
     return SqlLiteral.createSymbol(DateTimeUnit.DAYOFYEAR, SqlParserPos.ZERO);
+  }
+
+  private SqlCall handleDayNumberCalendar(SqlCall call, DateTimeUnit dateTimeUnit) {
+    SqlNode[] dateDiffOperands = new SqlNode[] { call.operand(0),
+         SqlLiteral.createDate(new DateString("1899-12-31"), SqlParserPos.ZERO),
+         SqlLiteral.createSymbol(dateTimeUnit, SqlParserPos.ZERO)};
+    return new SqlBasicCall(SqlLibraryOperators.DATE_DIFF, dateDiffOperands,
+        SqlParserPos.ZERO);
   }
 
   private SqlCall handleDayOccurrenceMonth(SqlCall call, DateTimeUnit dateTimeUnit) {
