@@ -234,7 +234,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
       }
       writer.endFunCall(regexpInstr);
       break;
-    case "RAND":
+    case "RAND_INTEGER":
       unparseRandom(writer, call, leftPrec, rightPrec);
       break;
     default:
