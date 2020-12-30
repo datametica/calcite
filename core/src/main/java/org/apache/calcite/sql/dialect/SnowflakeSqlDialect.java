@@ -130,6 +130,15 @@ public class SnowflakeSqlDialect extends SqlDialect {
     case OTHER:
       unparseOtherFunction(writer, call, leftPrec, rightPrec);
       break;
+    case TIMESTAMP_DIFF:
+      final SqlWriter.Frame timestampdiff = writer.startFunCall("TIMESTAMPDIFF");
+      call.operand(2).unparse(writer, leftPrec, rightPrec);
+      writer.print(", ");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.print(", ");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(timestampdiff);
+      break;
     case DIVIDE_INTEGER:
       unparseDivideInteger(writer, call, leftPrec, rightPrec);
       break;
@@ -204,6 +213,16 @@ public class SnowflakeSqlDialect extends SqlDialect {
       break;
     case "ROUND":
       unparseRoundfunction(writer, call, leftPrec, rightPrec);
+      break;
+    case "TIME_DIFF":
+      final SqlWriter.Frame timeDiff = writer.startFunCall("TIMEDIFF");
+      writer.sep(",");
+      call.operand(2).unparse(writer, leftPrec, rightPrec);
+      writer.sep(",");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.sep(",");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(timeDiff);
       break;
     case "FORMAT_DATE":
       final SqlWriter.Frame formatDate = writer.startFunCall("TO_VARCHAR");
