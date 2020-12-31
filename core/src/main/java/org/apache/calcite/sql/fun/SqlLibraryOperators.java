@@ -2469,14 +2469,6 @@ public abstract class SqlLibraryOperators {
               number -> number == 2 || number == 3),
           SqlFunctionCategory.STRING);
 
-  public static final SqlFunction DATE_MOD = new SqlFunction(
-          "DATE_MOD",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER_NULLABLE,
-          null,
-          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME),
-          SqlFunctionCategory.TIMEDATE);
-
   public static final SqlFunction TIMESTAMPINTSUB = new SqlFunction("TIMESTAMPINTSUB",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIMESTAMP, null,
