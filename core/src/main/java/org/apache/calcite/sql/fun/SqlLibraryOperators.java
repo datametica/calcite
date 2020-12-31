@@ -118,21 +118,6 @@ public abstract class SqlLibraryOperators {
 //              OperandTypes.DATE_INTERVAL)
 //          .withFunctionType(SqlFunctionCategory.TIMEDATE);
 
-  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
-  public static final SqlFunction DATE_ADD =
-          new SqlFunction(
-                  "DATE_ADD",
-                  SqlKind.PLUS,
-                  ReturnTypes.DATE,
-                  null,
-                  OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
-                  SqlFunctionCategory.TIMEDATE) {
-
-        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-          writer.getDialect().unparseIntervalOperandsBasedFunctions(
-                  writer, call, leftPrec, rightPrec);
-        }
-    };
 
   /** THE "DATE_DIFF(date, date2, timeUnit)" function
    * (BIG_QUERY) returns the number of timeUnit in (date - date2). */
@@ -221,22 +206,6 @@ public abstract class SqlLibraryOperators {
 //      SqlBasicFunction.create(SqlKind.DATE_SUB, ReturnTypes.ARG0_NULLABLE,
 //           OperandTypes.DATE_INTERVAL)
 //          .withFunctionType(SqlFunctionCategory.TIMEDATE);
-
-  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
-  public static final SqlFunction DATE_SUB =
-          new SqlFunction(
-                  "DATE_SUB",
-                  SqlKind.MINUS,
-                  ReturnTypes.DATE,
-                  null,
-                  OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
-                  SqlFunctionCategory.TIMEDATE) {
-
-        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-          writer.getDialect().unparseIntervalOperandsBasedFunctions(
-                writer, call, leftPrec, rightPrec);
-        }
-      };
 
   /** The "DATEPART(timeUnit, datetime)" function
    * (Microsoft SQL Server). */
@@ -902,6 +871,38 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_2000, OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
+  public static final SqlFunction DATE_ADD =
+      new SqlFunction(
+        "DATE_ADD",
+        SqlKind.PLUS,
+        ReturnTypes.DATE,
+        null,
+        OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
+        SqlFunctionCategory.TIMEDATE) {
+
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          writer.getDialect().unparseIntervalOperandsBasedFunctions(
+                writer, call, leftPrec, rightPrec);
+        }
+      };
+
+  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
+  public static final SqlFunction DATE_SUB =
+      new SqlFunction(
+          "DATE_SUB",
+          SqlKind.MINUS,
+          ReturnTypes.DATE,
+          null,
+          OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
+          SqlFunctionCategory.TIMEDATE) {
+
+    @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+      writer.getDialect().unparseIntervalOperandsBasedFunctions(
+          writer, call, leftPrec, rightPrec);
+    }
+  };
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction TIMESTAMP_ADD =
       new SqlFunction(
@@ -918,7 +919,8 @@ public abstract class SqlLibraryOperators {
         }
       };
 
-  @LibraryOperator(libraries = {HIVE, SPARK})
+
+  @LibraryOperator(libraries = {HIVE, SPARK, SNOWFLAKE, TERADATA})
   public static final SqlFunction ADD_MONTHS =
       new SqlFunction(
         "ADD_MONTHS",
@@ -926,13 +928,7 @@ public abstract class SqlLibraryOperators {
         ReturnTypes.DATE,
         null,
         OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
-        SqlFunctionCategory.TIMEDATE) {
-
-        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-          writer.getDialect().unparseIntervalOperandsBasedFunctions(
-                writer, call, leftPrec, rightPrec);
-        }
-      };
+        SqlFunctionCategory.TIMEDATE);
 
   /** The "DAYNAME(datetime)" function; returns the name of the day of the week,
    * in the current locale, of a TIMESTAMP or DATE argument. */
