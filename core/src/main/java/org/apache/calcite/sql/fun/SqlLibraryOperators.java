@@ -2479,7 +2479,7 @@ public abstract class SqlLibraryOperators {
 
   public static final SqlFunction TIMESTAMPINTSUB = new SqlFunction("TIMESTAMPINTSUB",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0_NULLABLE, null,
+          ReturnTypes.TIMESTAMP, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
           SqlFunctionCategory.USER_DEFINED_FUNCTION);
 }
