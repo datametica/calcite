@@ -2474,6 +2474,12 @@ public abstract class SqlLibraryOperators {
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER_NULLABLE,
           null,
-          OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.INTEGER),
-          SqlFunctionCategory.STRING);
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME),
+          SqlFunctionCategory.TIMEDATE);
+
+  public static final SqlFunction TIMESTAMPINTSUB = new SqlFunction("TIMESTAMPINTSUB",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.USER_DEFINED_FUNCTION);
 }
