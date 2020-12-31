@@ -907,7 +907,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "TIMESTAMP_ADD",
           SqlKind.PLUS,
-          ReturnTypes.DATE,
+          ReturnTypes.TIMESTAMP,
           null,
           OperandTypes.family(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.DATETIME_INTERVAL),
           SqlFunctionCategory.TIMEDATE) {
@@ -917,24 +917,6 @@ public abstract class SqlLibraryOperators {
               writer, call, leftPrec, rightPrec);
         }
       };
-
-//  @LibraryOperator(libraries = {BIG_QUERY})
-//  public static final SqlFunction TIMESTAMP_SUB =
-//      new SqlFunction(
-//          "TIMESTAMP_SUB",
-//          SqlKind.MINUS,
-//          ReturnTypes.DATE,
-//          null,
-//          OperandTypes.family(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.DATETIME_INTERVAL),
-//          SqlFunctionCategory.TIMEDATE) {
-//
-//        @Override public void unparse(SqlWriter writer, SqlCall call,
-//                    int leftPrec, int rightPrec) {
-//          writer.getDialect().unparseIntervalOperandsBasedFunctions(
-//              writer, call, leftPrec, rightPrec);
-//        }
-//      };
-
 
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction ADD_MONTHS =
@@ -2469,9 +2451,33 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
 
+//  @LibraryOperator(libraries = {SNOWFLAKE})
+//  public static final SqlFunction INSTR = new SqlFunction(
+//          "INSTR",
+//          SqlKind.OTHER_FUNCTION,
+//          ReturnTypes.INTEGER_NULLABLE,
+//          null,
+//          OperandTypes.family(ImmutableList.of
+//                          (SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+//                                  SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+//                  number -> number == 2 || number == 3),
+//          SqlFunctionCategory.STRING);
+
   public static final SqlFunction TIMESTAMPINTADD = new SqlFunction("TIMESTAMP_ADD",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0_NULLABLE, null,
-          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION);
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.family(ImmutableList.of
+          (SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+          SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+              number -> number == 2 || number == 3),
+          SqlFunctionCategory.STRING);
+
+  public static final SqlFunction DATE_MOD = new SqlFunction(
+          "DATE_MOD",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.STRING);
 }

@@ -350,17 +350,17 @@ public abstract class ReturnTypes {
       explicit(SqlTypeName.TIME, 0);
 
   /**
+   * Type-inference strategy whereby the result type of a call is TIMESTAMP.
+   */
+  public static final SqlReturnTypeInference TIMESTAMP =
+      explicit(SqlTypeName.TIMESTAMP);
+
+  /**
    * Type-inference strategy whereby the result type of a call is nullable
    * TIME(0).
    */
   public static final SqlReturnTypeInference TIME_NULLABLE =
       TIME.andThen(SqlTypeTransforms.TO_NULLABLE);
-
-  /**
-   * Type-inference strategy whereby the result type of a call is TIMESTAMP.
-   */
-  public static final SqlReturnTypeInference TIMESTAMP =
-      explicit(SqlTypeName.TIMESTAMP);
 
   /**
    * Type-inference strategy whereby the result type of a call is nullable
