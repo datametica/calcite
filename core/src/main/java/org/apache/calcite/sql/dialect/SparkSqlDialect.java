@@ -311,15 +311,8 @@ public class SparkSqlDialect extends SqlDialect {
         unparseOtherFunction(writer, call, leftPrec, rightPrec);
         break;
       case PLUS:
-        if (call.getOperator().getName().equals("ADD_MONTHS")) {
-          SqlWriter.Frame castFrame = writer.startFunCall("CAST");
-          new IntervalUtils().unparseAddMonths(writer, call, leftPrec, rightPrec, this);
-          writer.print("AS ");
-          writer.literal("DATE");
-          writer.endFunCall(castFrame);
-          break;
-        }
-        super.unparseCall(writer, call, leftPrec, rightPrec);
+      case MINUS:
+        unparsePlusMinus(writer, call, leftPrec, rightPrec);
         break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -679,23 +672,31 @@ public class SparkSqlDialect extends SqlDialect {
     return super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
   }
 
-  @Override public SqlNode getCastCall(
-      SqlNode operandToCast, RelDataType castFrom, RelDataType castTo) {
-    if (castTo.getSqlTypeName() == SqlTypeName.TIMESTAMP && castTo.getPrecision() > 0) {
-      return new CastCallBuilder(this).makCastCallForTimestampWithPrecision(operandToCast,
-          castTo.getPrecision());
-    } else if (castTo.getSqlTypeName() == SqlTypeName.TIME) {
-      if (castFrom.getSqlTypeName() == SqlTypeName.TIMESTAMP) {
-        return new CastCallBuilder(this)
-            .makCastCallForTimeWithPrecision(operandToCast, castTo.getPrecision());
-      }
-      return operandToCast;
+  private void unparsePlusMinus(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.getOperator().getName()) {
+    case "TIMESTAMP_ADD":
+    case "TIMESTAMP_SUB":
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      checkSign(writer, call);
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      break;
+    case "ADD_MONTHS":
+      SqlWriter.Frame castFrame = writer.startFunCall("CAST");
+      new IntervalUtils().unparseAddMonths(writer, call, leftPrec, rightPrec, this);
+      writer.print("AS ");
+      writer.literal("DATE");
+      writer.endFunCall(castFrame);
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
     }
-    return super.getCastCall(operandToCast, castFrom, castTo);
   }
 
-  @Override public SqlNode getTimeLiteral(
-      TimeString timeString, int precision, SqlParserPos pos) {
-    return SqlLiteral.createCharString(timeString.toString(), SqlParserPos.ZERO);
+  private void checkSign(SqlWriter writer, SqlCall call) {
+    if (SqlKind.PLUS == call.getKind()) {
+      writer.print("+ ");
+    } else {
+      writer.print("- ");
+    }
   }
 }
