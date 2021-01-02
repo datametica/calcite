@@ -124,6 +124,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -395,6 +396,9 @@ public enum BuiltInMethod {
   WEEKNUMBER_OF_CALENDAR(SqlFunctions.class, "weekNumberOfCalendar", Object.class),
   DAYOCCURRENCE_OF_MONTH(SqlFunctions.class, "dayOccurrenceOfMonth", Object.class),
   DAYNUMBER_OF_CALENDAR(SqlFunctions.class, "dayNumberOfCalendar", Object.class),
+  TIME_DIFF(SqlFunctions.class, "timeDiff", Date.class, Date.class),
+  TIMESTAMPINTADD(SqlFunctions.class, "timestampIntAdd", Timestamp.class, Integer.class),
+  TIMESTAMPINTSUB(SqlFunctions.class, "timestampIntSub", Timestamp.class, Integer.class),
   LEFT(SqlFunctions.class, "left", String.class, int.class),
   RIGHT(SqlFunctions.class, "right", String.class, int.class),
   TO_BASE64(SqlFunctions.class, "toBase64", String.class),
