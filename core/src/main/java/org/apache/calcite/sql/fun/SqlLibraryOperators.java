@@ -925,7 +925,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
         "ADD_MONTHS",
         SqlKind.PLUS,
-        ReturnTypes.DATE,
+        ReturnTypes.ARG0,
         null,
         OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
         SqlFunctionCategory.TIMEDATE);
