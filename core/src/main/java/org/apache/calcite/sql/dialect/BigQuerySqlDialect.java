@@ -60,10 +60,12 @@ import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.format.FormatModel;
 import org.apache.calcite.util.format.FormatModels;
+import org.apache.calcite.util.interval.BigQueryDateTimestampInterval;
 
 import com.google.common.collect.ImmutableList;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -534,12 +536,20 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       writer.sep("as " + operator.getAliasName());
       break;
-    case MINUS:
-    case PLUS:
-      unparseCallPlusMinus(writer, call, leftPrec, rightPrec);
-      break;
     case TIMES:
       unparseIntervalTimes(writer, call, leftPrec, rightPrec);
+      break;
+    case PLUS:
+      BigQueryDateTimestampInterval plusInterval = new BigQueryDateTimestampInterval();
+      if (!plusInterval.unparseTimestampadd(writer, call, leftPrec, rightPrec, "")) {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
+    case MINUS:
+      BigQueryDateTimestampInterval minusInterval = new BigQueryDateTimestampInterval();
+      if (!minusInterval.unparseTimestampadd(writer, call, leftPrec, rightPrec, "-")) {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
