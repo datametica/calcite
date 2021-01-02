@@ -6155,7 +6155,8 @@ public class SqlFunctions {
     default: throw new IllegalArgumentException(" unknown interval type");
     }
     Timestamp ts = Timestamp.valueOf((String) datetime);
-    Calendar cal = Calendar.getInstance();
+    Calendar cal = Calendar.getInstance(TimeZone.getDefault(),
+        Locale.getDefault(Locale.Category.FORMAT));
     cal.setTime(ts);
     cal.add(unit, additive);
     ts.setTime(cal.getTime().getTime());
@@ -6180,7 +6181,8 @@ public class SqlFunctions {
     default: throw new IllegalArgumentException(" unknown interval type");
     }
     Timestamp ts = Timestamp.valueOf((String) datetime);
-    Calendar cal = Calendar.getInstance();
+    Calendar cal = Calendar.getInstance(TimeZone.getDefault(),
+        Locale.getDefault(Locale.Category.FORMAT));
     cal.setTime(ts);
     cal.add(unit, additive);
     ts.setTime(cal.getTime().getTime());
