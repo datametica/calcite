@@ -172,6 +172,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FROM_UNIX_DATE
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_PART;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYNAME;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYOCCURRENCE_OF_MONTH;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DIFFERENCE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.ENDS_WITH;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.EXISTS;
@@ -222,6 +223,9 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.MAX_BY;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.MD5;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.MIN_BY;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.MONTHNAME;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.MONTHNUMBER_OF_QUARTER;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.MONTHNUMBER_OF_YEAR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.QUARTERNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.OFFSET;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.ORDINAL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
@@ -282,6 +286,10 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_CODE_POINTS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_HEX;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_VARCHAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRANSLATE3;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_CALENDAR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_MONTH;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_YEAR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.YEARNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRY_CAST;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_DATE;
@@ -612,8 +620,26 @@ public class RexImpTable {
       defineMethod(FIND_IN_SET, BuiltInMethod.FIND_IN_SET.method, NullPolicy.ANY);
       defineMethod(FORMAT, BuiltInMethod.FORMAT.method, NullPolicy.ARG0);
       defineMethod(TO_VARCHAR, BuiltInMethod.TO_VARCHAR.method, NullPolicy.ARG0);
+      defineMethod(FORMAT, BuiltInMethod.FORMAT.method, NullPolicy.ARG0);
+      defineMethod(TO_VARCHAR, BuiltInMethod.TO_VARCHAR.method, NullPolicy.ARG0);
+      defineMethod(WEEKNUMBER_OF_YEAR, BuiltInMethod.WEEKNUMBER_OF_YEAR.method, NullPolicy.NONE);
+      defineMethod(DAYOCCURRENCE_OF_MONTH, BuiltInMethod.DAYOCCURRENCE_OF_MONTH.method,
+              NullPolicy.NONE);
+      defineMethod(MONTHNUMBER_OF_QUARTER, BuiltInMethod.MONTHNUMBER_OF_QUARTER.method,
+              NullPolicy.NONE);
+      defineMethod(MONTHNUMBER_OF_YEAR, BuiltInMethod.MONTHNUMBER_OF_YEAR.method, NullPolicy.NONE);
+      defineMethod(QUARTERNUMBER_OF_YEAR, BuiltInMethod.QUARTERNUMBER_OF_YEAR.method,
+              NullPolicy.NONE);
+      defineMethod(WEEKNUMBER_OF_MONTH, BuiltInMethod.WEEKNUMBER_OF_MONTH.method, NullPolicy.NONE);
+      defineMethod(WEEKNUMBER_OF_CALENDAR, BuiltInMethod.WEEKNUMBER_OF_CALENDAR.method,
+              NullPolicy.NONE);
+      defineMethod(YEARNUMBER_OF_CALENDAR, BuiltInMethod.YEARNUMBER_OF_CALENDAR.method,
+              NullPolicy.NONE);
       defineMethod(TIMESTAMP_TO_DATE, BuiltInMethod.TIMESTAMP_TO_DATE.method, NullPolicy.STRICT);
       defineMethod(TIMESTAMP_SECONDS, BuiltInMethod.TIMESTAMPSECONDS.method, NullPolicy.ARG0);
+      defineMethod(TIME_DIFF, BuiltInMethod.TIME_DIFF.method, NullPolicy.NONE);
+      defineMethod(TIMESTAMPINTADD, BuiltInMethod.TIME_DIFF.method, NullPolicy.NONE);
+      defineMethod(TIMESTAMPINTSUB, BuiltInMethod.TIME_DIFF.method, NullPolicy.NONE);
 
       map.put(TRIM, new TrimImplementor());
 
