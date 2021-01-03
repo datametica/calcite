@@ -33,6 +33,7 @@ import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
@@ -250,6 +251,11 @@ public class BigQuerySqlDialect extends SqlDialect {
             && !SqlTypeUtil.isNumeric(call.type);
   }
 
+  @Override public SqlNode emulateNullDirection(SqlNode node,
+                                                boolean nullsFirst, boolean desc) {
+    return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
+  }
+
   @Override public boolean supportsApproxCountDistinct() {
     return true;
   }
@@ -340,6 +346,13 @@ public class BigQuerySqlDialect extends SqlDialect {
           return super.getTargetFunc(call);
         }
       case TIMESTAMP:
+        if (call.getOperands().get(1).getType().getSqlTypeName() == SqlTypeName.INTEGER) {
+          RexNode rex2 = call.getOperands().get(1);
+          if (((RexLiteral) rex2).getValueAs(Integer.class) < 0) {
+            return SqlLibraryOperators.DATETIME_SUB;
+          }
+          return SqlLibraryOperators.DATETIME_ADD;
+        }
         if (call.op.kind == SqlKind.MINUS) {
           return SqlLibraryOperators.TIMESTAMP_SUB;
         }
@@ -536,20 +549,9 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       writer.sep("as " + operator.getAliasName());
       break;
-    case TIMES:
-      unparseIntervalTimes(writer, call, leftPrec, rightPrec);
-      break;
-    case PLUS:
-      BigQueryDateTimestampInterval plusInterval = new BigQueryDateTimestampInterval();
-      if (!plusInterval.unparseTimestampadd(writer, call, leftPrec, rightPrec, "")) {
-        super.unparseCall(writer, call, leftPrec, rightPrec);
-      }
-      break;
     case MINUS:
-      BigQueryDateTimestampInterval minusInterval = new BigQueryDateTimestampInterval();
-      if (!minusInterval.unparseTimestampadd(writer, call, leftPrec, rightPrec, "-")) {
-        super.unparseCall(writer, call, leftPrec, rightPrec);
-      }
+    case PLUS:
+      unparseCallPlusMinus(writer, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -561,6 +563,8 @@ public class BigQuerySqlDialect extends SqlDialect {
     switch (call.getOperator().getName()) {
     case "DATETIME_ADD":
     case "DATETIME_SUB":
+    case "TIMESTAMP_SUB":
+    case "TIMESTAMP_ADD":
     case "DATE_ADD":
     case "DATE_SUB":
       utils.unparse(writer, call, left, right, this);
@@ -853,6 +857,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case TIMES:
       unparseExpressionIntervalCall(call.operand(1), writer, leftPrec, rightPrec);
       break;
+    case OTHER_FUNCTION:
+      unparseOtherFunction(writer, call.operand(1), leftPrec, rightPrec);
+      break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
@@ -972,19 +979,6 @@ public class BigQuerySqlDialect extends SqlDialect {
                   creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
       unparseCall(writer, parseDateCall, leftPrec, rightPrec);
       break;
-    case DateTimestampFormatUtil.WEEKNUMBER_OF_YEAR:
-    case DateTimestampFormatUtil.YEARNUMBER_OF_CALENDAR:
-    case DateTimestampFormatUtil.MONTHNUMBER_OF_YEAR:
-    case DateTimestampFormatUtil.QUARTERNUMBER_OF_YEAR:
-    case DateTimestampFormatUtil.MONTHNUMBER_OF_QUARTER:
-    case DateTimestampFormatUtil.WEEKNUMBER_OF_MONTH:
-    case DateTimestampFormatUtil.WEEKNUMBER_OF_CALENDAR:
-    case DateTimestampFormatUtil.DAYOCCURRENCE_OF_MONTH:
-    case DateTimestampFormatUtil.DAYNUMBER_OF_CALENDAR:
-    case "DAYOFYEAR":
-      DateTimestampFormatUtil dateTimestampFormatUtil = new DateTimestampFormatUtil();
-      dateTimestampFormatUtil.unparseCall(writer, call, leftPrec, rightPrec);
-      break;
     case "TO_DATE":
       SqlCall parseToDateCall = PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
               creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
@@ -1014,6 +1008,25 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "DATETIME_ADD":
     case "DATETIME_SUB":
       unparseCallPlusMinus(writer, call, leftPrec, rightPrec);
+      break;
+    case "TIMESTAMPINTMUL":
+      unparseTimestampIntMul(writer, call, leftPrec, rightPrec);
+      break;
+    case "RAND_INTEGER":
+      unparseRandomfunction(writer, call, leftPrec, rightPrec);
+      break;
+    case DateTimestampFormatUtil.WEEKNUMBER_OF_YEAR:
+    case DateTimestampFormatUtil.YEARNUMBER_OF_CALENDAR:
+    case DateTimestampFormatUtil.MONTHNUMBER_OF_YEAR:
+    case DateTimestampFormatUtil.QUARTERNUMBER_OF_YEAR:
+    case DateTimestampFormatUtil.MONTHNUMBER_OF_QUARTER:
+    case DateTimestampFormatUtil.WEEKNUMBER_OF_MONTH:
+    case DateTimestampFormatUtil.WEEKNUMBER_OF_CALENDAR:
+    case DateTimestampFormatUtil.DAYOCCURRENCE_OF_MONTH:
+    case DateTimestampFormatUtil.DAYNUMBER_OF_CALENDAR:
+    case DateTimestampFormatUtil.DAY_OF_YEAR:
+      DateTimestampFormatUtil dateTimestampFormatUtil = new DateTimestampFormatUtil();
+      dateTimestampFormatUtil.unparseCall(writer, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -1065,4 +1078,38 @@ public class BigQuerySqlDialect extends SqlDialect {
         .replace("%S.", "%E");
   }
 
+  private void unparseTimestampIntMul(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    if (call.operand(0) instanceof SqlBasicCall) {
+      handleSqlBasicCallForTimestampMulti(writer, call);
+    } else {
+      SqlIntervalLiteral intervalLiteralValue = call.operand(0);
+      SqlIntervalLiteral.IntervalValue literalValue =
+              (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
+      String secondOperand = "";
+      if (call.operand(1) instanceof SqlIdentifier) {
+        SqlIdentifier sqlIdentifier = call.operand(1);
+        secondOperand = sqlIdentifier.toString() + "*"
+                + (Integer.valueOf(literalValue.toString()) + "");
+      } else if (call.operand(1) instanceof SqlNumericLiteral) {
+        SqlNumericLiteral sqlNumericLiteral = call.operand(1);
+        secondOperand = Integer.parseInt(sqlNumericLiteral.toString())
+                * (Integer.parseInt(literalValue.toString())) + "";
+      }
+      writer.sep("INTERVAL");
+      writer.sep(secondOperand);
+      writer.print(literalValue.getIntervalQualifier().toString());
+    }
+  }
+
+  void handleSqlBasicCallForTimestampMulti(SqlWriter writer, SqlCall call) {
+    String firstOperand = String.valueOf((SqlBasicCall) call.getOperandList().get(0));
+    firstOperand = firstOperand.replaceAll("TIME(0)", "TIME");
+    SqlIntervalLiteral intervalLiteralValue = (SqlIntervalLiteral) call.getOperandList().get(1);
+    SqlIntervalLiteral.IntervalValue literalValue =
+            (SqlIntervalLiteral.IntervalValue) intervalLiteralValue.getValue();
+    String secondOperand = literalValue.toString() + " * " + firstOperand;
+    writer.sep("INTERVAL");
+    writer.sep(secondOperand);
+    writer.print(literalValue.toString());
+  }
 }

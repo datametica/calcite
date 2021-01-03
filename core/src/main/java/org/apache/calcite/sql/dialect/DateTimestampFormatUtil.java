@@ -47,6 +47,7 @@ public class DateTimestampFormatUtil {
   public static final String WEEKNUMBER_OF_CALENDAR = "WEEKNUMBER_OF_CALENDAR";
   public static final String DAYOCCURRENCE_OF_MONTH = "DAYOCCURRENCE_OF_MONTH";
   public static final String DAYNUMBER_OF_CALENDAR = "DAYNUMBER_OF_CALENDAR";
+  public static final String DAY_OF_YEAR = "DAYOFYEAR";
 
   private static final String DEFAULT_DATE = "1900-01-01";
 
@@ -77,11 +78,11 @@ public class DateTimestampFormatUtil {
     case DAYOCCURRENCE_OF_MONTH:
       extractCall = handleDayOccurrenceMonth(call, DateTimeUnit.DAY);
       break;
-    case "DAYOFYEAR":
-      extractCall = unparseDayNumber(call);
-      break;
     case DAYNUMBER_OF_CALENDAR:
       extractCall = handleDayNumberCalendar(call, DateTimeUnit.DAY);
+      break;
+    case DAY_OF_YEAR:
+      extractCall = unparseDayNumber(call);
       break;
     }
     if (null != extractCall) {
@@ -92,8 +93,8 @@ public class DateTimestampFormatUtil {
   /** returns day of the year for given date */
   private SqlCall unparseDayNumber(SqlCall call) {
     return SqlStdOperatorTable.EXTRACT.createCall(SqlParserPos.ZERO,
-            getDayOfYearLiteral(),
-            call.operand(0));
+      getDayOfYearLiteral(),
+      call.operand(0));
   }
 
   SqlLiteral getDayOfYearLiteral() {
