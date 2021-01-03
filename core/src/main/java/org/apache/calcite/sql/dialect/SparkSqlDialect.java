@@ -52,6 +52,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
 import org.apache.calcite.util.ToNumberUtils;
+import org.apache.calcite.util.interval.SparkDateTimestampInterval;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -308,8 +309,16 @@ public class SparkSqlDialect extends SqlDialect {
         unparseOtherFunction(writer, call, leftPrec, rightPrec);
         break;
       case PLUS:
+        SparkDateTimestampInterval plusInterval = new SparkDateTimestampInterval();
+        if (!plusInterval.unparseDateTimeMinus(writer, call, leftPrec, rightPrec, "+")) {
+          super.unparseCall(writer, call, leftPrec, rightPrec);
+        }
+        break;
       case MINUS:
-        unparsePlusMinus(writer, call, leftPrec, rightPrec);
+        SparkDateTimestampInterval minusInterval = new SparkDateTimestampInterval();
+        if (!minusInterval.unparseDateTimeMinus(writer, call, leftPrec, rightPrec, "-")) {
+          super.unparseCall(writer, call, leftPrec, rightPrec);
+        }
         break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
