@@ -32,7 +32,7 @@ import java.util.Queue;
 import static org.apache.calcite.util.interval.DateTimestampIntervalUtil.generateQueueForInterval;
 
 /**
- * Handle Snowflake date timestamp interval
+ * Handle Snowflake date timestamp interval.
  */
 public class SnowflakeDateTimestampInterval {
   public boolean handlePlus(SqlWriter writer, SqlCall call,

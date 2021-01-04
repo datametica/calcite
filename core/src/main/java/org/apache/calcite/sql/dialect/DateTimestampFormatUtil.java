@@ -103,7 +103,8 @@ public class DateTimestampFormatUtil {
 
   private SqlCall handleDayNumberCalendar(SqlCall call, DateTimeUnit dateTimeUnit) {
     SqlNode[] dateDiffOperands =
-         new SqlNode[] { call.operand(0), SqlLiteral.createDate(new DateString("1899-12-31"), SqlParserPos.ZERO),
+         new SqlNode[] { call.operand(0), SqlLiteral.createDate(
+                 new DateString("1899-12-31"), SqlParserPos.ZERO),
          SqlLiteral.createSymbol(dateTimeUnit, SqlParserPos.ZERO)};
     return new SqlBasicCall(SqlLibraryOperators.DATE_DIFF, dateDiffOperands,
         SqlParserPos.ZERO);

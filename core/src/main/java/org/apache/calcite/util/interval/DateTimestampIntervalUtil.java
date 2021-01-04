@@ -88,5 +88,3 @@ public class DateTimestampIntervalUtil {
     return Integer.valueOf(value);
   }
 }
-
-// End DateTimestampIntervalUtil.java

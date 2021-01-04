@@ -32,7 +32,7 @@ import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
- * util for resolving interval type operands
+ * util for resolving interval type operands.
  */
 public class IntervalUtils {
 

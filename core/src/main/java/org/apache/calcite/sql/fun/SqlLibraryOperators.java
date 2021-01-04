@@ -2476,8 +2476,8 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.USER_DEFINED_FUNCTION);
 
   @LibraryOperator(libraries = {STANDARD})
-  public static final SqlFunction DATE_MOD = new SqlFunction(
-      "DATE_MOD",
+  public static final SqlFunction DATE_MOD =
+      new SqlFunction("DATE_MOD",
       SqlKind.OTHER_FUNCTION,
       ReturnTypes.INTEGER_NULLABLE,
       null,
