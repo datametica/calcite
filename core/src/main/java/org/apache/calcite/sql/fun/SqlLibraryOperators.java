@@ -2474,4 +2474,13 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.TIMESTAMP, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
           SqlFunctionCategory.USER_DEFINED_FUNCTION);
+
+  @LibraryOperator(libraries = {STANDARD})
+  public static final SqlFunction DATE_MOD = new SqlFunction(
+      "DATE_MOD",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.INTEGER_NULLABLE,
+      null,
+      OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.INTEGER),
+      SqlFunctionCategory.STRING);
 }
