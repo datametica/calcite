@@ -386,6 +386,7 @@ public enum BuiltInMethod {
   RPAD(SqlFunctions.class, "rpad", String.class, Integer.class, String.class),
   FORMAT(SqlFunctions.class, "format", Object.class, Object.class),
   TO_VARCHAR(SqlFunctions.class, "toVarchar", Object.class, Object.class),
+  DATE_MOD(SqlFunctions.class, "dateMod", Object.class, Object.class),
   TIMESTAMPSECONDS(SqlFunctions.class, "timestampSeconds", Long.class),
   WEEKNUMBER_OF_YEAR(SqlFunctions.class, "weekNumberOfYear", Object.class),
   YEARNUMBER_OF_CALENDAR(SqlFunctions.class, "yearNumberOfCalendar", Object.class),

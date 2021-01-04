@@ -63,6 +63,7 @@ here to appease testAllFunctionsAreDocumented:
 | WEEKNUMBER_OF_MONTH    | Get week number of the month
 | WEEKNUMBER_OF_CALENDAR | Get week number of the calendar
 | DAYOCCURRENCE_OF_MONTH | Get day occurrence of the month
+| DATE_MOD       | Return division result between date and integer
 | INSTR          | Finds substring position from Source string
 
 Dialect-specific:
