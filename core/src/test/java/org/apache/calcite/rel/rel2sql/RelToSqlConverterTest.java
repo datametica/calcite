@@ -7519,9 +7519,9 @@ class RelToSqlConverterTest {
 
   @Test public void testDatePlusIntervalMonthFunctionWithArthOps() {
     String query = "select \"birth_date\" + -10 * INTERVAL '1' MONTH from \"employee\"";
-    final String expectedHive = "SELECT ADD_MONTHS(birth_date, -10)\n"
+    final String expectedHive = "SELECT ADD_MONTHS(birth_date, -10 * 1)\n"
         + "FROM foodmart.employee";
-    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, -10)\n"
+    final String expectedSpark = "SELECT ADD_MONTHS(birth_date, -10 * 1)\n"
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL -10 MONTH)\n"
         + "FROM foodmart.employee";
@@ -7576,7 +7576,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (\"birth_date\" + 1)\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, 1, \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7597,7 +7597,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL 1 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (\"birth_date\" - 1)\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, -1, \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7618,7 +7618,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(DATE '2018-01-01', INTERVAL 1 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (DATE '2018-01-01' + 1)\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, 1, DATE '2018-01-01')\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7639,7 +7639,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_SUB(DATE '2018-01-01', INTERVAL 1 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (DATE '2018-01-01' - 1)\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, -1, DATE '2018-01-01')\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7660,7 +7660,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 2 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (\"birth_date\" + 2)\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, 2, \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7681,7 +7681,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL 2 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (\"birth_date\" - 2)\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, -2, \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7723,7 +7723,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (\"birth_date\" + \"store_id\")\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, '1' * \"store_id\", \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7744,7 +7744,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 10 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (\"birth_date\" + 10)\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, '1' * 10, \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7891,7 +7891,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL 1 DAY)\n"
         + "FROM foodmart.employee";
-    final String expectedSnowflake = "SELECT (\"birth_date\" + 1)\n"
+    final String expectedSnowflake = "SELECT DATEADD(DAY, 1, \"birth_date\")\n"
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withHive()
@@ -7908,9 +7908,11 @@ class RelToSqlConverterTest {
     String query = "SELECT CURRENT_TIMESTAMP + INTERVAL '06:10:30' HOUR TO SECOND,"
         + "CURRENT_TIMESTAMP - INTERVAL '06:10:30' HOUR TO SECOND "
         + "FROM \"employee\"";
-    final String expectedBigQuery = "SELECT "
-        + "TIMESTAMP_ADD(CURRENT_TIMESTAMP, INTERVAL 22230 SECOND), "
-        + "TIMESTAMP_SUB(CURRENT_TIMESTAMP, INTERVAL 22230 SECOND)\n"
+    final String expectedBigQuery = "SELECT TIMESTAMP_ADD(TIMESTAMP_ADD("
+        + "TIMESTAMP_ADD(CURRENT_TIMESTAMP, INTERVAL 6 HOUR), "
+        + "INTERVAL 10 MINUTE), INTERVAL 30 SECOND), "
+        + "TIMESTAMP_SUB(TIMESTAMP_SUB(TIMESTAMP_SUB(CURRENT_TIMESTAMP, "
+        + "INTERVAL 6 HOUR), INTERVAL 10 MINUTE), INTERVAL 30 SECOND)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withBigQuery()

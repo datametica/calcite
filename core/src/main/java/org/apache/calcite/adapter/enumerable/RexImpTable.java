@@ -169,6 +169,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATEADD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_ADD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_SUB;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_MOD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FROM_UNIX_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_PART;
@@ -644,7 +645,7 @@ public class RexImpTable {
       defineMethod(TIMESTAMPINTSUB, BuiltInMethod.TIME_DIFF.method, NullPolicy.NONE);
       defineMethod(DATETIME_ADD, BuiltInMethod.DATETIME_ADD.method, NullPolicy.NONE);
       defineMethod(DATETIME_SUB, BuiltInMethod.DATETIME_SUB.method, NullPolicy.NONE);
-//      defineMethod(DATE_MOD, BuiltInMethod.DATE_MOD.method, NullPolicy.NONE);
+      defineMethod(DATE_MOD, BuiltInMethod.DATE_MOD.method, NullPolicy.NONE);
 
       map.put(TRIM, new TrimImplementor());
 

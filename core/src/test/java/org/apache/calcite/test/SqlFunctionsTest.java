@@ -47,6 +47,7 @@ import static org.apache.calcite.runtime.SqlFunctions.concatMulti;
 import static org.apache.calcite.runtime.SqlFunctions.concatMultiWithNull;
 import static org.apache.calcite.runtime.SqlFunctions.concatMultiWithSeparator;
 import static org.apache.calcite.runtime.SqlFunctions.concatWithNull;
+import static org.apache.calcite.runtime.SqlFunctions.dateMod;
 import static org.apache.calcite.runtime.SqlFunctions.datetimeAdd;
 import static org.apache.calcite.runtime.SqlFunctions.datetimeSub;
 import static org.apache.calcite.runtime.SqlFunctions.dateMod;
