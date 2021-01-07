@@ -1498,7 +1498,7 @@ public class RelToSqlConverterTest {
 
   @Test public void testSelectQueryWithOrderByAscAndNullsLastShouldBeEmulated() {
     final String query = "select \"product_id\" from \"product\"\n"
-        + "order by \"product_id\" asc nulls last";
+        + "order by \"product_id\" nulls last";
     final String expected = "SELECT product_id\n"
         + "FROM foodmart.product\n"
         + "ORDER BY product_id IS NULL, product_id";
