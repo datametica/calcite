@@ -76,13 +76,13 @@ public class MssqlSqlDialect extends SqlDialect {
     if (nullCollation.isDefaultOrder(nullsFirst, desc)) {
       return null;
     }
-    String sqlLiteralForCaseCall = (!(nullsFirst && desc)) ? "1" : "0";
+    String caseThenOperand = (nullsFirst && desc) ? "0" : "1";
+    String caseElseOperand = caseThenOperand.equals("1") ? "0" : "1";
     node = new SqlCase(
             SqlParserPos.ZERO, null,
             SqlNodeList.of(SqlStdOperatorTable.IS_NULL.createCall(SqlParserPos.ZERO, node)),
-            SqlNodeList.of(SqlLiteral.createExactNumeric(sqlLiteralForCaseCall, SqlParserPos.ZERO)),
-            SqlLiteral.createExactNumeric(
-                    sqlLiteralForCaseCall.equals("1") ? "0" : "1", SqlParserPos.ZERO)
+            SqlNodeList.of(SqlLiteral.createExactNumeric(caseThenOperand, SqlParserPos.ZERO)),
+            SqlLiteral.createExactNumeric(caseElseOperand, SqlParserPos.ZERO)
     );
     return node;
   }
