@@ -1494,10 +1494,10 @@ public class RelToSqlConverterTest {
         + "FROM [foodmart].[product]\n"
         + "ORDER BY CASE WHEN [product_id] IS NULL THEN 0 ELSE 1 END, [product_id] DESC";
     sql(query)
-//        .withHive()
-//        .ok(expected)
-//        .withBigQuery()
-//        .ok(expected)
+        .withHive()
+        .ok(expected)
+        .withBigQuery()
+        .ok(expected)
         .withMssql()
         .ok(expectedMssql);
   }
