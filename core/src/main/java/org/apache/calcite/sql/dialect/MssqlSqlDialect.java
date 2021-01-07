@@ -59,7 +59,8 @@ public class MssqlSqlDialect extends SqlDialect {
 
   @Override protected SqlNode emulateNullDirectionWithIsNull(
           SqlNode node, boolean nullsFirst, boolean desc) {
-    // No need to emulate null when we are presented with default conditions like (Asc & Nulls First) or (Dsc & Nulls Last)
+    // No need to emulate null when we are presented with default conditions
+    // like (Asc & Nulls First) or (Dsc & Nulls Last)
     if (nullCollation.isDefaultOrder(nullsFirst, desc)) {
       return null;
     }
