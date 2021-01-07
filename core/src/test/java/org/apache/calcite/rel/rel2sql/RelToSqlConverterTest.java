@@ -41,13 +41,7 @@ import org.apache.calcite.sql.SqlDialect.DatabaseProduct;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.dialect.CalciteSqlDialect;
-import org.apache.calcite.sql.dialect.HiveSqlDialect;
-import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
-import org.apache.calcite.sql.dialect.MysqlSqlDialect;
-import org.apache.calcite.sql.dialect.OracleSqlDialect;
-import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
-import org.apache.calcite.sql.dialect.SparkSqlDialect;
+import org.apache.calcite.sql.dialect.*;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -1490,24 +1484,34 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT product_id\n"
         + "FROM foodmart.product\n"
         + "ORDER BY product_id IS NULL DESC, product_id DESC";
+    final String expectedMssql = "SELECT [product_id]\n"
+        + "FROM [foodmart].[product]\n"
+        + "ORDER BY CASE WHEN [product_id] IS NULL THEN 0 ELSE 1 END, [product_id] DESC";
     sql(query)
         .withHive()
         .ok(expected)
         .withBigQuery()
-        .ok(expected);
+        .ok(expected)
+        .withMssql()
+        .ok(expectedMssql);
   }
 
   @Test public void testSelectQueryWithOrderByAscAndNullsLastShouldBeEmulated() {
     final String query = "select \"product_id\" from \"product\"\n"
-        + "order by \"product_id\" nulls last";
+        + "order by \"product_id\" asc nulls last";
     final String expected = "SELECT product_id\n"
         + "FROM foodmart.product\n"
         + "ORDER BY product_id IS NULL, product_id";
+    final String expectedMssql = "SELECT [product_id]\n"
+        + "FROM [foodmart].[product]\n"
+        + "ORDER BY CASE WHEN [product_id] IS NULL THEN 1 ELSE 0 END, [product_id]";
     sql(query)
         .withHive()
         .ok(expected)
         .withBigQuery()
-        .ok(expected);
+        .ok(expected)
+        .withMssql()
+        .ok(expectedMssql);
   }
 
   @Test public void testSelectQueryWithOrderByAscNullsFirstShouldNotAddNullEmulation() {
@@ -1516,11 +1520,16 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT product_id\n"
         + "FROM foodmart.product\n"
         + "ORDER BY product_id";
+    final String expectedMssql = "SELECT [product_id]\n"
+        + "FROM [foodmart].[product]\n"
+        + "ORDER BY [product_id]";
     sql(query)
         .withHive()
         .ok(expected)
         .withBigQuery()
-        .ok(expected);
+        .ok(expected)
+        .withMssql()
+        .ok(expectedMssql);
   }
 
   @Test public void testSelectQueryWithOrderByDescNullsLastShouldNotAddNullEmulation() {
@@ -1529,11 +1538,16 @@ public class RelToSqlConverterTest {
     final String expected = "SELECT product_id\n"
         + "FROM foodmart.product\n"
         + "ORDER BY product_id DESC";
+    final String expectedMssql = "SELECT [product_id]\n"
+        + "FROM [foodmart].[product]\n"
+        + "ORDER BY [product_id] DESC";
     sql(query)
         .withHive()
         .ok(expected)
         .withBigQuery()
-        .ok(expected);
+        .ok(expected)
+        .withMssql()
+        .ok(expectedMssql);
   }
 
   @Test
