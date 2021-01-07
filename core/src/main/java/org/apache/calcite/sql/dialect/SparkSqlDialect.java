@@ -331,6 +331,9 @@ public class SparkSqlDialect extends SqlDialect {
           super.unparseCall(writer, call, leftPrec, rightPrec);
         }
         break;
+      case TIMESTAMP_DIFF:
+        unparseTimestampDiff(writer, call, leftPrec, rightPrec);
+        break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
@@ -623,27 +626,26 @@ public class SparkSqlDialect extends SqlDialect {
           getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.INTEGER)));
       unparseCall(writer, castCall, leftPrec, rightPrec);
       break;
+    case "DATE_DIFF":
+      unparseDateDiff(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
   private void unparseTimestampAddSub(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    SqlWriter.Frame timestampAdd = writer.startFunCall(getFunName(call));
     call.operand(0).unparse(writer, leftPrec, rightPrec);
-    writer.print(",");
-    writer.print("INTERVAL ");
+    writer.print(getTimestampOperatorName(call) + " ");
     call.operand(call.getOperandList().size() - 1)
-            .unparse(writer, leftPrec, rightPrec);
-    writer.print("SECOND");
-    writer.endFunCall(timestampAdd);
+        .unparse(writer, leftPrec, rightPrec);
   }
 
-  private String getFunName(SqlCall call) {
+  private String getTimestampOperatorName(SqlCall call) {
     String operatorName = call.getOperator().getName();
-    return operatorName.equals("TIMESTAMPINTADD") ? "TIMESTAMP_ADD"
-            : operatorName.equals("TIMESTAMPINTSUB") ? "TIMESTAMP_SUB"
-            : operatorName;
+    return operatorName.equals("TIMESTAMPINTADD") ? "+"
+        : operatorName.equals("TIMESTAMPINTSUB") ? "-"
+        : operatorName;
   }
 
   private void unparseStrToDate(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
