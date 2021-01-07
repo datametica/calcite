@@ -36,6 +36,7 @@ import static org.apache.calcite.runtime.SqlFunctions.addMonths;
 import static org.apache.calcite.runtime.SqlFunctions.charLength;
 import static org.apache.calcite.runtime.SqlFunctions.concat;
 import static org.apache.calcite.runtime.SqlFunctions.dateMod;
+import static org.apache.calcite.runtime.SqlFunctions.dateTrunc;
 import static org.apache.calcite.runtime.SqlFunctions.datetimeAdd;
 import static org.apache.calcite.runtime.SqlFunctions.datetimeSub;
 import static org.apache.calcite.runtime.SqlFunctions.dayNumberOfCalendar;
@@ -1104,6 +1105,27 @@ public class SqlFunctionsTest {
   @Test public void testdatetimeAdd() {
     assertThat(datetimeAdd("2000-12-12 12:12:12", "INTERVAL 1 DAY"),
         is(Timestamp.valueOf("2000-12-13 12:12:12.0")));
+  }
+
+  /** Test for {@link SqlFunctions#dateTrunc(Object, Object)}. */
+  @Test public void testDateTruncWithMonth() {
+    assertThat(dateTrunc("TIMESTAMP 2020-12-12 12:12:12", "MONTH"),
+            is(Timestamp.valueOf("2020-12-01 00:00:00")));
+  }
+
+  @Test public void testDateTruncWithYear() {
+    assertThat(dateTrunc("TIMESTAMP 2020-12-12 12:12:12", "YEAR"),
+            is(Timestamp.valueOf("2020-01-01 00:00:00")));
+  }
+
+  @Test public void testDateTruncWithYearAndDate() {
+    assertThat(dateTrunc("DATE 2020-12-12", "YEAR"),
+            is(Timestamp.valueOf("2020-01-01 00:00:00")));
+  }
+
+  @Test public void testDateTruncWithWeek() {
+    assertThat(dateTrunc("TIMESTAMP 2020-12-12 12:12:12", "WEEK"),
+            is(Timestamp.valueOf("2020-12-07 00:00:00")));
   }
 
   /** Test for {@link SqlFunctions#datetimeSub(Object, Object)}. */

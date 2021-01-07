@@ -3029,6 +3029,63 @@ public class SqlFunctions {
     return new Timestamp(cal.getTime().getTime());
   }
 
+  public static Object dateTrunc(Object dateTime, Object formatString) {
+    String dt = dateTime.toString();
+    String[] split = dt.split("\\s+");
+    if (split.length < 3) {
+      dt = split[1].concat(" 00:00:00");
+    } else {
+      dt = split[1] + " " + split[2];
+    }
+    Timestamp ts = Timestamp.valueOf(dt);
+    Calendar cal = Calendar.getInstance(TimeZone.getDefault(),
+        Locale.getDefault(Locale.Category.FORMAT));
+    cal.setTime(ts);
+    switch (StringUtils.upperCase(formatString.toString())) {
+    case "DAY":
+      setHourMinuteSecondDayZero(cal);
+      break;
+    case "MONTH":
+      cal.set(Calendar.DAY_OF_MONTH, 01);
+      setHourMinuteSecondDayZero(cal);
+      break;
+    case "YEAR":
+      cal.set(Calendar.DAY_OF_MONTH, 01);
+      cal.set(Calendar.MONTH, 00);
+      setHourMinuteSecondDayZero(cal);
+      break;
+    case "HOUR":
+      cal.set(Calendar.MINUTE, 0);
+      cal.set(Calendar.SECOND, 0);
+      cal.set(Calendar.MILLISECOND, 0);
+      break;
+    case "MINUTE":
+      cal.set(Calendar.SECOND, 0);
+      cal.set(Calendar.MILLISECOND, 0);
+      break;
+    case "SECOND":
+    case "MILLISECOND":
+    case "MICROSECOND":
+      cal.set(Calendar.MILLISECOND, 0);
+      break;
+    case "WEEK":
+      setHourMinuteSecondDayZero(cal);
+      cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+      break;
+    default: throw new IllegalArgumentException(" unknown interval type");
+    }
+    ts.setTime(cal.getTime().getTime());
+    return new Timestamp(cal.getTime().getTime());
+  }
+
+  static void setHourMinuteSecondDayZero(Calendar cal) {
+    cal.set(Calendar.HOUR_OF_DAY, 0);
+    cal.set(Calendar.MINUTE, 0);
+    cal.set(Calendar.SECOND, 0);
+    cal.set(Calendar.MILLISECOND, 0);
+  }
+
+
   public static Object datetimeSub(Object datetime, Object interval) {
     String[] split = ((String) interval).split("\\s+");
     Integer additive = -Integer.parseInt(split[1]);

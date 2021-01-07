@@ -96,6 +96,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.CHR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_ADD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_SUB;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_MOD;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYNAME;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYOCCURRENCE_OF_MONTH;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DIFFERENCE;
@@ -344,6 +345,7 @@ public class RexImpTable {
     defineMethod(LPAD, BuiltInMethod.LPAD.method, NullPolicy.NONE);
     defineMethod(FORMAT, BuiltInMethod.FORMAT.method, NullPolicy.ARG0);
     defineMethod(TO_VARCHAR, BuiltInMethod.TO_VARCHAR.method, NullPolicy.ARG0);
+    defineMethod(DATE_TRUNC, BuiltInMethod.DATE_TRUNC.method, NullPolicy.NONE);
     defineMethod(WEEKNUMBER_OF_YEAR, BuiltInMethod.WEEKNUMBER_OF_YEAR.method, NullPolicy.NONE);
     defineMethod(DAYOCCURRENCE_OF_MONTH, BuiltInMethod.DAYOCCURRENCE_OF_MONTH.method,
         NullPolicy.NONE);
@@ -390,7 +392,6 @@ public class RexImpTable {
     defineBinary(DIVIDE_INTEGER, Divide, NullPolicy.STRICT, "divide");
     defineUnary(UNARY_MINUS, Negate, NullPolicy.STRICT);
     defineUnary(UNARY_PLUS, UnaryPlus, NullPolicy.STRICT);
-
     defineMethod(MOD, "mod", NullPolicy.STRICT);
     defineMethod(EXP, "exp", NullPolicy.STRICT);
     defineMethod(POWER, "power", NullPolicy.STRICT);

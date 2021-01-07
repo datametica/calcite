@@ -341,6 +341,11 @@ public class BigQuerySqlDialect extends SqlDialect {
       } else {
         return super.getTargetFunc(call);
       }
+    case DATE_TRUNC :
+      switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+      case TIMESTAMP:
+        return TIMESTAMP_TRUNC;
+      }
     default:
       return super.getTargetFunc(call);
     }
@@ -388,6 +393,9 @@ public class BigQuerySqlDialect extends SqlDialect {
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
+      break;
+    case DATE_TRUNC:
+      unparseDateTrunc(writer, call);
       break;
     case EXCEPT:
       if (!((SqlSetOperator) call.getOperator()).isAll()) {
@@ -904,6 +912,31 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.print(literalValue.toString());
   }
 
+  private static String removeSingleQuotes(SqlNode sqlNode) {
+    return sqlNode.toString().replaceAll("'", "");
+  }
+
+  private void unparseDateTrunc(SqlWriter writer, SqlCall call) {
+    final SqlWriter.Frame dateTruncFrame = writer.startFunCall(call.getOperator().getName());
+    call.operand(1).unparse(writer, 0, 0);
+    writer.print(",");
+    int len = call.operand(0).toString().length();
+    switch (call.operand(0).toString().substring(1, len - 1).toUpperCase(Locale.ROOT)) {
+    case "WEEK":
+      writer.sep(removeSingleQuotes(call.operand(0)));
+      writer.sep("(Monday)");
+      break;
+    case "MILLISECOND":
+    case "MICROSECOND":
+      if (call.getOperator() == TIMESTAMP_TRUNC) {
+        writer.sep("SECOND");
+      }
+      break;
+    default:
+      writer.sep(removeSingleQuotes(call.operand(0)));
+    }
+    writer.endFunCall(dateTruncFrame);
+  }
 }
 
 // End BigQuerySqlDialect.java
