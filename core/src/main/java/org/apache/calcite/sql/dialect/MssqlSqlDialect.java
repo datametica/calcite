@@ -42,25 +42,24 @@ import org.apache.calcite.sql.type.ReturnTypes;
  * database.
  */
 public class MssqlSqlDialect extends SqlDialect {
-
-  public static final SqlDialect DEFAULT = new MssqlSqlDialect(EMPTY_CONTEXT
+  public static final SqlDialect DEFAULT =
+      new MssqlSqlDialect(EMPTY_CONTEXT
           .withDatabaseProduct(DatabaseProduct.MSSQL)
           .withNullCollation(NullCollation.LOW)
           .withIdentifierQuoteString("[")
           .withCaseSensitive(false));
 
   private final boolean emulateNullDirection;
-
-  private static final SqlFunction MSSQL_SUBSTRING = new SqlFunction(
-          "SUBSTRING", SqlKind.OTHER_FUNCTION, ReturnTypes.ARG0_NULLABLE_VARYING,
-          null, null, SqlFunctionCategory.STRING);
+  private static final SqlFunction MSSQL_SUBSTRING =
+      new SqlFunction("SUBSTRING", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE_VARYING, null, null,
+          SqlFunctionCategory.STRING);
 
   /** Creates a MssqlSqlDialect. */
   public MssqlSqlDialect(Context context) {
     super(context);
     emulateNullDirection = true;
   }
-
 
   @Override public SqlNode emulateNullDirection(
           SqlNode node, boolean nullsFirst, boolean desc) {
@@ -88,14 +87,13 @@ public class MssqlSqlDialect extends SqlDialect {
     return node;
   }
 
-  @Override public void unparseDateTimeLiteral(
-          SqlWriter writer, SqlAbstractDateTimeLiteral literal, int leftPrec, int rightPrec) {
+  @Override public void unparseDateTimeLiteral(SqlWriter writer,
+      SqlAbstractDateTimeLiteral literal, int leftPrec, int rightPrec) {
     writer.literal("'" + literal.toFormattedString() + "'");
   }
 
-  @Override public void unparseCall(
-          SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-
+  @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
     if (call.getOperator() == SqlStdOperatorTable.SUBSTRING) {
       if (call.operandCount() != 3) {
         throw new IllegalArgumentException("MSSQL SUBSTRING requires FROM and FOR arguments");
@@ -130,7 +128,6 @@ public class MssqlSqlDialect extends SqlDialect {
   private void unparseFloor(SqlWriter writer, SqlCall call) {
     SqlLiteral node = call.operand(1);
     TimeUnitRange unit = (TimeUnitRange) node.getValue();
-
     switch (unit) {
     case YEAR:
       unparseFloorWithUnit(writer, call, 4, "-01-01");
