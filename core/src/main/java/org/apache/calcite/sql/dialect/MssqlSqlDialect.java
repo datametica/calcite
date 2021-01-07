@@ -19,8 +19,20 @@ package org.apache.calcite.sql.dialect;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.sql.*;
+import org.apache.calcite.sql.SqlAbstractDateTimeLiteral;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIntervalLiteral;
+import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
@@ -39,15 +51,16 @@ public class MssqlSqlDialect extends SqlDialect {
 
   private final boolean emulateNullDirection;
 
-  private static final SqlFunction MSSQL_SUBSTRING = new SqlFunction("SUBSTRING", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0_NULLABLE_VARYING, null, null,
-          SqlFunctionCategory.STRING);
+  private static final SqlFunction MSSQL_SUBSTRING = new SqlFunction(
+          "SUBSTRING", SqlKind.OTHER_FUNCTION, ReturnTypes.ARG0_NULLABLE_VARYING,
+          null, null, SqlFunctionCategory.STRING);
 
   /** Creates a MssqlSqlDialect. */
   public MssqlSqlDialect(Context context) {
     super(context);
     emulateNullDirection = true;
   }
+
 
   @Override public SqlNode emulateNullDirection(
           SqlNode node, boolean nullsFirst, boolean desc) {
@@ -64,12 +77,13 @@ public class MssqlSqlDialect extends SqlDialect {
     if (nullCollation.isDefaultOrder(nullsFirst, desc)) {
       return null;
     }
-    String sqlLiteralForCaseCall = (!(nullsFirst && desc)) ? "1":"0";
+    String sqlLiteralForCaseCall = (!(nullsFirst && desc)) ? "1" : "0";
     node = new SqlCase(
             SqlParserPos.ZERO, null,
             SqlNodeList.of(SqlStdOperatorTable.IS_NULL.createCall(SqlParserPos.ZERO, node)),
             SqlNodeList.of(SqlLiteral.createExactNumeric(sqlLiteralForCaseCall, SqlParserPos.ZERO)),
-            SqlLiteral.createExactNumeric((sqlLiteralForCaseCall=="1" ? "0":"1"), SqlParserPos.ZERO)
+            SqlLiteral.createExactNumeric(
+                    sqlLiteralForCaseCall.equals("1") ? "0" : "1", SqlParserPos.ZERO)
     );
     return node;
   }
