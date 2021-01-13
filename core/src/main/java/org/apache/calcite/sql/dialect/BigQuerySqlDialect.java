@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -30,7 +29,6 @@ import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalLiteral;
-import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -45,14 +43,13 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.ToNumberUtils;
-import org.apache.calcite.util.interval.BigQueryDateTimestampInterval;
+import org.apache.calcite.util.interval.DateIntervalUtil;
 import org.apache.calcite.util.interval.IntervalUtils;
 
 import com.google.common.collect.ImmutableList;
@@ -478,7 +475,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       writer.sep("as " + operator.getAliasName());
       break;
-    case PLUS:
+    /*case PLUS:
       BigQueryDateTimestampInterval plusInterval = new BigQueryDateTimestampInterval();
       if (!plusInterval.handlePlusMinus(writer, call, leftPrec, rightPrec, "")) {
         super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -489,7 +486,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       if (!minusInterval.handlePlusMinus(writer, call, leftPrec, rightPrec, "-")) {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
-      break;
+      break;*/
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -644,7 +641,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   @Override public void unparseSqlIntervalLiteral(
       SqlWriter writer, SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
-    literal = updateSqlIntervalLiteral(literal);
+    literal = new DateIntervalUtil().updateSqlIntervalLiteral(literal);
     SqlIntervalLiteral.IntervalValue intervalValue =
         (SqlIntervalLiteral.IntervalValue) literal.getValue();
     writer.sep("INTERVAL");
@@ -654,23 +651,6 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.sep(intervalValue.getIntervalLiteral());
     unparseSqlIntervalQualifier(
         writer, intervalValue.getIntervalQualifier(), RelDataTypeSystem.DEFAULT);
-  }
-
-  private SqlIntervalLiteral updateSqlIntervalLiteral(SqlIntervalLiteral literal) {
-    SqlIntervalLiteral.IntervalValue interval =
-        (SqlIntervalLiteral.IntervalValue) literal.getValue();
-    switch (literal.getTypeName()) {
-    case INTERVAL_HOUR_SECOND:
-      long equivalentSecondValue = SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(),
-          interval.getIntervalQualifier()) / 1000;
-      SqlIntervalQualifier qualifier = new SqlIntervalQualifier(TimeUnit.SECOND,
-          RelDataType.PRECISION_NOT_SPECIFIED, TimeUnit.SECOND,
-          RelDataType.PRECISION_NOT_SPECIFIED, SqlParserPos.ZERO);
-      return SqlLiteral.createInterval(interval.getSign(), Long.toString(equivalentSecondValue),
-          qualifier, literal.getParserPosition());
-    default:
-      return literal;
-    }
   }
 
   /**

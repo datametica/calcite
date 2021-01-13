@@ -35,6 +35,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.FormatFunctionUtil;
 import org.apache.calcite.util.ToNumberUtils;
+import org.apache.calcite.util.interval.DateIntervalUtil;
 import org.apache.calcite.util.interval.SnowflakeDateTimestampInterval;
 
 import org.apache.commons.lang3.StringUtils;
@@ -140,7 +141,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
     case TIMES:
       unparseIntervalTimes(writer, call, leftPrec, rightPrec);
       break;
-    case PLUS:
+    /*case PLUS:
       SnowflakeDateTimestampInterval interval = new SnowflakeDateTimestampInterval();
       if (!interval.handlePlus(writer, call, leftPrec, rightPrec)) {
         super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -151,7 +152,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
       if (!interval1.handleMinus(writer, call, leftPrec, rightPrec, "-")) {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
-      break;
+      break;*/
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -450,13 +451,12 @@ public class SnowflakeSqlDialect extends SqlDialect {
   @Override public void unparseIntervalOperandsBasedFunctions(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     final SqlWriter.Frame frame = writer.startList("(", ")");
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
-    writer.sep((SqlKind.PLUS == call.getKind()) ? "+" : "-");
     switch (call.operand(1).getKind()) {
     case LITERAL:
-      unparseSqlIntervalLiteral(writer, call.operand(1), leftPrec, rightPrec);
+      unparseSqlIntervalLiteral(writer, call, leftPrec, rightPrec);
       break;
     case TIMES:
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
       unparseExpressionIntervalCall(writer, call.operand(1), leftPrec, rightPrec);
       break;
     default:
@@ -469,21 +469,22 @@ public class SnowflakeSqlDialect extends SqlDialect {
    * Unparse the literal call from input query and write the INTERVAL part. Below is an example:
    * Input: INTERVAL 2 DAY
    * It will write this as: 2
-   *
-   * @param literal SqlIntervalLiteral :INTERVAL 1 DAY
-   * @param writer Target SqlWriter to write the call
    */
-  @Override public void unparseSqlIntervalLiteral(
-      SqlWriter writer, SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
-    SqlIntervalLiteral.IntervalValue interval =
+  public void unparseSqlIntervalLiteral(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlIntervalLiteral literal = new DateIntervalUtil().updateSqlIntervalLiteral(call.operand(1));
+    SqlIntervalLiteral.IntervalValue intervalValue =
         (SqlIntervalLiteral.IntervalValue) literal.getValue();
-    if (interval.getSign() == -1) {
-      writer.print("(-");
-      writer.literal(interval.getIntervalLiteral());
-      writer.print(")");
-    } else {
-      writer.literal(interval.getIntervalLiteral());
+    writer.sep(intervalValue.getIntervalQualifier().toString());
+    writer.sep(",");
+    if (intervalValue.getSign() == -1) {
+      writer.print("-");
     }
+    writer.print(intervalValue.getIntervalLiteral());
+    writer.sep(",");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    /*unparseSqlIntervalQualifier(
+        writer, intervalValue.getIntervalQualifier(), RelDataTypeSystem.DEFAULT);*/
   }
 
   /**
