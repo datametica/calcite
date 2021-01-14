@@ -553,18 +553,17 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction DATE_TRUNC =
       new SqlFunction(
           "DATE_TRUNC",
-          SqlKind.DATE_TRUNC,
+          SqlKind.OTHER_FUNCTION,
           ReturnTypes.DATE,
           null,
-          OperandTypes.or(OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.DATE),
-          OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.TIMESTAMP)),
+          OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.CHARACTER),
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIGQUERY})
   public static final SqlFunction TIMESTAMP_TRUNC =
       new SqlFunction(
           "TIMESTAMP_TRUNC",
-          SqlKind.DATE_TRUNC,
+          SqlKind.OTHER_FUNCTION,
           ReturnTypes.ARG1,
           null,
           OperandTypes.family(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER),

@@ -708,7 +708,6 @@ public abstract class SqlImplementor {
           }
         case PLUS:
         case MINUS:
-        case DATE_TRUNC:
           op = dialect.getTargetFunc(call);
           break;
         }
