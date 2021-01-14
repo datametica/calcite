@@ -69,6 +69,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
   @Override public SqlOperator getTargetFunc(RexCall call) {
     switch (call.type.getSqlTypeName()) {
     case DATE:
+    case TIMESTAMP:
       return getTargetFunctionForDateOperations(call);
     default:
       return super.getTargetFunc(call);
@@ -78,6 +79,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
   private SqlOperator getTargetFunctionForDateOperations(RexCall call) {
     switch (call.getOperands().get(1).getType().getSqlTypeName()) {
     case INTERVAL_DAY:
+    case INTERVAL_YEAR:
       if (call.op.kind == SqlKind.MINUS) {
         return SqlLibraryOperators.DATE_SUB;
       }
@@ -450,6 +452,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
    */
   @Override public void unparseIntervalOperandsBasedFunctions(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    writer.print("DATEADD");
     final SqlWriter.Frame frame = writer.startList("(", ")");
     switch (call.operand(1).getKind()) {
     case LITERAL:
@@ -477,7 +480,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
         (SqlIntervalLiteral.IntervalValue) literal.getValue();
     writer.sep(intervalValue.getIntervalQualifier().toString());
     writer.sep(",");
-    if (intervalValue.getSign() == -1) {
+    if (intervalValue.getSign() == -1 || checkMinusOperatorPresent(call.getOperator())) {
       writer.print("-");
     }
     writer.print(intervalValue.getIntervalLiteral());
@@ -485,6 +488,11 @@ public class SnowflakeSqlDialect extends SqlDialect {
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     /*unparseSqlIntervalQualifier(
         writer, intervalValue.getIntervalQualifier(), RelDataTypeSystem.DEFAULT);*/
+  }
+
+  private boolean checkMinusOperatorPresent(SqlOperator operator) {
+    return SqlLibraryOperators.DATE_SUB.equals(operator)
+        || SqlLibraryOperators.TIMESTAMP_SUB.equals(operator);
   }
 
   /**
