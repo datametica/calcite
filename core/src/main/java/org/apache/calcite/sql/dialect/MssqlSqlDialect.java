@@ -20,7 +20,9 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlAbstractDateTimeLiteral;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlFunction;
@@ -31,6 +33,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlTimeLiteral;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.sql.SqlUtil;
@@ -67,6 +70,73 @@ public class MssqlSqlDialect extends SqlDialect {
   public MssqlSqlDialect(Context context) {
     super(context);
     emulateNullDirection = true;
+  }
+
+  @Override public SqlOperator getTargetFunc(RexCall call) {
+    switch (call.getOperator().kind) {
+    case PLUS:
+    case MINUS:
+      switch (call.type.getSqlTypeName()) {
+      case DATE:
+        switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+        case INTERVAL_DAY:
+        case INTERVAL_MONTH:
+        case INTERVAL_YEAR:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_DAY_SECOND:
+          if (call.op.kind == SqlKind.MINUS) {
+            return SqlLibraryOperators.DATE_SUB;
+          }
+          return SqlLibraryOperators.DATE_ADD;
+        default:
+          return super.getTargetFunc(call);
+        }
+      case TIMESTAMP:
+        switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+        case INTERVAL_DAY:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_DAY_SECOND:
+          if (call.op.kind == SqlKind.MINUS) {
+            return SqlLibraryOperators.TIMESTAMP_SUB;
+          }
+          return SqlLibraryOperators.TIMESTAMP_ADD;
+        case INTERVAL_MONTH:
+        case INTERVAL_YEAR:
+          if (call.op.kind == SqlKind.MINUS) {
+            return SqlLibraryOperators.DATETIME_SUB;
+          }
+          return SqlLibraryOperators.DATETIME_ADD;
+        }
+      default:
+        return super.getTargetFunc(call);
+      }
+    case IS_NOT_TRUE:
+      if (call.getOperands().get(0).getKind() == SqlKind.EQUALS) {
+        return SqlStdOperatorTable.NOT_EQUALS;
+      } else if (call.getOperands().get(0).getKind() == SqlKind.NOT_EQUALS) {
+        return SqlStdOperatorTable.EQUALS;
+      } else {
+        return super.getTargetFunc(call);
+      }
+    case IS_TRUE:
+      if (call.getOperands().get(0).getKind() == SqlKind.EQUALS) {
+        return SqlStdOperatorTable.EQUALS;
+      } else if (call.getOperands().get(0).getKind() == SqlKind.NOT_EQUALS) {
+        return SqlStdOperatorTable.NOT_EQUALS;
+      } else {
+        return super.getTargetFunc(call);
+      }
+    default:
+      return super.getTargetFunc(call);
+    }
   }
 
   @Override public boolean supportsAliasedValues() {
@@ -161,10 +231,26 @@ public class MssqlSqlDialect extends SqlDialect {
         }
         writer.endFunCall(concatFrame);
         break;
+      case PLUS:
+        if (call.getOperator().equals(SqlLibraryOperators.DATE_ADD)
+            || call.getOperator().equals(SqlLibraryOperators.DATE_SUB)) {
+          handleDatePlusMinus(writer, call, leftPrec, rightPrec);
+        } else {
+          super.unparseCall(writer, call, leftPrec, rightPrec);
+        }
+        break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
     }
+  }
+
+  private void handleDatePlusMinus(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlNode[] operands = new SqlNode[] {
+        SqlLiteral.createSymbol(
+            DateTimeEnum.DAY, SqlParserPos.ZERO), call.operand(1), call.operand(0) };
+    SqlCall sqlCall = new SqlBasicCall(call.getOperator(), operands, SqlParserPos.ZERO);
+    super.unparseCall(writer, sqlCall, leftPrec, rightPrec);
   }
 
   public void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
@@ -185,9 +271,25 @@ public class MssqlSqlDialect extends SqlDialect {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
       break;
+    case "RPAD":
+      unparseRPAD(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseRPAD(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWriter.Frame leftFrame = writer.startFunCall("LEFT");
+    final SqlWriter.Frame replicateFrame = writer.startFunCall("REPLICATE");
+
+    writer.endFunCall(leftFrame);
+    writer.sep("+");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.sep(",", true);
+    writer.print("0");
+    writer.endFunCall(replicateFrame);
   }
 
   @Override public boolean supportsCharSet() {
@@ -341,6 +443,7 @@ public class MssqlSqlDialect extends SqlDialect {
    * Date time Enum for MS-Sql
    */
   enum DateTimeEnum {
+    DAY("DAY"),
     DATETIME2("DATETIME2");
 
     String name;
