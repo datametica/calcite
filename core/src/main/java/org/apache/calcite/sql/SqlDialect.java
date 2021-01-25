@@ -42,6 +42,8 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.TimeString;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
@@ -54,6 +56,7 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1339,6 +1342,20 @@ public class SqlDialect {
         separators.add(standardDateFormat.charAt(i));
         dateTimeTokens.add(standardDateFormat.substring(startIndex, i));
         startIndex = i + 1;
+      }
+    }
+
+    if (dateTimeTokens.isEmpty()) {
+      int startInd = 0;
+      int endInd = 2;
+      while (standardDateFormat.length() >= 2) {
+        String sourceFormat = StringUtils.substring(standardDateFormat, startInd, endInd);
+        if (sourceFormat.isEmpty()) {
+          return new Pair<>(dateTimeTokens, Collections.EMPTY_LIST);
+        }
+        dateTimeTokens.add(sourceFormat);
+        startInd += 2;
+        endInd += 2;
       }
     }
     if (lastIndex > startIndex) {
