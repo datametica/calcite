@@ -1348,7 +1348,7 @@ public class SqlDialect {
     if (dateTimeTokens.isEmpty()) {
       int startInd = 0;
       int endInd = 2;
-      while (standardDateFormat.length() >= 2) {
+      while (!standardDateFormat.isEmpty()) {
         String sourceFormat = StringUtils.substring(standardDateFormat, startInd, endInd);
         if (sourceFormat.isEmpty()) {
           return new Pair<>(dateTimeTokens, Collections.EMPTY_LIST);
