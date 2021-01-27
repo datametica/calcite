@@ -20,6 +20,7 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlAbstractDateTimeLiteral;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlFunction;
@@ -33,9 +34,13 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
+
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.ISNULL;
 
 /**
  * A <code>SqlDialect</code> implementation for the Microsoft SQL Server
@@ -106,9 +111,53 @@ public class MssqlSqlDialect extends SqlDialect {
         }
         unparseFloor(writer, call);
         break;
+      case TRIM:
+        unparseTrim(writer, call, leftPrec, rightPrec);
+        break;
+      case OTHER_FUNCTION:
+      case TRUNCATE:
+        unparseOtherFunction(writer, call, leftPrec, rightPrec);
+        break;
+      case CEIL:
+        final SqlWriter.Frame ceilFrame = writer.startFunCall("CEILING");
+        call.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.endFunCall(ceilFrame);
+        break;
+      case NVL:
+        SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
+        SqlCall sqlCall = new SqlBasicCall(ISNULL, extractNodeOperands,
+                SqlParserPos.ZERO);
+        unparseCall(writer, sqlCall, leftPrec, rightPrec);
+        break;
+
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
+    }
+  }
+
+  public void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.getOperator().getName()) {
+    case "LN":
+      final SqlWriter.Frame logFrame = writer.startFunCall("LOG");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(logFrame);
+      break;
+    case "ROUND":
+    case "TRUNCATE":
+      final SqlWriter.Frame funcFrame = writer.startFunCall("ROUND");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      if (call.operandCount() < 2) {
+        writer.sep(",");
+        writer.print("0");
+      }
+      writer.endFunCall(funcFrame);
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
@@ -233,6 +282,32 @@ public class MssqlSqlDialect extends SqlDialect {
     }
     writer.endList(frame);
   }
+
+  /**
+   * For usage of TRIM in MSSQL
+   */
+  private void unparseTrim(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (((SqlLiteral) call.operand(0)).getValueAs(SqlTrimFunction.Flag.class)) {
+    case BOTH:
+      final SqlWriter.Frame frame = writer.startFunCall(call.getOperator().getName());
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.sep("FROM");
+      call.operand(2).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(frame);
+      break;
+    case LEADING:
+      unparseCall(writer, SqlLibraryOperators.LTRIM.
+          createCall(SqlParserPos.ZERO, new SqlNode[]{call.operand(2)}), leftPrec, rightPrec);
+      break;
+    case TRAILING:
+      unparseCall(writer, SqlLibraryOperators.RTRIM.
+          createCall(SqlParserPos.ZERO, new SqlNode[]{call.operand(2)}), leftPrec, rightPrec);
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
 }
 
 // End MssqlSqlDialect.java
