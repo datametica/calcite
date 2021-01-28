@@ -98,6 +98,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NUMERICMONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR1;
+import static org.apache.calcite.sql.SqlDateTimeFormat.QUARTER;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECOND;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEZONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOUR;
@@ -120,6 +121,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MULTIPLY;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.PLUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.RAND;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
+
 
 
 /**
@@ -199,6 +201,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(MILISECONDS_4, "*S");
         put(E4, "%A");
         put(E3, "%a");
+        put(QUARTER, "%Q");
       }};
 
   /** An unquoted BigQuery identifier must start with a letter and be followed
