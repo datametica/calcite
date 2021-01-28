@@ -850,6 +850,10 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "STRTOK":
       unparseStrtok(writer, call, leftPrec, rightPrec);
       break;
+    case "DATE_TRUNC":
+    case "TIMESTAMP_TRUNC":
+      unparseTimestampDateTrunc(writer, call);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -947,6 +951,17 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.print(literalValue.toString());
   }
 
+  private static String removeSingleQuotes(SqlNode sqlNode) {
+    return sqlNode.toString().replaceAll("'", "");
+  }
+
+  private void unparseTimestampDateTrunc(SqlWriter writer, SqlCall call) {
+    final SqlWriter.Frame dateTruncFrame = writer.startFunCall(call.getOperator().getName());
+    call.operand(0).unparse(writer, 0, 0);
+    writer.print(",");
+    writer.sep(removeSingleQuotes(call.operand(1)));
+    writer.endFunCall(dateTruncFrame);
+  }
 }
 
 // End BigQuerySqlDialect.java
