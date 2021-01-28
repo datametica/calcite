@@ -1341,7 +1341,7 @@ public class SqlDialect {
         startIndex = i + 1;
       }
     }
-    if (lastIndex > startIndex) {
+    if (lastIndex >= startIndex) {
       dateTimeTokens.add(standardDateFormat.substring(startIndex));
     }
     return new Pair<>(dateTimeTokens, separators);

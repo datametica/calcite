@@ -6635,6 +6635,17 @@ public class RelToSqlConverterTest {
       .withMssql()
       .ok(expected);
   }
+
+  @Test public void testCaseForQ() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode condition = builder.call(SqlLibraryOperators.FORMAT_DATE,
+            builder.literal("Q"), builder.field("HIREDATE"));
+    final RelNode root = relBuilder().scan("EMP").filter(condition).build();
+    final String expectedBQ = "SELECT *\nFROM scott.EMP\n"
+            + "WHERE FORMAT_DATE('%Q', HIREDATE)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQ));
+  }
+
 }
 
 // End RelToSqlConverterTest.java
