@@ -68,6 +68,7 @@ import static org.apache.calcite.runtime.SqlFunctions.substring;
 import static org.apache.calcite.runtime.SqlFunctions.subtractMonths;
 import static org.apache.calcite.runtime.SqlFunctions.timeSub;
 import static org.apache.calcite.runtime.SqlFunctions.timestampToDate;
+import static org.apache.calcite.runtime.SqlFunctions.timestampTrunc;
 import static org.apache.calcite.runtime.SqlFunctions.toBase64;
 import static org.apache.calcite.runtime.SqlFunctions.toBinary;
 import static org.apache.calcite.runtime.SqlFunctions.toCharFunction;
@@ -1128,18 +1129,18 @@ public class SqlFunctionsTest {
             is(Timestamp.valueOf("2020-12-01 00:00:00")));
   }
 
-  @Test public void testDateTruncWithYear() {
-    assertThat(dateTrunc("TIMESTAMP 2020-12-12 12:12:12", "YEAR"),
+  @Test public void testTimestampTruncWithYear() {
+    assertThat(timestampTrunc("TIMESTAMP 2020-12-12 12:12:12", "YEAR"),
             is(Timestamp.valueOf("2020-01-01 00:00:00")));
   }
 
-  @Test public void testDateTruncWithYearAndDate() {
+  @Test public void testDateTruncWithYear() {
     assertThat(dateTrunc("DATE 2020-12-12", "YEAR"),
             is(Timestamp.valueOf("2020-01-01 00:00:00")));
   }
 
-  @Test public void testDateTruncWithWeek() {
-    assertThat(dateTrunc("TIMESTAMP 2020-12-12 12:12:12", "WEEK"),
+  @Test public void testTimestampTruncWithWeek() {
+    assertThat(timestampTrunc("TIMESTAMP 2020-12-12 12:12:12", "WEEK"),
             is(Timestamp.valueOf("2020-12-07 00:00:00")));
   }
 
