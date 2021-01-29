@@ -140,6 +140,18 @@ public class MssqlSqlDialect extends SqlDialect {
       case EXTRACT:
         unparseExtract(writer, call, leftPrec, rightPrec);
         break;
+      case SUBSTRING:
+        final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTRING");
+        for(SqlNode operand : call.getOperandList()) {
+          writer.sep(",");
+          operand.unparse(writer, leftPrec, rightPrec);
+        }
+        if(call.operandCount() < 3) {
+          writer.sep(",");
+          writer.print("2147483647");
+        }
+        writer.endFunCall(substringFrame);
+        break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
