@@ -32,7 +32,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
@@ -105,56 +104,53 @@ public class MssqlSqlDialect extends SqlDialect {
 
   @Override public void unparseCall(SqlWriter writer, SqlCall call,
       int leftPrec, int rightPrec) {
-    if (call.getOperator() == SqlStdOperatorTable.SUBSTRING) {
-      if (call.operandCount() != 3) {
-        throw new IllegalArgumentException("MSSQL SUBSTRING requires FROM and FOR arguments");
-      }
-      SqlUtil.unparseFunctionSyntax(MSSQL_SUBSTRING, writer, call);
-    } else {
-      switch (call.getKind()) {
-      case FLOOR:
-        if (call.operandCount() != 2) {
-          super.unparseCall(writer, call, leftPrec, rightPrec);
-          return;
-        }
-        unparseFloor(writer, call);
-        break;
-      case TRIM:
-        unparseTrim(writer, call, leftPrec, rightPrec);
-        break;
-      case OTHER_FUNCTION:
-      case TRUNCATE:
-        unparseOtherFunction(writer, call, leftPrec, rightPrec);
-        break;
-      case CEIL:
-        final SqlWriter.Frame ceilFrame = writer.startFunCall("CEILING");
-        call.operand(0).unparse(writer, leftPrec, rightPrec);
-        writer.endFunCall(ceilFrame);
-        break;
-      case NVL:
-        SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
-        SqlCall sqlCall = new SqlBasicCall(ISNULL, extractNodeOperands,
-                SqlParserPos.ZERO);
-        unparseCall(writer, sqlCall, leftPrec, rightPrec);
-        break;
-      case EXTRACT:
-        unparseExtract(writer, call, leftPrec, rightPrec);
-        break;
-      case SUBSTRING:
-        final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTRING");
-        for(SqlNode operand : call.getOperandList()) {
-          writer.sep(",");
-          operand.unparse(writer, leftPrec, rightPrec);
-        }
-        if(call.operandCount() < 3) {
-          writer.sep(",");
-          writer.print("2147483647");
-        }
-        writer.endFunCall(substringFrame);
-        break;
-      default:
+    switch (call.getKind()) {
+    case FLOOR:
+      if (call.operandCount() != 2) {
         super.unparseCall(writer, call, leftPrec, rightPrec);
+        return;
       }
+      unparseFloor(writer, call);
+      break;
+    case TRIM:
+      unparseTrim(writer, call, leftPrec, rightPrec);
+      break;
+    case OTHER_FUNCTION:
+    case TRUNCATE:
+      unparseOtherFunction(writer, call, leftPrec, rightPrec);
+      break;
+    case CEIL:
+      final SqlWriter.Frame ceilFrame = writer.startFunCall("CEILING");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(ceilFrame);
+      break;
+    case NVL:
+      SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
+      SqlCall sqlCall = new SqlBasicCall(ISNULL, extractNodeOperands,
+              SqlParserPos.ZERO);
+      unparseCall(writer, sqlCall, leftPrec, rightPrec);
+      break;
+    case EXTRACT:
+      unparseExtract(writer, call, leftPrec, rightPrec);
+      break;
+    case SUBSTRING:
+      final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTRING");
+      final int maxLength = 2147483647;
+      for (SqlNode operand : call.getOperandList()) {
+        if (operand.getKind() == SqlKind.TIMES) {
+          operand = ((SqlBasicCall) operand).operand(0);
+        }
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      if (call.operandCount() < 3) {
+        writer.sep(",");
+        writer.print(maxLength);
+      }
+      writer.endFunCall(substringFrame);
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
