@@ -138,7 +138,7 @@ public class MssqlSqlDialect extends SqlDialect {
       final int maxLength = 2147483647;
       for (SqlNode operand : call.getOperandList()) {
         if (operand.getKind() == SqlKind.TIMES) {
-          operand = ((SqlBasicCall) operand).operand(0);
+          operand = ((SqlBasicCall) operand).operand(1);
         }
         writer.sep(",");
         operand.unparse(writer, leftPrec, rightPrec);
