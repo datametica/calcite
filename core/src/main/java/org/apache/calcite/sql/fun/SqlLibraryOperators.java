@@ -847,5 +847,22 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_2000_NULLABLE, null,
               OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction LEN =
+      new SqlFunction("LEN",
+          SqlKind.CHAR_LENGTH,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.CHARACTER,
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction CHARINDEX =
+      new SqlFunction("CHARINDEX",
+          SqlKind.POSITION,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.STRING),
+          SqlFunctionCategory.NUMERIC);
+
 }
 // End SqlLibraryOperators.java

@@ -1408,7 +1408,13 @@ public class RelToSqlConverterTest {
     final String query = "select position('A' IN 'ABC') from \"product\"";
     final String expected = "SELECT INSTR('ABC', 'A')\n"
         + "FROM foodmart.product";
-    sql(query).withHive().ok(expected);
+    final String synapseSql = "SELECT CHARINDEX('A', 'ABC')\n"
+            + "FROM [foodmart].[product]";
+    sql(query)
+        .withHive()
+        .ok(expected)
+        .withMssql()
+        .ok(synapseSql);
   }
 
   @Test public void testPositionFunctionForBigQuery() {
@@ -1583,6 +1589,8 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product";
     final String expectedSnowFlake = "SELECT LENGTH('xyz')\n"
             + "FROM \"foodmart\".\"product\"";
+    final String synapseSql = "SELECT LEN('xyz')\n"
+            + "FROM [foodmart].[product]";
     sql(query)
       .withHive()
       .ok(expected)
@@ -1591,7 +1599,9 @@ public class RelToSqlConverterTest {
       .withSpark()
       .ok(expected)
       .withSnowflake()
-      .ok(expectedSnowFlake);
+      .ok(expectedSnowFlake)
+      .withMssql()
+      .ok(synapseSql);
   }
 
   @Test
@@ -5151,6 +5161,7 @@ public class RelToSqlConverterTest {
         + "GROUP BY \"product_id\", MAX(\"product_id\") OVER (PARTITION BY \"product_id\" "
         + "ORDER BY \"product_id\" ROWS BETWEEN UNBOUNDED PRECEDING AND "
         + "UNBOUNDED FOLLOWING)";
+    final String synapse = "";
     sql(query)
         .withHive()
         .ok(expected)
@@ -5159,7 +5170,9 @@ public class RelToSqlConverterTest {
         .withBigQuery()
         .ok(expectedBQ)
         .withSnowflake()
-        .ok(expectedSnowFlake);
+        .ok(expectedSnowFlake)
+        .withMssql()
+        .ok(synapse);
   }
 
   @Test
