@@ -2641,6 +2641,8 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product";
     final String expectedBiqQuery = "SELECT SUBSTR(brand_name, 2)\n"
         + "FROM foodmart.product";
+    final String expectedMssql = "SELECT SUBSTRING([brand_name], 2, 2147483647)"
+            + "\nFROM [foodmart].[product]";
     sql(query)
         .withOracle()
         .ok(expectedOracle)
@@ -2653,8 +2655,7 @@ public class RelToSqlConverterTest {
         .withMysql()
         .ok(expectedMysql)
         .withMssql()
-        // mssql does not support this syntax and so should fail
-        .throws_("MSSQL SUBSTRING requires FROM and FOR arguments")
+        .ok(expectedMssql)
         .withHive()
         .ok(expectedHive)
         .withSpark()
