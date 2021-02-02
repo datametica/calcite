@@ -869,12 +869,20 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.NUMERIC);
 
   @LibraryOperator(libraries = {MSSQL})
-  public static final SqlFunction CHARINDEX =
-      new SqlFunction("CHARINDEX",
-          SqlKind.POSITION,
-          ReturnTypes.INTEGER_NULLABLE, null,
-          OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.STRING),
-          SqlFunctionCategory.NUMERIC);
-
+  public static final SqlFunction IIF =
+      new SqlFunction("IIF",
+          SqlKind.IF,
+          ReturnTypes.ARG2_NULLABLE,
+          null,
+          OperandTypes.and(
+            OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY,
+                    SqlTypeFamily.ANY),
+            new SameOperandTypeChecker(3) {
+              @Override protected List<Integer>
+              getOperandList(int operandCount) {
+                return ImmutableList.of(1, 2);
+              }
+            }),
+          SqlFunctionCategory.SYSTEM);
 }
 // End SqlLibraryOperators.java

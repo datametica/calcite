@@ -152,6 +152,18 @@ public class MssqlSqlDialect extends SqlDialect {
                 createCall(SqlParserPos.ZERO, call.getOperandList());
         super.unparseCall(writer, charIndex, leftPrec, rightPrec);
         break;
+      case IF:
+        SqlCall iifCall;
+        if (call.getOperandList().size() == 3) {
+          iifCall = SqlLibraryOperators.IIF.createCall(SqlParserPos.ZERO, call.operand(0),
+                  call.operand(1), call.operand(2));
+        } else {
+          SqlNode literal = SqlLiteral.createBinaryString("", SqlParserPos.ZERO);
+          iifCall = SqlLibraryOperators.IIF.createCall(SqlParserPos.ZERO, call.operand(0),
+                  call.operand(1), literal);
+        }
+        super.unparseCall(writer, iifCall, leftPrec, rightPrec);
+        break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
@@ -215,7 +227,8 @@ public class MssqlSqlDialect extends SqlDialect {
       break;
 //    case "REPLACE":
 //      call.operand(0).unparse(writer, leftPrec, rightPrec);
-//      SqlNode collateCall = SqlLiteral. call.operand(1).toString() + "COLLATE Latin1_General_CS_AS, 'O')";
+//      SqlNode collateCall = SqlLiteral. call.operand(1).toString()
+//      + "COLLATE Latin1_General_CS_AS, 'O')";
 //      call.operand(2).unparse(writer, leftPrec, rightPrec);
 //      break;
     default:

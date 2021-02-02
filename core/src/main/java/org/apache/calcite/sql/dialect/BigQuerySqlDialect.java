@@ -759,7 +759,7 @@ public class BigQuerySqlDialect extends SqlDialect {
    * Return the identifer from the SqlBasicCall.
    *
    * @param intervalOperand Store_id * INTERVAL 1 DAY
-   * @return SqlIdentifier Store_id
+   * @retufdentifier Store_id
    */
   private SqlNode getIdentifier(SqlBasicCall intervalOperand) {
     if (intervalOperand.operand(1).getKind() == SqlKind.IDENTIFIER

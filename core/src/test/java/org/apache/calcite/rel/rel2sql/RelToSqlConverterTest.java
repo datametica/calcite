@@ -5810,6 +5810,7 @@ public class RelToSqlConverterTest {
     String query = "SELECT if ('ABC'='' or 'ABC' is null, null, ASCII('ABC'))";
     final String expected = "SELECT CAST(ASCII('ABC') AS INTEGER)";
     final String expectedBigQuery = "SELECT CAST(TO_CODE_POINTS('ABC') [OFFSET(0)] AS INTEGER)";
+    final String synapse = "";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
@@ -5829,13 +5830,17 @@ public class RelToSqlConverterTest {
         + " IS NULL, NULL, ASCII(SUBSTRING('ABC', 1, 1)))";
     final String expectedBigQuery = "SELECT IF(SUBSTR('ABC', 1, 1) = '' OR SUBSTR('ABC', 1, 1) IS"
         + " NULL, NULL, TO_CODE_POINTS(SUBSTR('ABC', 1, 1)) [OFFSET(0)])";
+    final String synapse = "SELECT IIF(SUBSTRING('ABC', 1, 1) = '' OR SUBSTRING('ABC', 1, 1) IS"
+        + " NULL, NULL, ASCII(SUBSTRING('ABC', 1, 1)))";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withHive()
         .ok(expected)
         .withSpark()
-        .ok(expectedSpark);
+        .ok(expectedSpark)
+        .withMssql()
+        .ok(synapse);
   }
 
   @Test public void testIfColumnArgument() {
@@ -5847,6 +5852,7 @@ public class RelToSqlConverterTest {
     final String hiveExpected = "SELECT IF(product_name = '' OR product_name IS NULL, NULL, "
         + "ASCII(product_name))\n"
         + "FROM foodmart.product";
+    final String synapse = "";
     sql(query)
         .withBigQuery()
         .ok(bigQueryExpected)
@@ -5870,6 +5876,7 @@ public class RelToSqlConverterTest {
         + "FROM scott.EMP";
     final String expectedHive = "SELECT IF(EMPNO = 20, NULL, EMPNO) NI\n"
         + "FROM scott.EMP";
+    final String synapse = "";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
