@@ -100,9 +100,16 @@ public class MssqlSqlDialect extends SqlDialect {
     return node;
   }
 
+  /**
+   * For usage of Offset/Fetch in Mssql
+   * Using ANSI Standard Syntax OFFSET offset_value ROWS FETCH NEXT fetch_value ROWS ONLY
+   * */
   @Override public void unparseOffsetFetch(
       SqlWriter writer, SqlNode offset, SqlNode fetch) {
-    unparseOffsetFetchAnsi(writer, offset, fetch);
+    if (fetch != null && offset == null) {
+      offset = SqlLiteral.createExactNumeric("0", SqlParserPos.ZERO);
+    }
+    super.unparseOffsetFetch(writer, offset, fetch);
   }
 
   @Override public void unparseDateTimeLiteral(SqlWriter writer,
@@ -451,51 +458,6 @@ public class MssqlSqlDialect extends SqlDialect {
     writer.endList(frame);
   }
 
-  /**
-   * For usage of Offset/Fetch in Mssql
-   * Using ANSI Standard Syntax OFFSET offset_value ROWS FETCH NEXT fetch_value ROWS ONLY
-   * */
-  private void unparseOffsetFetchAnsi(
-      SqlWriter writer, SqlNode offset, SqlNode fetch) {
-    if (offset != null) {
-      unparseOffsetAnsi(writer, offset);
-    }
-    if (fetch != null) {
-      unparseFetchAnsi(writer, offset, fetch);
-    }
-  }
-
-  private void unparseOffsetAnsi(SqlWriter writer, SqlNode offset) {
-    writer.newlineAndIndent();
-    final SqlWriter.Frame offsetFrame =
-        writer.startList(SqlWriter.FrameTypeEnum.OFFSET);
-    writer.print("OFFSET");
-    writer.setNeedWhitespace(true);
-    if (offset != null) {
-      offset.unparse(writer, -1, -1);
-    } else {
-      writer.print("0");
-    }
-    writer.setNeedWhitespace(true);
-    writer.print("ROWS");
-    writer.endList(offsetFrame);
-
-  }
-
-  private void unparseFetchAnsi(SqlWriter writer, SqlNode offset, SqlNode fetch) {
-    if (offset == null) {
-      unparseOffsetAnsi(writer, null);
-    }
-    writer.newlineAndIndent();
-    final SqlWriter.Frame fetchFrame =
-        writer.startList(SqlWriter.FrameTypeEnum.FETCH);
-    writer.keyword("FETCH");
-    writer.keyword("NEXT");
-    fetch.unparse(writer, -1, -1);
-    writer.keyword("ROWS");
-    writer.keyword("ONLY");
-    writer.endList(fetchFrame);
-  }
 }
 
 // End MssqlSqlDialect.java
