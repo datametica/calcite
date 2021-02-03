@@ -832,6 +832,13 @@ public class RelToSqlConverterTest {
         + "ELSE NULL END AS rnk\n"
         + "FROM foodmart.employee) AS t\n"
         + "GROUP BY rnk";
+    final  String mssql = "SELECT CASE WHEN CAST([salary] AS DECIMAL(14, 4)) = 20 THEN MAX("
+            + "[salary]) OVER (PARTITION BY [position_id] ORDER BY [salary] ROWS BETWEEN UNBOUNDED "
+            + "PRECEDING AND UNBOUNDED FOLLOWING) ELSE NULL END AS [rnk]\n"
+            + "FROM [foodmart].[employee]\n"
+            + "GROUP BY CASE WHEN CAST([salary] AS DECIMAL(14, 4)) = 20 THEN MAX([salary]) OVER "
+            + "(PARTITION BY [position_id] ORDER BY [salary] ROWS BETWEEN UNBOUNDED PRECEDING AND "
+            + "UNBOUNDED FOLLOWING) ELSE NULL END";
     sql(query)
         .ok(expectedSql)
         .withHive()
@@ -839,7 +846,9 @@ public class RelToSqlConverterTest {
         .withSpark()
         .ok(expectedSpark)
         .withBigQuery()
-        .ok(expectedBigQuery);
+        .ok(expectedBigQuery)
+        .withMssql()
+        .ok(mssql);
   }
 
   /** Test case for
@@ -4265,10 +4274,15 @@ public class RelToSqlConverterTest {
     final String expectedBiqquery = "SELECT employee_id\n"
         + "FROM foodmart.employee\n"
         + "WHERE 10 = CAST('10' AS INTEGER) AND birth_date = '1914-02-02' OR hire_date = CAST(CONCAT('1996-01-01 ', '00:00:00') AS TIMESTAMP(0))";
+    final String mssql = "SELECT [employee_id]\n"
+            + "FROM [foodmart].[employee]\n"
+            + "WHERE 10 = '10' AND [birth_date] = '1914-02-02' OR [hire_date] = CONCAT('1996-01-01 ', '00:00:00')";
     sql(query)
         .ok(expected)
         .withBigQuery()
-        .ok(expectedBiqquery);
+        .ok(expectedBiqquery)
+        .withMssql()
+        .ok(mssql);
   }
 
   @Test public void testRegexSubstrFunction2Args() {
@@ -4931,13 +4945,17 @@ public class RelToSqlConverterTest {
     String query = "select 'foo' || 'bar' from \"employee\"";
     final String expected = "SELECT CONCAT('foo', 'bar')\n"
         + "FROM foodmart.employee";
+    final String mssql = "SELECT CONCAT('foo', 'bar')\n"
+            + "FROM [foodmart].[employee]";
     sql(query)
         .withHive()
         .ok(expected)
         .withSpark()
         .ok(expected)
         .withBigQuery()
-        .ok(expected);
+        .ok(expected)
+        .withMssql()
+        .ok(mssql);
   }
 
   @Test public void testJsonRemove() {
@@ -5209,6 +5227,12 @@ public class RelToSqlConverterTest {
         + "GROUP BY \"product_id\", MAX(\"product_id\") OVER (PARTITION BY \"product_id\" "
         + "ORDER BY \"product_id\" ROWS BETWEEN UNBOUNDED PRECEDING AND "
         + "UNBOUNDED FOLLOWING)";
+    final String mssql = "SELECT [product_id], MAX([product_id]) OVER (PARTITION "
+            + "BY [product_id] ORDER BY [product_id] ROWS BETWEEN UNBOUNDED PRECEDING AND "
+            + "UNBOUNDED FOLLOWING) AS [ABC]\n"
+            + "FROM [foodmart].[product]\n"
+            + "GROUP BY [product_id], MAX([product_id]) OVER (PARTITION BY [product_id] "
+            + "ORDER BY [product_id] ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)";
     sql(query)
         .withHive()
         .ok(expected)
@@ -5217,7 +5241,9 @@ public class RelToSqlConverterTest {
         .withBigQuery()
         .ok(expectedBQ)
         .withSnowflake()
-        .ok(expectedSnowFlake);
+        .ok(expectedSnowFlake)
+        .withMssql()
+        .ok(mssql);
   }
 
   @Test
@@ -5232,6 +5258,8 @@ public class RelToSqlConverterTest {
     final String expectedSnowFlake = "SELECT COUNT(*) OVER (ORDER BY 0 "
         + "ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)\n"
         + "FROM \"foodmart\".\"product\"";
+    final String mssql = "SELECT COUNT(*) OVER ()\n"
+            + "FROM [foodmart].[product]";
     sql(query)
         .withHive()
         .ok(expected)
@@ -5240,7 +5268,9 @@ public class RelToSqlConverterTest {
         .withBigQuery()
         .ok(expectedBQ)
         .withSnowflake()
-        .ok(expectedSnowFlake);
+        .ok(expectedSnowFlake)
+        .withMssql()
+        .ok(mssql);
   }
 
   @Test
@@ -5267,6 +5297,12 @@ public class RelToSqlConverterTest {
         + " \"department_id\" RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
         + "FROM \"foodmart\".\"employee\"\n"
         + "GROUP BY \"first_name\", \"department_id\"";
+    final String mssql = "SELECT [first_name], COUNT(*) AS [department_id_number],"
+            + " ROW_NUMBER() OVER (ORDER BY [department_id] NULLS LAST), SUM([department_id])"
+            + " OVER (ORDER BY [department_id] NULLS LAST RANGE BETWEEN UNBOUNDED "
+            + "PRECEDING AND CURRENT ROW)\n"
+            + "FROM [foodmart].[employee]\n"
+            + "GROUP BY [first_name], [department_id]";
     sql(query)
         .withHive()
         .ok(expected)
@@ -5275,7 +5311,9 @@ public class RelToSqlConverterTest {
         .withBigQuery()
         .ok(expectedBQ)
         .withSnowflake()
-        .ok(expectedSnowFlake);
+        .ok(expectedSnowFlake)
+        .withMssql()
+        .ok(mssql);
   }
 
   @Test
@@ -5775,7 +5813,9 @@ public class RelToSqlConverterTest {
         .withSpark()
         .ok(expected)
         .withSnowflake()
-        .ok(expectedSnowFlake);
+        .ok(expectedSnowFlake)
+        .withMssql()
+        .ok(expected);
   }
 
   @Test
@@ -5995,13 +6035,17 @@ public class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT CAST(FORMAT_TIME('%H:%M:%E3S', CAST(CONCAT('12:00', "
         + "':05') AS TIME(0))) AS TIME(0))\n"
         + "FROM foodmart.employee";
+    final String mssql = "SELECT CAST(CONCAT('12:00', ':05') AS TIME(3))\n"
+            + "FROM [foodmart].[employee]";
     sql(query)
         .withHive()
         .ok(expectedHive)
         .withSpark()
         .ok(expectedSpark)
         .withBigQuery()
-        .ok(expectedBigQuery);
+        .ok(expectedBigQuery)
+        .withMssql()
+        .ok(mssql);
   }
 
   @Test public void testCastToTimeWithPrecisionWithStringLiteral() {
@@ -6562,9 +6606,13 @@ public class RelToSqlConverterTest {
     final String expectedSnowflake = "SELECT COUNT(*) OVER (ORDER BY 0 ROWS BETWEEN UNBOUNDED "
             + "PRECEDING AND UNBOUNDED FOLLOWING)\n"
             + "FROM \"foodmart\".\"employee\"";
+    final String mssql = "SELECT COUNT(*) OVER ()\n"
+            + "FROM [foodmart].[employee]";
     sql(query)
             .withSnowflake()
-            .ok(expectedSnowflake);
+            .ok(expectedSnowflake)
+            .withMssql()
+            .ok(mssql);
   }
 
   @Test
@@ -6728,6 +6776,15 @@ public class RelToSqlConverterTest {
         + "WHERE [product_id] < 10";
     sql(query).withMssql().ok(expected);
   }
+
+  @Test public void testDayOfMonth() {
+    String query = "select DAYOFMONTH( DATE '2008-08-29')";
+    final String expectedMssql = "SELECT DAY('2008-08-29')";
+    sql(query)
+      .withMssql()
+      .ok(expectedMssql);
+  }
+
 }
 
 // End RelToSqlConverterTest.java

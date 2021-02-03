@@ -33,6 +33,7 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
@@ -40,6 +41,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.util.ToNumberUtils;
 
 import java.util.Arrays;
 import java.util.List;
@@ -117,6 +119,9 @@ public class MssqlSqlDialect extends SqlDialect {
       SqlUtil.unparseFunctionSyntax(MSSQL_SUBSTRING, writer, call);
     } else {
       switch (call.getKind()) {
+      case TO_NUMBER:
+        ToNumberUtils.unparseToNumber(writer, call, leftPrec, rightPrec);
+        break;
       case FLOOR:
         if (call.operandCount() != 2) {
           super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -130,6 +135,15 @@ public class MssqlSqlDialect extends SqlDialect {
       case TRUNCATE:
         unpaseRoundAndTrunc(writer, call, leftPrec, rightPrec);
         break;
+      case OVER:
+        if (checkWindowFunctionContainOrderBy(call)) {
+          super.unparseCall(writer, call, leftPrec, rightPrec);
+        } else {
+          call.operand(0).unparse(writer, leftPrec, rightPrec);
+          unparseSqlWindow(writer, call, leftPrec, rightPrec);
+        }
+        break;
+      case OTHER:
       case OTHER_FUNCTION:
         unparseOtherFunction(writer, call, leftPrec, rightPrec);
         break;
@@ -146,6 +160,14 @@ public class MssqlSqlDialect extends SqlDialect {
         break;
       case EXTRACT:
         unparseExtract(writer, call, leftPrec, rightPrec);
+        break;
+      case CONCAT:
+        final SqlWriter.Frame concatFrame = writer.startFunCall("CONCAT");
+        for (SqlNode operand : call.getOperandList()) {
+          writer.sep(",");
+          operand.unparse(writer, leftPrec, rightPrec);
+        }
+        writer.endFunCall(concatFrame);
         break;
       default:
         super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -207,6 +229,11 @@ public class MssqlSqlDialect extends SqlDialect {
     case "CURRENT_DATE":
     case "CURRENT_TIME":
       castGetDateToDateTime(writer, call.getOperator().getName().replace("CURRENT_", ""));
+      break;
+    case "DAYOFMONTH":
+      final SqlWriter.Frame dayFrame = writer.startFunCall("DAY");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(dayFrame);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -387,6 +414,41 @@ public class MssqlSqlDialect extends SqlDialect {
       writer.print("0");
     }
     writer.endFunCall(funcFrame);
+  }
+  private boolean checkWindowFunctionContainOrderBy(SqlCall call) {
+    return !((SqlWindow) call.operand(1)).getOrderList().getList().isEmpty();
+  }
+
+  private void unparseSqlWindow(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWindow window = call.operand(1);
+    writer.print("OVER ");
+    final SqlWriter.Frame frame =
+            writer.startList(SqlWriter.FrameTypeEnum.WINDOW, "(", ")");
+
+    if (window.getRefName() != null) {
+      window.getRefName().unparse(writer, 0, 0);
+    }
+
+    SqlCall firstOperandColumn = call.operand(0);
+
+    if (window.getPartitionList().size() > 0) {
+      writer.sep("PARTITION BY");
+      final SqlWriter.Frame partitionFrame = writer.startList("", "");
+      window.getPartitionList().unparse(writer, 0, 0);
+      writer.endList(partitionFrame);
+    }
+
+    if (!firstOperandColumn.getOperandList().isEmpty()) {
+      if (window.getLowerBound() != null) {
+        writer.print("ORDER BY ");
+        SqlNode orderByColumn = firstOperandColumn.operand(0);
+        orderByColumn.unparse(writer, 0, 0);
+
+        writer.print("ROWS BETWEEN " +  window.getLowerBound()
+                + " AND " + window.getUpperBound());
+      }
+    }
+    writer.endList(frame);
   }
 
   /**
