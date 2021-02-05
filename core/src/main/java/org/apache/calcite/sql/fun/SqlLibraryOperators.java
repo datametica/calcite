@@ -223,6 +223,15 @@ public abstract class SqlLibraryOperators {
       null, OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction TO_CODE_POINTS =
+      new SqlFunction("TO_CODE_POINTS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.INTEGER),
+                  SqlTypeTransforms.TO_NULLABLE), null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.NUMERIC);
+
   @LibraryOperator(libraries = {BIGQUERY})
   public static final SqlFunction REGEXP_EXTRACT_ALL = new SqlFunction("REGEXP_EXTRACT_ALL",
       SqlKind.OTHER_FUNCTION,
