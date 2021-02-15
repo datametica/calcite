@@ -107,6 +107,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIME;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.IF;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_TIMESTAMP;
@@ -117,8 +118,10 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_SECONDS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EXTRACT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.FLOOR;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ITEM;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MINUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MULTIPLY;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.PLUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.RAND;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
@@ -454,13 +457,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       ToNumberUtils.unparseToNumber(writer, call, leftPrec, rightPrec);
       break;
     case ASCII:
-      SqlWriter.Frame toCodePointsFrame = writer.startFunCall("TO_CODE_POINTS");
-      for (SqlNode operand : call.getOperandList()) {
-        writer.sep(",");
-        operand.unparse(writer, leftPrec, rightPrec);
-      }
-      writer.endFunCall(toCodePointsFrame);
-      writer.literal("[OFFSET(0)]");
+      unparseASCII(writer, call, leftPrec, rightPrec);
       break;
     case NVL:
       SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
@@ -497,6 +494,36 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseASCII(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    if (call.operand(0).toString().equals("NULL")) {
+      super.unparseCall(writer, call, leftPrec, rightPrec);
+    } else {
+      SqlCall codePointsCall = SqlLibraryOperators.TO_CODE_POINTS.
+              createCall(SqlParserPos.ZERO, call.getOperandList());
+
+      SqlCall codePointsWithOffset = ITEM.createCall(
+              SqlParserPos.ZERO, codePointsCall,
+              SqlLiteral.createExactNumeric("0", SqlParserPos.ZERO));
+
+      SqlNode[] nullCondition = new SqlNode[]{
+              call.operand(0)};
+
+      SqlCall nullCall = new SqlBasicCall(SqlStdOperatorTable.IS_NULL,
+              nullCondition, SqlParserPos.ZERO);
+
+      SqlNode[] emptyCondition = new SqlNode[]{
+              call.operand(0), SqlLiteral.createCharString("", SqlParserPos.ZERO)};
+
+      SqlCall emptyCall = new SqlBasicCall(SqlStdOperatorTable.EQUALS,
+              emptyCondition, SqlParserPos.ZERO);
+      SqlNode orNode = OR.createCall(SqlParserPos.ZERO, nullCall, emptyCall);
+
+      SqlCall ifCall = IF.createCall(SqlParserPos.ZERO, orNode,
+              SqlLiteral.createNull(SqlParserPos.ZERO), codePointsWithOffset);
+      unparseCall(writer, ifCall, leftPrec, rightPrec);
     }
   }
 
@@ -762,7 +789,7 @@ public class BigQuerySqlDialect extends SqlDialect {
    * Return the identifer from the SqlBasicCall.
    *
    * @param intervalOperand Store_id * INTERVAL 1 DAY
-   * @return SqlIdentifier Store_id
+   * @retufdentifier Store_id
    */
   private SqlNode getIdentifier(SqlBasicCall intervalOperand) {
     if (intervalOperand.operand(1).getKind() == SqlKind.IDENTIFIER
@@ -860,6 +887,12 @@ public class BigQuerySqlDialect extends SqlDialect {
       SqlCall extractCall = EXTRACT.createCall(SqlParserPos.ZERO,
               daySymbolLiteral, call.operand(0));
       super.unparseCall(writer, extractCall, leftPrec, rightPrec);
+      break;
+    case "ITEM":
+      call.operand(0).unparse(writer, leftPrec, 0);
+      final SqlWriter.Frame itemFrame = writer.startList("[OFFSET(", ")]");
+      call.operand(1).unparse(writer, 0, 0);
+      writer.endList(itemFrame);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);

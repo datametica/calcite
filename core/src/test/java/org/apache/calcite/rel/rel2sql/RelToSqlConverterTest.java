@@ -1417,7 +1417,13 @@ public class RelToSqlConverterTest {
     final String query = "select position('A' IN 'ABC') from \"product\"";
     final String expected = "SELECT INSTR('ABC', 'A')\n"
         + "FROM foodmart.product";
-    sql(query).withHive().ok(expected);
+    final String synapseSql = "SELECT CHARINDEX('A', 'ABC')\n"
+            + "FROM [foodmart].[product]";
+    sql(query)
+        .withHive()
+        .ok(expected)
+        .withMssql()
+        .ok(synapseSql);
   }
 
   @Test public void testPositionFunctionForBigQuery() {
@@ -1631,6 +1637,8 @@ public class RelToSqlConverterTest {
         + "FROM foodmart.product";
     final String expectedSnowFlake = "SELECT LENGTH('xyz')\n"
             + "FROM \"foodmart\".\"product\"";
+    final String synapseSql = "SELECT LEN('xyz')\n"
+            + "FROM [foodmart].[product]";
     sql(query)
       .withHive()
       .ok(expected)
@@ -1639,7 +1647,9 @@ public class RelToSqlConverterTest {
       .withSpark()
       .ok(expected)
       .withSnowflake()
-      .ok(expectedSnowFlake);
+      .ok(expectedSnowFlake)
+      .withMssql()
+      .ok(synapseSql);
   }
 
   @Test
@@ -5274,12 +5284,13 @@ public class RelToSqlConverterTest {
         + "GROUP BY \"product_id\", MAX(\"product_id\") OVER (PARTITION BY \"product_id\" "
         + "ORDER BY \"product_id\" ROWS BETWEEN UNBOUNDED PRECEDING AND "
         + "UNBOUNDED FOLLOWING)";
-    final String mssql = "SELECT [product_id], MAX([product_id]) OVER (PARTITION "
-            + "BY [product_id] ORDER BY [product_id] ROWS BETWEEN UNBOUNDED PRECEDING AND "
+    final String expectedMssql = "SELECT [product_id], MAX([product_id]) OVER "
+            + "(PARTITION BY [product_id] RANGE BETWEEN UNBOUNDED PRECEDING AND "
             + "UNBOUNDED FOLLOWING) AS [ABC]\n"
             + "FROM [foodmart].[product]\n"
-            + "GROUP BY [product_id], MAX([product_id]) OVER (PARTITION BY [product_id] "
-            + "ORDER BY [product_id] ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)";
+            + "GROUP BY [product_id], MAX([product_id]) OVER (PARTITION BY "
+            + "[product_id] RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED "
+            + "FOLLOWING)";
     sql(query)
         .withHive()
         .ok(expected)
@@ -5290,7 +5301,7 @@ public class RelToSqlConverterTest {
         .withSnowflake()
         .ok(expectedSnowFlake)
         .withMssql()
-        .ok(mssql);
+        .ok(expectedMssql);
   }
 
   @Test
@@ -5869,14 +5880,22 @@ public class RelToSqlConverterTest {
   public void testAscii() {
     String query = "SELECT ASCII ('ABC')";
     final String expected = "SELECT ASCII('ABC')";
-    final String expectedBigQuery = "SELECT TO_CODE_POINTS('ABC') [OFFSET(0)]";
+    final String expectedBigQuery = "SELECT IF('ABC' IS NULL OR 'ABC' = '', "
+            + "NULL, TO_CODE_POINTS('ABC') [OFFSET( 0 )])";
+    final String expectedSF = "SELECT IFF('ABC' IS NULL OR 'ABC' = '', NULL,"
+            + " ASCII('ABC'))";
+    final String expectedMsSql = "SELECT ASCII('ABC')";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withHive()
         .ok(expected)
         .withSpark()
-        .ok(expected);
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSF)
+        .withMssql()
+        .ok(expectedMsSql);
   }
 
   @Test
@@ -5884,41 +5903,66 @@ public class RelToSqlConverterTest {
     String query = "SELECT ASCII (SUBSTRING('ABC',1,1))";
     final String expected = "SELECT ASCII(SUBSTR('ABC', 1, 1))";
     final String expectedSpark = "SELECT ASCII(SUBSTRING('ABC', 1, 1))";
-    final String expectedBigQuery = "SELECT TO_CODE_POINTS(SUBSTR('ABC', 1, 1)) [OFFSET(0)]";
+    final String expectedBigQuery = "SELECT ASCII('ABC')";
+    final String expectedSF = "SELECT IFF(SUBSTR('ABC', 1, 1) IS NULL OR "
+            + "SUBSTR('ABC', 1, 1) = '', NULL, ASCII(SUBSTR('ABC', 1, 1)))";
+    final String expectedMsSql = "SELECT ASCII(SUBSTRING('ABC', 1, 1))";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withHive()
         .ok(expected)
         .withSpark()
-        .ok(expectedSpark);
+        .ok(expectedSpark)
+        .withSnowflake()
+        .ok(expectedSF)
+        .withMssql()
+        .ok(expectedMsSql);
   }
 
   @Test public void testAsciiColumnArgument() {
     final String query = "select ASCII(\"product_name\") from \"product\" ";
-    final String bigQueryExpected = "SELECT TO_CODE_POINTS(product_name) [OFFSET(0)]\n"
-        + "FROM foodmart.product";
+    final String bigQueryExpected = "SELECT IF(product_name IS NULL OR product_name = ''"
+            + ", NULL, TO_CODE_POINTS(product_name) [OFFSET( 0 )])\n"
+            + "FROM foodmart.product";
     final String hiveExpected = "SELECT ASCII(product_name)\n"
         + "FROM foodmart.product";
+    final String expectedSF = "SELECT IFF(\"product_name\" IS NULL OR \"product_name\" "
+            + "= '', NULL, ASCII(\"product_name\"))\n"
+            + "FROM \"foodmart\".\"product\"";
+    final String expectedMsSql = "SELECT ASCII([product_name])\n"
+            + "FROM [foodmart].[product]";
     sql(query)
         .withBigQuery()
         .ok(bigQueryExpected)
         .withHive()
-        .ok(hiveExpected);
+        .ok(hiveExpected)
+        .withSnowflake()
+        .ok(expectedSF)
+        .withMssql()
+        .ok(expectedMsSql);
   }
 
   @Test
   public void testIf() {
     String query = "SELECT if ('ABC'='' or 'ABC' is null, null, ASCII('ABC'))";
     final String expected = "SELECT CAST(ASCII('ABC') AS INTEGER)";
-    final String expectedBigQuery = "SELECT CAST(TO_CODE_POINTS('ABC') [OFFSET(0)] AS INTEGER)";
+    final String expectedBigQuery = "SELECT CAST(IF('ABC' IS NULL OR 'ABC' = '',"
+            + " NULL, TO_CODE_POINTS('ABC') [OFFSET( 0 )]) AS INTEGER)";
+    final String expectedSF = "SELECT CAST(IFF('ABC' IS NULL OR 'ABC' = '',"
+            + " NULL, ASCII('ABC')) AS INTEGER)";
+    final String expectedMsSql = "SELECT CAST(ASCII('ABC') AS INTEGER)";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withHive()
         .ok(expected)
         .withSpark()
-        .ok(expected);
+        .ok(expected)
+        .withSnowflake()
+        .ok(expectedSF)
+        .withMssql()
+        .ok(expectedMsSql);
   }
 
   @Test
@@ -5929,31 +5973,51 @@ public class RelToSqlConverterTest {
         + "NULL, ASCII(SUBSTR('ABC', 1, 1)))";
     final String expectedSpark = "SELECT IF(SUBSTRING('ABC', 1, 1) = '' OR SUBSTRING('ABC', 1, 1)"
         + " IS NULL, NULL, ASCII(SUBSTRING('ABC', 1, 1)))";
-    final String expectedBigQuery = "SELECT IF(SUBSTR('ABC', 1, 1) = '' OR SUBSTR('ABC', 1, 1) IS"
-        + " NULL, NULL, TO_CODE_POINTS(SUBSTR('ABC', 1, 1)) [OFFSET(0)])";
+    final String expectedBigQuery = "SELECT CAST(ASCII('ABC') AS INTEGER)";
+    final String expectedMsSql = "SELECT IIF(SUBSTRING('ABC', 1, 1) = '' OR"
+        + " SUBSTRING('ABC', 1, 1) IS NULL, NULL, ASCII(SUBSTRING('ABC', 1, 1)))";
+    final String expectedSF = "SELECT IFF(SUBSTR('ABC', 1, 1) = '' OR SUBSTR('ABC', 1, 1) IS NULL, "
+            + "NULL, IFF(SUBSTR('ABC', 1, 1) IS NULL OR SUBSTR('ABC', 1, 1) = '', NULL, "
+            + "ASCII(SUBSTR('ABC', 1, 1))))";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
         .withHive()
         .ok(expected)
         .withSpark()
-        .ok(expectedSpark);
+        .ok(expectedSpark)
+        .withMssql()
+        .ok(expectedMsSql)
+        .withSnowflake()
+        .ok(expectedSF);
   }
 
   @Test public void testIfColumnArgument() {
     final String query = "select if (\"product_name\"='' or \"product_name\" is null, null, ASCII"
         + "(\"product_name\")) from \"product\" ";
-    final String bigQueryExpected = "SELECT IF(product_name = '' OR product_name IS NULL, NULL, "
-        + "TO_CODE_POINTS(product_name) [OFFSET(0)])\n"
-        + "FROM foodmart.product";
+    final String bigQueryExpected = "SELECT IF(product_name = '' OR product_name IS NULL, NULL,"
+            + " IF(product_name IS NULL OR product_name = '', NULL, TO_CODE_POINTS(product_name)"
+            + " [OFFSET( 0 )]))\n"
+            + "FROM foodmart.product";
     final String hiveExpected = "SELECT IF(product_name = '' OR product_name IS NULL, NULL, "
         + "ASCII(product_name))\n"
         + "FROM foodmart.product";
+    final String expectedSF = "SELECT IFF(\"product_name\" = '' OR \"product_name\" IS NULL,"
+            + " NULL, IFF(\"product_name\" IS NULL OR \"product_name\" = '', NULL, "
+            + "ASCII(\"product_name\")))\n"
+            + "FROM \"foodmart\".\"product\"";
+    final String expectedMsSql = "SELECT IIF([product_name] = '' OR [product_name] IS NULL,"
+            + " NULL, ASCII([product_name]))\n"
+            + "FROM [foodmart].[product]";
     sql(query)
         .withBigQuery()
         .ok(bigQueryExpected)
         .withHive()
-        .ok(hiveExpected);
+        .ok(hiveExpected)
+        .withSnowflake()
+        .ok(expectedSF)
+        .withMssql()
+        .ok(expectedMsSql);
   }
 
   @Test public void testNullIfFunctionRelToSql() {
@@ -5972,6 +6036,7 @@ public class RelToSqlConverterTest {
         + "FROM scott.EMP";
     final String expectedHive = "SELECT IF(EMPNO = 20, NULL, EMPNO) NI\n"
         + "FROM scott.EMP";
+    final String synapse = "";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));

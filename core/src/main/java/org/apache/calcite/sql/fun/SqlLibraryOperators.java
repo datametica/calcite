@@ -223,6 +223,15 @@ public abstract class SqlLibraryOperators {
       null, OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction TO_CODE_POINTS =
+      new SqlFunction("TO_CODE_POINTS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.INTEGER),
+                  SqlTypeTransforms.TO_NULLABLE), null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.NUMERIC);
+
   @LibraryOperator(libraries = {BIGQUERY})
   public static final SqlFunction REGEXP_EXTRACT_ALL = new SqlFunction("REGEXP_EXTRACT_ALL",
       SqlKind.OTHER_FUNCTION,
@@ -859,5 +868,30 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_2000_NULLABLE, null,
               OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction LEN =
+      new SqlFunction("LEN",
+          SqlKind.CHAR_LENGTH,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.CHARACTER,
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction IIF =
+      new SqlFunction("IIF",
+          SqlKind.IF,
+          ReturnTypes.ARG2_NULLABLE,
+          null,
+          OperandTypes.and(
+            OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY,
+                    SqlTypeFamily.ANY),
+            new SameOperandTypeChecker(3) {
+              @Override protected List<Integer>
+              getOperandList(int operandCount) {
+                return ImmutableList.of(1, 2);
+              }
+            }),
+          SqlFunctionCategory.SYSTEM);
 }
 // End SqlLibraryOperators.java

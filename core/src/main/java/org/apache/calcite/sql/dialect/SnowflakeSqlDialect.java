@@ -65,8 +65,11 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E3;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E4;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.IF;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ITEM;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OR;
 
 /**
  * A <code>SqlDialect</code> implementation for the Snowflake database.
@@ -203,6 +206,30 @@ public class SnowflakeSqlDialect extends SqlDialect {
       SnowflakeDateTimestampInterval interval1 = new SnowflakeDateTimestampInterval();
       if (!interval1.handleMinus(writer, call, leftPrec, rightPrec, "-")) {
         super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
+    case ASCII:
+      if (call.operand(0).toString().equals("NULL")) {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      } else {
+        SqlCall thenClause = ITEM.createCall(SqlParserPos.ZERO, call.getOperandList());
+
+        SqlNode[] nullCondition = new SqlNode[]{
+                call.operand(0)};
+
+        SqlCall nullCall = new SqlBasicCall(SqlStdOperatorTable.IS_NULL,
+                nullCondition, SqlParserPos.ZERO);
+
+        SqlNode[] emptyCondition = new SqlNode[]{
+                call.operand(0), SqlLiteral.createCharString("", SqlParserPos.ZERO)};
+
+        SqlCall emptyCall = new SqlBasicCall(SqlStdOperatorTable.EQUALS,
+                emptyCondition, SqlParserPos.ZERO);
+        SqlNode orNode = OR.createCall(SqlParserPos.ZERO, nullCall, emptyCall);
+
+        SqlCall ifCall = IF.createCall(SqlParserPos.ZERO, orNode,
+                SqlLiteral.createNull(SqlParserPos.ZERO), thenClause);
+        unparseCall(writer, ifCall, leftPrec, rightPrec);
       }
       break;
     default:
@@ -351,6 +378,11 @@ public class SnowflakeSqlDialect extends SqlDialect {
       break;
     case "REGEXP_CONTAINS":
       unparseRegexContains(writer, call, leftPrec, rightPrec);
+      break;
+    case "ITEM":
+      final SqlWriter.Frame itemFrame = writer.startFunCall("ASCII");
+      call.operand(0).unparse(writer, 0, 0);
+      writer.endList(itemFrame);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);

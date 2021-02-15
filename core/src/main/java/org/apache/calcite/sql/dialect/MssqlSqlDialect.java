@@ -174,6 +174,28 @@ public class MssqlSqlDialect extends SqlDialect {
       case EXTRACT:
         unparseExtract(writer, call, leftPrec, rightPrec);
         break;
+      case CHAR_LENGTH:
+        super.unparseCall(writer, SqlLibraryOperators.LEN.
+            createCall(SqlParserPos.ZERO,
+                new SqlNode[]{call.operand(0)}), leftPrec, rightPrec);
+        break;
+      case POSITION:
+        SqlCall charIndex = SqlLibraryOperators.CHARINDEX.
+                createCall(SqlParserPos.ZERO, call.getOperandList());
+        super.unparseCall(writer, charIndex, leftPrec, rightPrec);
+        break;
+      case IF:
+        SqlCall iifCall;
+        if (call.getOperandList().size() == 3) {
+          iifCall = SqlLibraryOperators.IIF.createCall(SqlParserPos.ZERO, call.operand(0),
+                  call.operand(1), call.operand(2));
+        } else {
+          SqlNode literal = SqlLiteral.createBinaryString("", SqlParserPos.ZERO);
+          iifCall = SqlLibraryOperators.IIF.createCall(SqlParserPos.ZERO, call.operand(0),
+                  call.operand(1), literal);
+        }
+        super.unparseCall(writer, iifCall, leftPrec, rightPrec);
+        break;
       case CONCAT:
         final SqlWriter.Frame concatFrame = writer.startFunCall("CONCAT");
         for (SqlNode operand : call.getOperandList()) {
