@@ -6836,6 +6836,15 @@ public class RelToSqlConverterTest {
       .ok(expectedBQ);
   }
 
+  @Test public void testCastDecimalToInt() {
+    String query = "select CAST(100.2 as int)";
+    final String expectedBQ = "SELECT 100";
+
+    sql(query)
+            .withBigQuery()
+            .ok(expectedBQ);
+  }
+
 }
 
 // End RelToSqlConverterTest.java
