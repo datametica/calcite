@@ -616,6 +616,9 @@ public class RexBuilder {
     if (!RexLiteral.valueMatchesType(value, sqlType, false)) {
       return false;
     }
+    if (toType.getSqlTypeName() != fromTypeName && fromTypeName == SqlTypeName.DECIMAL) {
+      return false;
+    }
     if (toType.getSqlTypeName() != fromTypeName
         && SqlTypeFamily.DATETIME.getTypeNames().contains(fromTypeName)) {
       return false;
