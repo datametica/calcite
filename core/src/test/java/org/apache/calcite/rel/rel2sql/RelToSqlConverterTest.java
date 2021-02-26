@@ -6258,12 +6258,14 @@ public class RelToSqlConverterTest {
         .scan("EMP")
         .project(builder.alias(parseTSNode1, "date1"), builder.alias(parseTSNode2, "date2"))
         .build();
-    final String expectedSql = "SELECT PARSE_TIMESTAMP('yyyy-MM-dd HH24:MI:SS', '2009-03-20 12:25:50') AS \"date1\"," +
-        " PARSE_TIMESTAMP('MI dd-yyyy-MM SS HH24', '25 20-2009-03 50 12') AS \"date2\"\n" +
-        "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS date1, " +
-        "PARSE_TIMESTAMP('%M %d-%Y-%m %S %H', '25 20-2009-03 50 12') AS date2\n" +
-        "FROM scott.EMP";
+    final String expectedSql =
+        "SELECT PARSE_TIMESTAMP('yyyy-MM-dd HH24:MI:SS', '2009-03-20 12:25:50') AS \"date1\","
+            + " PARSE_TIMESTAMP('MI dd-yyyy-MM SS HH24', '25 20-2009-03 50 12') AS \"date2\"\n"
+            + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery =
+        "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS date1, "
+            + "PARSE_TIMESTAMP('%M %d-%Y-%m %S %H', '25 20-2009-03 50 12') AS date2\n"
+            + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
