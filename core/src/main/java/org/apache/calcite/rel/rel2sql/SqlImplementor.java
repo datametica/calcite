@@ -1283,6 +1283,9 @@ public abstract class SqlImplementor {
               return super.implementor();
             }
           }
+          @Override protected Context getAliasContext(RexCorrelVariable variable) {
+            return correlTableMap.get(variable.id);
+          }
         };
       } else {
         boolean qualified =
