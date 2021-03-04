@@ -834,7 +834,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     case "TO_DATE":
       SqlCall parseToDateCall = PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
-              call.operand(1), call.operand(0));
+          call.operand(1), call.operand(0));
       final SqlWriter.Frame timestampSecond = writer.startFunCall("DATE");
       unparseCall(writer, parseToDateCall, leftPrec, rightPrec);
       writer.endFunCall(timestampSecond);
@@ -847,7 +847,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         break;
       }
       SqlCall parseTimestampCall = PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
-              call.operand(1), call.operand(0));
+          call.operand(1), call.operand(0));
       unparseCall(writer, parseTimestampCall, leftPrec, rightPrec);
       break;
     case "INSTR":

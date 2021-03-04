@@ -6310,11 +6310,11 @@ public class RelToSqlConverterTest {
         .project(builder.alias(parseTSNode1, "timestamp_value"))
         .build();
     final String expectedSql =
-        "SELECT TO_TIMESTAMP('2009-03-20 12:25:50', 'yyyy-MM-dd HH24:MI:SS') AS " +
-            "\"timestamp_value\"\nFROM \"scott\".\"EMP\"";
+        "SELECT TO_TIMESTAMP('2009-03-20 12:25:50', 'yyyy-MM-dd HH24:MI:SS') AS "
+            + "\"timestamp_value\"\nFROM \"scott\".\"EMP\"";
     final String expectedBiqQuery =
-        "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS timestamp_value\n" +
-            "FROM scott.EMP";
+        "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS timestamp_value\n"
+            + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -6333,8 +6333,8 @@ public class RelToSqlConverterTest {
         "SELECT TO_DATE('2009/03/20', 'yyyy/MM/dd') AS \"date_value\"\n"
             + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery =
-        "SELECT DATE(PARSE_TIMESTAMP('%Y/%m/%d', '2009/03/20')) AS date_value\n" +
-            "FROM scott.EMP";
+        "SELECT DATE(PARSE_TIMESTAMP('%Y/%m/%d', '2009/03/20')) AS date_value\n"
+            + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
