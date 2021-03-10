@@ -964,5 +964,16 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {BIGQUERY})
+  public static final SqlFunction REGEXP_INSTR = new SqlFunction("REGEXP_INSTR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR),
+                  SqlTypeTransforms.TO_NULLABLE),
+          null, OperandTypes.family(
+          ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+                  SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+          number -> number == 2 || number == 3),
+          SqlFunctionCategory.STRING);
 }
 // End SqlLibraryOperators.java
