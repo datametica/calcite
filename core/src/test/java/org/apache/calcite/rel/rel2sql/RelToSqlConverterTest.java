@@ -7097,6 +7097,24 @@ public class RelToSqlConverterTest {
             .withBigQuery()
             .ok(expectedBQ);
   }
+
+  @Test public void testRadian() {
+    String query = "SELECT RADIANS(0.12)";
+    final String expectedBQ = "SELECT 0.12 * (ACOS(-1) / 180)";
+
+    sql(query)
+            .withBigQuery()
+            .ok(expectedBQ);
+  }
+
+  @Test public void testDegrees() {
+    String query = "SELECT DEGREES(0.12)";
+    final String expectedBQ = "SELECT 0.12 * (180 / ACOS(-1))";
+
+    sql(query)
+            .withBigQuery()
+            .ok(expectedBQ);
+  }
 }
 
 // End RelToSqlConverterTest.java

@@ -934,6 +934,12 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "REGEXP_LIKE":
       unparseRegexpLike(writer, call, leftPrec, rightPrec);
       break;
+    case "RADIANS":
+      unparseRadianAndDeggreefunction(writer, call, leftPrec, rightPrec, true);
+      break;
+    case "DEGREES":
+      unparseRadianAndDeggreefunction(writer, call, leftPrec, rightPrec, false);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -1113,6 +1119,26 @@ public class BigQuerySqlDialect extends SqlDialect {
     unparseCall(writer, plusNode, leftPrec, rightPrec);
   }
 
+  private void unparseRadianAndDeggreefunction(SqlWriter writer, SqlCall call,
+                                               int leftPrec, int rightPrec, boolean isRadian) {
+    SqlNode numericNode = SqlLiteral.createExactNumeric("-1", SqlParserPos.ZERO);
+    SqlCall acosCall = ACOS.createCall(SqlParserPos.ZERO, numericNode);
+
+    SqlNumericLiteral divideLiteral = SqlLiteral.createExactNumeric("180",
+            SqlParserPos.ZERO);
+    SqlNode[] substrOperand;
+    if (isRadian) {
+      substrOperand = new SqlNode[] { acosCall, divideLiteral};
+    } else {
+      substrOperand = new SqlNode[] { divideLiteral, acosCall};
+    }
+    SqlCall divideCall = new SqlBasicCall(SqlStdOperatorTable.DIVIDE, substrOperand,
+            SqlParserPos.ZERO);
+    SqlNode[] multiplyOperand = new SqlNode[] { call.operand(0), divideCall};
+    SqlCall multiplyCall = new SqlBasicCall(MULTIPLY, multiplyOperand,
+            SqlParserPos.ZERO);
+    super.unparseCall(writer, multiplyCall, leftPrec, rightPrec);
+  }
   @Override protected String getDateTimeFormatString(
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     String dateTimeFormat = super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
