@@ -1126,19 +1126,22 @@ public class BigQuerySqlDialect extends SqlDialect {
 
     SqlNumericLiteral divideLiteral = SqlLiteral.createExactNumeric("180",
             SqlParserPos.ZERO);
-    SqlNode[] substrOperand;
-    if (isRadian) {
-      substrOperand = new SqlNode[] { acosCall, divideLiteral};
-    } else {
-      substrOperand = new SqlNode[] { divideLiteral, acosCall};
-    }
-    SqlCall divideCall = new SqlBasicCall(SqlStdOperatorTable.DIVIDE, substrOperand,
+    SqlNode[] divideOperand = getDivideOperandsForRadianOrDegree(acosCall, divideLiteral, isRadian);
+    SqlCall divideCall = new SqlBasicCall(SqlStdOperatorTable.DIVIDE, divideOperand,
             SqlParserPos.ZERO);
     SqlNode[] multiplyOperand = new SqlNode[] { call.operand(0), divideCall};
     SqlCall multiplyCall = new SqlBasicCall(MULTIPLY, multiplyOperand,
             SqlParserPos.ZERO);
     super.unparseCall(writer, multiplyCall, leftPrec, rightPrec);
   }
+  private SqlNode[] getDivideOperandsForRadianOrDegree(SqlNode call1,
+                                                      SqlNode call2, boolean isRadian) {
+    if (isRadian) {
+      return new SqlNode[] { call1, call2};
+    }
+    return new SqlNode[] { call2, call1};
+  }
+
   @Override protected String getDateTimeFormatString(
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     String dateTimeFormat = super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
