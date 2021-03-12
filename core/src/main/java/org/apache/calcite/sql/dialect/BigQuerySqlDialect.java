@@ -934,6 +934,12 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "REGEXP_LIKE":
       unparseRegexpLike(writer, call, leftPrec, rightPrec);
       break;
+    case "RADIANS":
+      unparseRadianAndDeggreefunction(writer, call, leftPrec, rightPrec, true);
+      break;
+    case "DEGREES":
+      unparseRadianAndDeggreefunction(writer, call, leftPrec, rightPrec, false);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -1111,6 +1117,29 @@ public class BigQuerySqlDialect extends SqlDialect {
     SqlCall floorDoubleValue = FLOOR.createCall(SqlParserPos.ZERO, numberGenerator);
     SqlCall plusNode = PLUS.createCall(SqlParserPos.ZERO, floorDoubleValue, call.operand(0));
     unparseCall(writer, plusNode, leftPrec, rightPrec);
+  }
+
+  private void unparseRadianAndDeggreefunction(SqlWriter writer, SqlCall call,
+                                               int leftPrec, int rightPrec, boolean isRadian) {
+    SqlNode numericNode = SqlLiteral.createExactNumeric("-1", SqlParserPos.ZERO);
+    SqlCall acosCall = ACOS.createCall(SqlParserPos.ZERO, numericNode);
+
+    SqlNumericLiteral divideLiteral = SqlLiteral.createExactNumeric("180",
+            SqlParserPos.ZERO);
+    SqlNode[] divideOperand = getDivideOperandsForRadianOrDegree(acosCall, divideLiteral, isRadian);
+    SqlCall divideCall = new SqlBasicCall(SqlStdOperatorTable.DIVIDE, divideOperand,
+            SqlParserPos.ZERO);
+    SqlNode[] multiplyOperand = new SqlNode[] { call.operand(0), divideCall};
+    SqlCall multiplyCall = new SqlBasicCall(MULTIPLY, multiplyOperand,
+            SqlParserPos.ZERO);
+    super.unparseCall(writer, multiplyCall, leftPrec, rightPrec);
+  }
+  private SqlNode[] getDivideOperandsForRadianOrDegree(SqlNode call1,
+                                                      SqlNode call2, boolean isRadian) {
+    if (isRadian) {
+      return new SqlNode[] { call1, call2};
+    }
+    return new SqlNode[] { call2, call1};
   }
 
   @Override protected String getDateTimeFormatString(
