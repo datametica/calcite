@@ -68,6 +68,7 @@ import static org.apache.calcite.runtime.SqlFunctions.posixRegex;
 import static org.apache.calcite.runtime.SqlFunctions.quarterNumberOfYear;
 import static org.apache.calcite.runtime.SqlFunctions.regexpContains;
 import static org.apache.calcite.runtime.SqlFunctions.regexpExtract;
+import static org.apache.calcite.runtime.SqlFunctions.regexpInstr;
 import static org.apache.calcite.runtime.SqlFunctions.regexpMatchCount;
 import static org.apache.calcite.runtime.SqlFunctions.regexpReplace;
 import static org.apache.calcite.runtime.SqlFunctions.rpad;
@@ -1243,6 +1244,16 @@ public class SqlFunctionsTest {
         is("cat"));
     assertThat(regexpExtract("cat on the mat", ".at", 0, 1),
         is("mat"));
+  }
+
+  /** Test for {@link SqlFunctions#regexpInstr(Object, Object, Object, Object)}. */
+  @Test public void testRegexpInstr() {
+    assertThat(regexpInstr("foo@example.com", "o", 0, 1),
+            is(2));
+    assertThat(regexpInstr("cat on the mat", ".at", 0, 0),
+            is(1));
+    assertThat(regexpInstr("cat on the mat", ".at", 0, 1),
+            is(12));
   }
 }
 

@@ -3243,6 +3243,28 @@ public class SqlFunctions {
     return null;
   }
 
+  public static Object regexpInstr(Object str, Object regex, Object startPos, Object occurrence) {
+    String newString = (String) str;
+    if ((Integer) startPos > newString.length()) {
+      return 0;
+    }
+    if ((Integer) startPos > 0) {
+      int startPosition = (Integer) startPos;
+      newString = newString.substring(startPosition, newString.length());
+    }
+    Pattern pattern = Pattern.compile((String) regex);
+    Matcher matcher = pattern.matcher(newString);
+    int count = 0;
+    int index = 0;
+    while (matcher.find()) {
+      if (count == (Integer) occurrence) {
+        index  = position(matcher.group(), newString);
+        break;
+      }
+      count++;
+    }
+    return index;
+  }
 }
 
 // End SqlFunctions.java
