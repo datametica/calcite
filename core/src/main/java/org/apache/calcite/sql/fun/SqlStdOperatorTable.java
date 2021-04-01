@@ -55,6 +55,7 @@ import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.ReflectiveSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
@@ -1770,6 +1771,16 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlFunction NULLIF = new SqlNullifFunction();
 
   public static final SqlFunction REGEXP_SUBSTR = new SqlRegexpSubstrFunction();
+
+  public static final SqlFunction REGEXP_INSTR =
+        new SqlFunction("REGEXP_INSTR",
+                SqlKind.OTHER_FUNCTION,
+                ReturnTypes.INTEGER_NULLABLE,
+                null, OperandTypes.family(
+                ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+                        SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+                  number -> number == 2 || number == 3),
+                  SqlFunctionCategory.STRING);
 
   /**
    * The COALESCE builtin function.

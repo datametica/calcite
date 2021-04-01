@@ -4346,6 +4346,19 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test public void testRegexInstrFunction4Args() {
+    final String query = "select \"product_id\", regexp_instr('chocolate chip cookies', 'c+.{2}',"
+            + " 4, 2)\n"
+            + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3)";
+    final String expected = "SELECT product_id, REGEXP_INSTR('chocolate chip cookies', "
+            + "'c+.{2}', 4, 2)\n"
+            + "FROM foodmart.product\n"
+            + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3";
+    sql(query)
+            .withBigQuery()
+            .ok(expected);
+  }
+
   @Test public void testRegexSubstrFunction5Args() {
     final String query = "select regexp_substr('chocolate Chip cookies', 'c+.{2}',"
         + " 1, 2, 'i')\n"
