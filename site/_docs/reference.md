@@ -72,6 +72,7 @@ here to appease testAllFunctionsAreDocumented:
 | REGEXP_MATCH_COUNT | Returns the number of matching occurrences in the input
 | REGEXP_CONTAINS    | Returns TRUE if value is a partial match for the regular expression.
 | MONTHS_BETWEEN | Returns the month difference between two dates or timestamp
+| REGEXP_INSTR()  | Returns index if value is a match for the regular expression.
 {% endcomment %}
 -->
 
