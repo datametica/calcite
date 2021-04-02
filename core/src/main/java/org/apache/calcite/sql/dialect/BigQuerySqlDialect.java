@@ -934,7 +934,26 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "REGEXP_LIKE":
       unparseRegexpLike(writer, call, leftPrec, rightPrec);
       break;
+    case "CURRENT_TIME":
+      unparseCurrentTime(writer, call, leftPrec, rightPrec);
+      break;
     default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseCurrentTime(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    if (((SqlBasicCall) call).getOperands().length == 0) {
+      SqlWriter.Frame castTimeFrame = writer.startFunCall("CAST");
+      SqlWriter.Frame formatTimeFrame = writer.startFunCall("FORMAT_TIME");
+      SqlNode formatType = SqlLiteral.createCharString("%H:%M:%S", SqlParserPos.ZERO);
+      formatType.unparse(writer, leftPrec, rightPrec);
+      writer.print(",");
+      writer.print("CURRENT_TIME");
+      writer.endFunCall(formatTimeFrame);
+      writer.print("AS TIME");
+      writer.endFunCall(castTimeFrame);
+    } else {
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
