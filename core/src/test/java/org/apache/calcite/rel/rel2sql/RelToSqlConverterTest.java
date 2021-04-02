@@ -7097,6 +7097,16 @@ public class RelToSqlConverterTest {
             .withBigQuery()
             .ok(expectedBQ);
   }
+
+  @Test public void testCurrentTimeFunction() {
+    String query = "SELECT CURRENT_TIME";
+    final String expectedBQ = "SELECT CAST(FORMAT_TIME('%H:%M:%S', CURRENT_TIME)"
+            + " AS TIME) AS CURRENT_TIME";
+
+    sql(query)
+            .withBigQuery()
+            .ok(expectedBQ);
+  }
 }
 
 // End RelToSqlConverterTest.java
