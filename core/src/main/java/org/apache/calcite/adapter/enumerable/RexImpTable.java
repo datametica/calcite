@@ -146,6 +146,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIME_SUB;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_BASE64;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_BINARY;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_CHAR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_VARCHAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRANSLATE3;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_CALENDAR;
@@ -442,6 +443,7 @@ public class RexImpTable {
     defineMethod(SIN, "sin", NullPolicy.STRICT);
     defineMethod(TAN, "tan", NullPolicy.STRICT);
     defineMethod(TRUNCATE, "struncate", NullPolicy.STRICT);
+    defineMethod(TO_TIMESTAMP, BuiltInMethod.TO_TIMESTAMP.method, NullPolicy.NONE);
 
     map.put(PI, (translator, call, nullAs) -> Expressions.constant(Math.PI));
 
