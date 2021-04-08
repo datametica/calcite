@@ -67,7 +67,9 @@ public enum SqlDateTimeFormat {
   MILLISECONDS_5("sssss"),
   MILISECONDS_4("ssss"),
   E4("E4"),
-  E3("E3");
+  E3("E3"),
+  US("US"),
+  MS("MS");
 
   public final String value;
 

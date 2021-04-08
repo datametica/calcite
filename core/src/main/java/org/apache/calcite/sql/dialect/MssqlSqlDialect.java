@@ -248,6 +248,15 @@ public class MssqlSqlDialect extends SqlDialect {
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       writer.endFunCall(dayFrame);
       break;
+    case "TO_TIMESTAMP":
+      final SqlWriter.Frame timestampFrame = writer.startFunCall("CONVERT");
+      writer.print(getType(call.operand(1).toString().replaceAll("'", "").trim()));
+      writer.print(",");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.print(",");
+      writer.print(120);
+      writer.endFunCall(timestampFrame);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -462,6 +471,17 @@ public class MssqlSqlDialect extends SqlDialect {
       }
     }
     writer.endList(frame);
+  }
+
+  String getType(String formatType) {
+    List<String> formatTypeList = Arrays.asList("YYYYMMDD",
+            "YYYY-MM-DD", "MM-DD-YYYY", "DD-MM-YYYY",
+            "YYYY/MM/DD", "MM/DD/YYYY", "DD/MM/YYYY",
+            "MMDDYYYY", "DDMMYYYYY");
+    if (formatTypeList.contains(formatType)) {
+      return "DATETIME";
+    }
+    return "DATETIME2";
   }
 }
 

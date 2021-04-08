@@ -47,6 +47,8 @@ import org.apache.commons.lang3.StringUtils;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -56,7 +58,10 @@ import java.nio.charset.Charset;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -3156,6 +3161,26 @@ public class SqlFunctions {
     }
     return count;
   }
+
+  public static String toTimestamp(Object value, Object formatType) {
+    List<String> timestampFormat = Arrays.asList("yyyy-MM-dd", "yyyy/MM/dd hh:mm:ss.SSS");
+    String defaultDateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
+    String result = (String) value;
+    String date = "";
+    for (String dateFormat : timestampFormat) {
+      DateFormat originalFormat = new SimpleDateFormat(dateFormat, Locale.ROOT);
+      DateFormat targetFormat = new SimpleDateFormat(defaultDateFormat, Locale.ROOT);
+      try {
+        Date parsedDate = originalFormat.parse(result);
+        date = targetFormat.format(parsedDate);
+        return date;
+      } catch (ParseException e) {
+        LoggerFactory.getLogger("the format is not supported");
+      }
+    }
+    return date;
+  }
+
 
   public static Object cotFunction(Double operand) {
     return 1 / Math.tan(operand);

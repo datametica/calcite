@@ -617,7 +617,8 @@ public enum BuiltInMethod {
   INT8XOR(SqlFunctions.class, "bitwiseXOR", Integer.class, Integer.class),
   INT2SHL(SqlFunctions.class, "bitwiseSHL", Integer.class, Integer.class, Integer.class),
   BITWISE_OR(SqlFunctions.class, "bitwiseOR", Integer.class, Integer.class),
-  BITWISE_AND(SqlFunctions.class, "bitwiseAnd", Integer.class, Integer.class),;
+  BITWISE_AND(SqlFunctions.class, "bitwiseAnd", Integer.class, Integer.class),
+  TO_TIMESTAMP(SqlFunctions.class, "toTimestamp", Object.class, Object.class),;
 
 
   public final Method method;

@@ -81,6 +81,7 @@ import static org.apache.calcite.runtime.SqlFunctions.timestampToDate;
 import static org.apache.calcite.runtime.SqlFunctions.toBase64;
 import static org.apache.calcite.runtime.SqlFunctions.toBinary;
 import static org.apache.calcite.runtime.SqlFunctions.toCharFunction;
+import static org.apache.calcite.runtime.SqlFunctions.toTimestamp;
 import static org.apache.calcite.runtime.SqlFunctions.toVarchar;
 import static org.apache.calcite.runtime.SqlFunctions.trim;
 import static org.apache.calcite.runtime.SqlFunctions.upper;
@@ -1143,6 +1144,17 @@ public class SqlFunctionsTest {
   @Test public void testdatetimeSub() {
     assertThat(datetimeSub("2000-12-12 12:12:12", "INTERVAL 1 DAY"),
         is(Timestamp.valueOf("2000-12-11 12:12:12.0")));
+  }
+
+  /** Test for {@link SqlFunctions#toTimestamp(Object, Object)}. */
+  @Test public void testToTimestamp() {
+    assertThat(toTimestamp("2017-02-20", "YYYY-MM-DD"),
+        is("2017-02-20 00:00:00.000"));
+  }
+
+  @Test public void testToTimestampWithDifferentFormat() {
+    assertThat(toTimestamp("2017/02/20 08:27:17.899", "YYYY/MM/DD HH24:MI:SS.MS"),
+        is("2017-02-20 08:27:17.899"));
   }
 
   /** Test for {@link SqlFunctions#toBinary(Object, Object)}. */
