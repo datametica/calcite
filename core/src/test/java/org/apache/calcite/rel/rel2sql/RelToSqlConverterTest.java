@@ -7973,6 +7973,10 @@ class RelToSqlConverterTest {
         builder.literal("yyyy-MM-dd HH24:MI:SS"), builder.literal("2009-03-20 12:25:50"));
     final RexNode parseTSNode2 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
         builder.literal("MI dd-yyyy-MM SS HH24"), builder.literal("25 20-2009-03 50 12"));
+    final RexNode parseTSNode3 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("YYYYMMDDHHMMSS"), builder.literal("20200903020211"));
+    final RexNode parseTSNode4 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("HHMMSS"), builder.literal("010203"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(parseTSNode1, "date1"), builder.alias(parseTSNode2, "date2"))
