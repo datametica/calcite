@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
@@ -1448,10 +1449,14 @@ public class SqlDialect {
   private String getFinalFormat(
       List<String> dateTimeTokens, List<Character> separators,
       Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
+    Pattern numberRegex = Pattern.compile("^[0-9]*$");
     StringBuilder finalFormatBuilder = new StringBuilder();
     for (String token : dateTimeTokens) {
-      finalFormatBuilder.append(token.equals("") ? token
-          : dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
+      if (numberRegex.matcher(token).matches() || token.equals("")) {
+        finalFormatBuilder.append(token);
+      } else {
+        finalFormatBuilder.append(dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
+      }
       String sep = "";
       if (!separators.isEmpty()) {
         sep = separators.get(0).toString();

@@ -7948,19 +7948,31 @@ class RelToSqlConverterTest {
             builder.literal("DDMMYY"), builder.literal("2008-12-25 15:30:00"));
     final RexNode formatDateNode2 = builder.call(SqlLibraryOperators.FORMAT_DATETIME,
             builder.literal("YY/MM/DD"), builder.literal("2012-12-25 12:50:10"));
+    final RexNode formatDateNode3 = builder.call(SqlLibraryOperators.FORMAT_DATETIME,
+        builder.literal("YY-MM-01"), builder.literal("2012-12-25 12:50:10"));
+    final RexNode formatDateNode4 = builder.call(SqlLibraryOperators.FORMAT_DATETIME,
+        builder.literal("YY-MM-DD 00:00:00"), builder.literal("2012-12-25 12:50:10"));
     final RelNode root = builder
             .scan("EMP")
             .project(builder.alias(formatDateNode1, "date1"),
-                    builder.alias(formatDateNode2, "date2"))
+                    builder.alias(formatDateNode2, "date2"),
+                    builder.alias(formatDateNode3, "date3"),
+                    builder.alias(formatDateNode4, "date4"))
             .build();
     final String expectedSql = "SELECT FORMAT_DATETIME('DDMMYY', '2008-12-25 15:30:00') AS "
-            + "\"date1\", FORMAT_DATETIME('YY/MM/DD', '2012-12-25 12:50:10') AS \"date2\"\n"
+            + "\"date1\", FORMAT_DATETIME('YY/MM/DD', '2012-12-25 12:50:10') AS \"date2\", "
+            + "FORMAT_DATETIME('YY-MM-01', '2012-12-25 12:50:10') AS \"date3\", FORMAT_DATETIME"
+            + "('YY-MM-DD 00:00:00', '2012-12-25 12:50:10') AS \"date4\"\n"
             + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT FORMAT_DATETIME('%d%m%y', '2008-12-25 15:30:00') "
-            + "AS date1, FORMAT_DATETIME('%y/%m/%d', '2012-12-25 12:50:10') AS date2\n"
+            + "AS date1, FORMAT_DATETIME('%y/%m/%d', '2012-12-25 12:50:10') AS date2,"
+            + " FORMAT_DATETIME('%y-%m-01', '2012-12-25 12:50:10') AS date3,"
+            + " FORMAT_DATETIME('%y-%m-%d 00:00:00', '2012-12-25 12:50:10') AS date4\n"
             + "FROM scott.EMP";
     final String expectedSpark = "SELECT DATE_FORMAT('2008-12-25 15:30:00', 'ddMMyy') date1, "
-            + "DATE_FORMAT('2012-12-25 12:50:10', 'yy/MM/dd') date2\n"
+            + "DATE_FORMAT('2012-12-25 12:50:10', 'yy/MM/dd') date2,"
+            + " DATE_FORMAT('2012-12-25 12:50:10', 'yy-MM-01') date3,"
+            + " DATE_FORMAT('2012-12-25 12:50:10', 'yy-MM-dd 00:00:00') date4\n"
             + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
