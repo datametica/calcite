@@ -164,6 +164,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(ABBREVIATEDDAYOFWEEK, "%a");
         put(TWENTYFOURHOUR, "%H");
         put(HOUR, "%I");
+        put(HHMMSS, "%H%M%S");
         put(HOURMINSEC, "%I%M%S");
         put(MINUTE, "%M");
         put(SECOND, "%S");
@@ -188,10 +189,12 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(ANTE_MERIDIAN_INDICATOR1, "%p");
         put(MILLISECONDS_5, "*S");
         put(MILISECONDS_4, "*S");
+        put(MILISECONDS_3, "*S");
         put(E4, "%A");
         put(E3, "%a");
         put(YYYYMMDDHHMMSS, "%Y%m%d%H%M%S");
         put(U, "%u");
+        put(DDHH, "%d%H");
       }};
 
   private static final String OR = "|";
