@@ -189,7 +189,6 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(ANTE_MERIDIAN_INDICATOR1, "%p");
         put(MILLISECONDS_5, "*S");
         put(MILISECONDS_4, "*S");
-        put(MILISECONDS_3, "*S");
         put(E4, "%A");
         put(E3, "%a");
         put(YYYYMMDDHHMMSS, "%Y%m%d%H%M%S");

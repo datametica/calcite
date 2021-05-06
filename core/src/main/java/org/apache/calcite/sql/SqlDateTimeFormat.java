@@ -69,7 +69,6 @@ public enum SqlDateTimeFormat {
   ANTE_MERIDIAN_INDICATOR1("A.M."),
   MILLISECONDS_5("sssss"),
   MILISECONDS_4("ssss"),
-  MILISECONDS_3("sss"),
   E4("E4"),
   E3("E3"),
   U("u");
