@@ -101,6 +101,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_5;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYYYY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MMMDDYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTHNAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH_NAME;
@@ -115,6 +116,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
+import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHHMISS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.ACOS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_DIFF;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIME;
@@ -232,6 +234,8 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(MILISECONDS_4, "*S");
         put(E4, "%A");
         put(E3, "%a");
+        put(YYYYMMDDHHMISS, "%Y%m%d%H%M%S");
+        put(MMMDDYY, "%b%d%y");
       }};
 
   private static final String OR = "|";
