@@ -55,6 +55,7 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -150,14 +151,8 @@ public class SqlDialect {
   /**
    * Valid Date Time Separators.
    */
-  private static final List<Character> DATE_FORMAT_SEPARATORS = new ArrayList<Character>() {{
-      add('-');
-      add('/');
-      add(',');
-      add('.');
-      add(':');
-      add(' ');
-    }};
+  private static final List<Character> DATE_FORMAT_SEPARATORS =
+      Arrays.asList('-', '/', ',', '.', ':', ' ');
 
   //~ Instance fields --------------------------------------------------------
 
