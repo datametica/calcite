@@ -55,12 +55,14 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
@@ -149,14 +151,8 @@ public class SqlDialect {
   /**
    * Valid Date Time Separators.
    */
-  private static final List<Character> DATE_FORMAT_SEPARATORS = new ArrayList<Character>() {{
-      add('-');
-      add('/');
-      add(',');
-      add('.');
-      add(':');
-      add(' ');
-    }};
+  private static final List<Character> DATE_FORMAT_SEPARATORS =
+      Arrays.asList('-', '/', ',', '.', ':', ' ');
 
   //~ Instance fields --------------------------------------------------------
 
@@ -1439,7 +1435,7 @@ public class SqlDialect {
         startIndex = i + 1;
       }
     }
-    if (lastIndex > startIndex) {
+    if (lastIndex >= startIndex) {
       dateTimeTokens.add(standardDateFormat.substring(startIndex));
     }
     return new Pair<>(dateTimeTokens, separators);
@@ -1448,10 +1444,14 @@ public class SqlDialect {
   private String getFinalFormat(
       List<String> dateTimeTokens, List<Character> separators,
       Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
+    Pattern numberRegex = Pattern.compile("^[0-9]*$");
     StringBuilder finalFormatBuilder = new StringBuilder();
     for (String token : dateTimeTokens) {
-      finalFormatBuilder.append(token.equals("") ? token
-          : dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
+      if (numberRegex.matcher(token).matches() || token.equals("")) {
+        finalFormatBuilder.append(token);
+      } else {
+        finalFormatBuilder.append(dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
+      }
       String sep = "";
       if (!separators.isEmpty()) {
         sep = separators.get(0).toString();

@@ -39,11 +39,14 @@ public enum SqlDateTimeFormat {
   YYYYMM("YYYYMM"),
   YYYYMMDD("YYYYMMDD"),
   YYMMDD("YYMMDD"),
+  YYYYMMDDHHMMSS("YYYYMMDDHHMMSS"),
   MMYY("MMYY"),
+  DDHH("DDHH"),
   DAYOFWEEK("EEEE"),
   ABBREVIATEDDAYOFWEEK("EEE"),
   TWENTYFOURHOUR("HH24"),
   HOUR("HH"),
+  HHMMSS("HHMMSS"),
   HOURMINSEC("HHMISS"),
   MINUTE("MI"),
   SECOND("SS"),
@@ -67,7 +70,8 @@ public enum SqlDateTimeFormat {
   MILLISECONDS_5("sssss"),
   MILISECONDS_4("ssss"),
   E4("E4"),
-  E3("E3");
+  E3("E3"),
+  U("u");
 
   public final String value;
 
