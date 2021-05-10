@@ -1094,7 +1094,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     String dateTimeFormat = super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
     return dateTimeFormat
         .replace("%Y-%m-%d", "%F")
-        .replace("%S.", "%E");
+        .replace("%S.", "%E")
+        .replace("%S:", "%E")
+        .replace("\''T\''", "T");
   }
 
   /**

@@ -152,7 +152,7 @@ public class SqlDialect {
    * Valid Date Time Separators.
    */
   private static final List<Character> DATE_FORMAT_SEPARATORS =
-      Arrays.asList('-', '/', ',', '.', ':', ' ');
+      Arrays.asList('-', '/', ',', '.', ':', ' ', '\'');
 
   //~ Instance fields --------------------------------------------------------
 
@@ -1447,7 +1447,7 @@ public class SqlDialect {
     Pattern numberRegex = Pattern.compile("^[0-9]*$");
     StringBuilder finalFormatBuilder = new StringBuilder();
     for (String token : dateTimeTokens) {
-      if (numberRegex.matcher(token).matches() || token.equals("")) {
+      if (numberRegex.matcher(token).matches() || token.equals("") || token.equals("T")) {
         finalFormatBuilder.append(token);
       } else {
         finalFormatBuilder.append(dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
