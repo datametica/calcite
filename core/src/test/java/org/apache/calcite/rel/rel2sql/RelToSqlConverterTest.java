@@ -7995,12 +7995,14 @@ class RelToSqlConverterTest {
         builder.literal("yyyy-MM-ddHH:mm:ss z"), builder.literal("2009-03-20 12:25:50.222"));
     final RexNode parseTSNode7 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
         builder.literal("yyyy-MM-dd'T'HH:mm:ss"), builder.literal("2012-05-09T04:12:12"));
+    final RexNode parseTSNode8 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("YYYYMMDDHHMMSSSSS"), builder.literal("20120509041212213"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(parseTSNode1, "date1"), builder.alias(parseTSNode2, "date2"),
             builder.alias(parseTSNode3, "date3"), builder.alias(parseTSNode4, "time1"),
             builder.alias(parseTSNode5, "date4"), builder.alias(parseTSNode6, "date5"),
-            builder.alias(parseTSNode7, "date6"))
+            builder.alias(parseTSNode7, "date6"), builder.alias(parseTSNode8, "date7"))
         .build();
     final String expectedSql =
         "SELECT PARSE_TIMESTAMP('yyyy-MM-dd HH24:MI:SS', '2009-03-20 12:25:50') AS \"date1\","
@@ -8009,7 +8011,8 @@ class RelToSqlConverterTest {
             + "('HHMMSS', '010203') AS \"time1\", PARSE_TIMESTAMP('yyyy-MM-ddHH:mm:ss', "
             + "'2009-03-2012:25:50') AS \"date4\", PARSE_TIMESTAMP('yyyy-MM-ddHH:mm:ss z', "
             + "'2009-03-20 12:25:50.222') AS \"date5\", PARSE_TIMESTAMP"
-            + "('yyyy-MM-dd''T''HH:mm:ss', '2012-05-09T04:12:12') AS \"date6\"\n"
+            + "('yyyy-MM-dd''T''HH:mm:ss', '2012-05-09T04:12:12') AS \"date6\","
+            + " PARSE_TIMESTAMP('YYYYMMDDHHMMSSSSS', '20120509041212213') AS \"date7\"\n"
             + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery =
         "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS date1, PARSE_TIMESTAMP"
@@ -8017,7 +8020,8 @@ class RelToSqlConverterTest {
             + "'20200903020211') AS date3, PARSE_TIMESTAMP('%H%M%S', '010203') AS time1, "
             + "PARSE_TIMESTAMP('%F%H:%m:%S', '2009-03-2012:25:50') AS date4, PARSE_TIMESTAMP"
             + "('%F%H:%m:%S %Z', '2009-03-20 12:25:50.222') AS date5,"
-            + " PARSE_TIMESTAMP('%FT%I:%m:%S', '2012-05-09T04:12:12') AS date6\n"
+            + " PARSE_TIMESTAMP('%FT%I:%m:%S', '2012-05-09T04:12:12') AS date6,"
+            + " PARSE_TIMESTAMP('%Y%m%d%H%M%E3S', '20120509041212213') AS date7\n"
             + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
