@@ -43,6 +43,8 @@ public class SqlMerge extends SqlCall {
   @Nullable SqlInsert insertCall;
   @Nullable SqlSelect sourceSelect;
   @Nullable SqlIdentifier alias;
+  @Nullable SqlBasicCall matchedCondition;
+  @Nullable SqlBasicCall notMatchedCondition;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -62,6 +64,27 @@ public class SqlMerge extends SqlCall {
     this.insertCall = insertCall;
     this.sourceSelect = sourceSelect;
     this.alias = alias;
+  }
+  public SqlMerge(SqlParserPos pos,
+      SqlNode targetTable,
+      SqlNode condition,
+      SqlNode source,
+      @Nullable SqlUpdate updateCall,
+      @Nullable SqlInsert insertCall,
+      @Nullable SqlSelect sourceSelect,
+      @Nullable SqlIdentifier alias,
+      @Nullable SqlBasicCall matchedCondition,
+      @Nullable SqlBasicCall notMatchedCondition) {
+    super(pos);
+    this.targetTable = targetTable;
+    this.condition = condition;
+    this.source = source;
+    this.updateCall = updateCall;
+    this.insertCall = insertCall;
+    this.sourceSelect = sourceSelect;
+    this.alias = alias;
+    this.matchedCondition = matchedCondition;
+    this.notMatchedCondition = notMatchedCondition;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -184,7 +207,13 @@ public class SqlMerge extends SqlCall {
     SqlUpdate updateCall = this.updateCall;
     if (updateCall != null) {
       writer.newlineAndIndent();
-      writer.keyword("WHEN MATCHED THEN UPDATE");
+      if (matchedCondition != null) {
+        writer.keyword("WHEN MATCHED AND");
+        matchedCondition.unparse(writer, leftPrec, rightPrec);
+        writer.keyword("THEN UPDATE");
+      } else {
+        writer.keyword("WHEN MATCHED THEN UPDATE");
+      }
       final SqlWriter.Frame setFrame =
           writer.startList(
               SqlWriter.FrameTypeEnum.UPDATE_SET_LIST,
@@ -206,7 +235,13 @@ public class SqlMerge extends SqlCall {
     SqlInsert insertCall = this.insertCall;
     if (insertCall != null) {
       writer.newlineAndIndent();
-      writer.keyword("WHEN NOT MATCHED THEN INSERT");
+      if (matchedCondition != null) {
+        writer.keyword("WHEN NOT MATCHED AND");
+        notMatchedCondition.unparse(writer, leftPrec, rightPrec);
+        writer.keyword("THEN INSERT");
+      } else {
+        writer.keyword("WHEN NOT MATCHED THEN INSERT");
+      }
       SqlNodeList targetColumnList = insertCall.getTargetColumnList();
       if (targetColumnList != null) {
         targetColumnList.unparse(writer, opLeft, opRight);
