@@ -207,6 +207,7 @@ public class SqlMerge extends SqlCall {
     SqlUpdate updateCall = this.updateCall;
     if (updateCall != null) {
       writer.newlineAndIndent();
+      // RAV-6232 - For Merge Statement on Set Table
       if (matchedCondition != null) {
         writer.keyword("WHEN MATCHED AND");
         matchedCondition.unparse(writer, leftPrec, rightPrec);
@@ -235,6 +236,7 @@ public class SqlMerge extends SqlCall {
     SqlInsert insertCall = this.insertCall;
     if (insertCall != null) {
       writer.newlineAndIndent();
+      // RAV-6232 - For Merge Statement on Set Table
       if (matchedCondition != null) {
         writer.keyword("WHEN NOT MATCHED AND");
         notMatchedCondition.unparse(writer, leftPrec, rightPrec);
