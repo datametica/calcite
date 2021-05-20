@@ -45,6 +45,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 
+import org.apache.commons.lang.StringUtils;
+
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 import org.slf4j.Logger;
@@ -1444,10 +1446,9 @@ public class SqlDialect {
   private String getFinalFormat(
       List<String> dateTimeTokens, List<Character> separators,
       Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
-    Pattern numberRegex = Pattern.compile("^[0-9]*$");
     StringBuilder finalFormatBuilder = new StringBuilder();
     for (String token : dateTimeTokens) {
-      if (numberRegex.matcher(token).matches() || token.equals("") || token.equals("T")) {
+      if (StringUtils.isNumeric(token) || token.equals("") || token.equals("T")) {
         finalFormatBuilder.append(token);
       } else {
         finalFormatBuilder.append(dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
