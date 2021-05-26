@@ -1468,13 +1468,11 @@ public class SqlDialect {
           token.append(currentChar);
         }
       } else {
-        if ((i == 0) || (previousChar != 0 && previousChar == currentChar)) {
-          token.append(currentChar);
-        } else {
+        if ((i != 0) && (previousChar == 0 || previousChar != currentChar)) {
           dateTimeTokens.add(token.toString());
           token = new StringBuilder();
-          token.append(currentChar);
         }
+        token.append(currentChar);
       }
       previousChar = currentChar;
     }

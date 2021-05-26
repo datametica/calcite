@@ -8040,19 +8040,19 @@ class RelToSqlConverterTest {
     final String expectedBiqQuery =
         "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS date1,"
             + " PARSE_TIMESTAMP('%M %d-%Y-%m %S %H', '25 20-2009-03 50 12') AS date2,"
-            + " PARSE_TIMESTAMP('%Y%m%d%H%m%S', '20200903020211') AS timestamp1,"
-            + " PARSE_TIMESTAMP('%Y%m%d%H%m%S', '20200903210211') AS timestamp2,"
-            + " PARSE_TIMESTAMP('%H%m%S', '215313') AS time1,"
+            + " PARSE_TIMESTAMP('%Y%m%d%I%m%S', '20200903020211') AS timestamp1,"
+            + " PARSE_TIMESTAMP('%Y%m%d%I%m%S', '20200903210211') AS timestamp2,"
+            + " PARSE_TIMESTAMP('%I%m%S', '215313') AS time1,"
             + " PARSE_TIMESTAMP('%m%d%y', '090415') AS date10,"
             + " PARSE_TIMESTAMP('%b%d%y', 'Jun1215') AS date20,"
-            + " PARSE_TIMESTAMP('%Y%m%d%H', '2015061221') AS date3,"
-            + " PARSE_TIMESTAMP('%Y%m%d%H', '2015061221') AS date4,"
+            + " PARSE_TIMESTAMP('%Y%m%d%I', '2015061221') AS date3,"
+            + " PARSE_TIMESTAMP('%Y%m%d%I', '2015061221') AS date4,"
             + " PARSE_TIMESTAMP('%Y%d%m', '20150653') AS date5,"
             + " PARSE_TIMESTAMP('%Y%m%d', '20155308') AS date6,"
-            + " PARSE_TIMESTAMP('%F%H:%m:%S', '2009-03-2021:25:50') AS timestamp3,"
-            + " PARSE_TIMESTAMP('%F%H:%m:%S', '2009-03-2007:25:50') AS timestamp4, "
-            + "PARSE_TIMESTAMP('%F%H:%m:%S %Z', '2009-03-20 12:25:50.222') AS timestamp5, "
-            + "PARSE_TIMESTAMP('%FT%H:%m:%S', '2012-05-09T04:12:12') AS timestamp6\n"
+            + " PARSE_TIMESTAMP('%F%I:%m:%S', '2009-03-2021:25:50') AS timestamp3,"
+            + " PARSE_TIMESTAMP('%F%I:%m:%S', '2009-03-2007:25:50') AS timestamp4, "
+            + "PARSE_TIMESTAMP('%F%I:%m:%S %Z', '2009-03-20 12:25:50.222') AS timestamp5, "
+            + "PARSE_TIMESTAMP('%FT%I:%m:%S', '2012-05-09T04:12:12') AS timestamp6\n"
             + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
