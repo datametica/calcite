@@ -7899,9 +7899,9 @@ class RelToSqlConverterTest {
         .build();
     final String expectedSql = "SELECT FORMAT_TIME('HH:MI:SS', \"HIREDATE\") AS \"FD\"\n"
         + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT FORMAT_TIME('%H:%M:%S', HIREDATE) AS FD\n"
+    final String expectedBiqQuery = "SELECT FORMAT_TIME('%I:%M:%S', HIREDATE) AS FD\n"
         + "FROM scott.EMP";
-    final String expectedHive = "SELECT DATE_FORMAT(HIREDATE, 'HH:mm:ss') FD\n"
+    final String expectedHive = "SELECT DATE_FORMAT(HIREDATE, 'hh:mm:ss') FD\n"
         + "FROM scott.EMP";
     final String expectedSpark = expectedHive;
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
