@@ -58,6 +58,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
+import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.interval.BigQueryDateTimestampInterval;
 
@@ -72,67 +73,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATEDDAYOFWEEK;
-import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATEDMONTH;
-import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_MONTH;
-import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_NAME_OF_DAY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.ABBR_MONTH_DAY_YEAR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.AMPM;
-import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR1;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DATE_HOUR24;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DATE_TO_HOUR12_SEC;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DATE_TO_HOUR24_SEC;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DAY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DAYHOUR12;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DAYHOUR24;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFMONTH;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFYEAR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYYYY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.E3;
-import static org.apache.calcite.sql.SqlDateTimeFormat.E4;
-import static org.apache.calcite.sql.SqlDateTimeFormat.FOURDIGITYEAR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONFIVE;
-import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONFOUR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONONE;
-import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONSIX;
-import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTHREE;
-import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTWO;
-import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR12;
-import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR12MINSEC;
-import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR24;
-import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR24MINSEC;
-import static org.apache.calcite.sql.SqlDateTimeFormat.HOURMINSEC;
-import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR_OF_DAY_12;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MILISECONDS_4;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_5;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MIN;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYYYY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MMYY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MONTHNAME;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH_DAY_YEAR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH_NAME;
-import static org.apache.calcite.sql.SqlDateTimeFormat.NAME_OF_DAY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.NUMERICMONTH;
-import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR1;
-import static org.apache.calcite.sql.SqlDateTimeFormat.SEC;
-import static org.apache.calcite.sql.SqlDateTimeFormat.SECOND;
-import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEZONE;
-import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOUR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.U;
-import static org.apache.calcite.sql.SqlDateTimeFormat.UTC;
-import static org.apache.calcite.sql.SqlDateTimeFormat.YEAR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.YEAR_DAY_MIN;
-import static org.apache.calcite.sql.SqlDateTimeFormat.YEAR_MIN_DAY;
-import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
-import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
-import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
+import static org.apache.calcite.sql.SqlDateTimeFormat.*;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.ACOS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_DIFF;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIME;
@@ -208,14 +149,12 @@ public class BigQuerySqlDialect extends SqlDialect {
   private static final Map<SqlDateTimeFormat, String> DATE_TIME_FORMAT_MAP =
       new HashMap<SqlDateTimeFormat, String>() {{
         put(DAYOFMONTH, "%d");
-        put(DAY, "%d");
         put(DAYOFYEAR, "%j");
         put(NUMERICMONTH, "%m");
         put(ABBREVIATEDMONTH, "%b");
         put(MONTHNAME, "%B");
         put(TWODIGITYEAR, "%y");
         put(FOURDIGITYEAR, "%Y");
-        put(YEAR, "%Y");
         put(DDMMYYYY, "%d%m%Y");
         put(DDMMYY, "%d%m%y");
         put(MMDDYYYY, "%m%d%Y");
@@ -225,8 +164,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(DAYOFWEEK, "%A");
         put(ABBREVIATEDDAYOFWEEK, "%a");
         put(TWENTYFOURHOUR, "%H");
-        put(HOUR24, "%H");
-        put(HOUR12, "%I");
+        put(HOUR, "%H");
         put(HOURMINSEC, "%I%M%S");
         put(MINUTE, "%M");
         put(SECOND, "%S");
@@ -253,20 +191,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(MILISECONDS_4, "*S");
         put(E4, "%A");
         put(E3, "%a");
-        put(DATE_TO_HOUR12_SEC, "%Y%m%d%I%M%S");
-        put(DATE_TO_HOUR24_SEC, "%Y%m%d%H%M%S");
-        put(YEAR_DAY_MIN, "%Y%d%M");
         put(U, "%u");
-        put(DAYHOUR24, "%d%H");
-        put(DAYHOUR12, "%d%I");
-        put(YEAR_MIN_DAY, "%Y%M%d");
-        put(DATE_HOUR24, "%Y%m%d%H");
-        put(ABBR_MONTH_DAY_YEAR, "%b%d%y");
-        put(MONTH_DAY_YEAR, "%m%d%y");
-        put(HOUR24MINSEC, "%H%M%S");
-        put(HOUR12MINSEC, "%I%M%S");
-        put(MIN, "%M");
-        put(SEC, "%S");
         put(UTC, "%Z");
       }};
 
@@ -945,8 +870,13 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseFormatCall(SqlWriter writer,
                                  SqlCall call, int leftPrec, int rightPrec) {
+    String dateFormat = call.operand(0) instanceof SqlCharStringLiteral ?
+            (
+                (NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0))
+                .getValue()))
+                .getValue() : call.operand(0).toString();
     SqlCall formatCall = call.getOperator().createCall(SqlParserPos.ZERO,
-        createDateTimeFormatSqlCharLiteral(call.operand(0).toString()), call.operand(1));
+        createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
     super.unparseCall(writer, formatCall, leftPrec, rightPrec);
   }
 
@@ -1124,7 +1054,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         .replace("%Y-%m-%d", "%F")
         .replace("%S.", "%E")
         .replace("%S:", "%E")
-        .replace("\''T\''", "T");
+        .replace("'", "");
   }
 
   /**

@@ -41,11 +41,11 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.TimeString;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
-
-import org.apache.commons.lang.StringUtils;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
@@ -64,7 +64,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
@@ -920,7 +919,7 @@ public class SqlDialect {
   public @Nullable SqlNode getCastSpec(RelDataType type) {
     int maxPrecision = -1;
     if (type instanceof AbstractSqlType) {
-      System.out.println("type.getSqlTypeName() = " + type.getSqlTypeName().getName());
+      //System.out.println("type.getSqlTypeName() = " + type.getSqlTypeName().getName());
       switch (type.getSqlTypeName()) {
       case NULL:
         return null;
@@ -1420,8 +1419,14 @@ public class SqlDialect {
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     Pair<List<String>, List<Character>> dateTimeTokensWithSeparators =
         getDateTimeTokensWithSeparators(standardDateFormat);
-    return getFinalFormat(dateTimeTokensWithSeparators.left,
-        dateTimeTokensWithSeparators.right, dateTimeFormatMap);
+    try {
+      return getFinalFormat(dateTimeTokensWithSeparators.left,
+          dateTimeTokensWithSeparators.right, dateTimeFormatMap);
+    } catch (IllegalArgumentException ex) {
+      dateTimeTokensWithSeparators = getDateTimeTokensIfNotFound(standardDateFormat);
+      return getFinalFormat(dateTimeTokensWithSeparators.left,
+          dateTimeTokensWithSeparators.right, dateTimeFormatMap);
+    }
   }
 
   private Pair<List<String>, List<Character>> getDateTimeTokensWithSeparators(
@@ -1437,9 +1442,43 @@ public class SqlDialect {
         startIndex = i + 1;
       }
     }
-    if (lastIndex >= startIndex) {
+    if (lastIndex > startIndex) {
       dateTimeTokens.add(standardDateFormat.substring(startIndex));
     }
+    return new Pair<>(dateTimeTokens, separators);
+  }
+
+  private Pair<List<String>, List<Character>> getDateTimeTokensIfNotFound(
+      String standardDateFormat) {
+    List<String> dateTimeTokens = new ArrayList<>();
+    List<Character> separators = new ArrayList<>();
+    standardDateFormat = standardDateFormat.replace("''","'" );
+    int lastIndex = standardDateFormat.length() - 1;
+    StringBuilder token = new StringBuilder();
+    char previousChar = 0;
+    char currentChar;
+    for (int i = 0; i <= lastIndex; i++) {
+      currentChar = standardDateFormat.charAt(i);
+      boolean  isSeparator = DATE_FORMAT_SEPARATORS.contains(currentChar);
+      if (isSeparator || (dateTimeTokens.size() > separators.size())) {
+        if(isSeparator) {
+          separators.add(currentChar);
+        } else {
+          separators.add(Character.MIN_VALUE);
+          token.append(currentChar);
+        }
+      } else {
+        if ((i == 0) || (previousChar != 0 && previousChar == currentChar)) {
+          token.append(currentChar);
+        } else {
+          dateTimeTokens.add(token.toString());
+          token = new StringBuilder();
+          token.append(currentChar);
+        }
+      }
+      previousChar = currentChar;
+    }
+    dateTimeTokens.add(token.toString());
     return new Pair<>(dateTimeTokens, separators);
   }
 
@@ -1448,14 +1487,17 @@ public class SqlDialect {
       Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     StringBuilder finalFormatBuilder = new StringBuilder();
     for (String token : dateTimeTokens) {
-      if (StringUtils.isNumeric(token) || token.equals("") || token.equals("T")) {
+      if (StringUtils.isNumeric(token) || token.equals("") ||
+          (
+               separators.size() > 0 && (separators.get(0).toString().equals("'") &&
+              !(separators.size() > 1 && separators.get(1).toString().equals("'"))))) {
         finalFormatBuilder.append(token);
       } else {
         finalFormatBuilder.append(dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
       }
       String sep = "";
       if (!separators.isEmpty()) {
-        sep = separators.get(0).toString();
+        sep = separators.get(0) == Character.MIN_VALUE ? "" : separators.get(0).toString();
         separators.remove(0);
       }
       finalFormatBuilder.append(sep);
