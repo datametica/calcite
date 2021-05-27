@@ -2116,7 +2116,8 @@ public abstract class SqlImplementor {
           return !hasNestedAgg || Aggregate.isNotGrandTotal(agg);
         }
         if (rel instanceof Aggregate
-            && rel.getInput(0) instanceof RavenDistinctProject) {
+            && rel.getInput(0) instanceof RavenDistinctProject
+            && ((RavenDistinctProject) rel.getInput(0)).isDistinct()) {
           return true;
         }
       }
