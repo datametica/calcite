@@ -26,12 +26,15 @@ import java.util.Set;
 public enum SqlDateTimeFormat {
 
   DAYOFMONTH("DD"),
+  DAY_MONTH("dd"),
   DAYOFYEAR("DDD"),
   NUMERICMONTH("MM"),
   ABBREVIATEDMONTH("MMM"),
   MONTHNAME("MMMM"),
   TWODIGITYEAR("YY"),
+  YEAR_2("yy"),
   FOURDIGITYEAR("YYYY"),
+  YEAR_4("yyyy"),
   DDMMYYYY("DDMMYYYY"),
   DDMMYY("DDMMYY"),
   MMDDYYYY("MMDDYYYY"),
@@ -44,9 +47,13 @@ public enum SqlDateTimeFormat {
   ABBREVIATEDDAYOFWEEK("EEE"),
   TWENTYFOURHOUR("HH24"),
   HOUR("HH"),
+  HOUR_24("HHH"),
+  HOUR_12("hh"),
+  MIN("mm"),
   HOURMINSEC("HHMISS"),
   MINUTE("MI"),
   SECOND("SS"),
+  SEC("ss"),
   FRACTIONONE("S(1)"),
   FRACTIONTWO("S(2)"),
   FRACTIONTHREE("S(3)"),
@@ -66,6 +73,7 @@ public enum SqlDateTimeFormat {
   ANTE_MERIDIAN_INDICATOR1("A.M."),
   MILLISECONDS_5("sssss"),
   MILISECONDS_4("ssss"),
+  MILLISECONDS_3("SSS"),
   E4("E4"),
   E3("E3"),
   U("u"),
@@ -88,7 +96,7 @@ public enum SqlDateTimeFormat {
 
   static SqlDateTimeFormat of(String value) {
     for (SqlDateTimeFormat dateTimeFormat : values()) {
-      if (dateTimeFormat.value.equalsIgnoreCase(value)) {
+      if (dateTimeFormat.value.equals(value)) {
         return dateTimeFormat;
       }
     }

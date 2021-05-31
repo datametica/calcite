@@ -56,13 +56,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
@@ -1417,7 +1411,7 @@ public class SqlDialect {
 
   protected String getDateTimeFormatString(
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
-    Pair<List<String>, List<Character>> dateTimeTokensWithSeparators =
+    Pair<List<String>, List<List<Character>>> dateTimeTokensWithSeparators =
         getDateTimeTokensWithSeparators(standardDateFormat);
     try {
       return getFinalFormat(dateTimeTokensWithSeparators.left,
@@ -1429,76 +1423,107 @@ public class SqlDialect {
     }
   }
 
-  private Pair<List<String>, List<Character>> getDateTimeTokensWithSeparators(
+  private Pair<List<String>, List<List<Character>>> getDateTimeTokensWithSeparators(
       String standardDateFormat) {
     List<String> dateTimeTokens = new ArrayList<>();
-    List<Character> separators = new ArrayList<>();
+    List<List<Character>> separators = new ArrayList<>();
+    List<Character> separator = new ArrayList<>();
     int startIndex = 0;
+    int previousIndex = -1;
     int lastIndex = standardDateFormat.length() - 1;
     for (int i = 0; i <= lastIndex; i++) {
-      if (DATE_FORMAT_SEPARATORS.contains(standardDateFormat.charAt(i))) {
-        separators.add(standardDateFormat.charAt(i));
-        dateTimeTokens.add(standardDateFormat.substring(startIndex, i));
+      Character currentChar = standardDateFormat.charAt(i);
+      if (DATE_FORMAT_SEPARATORS.contains(currentChar)) {
+        separator.add(currentChar);
+        String token = StringUtils.substring(standardDateFormat, startIndex, i);
+        boolean isNextASeparator =
+            DATE_FORMAT_SEPARATORS.contains(standardDateFormat.charAt(i + 1));
+        if (!token.isEmpty()) {
+          previousIndex = i;
+          dateTimeTokens.add(token);
+          if (!isNextASeparator) {
+            separators.add(separator);
+            separator = new ArrayList<>();
+          }
+        } else if (previousIndex + 1 == i) {
+          if (!isNextASeparator) {
+            separators.add(separator);
+            separator = new ArrayList<>();
+          }
+          previousIndex = i;
+        }
         startIndex = i + 1;
       }
     }
-    if (lastIndex > startIndex) {
-      dateTimeTokens.add(standardDateFormat.substring(startIndex));
+    if (lastIndex >= startIndex) {
+      dateTimeTokens.add(StringUtils.substring(standardDateFormat, startIndex));
     }
     return new Pair<>(dateTimeTokens, separators);
   }
 
-  private Pair<List<String>, List<Character>> getDateTimeTokensIfNotFound(
+  private Pair<List<String>, List<List<Character>>> getDateTimeTokensIfNotFound(
       String standardDateFormat) {
     List<String> dateTimeTokens = new ArrayList<>();
-    List<Character> separators = new ArrayList<>();
-    standardDateFormat = standardDateFormat.replace("''","'" );
+    List<List<Character>> separators = new ArrayList<>();
     int lastIndex = standardDateFormat.length() - 1;
     StringBuilder token = new StringBuilder();
     char previousChar = 0;
     char currentChar;
+    int previousIndex = -1;
+    List<Character> separator = new ArrayList<>();
     for (int i = 0; i <= lastIndex; i++) {
       currentChar = standardDateFormat.charAt(i);
-      boolean  isSeparator = DATE_FORMAT_SEPARATORS.contains(currentChar);
+      boolean isSeparator = DATE_FORMAT_SEPARATORS.contains(currentChar);
       if (isSeparator || (dateTimeTokens.size() > separators.size())) {
-        if(isSeparator) {
-          separators.add(currentChar);
+        if (isSeparator) {
+          separator.add(currentChar);
         } else {
-          separators.add(Character.MIN_VALUE);
+          separator.add(Character.MIN_VALUE);
           token.append(currentChar);
         }
+        if (i != previousIndex) {
+          separators.add(separator);
+          separator = new ArrayList<>();
+        }
       } else {
-        if ((i != 0) && (previousChar == 0 || previousChar != currentChar)) {
+        if ((i != 0) && (previousChar == Character.MIN_VALUE || previousChar != currentChar)) {
           dateTimeTokens.add(token.toString());
           token = new StringBuilder();
         }
         token.append(currentChar);
       }
       previousChar = currentChar;
+      previousIndex = i;
     }
     dateTimeTokens.add(token.toString());
     return new Pair<>(dateTimeTokens, separators);
   }
 
   private String getFinalFormat(
-      List<String> dateTimeTokens, List<Character> separators,
+      List<String> dateTimeTokens, List<List<Character>> separators,
       Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     StringBuilder finalFormatBuilder = new StringBuilder();
-    for (String token : dateTimeTokens) {
+    for (int i = 0; i< dateTimeTokens.size() ; i++) {
+      String token = dateTimeTokens.get(i);
       if (StringUtils.isNumeric(token) || token.equals("") ||
           (
-               separators.size() > 0 && (separators.get(0).toString().equals("'") &&
-              !(separators.size() > 1 && separators.get(1).toString().equals("'"))))) {
+              separators.size() > 0 && (separators.get(0).get(0).toString().equals("'") &&
+              !(separators.size() > 1 && separators.get(1).get(0).toString().equals("'"))))) {
         finalFormatBuilder.append(token);
       } else {
         finalFormatBuilder.append(dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
       }
-      String sep = "";
+
+      StringBuilder separator = new StringBuilder();
       if (!separators.isEmpty()) {
-        sep = separators.get(0) == Character.MIN_VALUE ? "" : separators.get(0).toString();
+        for (int j = 0; j < separators.get(0).size(); j++ ) {
+          separator.append(
+              separators.get(0).get(j) == Character.MIN_VALUE ?
+                  "" : separators.get(0).get(j).toString());
+        }
         separators.remove(0);
       }
-      finalFormatBuilder.append(sep);
+      finalFormatBuilder.append(separator);
     }
     return finalFormatBuilder.toString();
   }
