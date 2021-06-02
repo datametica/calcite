@@ -79,7 +79,8 @@ public enum SqlDateTimeFormat {
   E4("E4"),
   E3("E3"),
   U("u"),
-  UTC("z");
+  UTC("z"),
+  NUMERIC_TIME_ZONE("HZ");
 
   public final String value;
 

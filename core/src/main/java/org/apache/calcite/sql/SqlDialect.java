@@ -1429,7 +1429,7 @@ public class SqlDialect {
       }
       StringBuilder sb = new StringBuilder(s.length());
       int start = 0;
-      for (; ; ) {
+      for (; ;) {
         for (; start < found; start++) {
           sb.append(s.charAt(start));
         }

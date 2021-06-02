@@ -115,6 +115,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.MONTHNAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH_NAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NUMERICMONTH;
+import static org.apache.calcite.sql.SqlDateTimeFormat.NUMERIC_TIME_ZONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR1;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SEC;
@@ -262,6 +263,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(E3, "%a");
         put(U, "%u");
         put(UTC, "%Z");
+        put(NUMERIC_TIME_ZONE, "%Ez");
       }};
 
   private static final String OR = "|";
