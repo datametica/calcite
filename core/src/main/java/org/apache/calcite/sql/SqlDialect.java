@@ -1544,10 +1544,11 @@ public class SqlDialect {
     int i = 0;
     while (i < dateTimeTokens.size()) {
       String token = dateTimeTokens.get(i);
-      if (StringUtils.isNumeric(token) || token.equals("") ||
-          (
-              separators.size() > 0 && (separators.get(0).get(0).toString().equals("'") &&
-                  !(separators.size() > 1 && separators.get(1).get(0).toString().equals("'"))))) {
+      if (StringUtils.isNumeric(token)
+          || token.equals("")
+          || (separators.size() > 0
+          && (separators.get(0).get(0).toString().equals("'")
+          && !(separators.size() > 1 && separators.get(1).get(0).toString().equals("'"))))) {
         finalFormatBuilder.append(token);
       } else {
         finalFormatBuilder.append(dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
@@ -1568,6 +1569,7 @@ public class SqlDialect {
     }
     return finalFormatBuilder.toString();
   }
+
 
   /**
    * Whether this JDBC driver needs you to pass a Calendar object to methods

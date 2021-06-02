@@ -939,11 +939,10 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseFormatCall(SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
-    String dateFormat = call.operand(0) instanceof SqlCharStringLiteral ?
-        (
-            (NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0))
-                .getValue()))
-            .getValue() : call.operand(0).toString();
+    String dateFormat = call.operand(0) instanceof SqlCharStringLiteral
+        ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
+        .getValue()
+        : call.operand(0).toString();
     SqlCall formatCall = call.getOperator().createCall(SqlParserPos.ZERO,
         createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
     super.unparseCall(writer, formatCall, leftPrec, rightPrec);
@@ -1126,9 +1125,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     Matcher matcher = Pattern.compile("(.*?)(%S:(?=[0-9]S))").matcher(dateTimeFormat);
     while (matcher.find()) {
       dateTimeFormat =
-          dateTimeFormat.substring(0, matcher.start(2)) +
-              "%E." +
-              dateTimeFormat.substring(matcher.end(2));
+          dateTimeFormat.substring(0, matcher.start(2))
+              + "%E."
+              + dateTimeFormat.substring(matcher.end(2));
     }
     return dateTimeFormat.replaceAll("%E\\.", "%E");
   }
