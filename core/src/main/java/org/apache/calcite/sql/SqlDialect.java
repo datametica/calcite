@@ -1545,7 +1545,8 @@ public class SqlDialect {
     while (i < dateTimeTokens.size()) {
       String token = dateTimeTokens.get(i);
       if (StringUtils.isNumeric(token) || token.equals("") ||
-          (separators.size() > 0 && (separators.get(0).get(0).toString().equals("'") &&
+          (
+              separators.size() > 0 && (separators.get(0).get(0).toString().equals("'") &&
                   !(separators.size() > 1 && separators.get(1).get(0).toString().equals("'"))))) {
         finalFormatBuilder.append(token);
       } else {
@@ -1795,13 +1796,11 @@ public class SqlDialect {
       this.jethroInfo = Objects.requireNonNull(jethroInfo);
     }
 
-    @Override
-    public DatabaseProduct databaseProduct() {
+    @Override public DatabaseProduct databaseProduct() {
       return databaseProduct;
     }
 
-    @Override
-    public Context withDatabaseProduct(
+    @Override public Context withDatabaseProduct(
         DatabaseProduct databaseProduct) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
@@ -1810,13 +1809,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public @Nullable String databaseProductName() {
+    @Override public @Nullable String databaseProductName() {
       return databaseProductName;
     }
 
-    @Override
-    public Context withDatabaseProductName(String databaseProductName) {
+    @Override public Context withDatabaseProductName(String databaseProductName) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1824,13 +1821,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public @Nullable String databaseVersion() {
+    @Override public @Nullable String databaseVersion() {
       return databaseVersion;
     }
 
-    @Override
-    public Context withDatabaseVersion(String databaseVersion) {
+    @Override public Context withDatabaseVersion(String databaseVersion) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1838,13 +1833,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public int databaseMajorVersion() {
+    @Override public int databaseMajorVersion() {
       return databaseMajorVersion;
     }
 
-    @Override
-    public Context withDatabaseMajorVersion(int databaseMajorVersion) {
+    @Override public Context withDatabaseMajorVersion(int databaseMajorVersion) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1852,13 +1845,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public int databaseMinorVersion() {
+    @Override public int databaseMinorVersion() {
       return databaseMinorVersion;
     }
 
-    @Override
-    public Context withDatabaseMinorVersion(int databaseMinorVersion) {
+    @Override public Context withDatabaseMinorVersion(int databaseMinorVersion) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1866,13 +1857,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public String literalQuoteString() {
+    @Override public String literalQuoteString() {
       return literalQuoteString;
     }
 
-    @Override
-    public Context withLiteralQuoteString(String literalQuoteString) {
+    @Override public Context withLiteralQuoteString(String literalQuoteString) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1880,13 +1869,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public String literalEscapedQuoteString() {
+    @Override public String literalEscapedQuoteString() {
       return literalEscapedQuoteString;
     }
 
-    @Override
-    public Context withLiteralEscapedQuoteString(
+    @Override public Context withLiteralEscapedQuoteString(
         String literalEscapedQuoteString) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
@@ -1895,13 +1882,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public @Nullable String identifierQuoteString() {
+    @Override public @Nullable String identifierQuoteString() {
       return identifierQuoteString;
     }
 
-    @Override
-    public Context withIdentifierQuoteString(
+    @Override public Context withIdentifierQuoteString(
         @Nullable String identifierQuoteString) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
@@ -1910,13 +1895,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public Casing unquotedCasing() {
+    @Override public Casing unquotedCasing() {
       return unquotedCasing;
     }
 
-    @Override
-    public Context withUnquotedCasing(Casing unquotedCasing) {
+    @Override public Context withUnquotedCasing(Casing unquotedCasing) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1924,13 +1907,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public Casing quotedCasing() {
+    @Override public Casing quotedCasing() {
       return quotedCasing;
     }
 
-    @Override
-    public Context withQuotedCasing(Casing quotedCasing) {
+    @Override public Context withQuotedCasing(Casing quotedCasing) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1938,13 +1919,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public boolean caseSensitive() {
+    @Override public boolean caseSensitive() {
       return caseSensitive;
     }
 
-    @Override
-    public Context withCaseSensitive(boolean caseSensitive) {
+    @Override public Context withCaseSensitive(boolean caseSensitive) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1952,13 +1931,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public SqlConformance conformance() {
+    @Override public SqlConformance conformance() {
       return conformance;
     }
 
-    @Override
-    public Context withConformance(SqlConformance conformance) {
+    @Override public Context withConformance(SqlConformance conformance) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1966,13 +1943,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public NullCollation nullCollation() {
+    @Override public NullCollation nullCollation() {
       return nullCollation;
     }
 
-    @Override
-    public Context withNullCollation(
+    @Override public Context withNullCollation(
         NullCollation nullCollation) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
@@ -1981,13 +1956,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public RelDataTypeSystem dataTypeSystem() {
+    @Override public RelDataTypeSystem dataTypeSystem() {
       return dataTypeSystem;
     }
 
-    @Override
-    public Context withDataTypeSystem(RelDataTypeSystem dataTypeSystem) {
+    @Override public Context withDataTypeSystem(RelDataTypeSystem dataTypeSystem) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1995,13 +1968,11 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
 
-    @Override
-    public JethroDataSqlDialect.JethroInfo jethroInfo() {
+    @Override public JethroDataSqlDialect.JethroInfo jethroInfo() {
       return jethroInfo;
     }
 
-    @Override
-    public Context withJethroInfo(JethroDataSqlDialect.JethroInfo jethroInfo) {
+    @Override public Context withJethroInfo(JethroDataSqlDialect.JethroInfo jethroInfo) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
