@@ -104,6 +104,8 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR_OF_DAY_12;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MILISECONDS_4;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_3;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_5;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECS_5;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MILLI_SEC_4;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MIN;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
@@ -253,7 +255,9 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(ANTE_MERIDIAN_INDICATOR, "%p");
         put(ANTE_MERIDIAN_INDICATOR1, "%p");
         put(MILLISECONDS_5, "*S");
+        put(MILLISECS_5, "*S");
         put(MILISECONDS_4, "*S");
+        put(MILLI_SEC_4, "4S");
         put(E4, "%A");
         put(E3, "%a");
         put(U, "%u");
