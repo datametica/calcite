@@ -582,24 +582,8 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseRegexSubstr(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     SqlCall extractCall;
-    switch (call.operandCount()) {
-    case 2: case 3:
-      extractCall = makeExtractSqlCall(call);
-      REGEXP_SUBSTR.unparse(writer, extractCall, leftPrec, rightPrec);
-      break;
-    case 4: case 5:
-      extractCall = makeExtractSqlCall(call);
-      REGEXP_SUBSTR.unparse(writer, extractCall, leftPrec, rightPrec);
-      writeOffset(writer, call);
-      break;
-    default:
-      REGEXP_SUBSTR.unparse(writer, call, leftPrec, rightPrec);
-    }
-  }
-
-  private void writeOffset(SqlWriter writer, SqlCall call) {
-    int occurrenceNumber = Integer.parseInt(call.operand(3).toString()) - 1;
-    writer.literal("[OFFSET(" + occurrenceNumber + ")]");
+    extractCall = makeExtractSqlCall(call);
+    REGEXP_SUBSTR.unparse(writer, extractCall, leftPrec, rightPrec);
   }
 
   private SqlCall makeExtractSqlCall(SqlCall call) {
@@ -618,16 +602,12 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private SqlCharStringLiteral makeRegexNode(SqlCall call) {
-    String regexLiteral = null;
-    String regexStr = call.operand(1).toString();
-    regexStr = regexStr.replace("\\", "\\\\");
+    String regexLiteral = call.operand(1).toString();
+    regexLiteral = regexLiteral.replace("\\", "\\\\");
     if (call.operandCount() == 5 && call.operand(4).toString().equals("'i'")) {
-      regexLiteral = "(?i)".concat(regexStr.substring(1, regexStr.length() - 1));
-      return SqlLiteral.createCharString(regexLiteral, call.operand(1).getParserPosition());
-    } else {
-      return SqlLiteral.createCharString(regexStr,
-          call.operand(1).getParserPosition());
+      regexLiteral = "(?i)".concat(regexLiteral.substring(1, regexLiteral.length() - 1));
     }
+    return SqlLiteral.createCharString(regexLiteral, call.operand(1).getParserPosition());
   }
 
   private SqlCall makeSubstringSqlCall(SqlCall call) {

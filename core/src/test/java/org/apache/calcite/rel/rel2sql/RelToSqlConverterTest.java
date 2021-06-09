@@ -5835,7 +5835,7 @@ class RelToSqlConverterTest {
         + " 4, 2)\n"
         + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3)";
     final String expected = "SELECT product_id, REGEXP_SUBSTR('chocolate chip "
-        + "cookies', 'c+.{2}', 4, 2) [OFFSET(1)]\n"
+        + "cookies', 'c+.{2}', 4, 2)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3";
     sql(query)
@@ -5848,8 +5848,7 @@ class RelToSqlConverterTest {
         + " 1, 2, 'i')\n"
         + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3, 4)";
     final String expected = "SELECT "
-        + "REGEXP_SUBSTR('chocolate Chip cookies', '(?i)c+.{2}', 1, 2) [OFFSET"
-        + "(1)]\n"
+        + "REGEXP_SUBSTR('chocolate Chip cookies', '(?i)c+.{2}', 1, 2)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3 OR product_id = 4";
     sql(query)
@@ -5862,14 +5861,13 @@ class RelToSqlConverterTest {
         + "1,1,'i')\n"
         + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3, 4)";
     final String expected = "SELECT "
-        + "REGEXP_SUBSTR('chocolate Chip cookies', '(?i)[-\\\\_] V[0-9]+', 1, 1) [OFFSET(0)]\n"
+        + "REGEXP_SUBSTR('chocolate Chip cookies', '(?i)[-\\\\_] V[0-9]+', 1, 1)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3 OR product_id = 4";
     sql(query)
         .withBigQuery()
         .ok(expected);
   }
-
 
   @Test public void testTimestampFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
