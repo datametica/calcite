@@ -122,7 +122,6 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_CONTAINS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR_BIG_QUERY;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_SECONDS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CEIL;
@@ -607,12 +606,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     if (call.operandCount() == 5 && call.operand(4).toString().equals("'i'")) {
       regexLiteral = "(?i)".concat(regexLiteral.substring(1, regexLiteral.length() - 1));
     }
-    return SqlLiteral.createCharString(regexLiteral, call.operand(1).getParserPosition());
-  }
-
-  private SqlCall makeSubstringSqlCall(SqlCall call) {
-    SqlNode[] sqlNodes = new SqlNode[]{call.operand(0), call.operand(2)};
-    return new SqlBasicCall(SUBSTR_BIG_QUERY, sqlNodes, SqlParserPos.ZERO);
+    return SqlLiteral.createCharString((call.operandCount() == 5) ? regexLiteral
+        : regexLiteral.substring(1, regexLiteral.length() - 1),
+        call.operand(1).getParserPosition());
   }
 
   /**
