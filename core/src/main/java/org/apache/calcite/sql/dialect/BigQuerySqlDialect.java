@@ -581,11 +581,11 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseRegexSubstr(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     SqlCall extractCall;
-    extractCall = makeExtractSqlCall(call);
+    extractCall = makeRegexpSubstrSqlCall(call);
     REGEXP_SUBSTR.unparse(writer, extractCall, leftPrec, rightPrec);
   }
 
-  private SqlCall makeExtractSqlCall(SqlCall call) {
+  private SqlCall makeRegexpSubstrSqlCall(SqlCall call) {
     if (call.operandCount() == 5 || call.operand(1).toString().contains("\\")) {
       SqlCharStringLiteral regexNode = makeRegexNode(call);
       call.setOperand(1, regexNode);
@@ -603,11 +603,11 @@ public class BigQuerySqlDialect extends SqlDialect {
   private SqlCharStringLiteral makeRegexNode(SqlCall call) {
     String regexLiteral = call.operand(1).toString();
     regexLiteral = regexLiteral.replace("\\", "\\\\");
+    regexLiteral = regexLiteral.substring(1, regexLiteral.length() - 1);
     if (call.operandCount() == 5 && call.operand(4).toString().equals("'i'")) {
-      regexLiteral = "(?i)".concat(regexLiteral.substring(1, regexLiteral.length() - 1));
+      regexLiteral = "(?i)".concat(regexLiteral);
     }
-    return SqlLiteral.createCharString((call.operandCount() == 5) ? regexLiteral
-        : regexLiteral.substring(1, regexLiteral.length() - 1),
+    return SqlLiteral.createCharString(regexLiteral,
         call.operand(1).getParserPosition());
   }
 
