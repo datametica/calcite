@@ -72,15 +72,18 @@ public enum SqlDateTimeFormat {
   ANTE_MERIDIAN_INDICATOR("AM"),
   ANTE_MERIDIAN_INDICATOR1("A.M."),
   MILLISECONDS_5("sssss"),
-  MILLISECS_5("SSSSS"),
+  MILLI_SEC_5("SSSSS"),
+  MILLI_SEC_1("S"),
+  MILLI_SEC_2("SSSSSSS"),
   MILISECONDS_4("ssss"),
   MILLI_SEC_4("SSSS"),
-  MILLISECONDS_3("SSS"),
+  MILLI_SEC_6("SSSSSS"),
+  MILLI_SEC_3("SSS"),
   E4("E4"),
   E3("E3"),
   U("u"),
   UTC("z"),
-  NUMERIC_TIME_ZONE("HZ");
+  NUMERIC_TIME_ZONE("ZZ");
 
   public final String value;
 

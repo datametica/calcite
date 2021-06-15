@@ -61,11 +61,8 @@ import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.interval.BigQueryDateTimestampInterval;
-
 import com.google.common.collect.ImmutableList;
-
 import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -102,10 +99,10 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR_12;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR_24;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR_OF_DAY_12;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MILISECONDS_4;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_3;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_5;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECS_5;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MILLI_SEC_3;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MILLI_SEC_4;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MILLI_SEC_5;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MIN;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
@@ -235,7 +232,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(SECOND, "%S");
         put(MIN, "%M");
         put(SEC, "%S");
-        put(MILLISECONDS_3, "3S");
+        put(MILLI_SEC_3, "3S");
         put(FRACTIONONE, "1S");
         put(FRACTIONTWO, "2S");
         put(FRACTIONTHREE, "3S");
@@ -256,7 +253,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(ANTE_MERIDIAN_INDICATOR, "%p");
         put(ANTE_MERIDIAN_INDICATOR1, "%p");
         put(MILLISECONDS_5, "*S");
-        put(MILLISECS_5, "*S");
+        put(MILLI_SEC_5, "5S");
         put(MILISECONDS_4, "*S");
         put(MILLI_SEC_4, "4S");
         put(E4, "%A");
@@ -1122,16 +1119,16 @@ public class BigQuerySqlDialect extends SqlDialect {
     String dateTimeFormat = super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
     dateTimeFormat = dateTimeFormat
         .replace("%Y-%m-%d", "%F")
-        .replace("%S.", "%E")
         .replace("'", "");
-    Matcher matcher = Pattern.compile("(.*?)(%S:(?=[0-9]S))").matcher(dateTimeFormat);
+    Matcher matcher = Pattern.compile("(.*?)(%S[:\\.](?=[0-9*]S))").matcher(dateTimeFormat);
     while (matcher.find()) {
       dateTimeFormat =
           dateTimeFormat.substring(0, matcher.start(2))
               + "%E."
               + dateTimeFormat.substring(matcher.end(2));
     }
-    return dateTimeFormat.replaceAll("%E\\.", "%E");
+    return dateTimeFormat
+        .replaceAll("%E\\.", "%E");
   }
 
   /**
