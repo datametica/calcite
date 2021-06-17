@@ -32,7 +32,6 @@ public enum SqlDateTimeFormat {
   MONTHNAME("MMMM"),
   TWODIGITYEAR("YY"),
   FOURDIGITYEAR("YYYY"),
-  YEAR_4("yyyy"),
   DDMMYYYY("DDMMYYYY"),
   DDMMYY("DDMMYY"),
   MMDDYYYY("MMDDYYYY"),
@@ -45,12 +44,9 @@ public enum SqlDateTimeFormat {
   ABBREVIATEDDAYOFWEEK("EEE"),
   TWENTYFOURHOUR("HH24"),
   HOUR("HH"),
-  HOUR_24("HHH"),
-  MIN("mm"),
   HOURMINSEC("HHMISS"),
   MINUTE("MI"),
   SECOND("SS"),
-  SEC("ss"),
   FRACTIONONE("S(1)"),
   FRACTIONTWO("S(2)"),
   FRACTIONTHREE("S(3)"),
@@ -61,22 +57,21 @@ public enum SqlDateTimeFormat {
   TIMEZONE("Z"),
   MONTH_NAME("MONTH"),
   ABBREVIATED_MONTH("MON"),
+  NAME_OF_DAY("DAY"),
   ABBREVIATED_NAME_OF_DAY("DY"),
   HOUR_OF_DAY_12("HH12"),
   POST_MERIDIAN_INDICATOR("PM"),
   POST_MERIDIAN_INDICATOR1("P.M."),
   ANTE_MERIDIAN_INDICATOR("AM"),
   ANTE_MERIDIAN_INDICATOR1("A.M."),
-  MILLI_SEC_5("SSSSS"),
-  MILLI_SEC_1("S"),
-  MILLI_SEC_2("SSSSSSS"),
-  MILLI_SEC_4("SSSS"),
-  MILLI_SEC_6("SSSSSS"),
-  MILLI_SEC_3("SSS"),
+  MILLISECONDS_5("sssss"),
+  MILISECONDS_4("ssss"),
+  E4("E4"),
   E3("E3"),
-  U("u"),
-  UTC("z"),
-  NUMERIC_TIME_ZONE("ZZ");
+  U("U"),
+  NUMERIC_TIME_ZONE("ZZ"),
+  WEEK_OF_YEAR("WW"),
+  WEEK_OF_MONTH("W");
 
   public final String value;
 
@@ -95,7 +90,7 @@ public enum SqlDateTimeFormat {
 
   static SqlDateTimeFormat of(String value) {
     for (SqlDateTimeFormat dateTimeFormat : values()) {
-      if (dateTimeFormat.value.equals(value)) {
+      if (dateTimeFormat.value.equalsIgnoreCase(value)) {
         return dateTimeFormat;
       }
     }

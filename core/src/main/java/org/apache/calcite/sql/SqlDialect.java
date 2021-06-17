@@ -151,9 +151,11 @@ public class SqlDialect {
 
   /**
    * Valid Date Time Separators.
+   * '@' is a standard Format added at mig side in case if we don't have any separators
+   * between two tokens which makes us easy to getFinalFormat
    */
   private static final List<Character> DATE_FORMAT_SEPARATORS =
-      Arrays.asList('-', '/', ',', '.', ':', ' ', '\'');
+      Arrays.asList('-', '/', ',', '.', ':', ' ', '\'', '@');
 
   //~ Instance fields --------------------------------------------------------
 
@@ -1451,15 +1453,8 @@ public class SqlDialect {
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     Pair<List<String>, List<List<Character>>> dateTimeTokensWithSeparators =
         getDateTimeTokensWithSeparators(standardDateFormat, DATE_FORMAT_SEPARATORS);
-    try {
-      return getFinalFormat(dateTimeTokensWithSeparators.left,
-          dateTimeTokensWithSeparators.right, dateTimeFormatMap);
-    } catch (IllegalArgumentException ex) {
-      dateTimeTokensWithSeparators =
-          getDateTimeTokensIfNotFound(standardDateFormat, DATE_FORMAT_SEPARATORS);
-      return getFinalFormat(dateTimeTokensWithSeparators.left,
-          dateTimeTokensWithSeparators.right, dateTimeFormatMap);
-    }
+    return getFinalFormat(dateTimeTokensWithSeparators.left,
+        dateTimeTokensWithSeparators.right, dateTimeFormatMap);
   }
 
   public static Pair<List<String>, List<List<Character>>> getDateTimeTokensWithSeparators(
@@ -1500,50 +1495,6 @@ public class SqlDialect {
     return new Pair<>(dateTimeTokens, separators);
   }
 
-  public static Pair<List<String>, List<List<Character>>> getDateTimeTokensIfNotFound(
-      String standardDateFormat, List<Character> dateFormatSeparators) {
-    List<String> dateTimeTokens = new ArrayList<>();
-    List<List<Character>> separators = new ArrayList<>();
-    int lastIndex = standardDateFormat.length() - 1;
-    StringBuilder token = new StringBuilder();
-    char previousChar = 0;
-    char currentChar;
-    List<Character> separator = new ArrayList<>();
-    for (int i = 0; i <= lastIndex; i++) {
-      currentChar = standardDateFormat.charAt(i);
-      boolean isSeparator = dateFormatSeparators.contains(currentChar);
-      boolean isNextASeparator = standardDateFormat.length() - 1 > i
-              && dateFormatSeparators.contains(standardDateFormat.charAt(i + 1));
-      if (isSeparator || (dateTimeTokens.size() > separators.size())) {
-        if (isSeparator) {
-          separator.add(currentChar);
-        } else {
-          separator.add(Character.MIN_VALUE);
-          token.append(currentChar);
-          if (isNextASeparator) {
-            dateTimeTokens.add(token.toString());
-            separators.add(separator);
-            separator = new ArrayList<>();
-            token = new StringBuilder();
-          }
-        }
-        if (!isNextASeparator) {
-          separators.add(separator);
-          separator = new ArrayList<>();
-        }
-      } else {
-        if ((i != 0) && (previousChar != currentChar)) {
-          dateTimeTokens.add(token.toString());
-          token = new StringBuilder();
-        }
-        token.append(currentChar);
-      }
-      previousChar = currentChar;
-    }
-    dateTimeTokens.add(token.toString());
-    return new Pair<>(dateTimeTokens, separators);
-  }
-
   private String getFinalFormat(
       List<String> dateTimeTokens, List<List<Character>> separators,
       Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
@@ -1565,7 +1516,7 @@ public class SqlDialect {
       if (!separators.isEmpty()) {
         for (int j = 0; j < separators.get(0).size(); j++) {
           separator.append(
-              separators.get(0).get(j) == Character.MIN_VALUE
+              separators.get(0).get(j) == '@'
                   ? ""
                   : separators.get(0).get(j).toString());
         }
