@@ -7972,10 +7972,10 @@ class RelToSqlConverterTest {
         "SELECT TO_DATE('20181106', 'YYYYMMDD') AS \"date1\", "
         + "TO_DATE('2018/11/06', 'YYYY/MM/DD') AS \"date2\"\n"
         + "FROM \"scott\".\"EMP\"";
- //   assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
- //   assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
- //   assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
- //   assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+    assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflake));
   }
 
@@ -8107,17 +8107,16 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
-  @org.junit.jupiter.api.Test
-  public void testToTimestampFunction() {
+  @Test public void testToTimestampFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.TO_TIMESTAMP,
-        builder.literal("2009-03-20 12:25:50"), builder.literal("yyyy-MM-DD HH24:MI:SS"));
+        builder.literal("2009-03-20 12:25:50"), builder.literal("yyyy-MM-dd HH24:MI:SS"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(parseTSNode1, "timestamp_value"))
         .build();
     final String expectedSql =
-        "SELECT TO_TIMESTAMP('2009-03-20 12:25:50', 'yyyy-MM-DD HH24:MI:SS') AS "
+        "SELECT TO_TIMESTAMP('2009-03-20 12:25:50', 'yyyy-MM-dd HH24:MI:SS') AS "
             + "\"timestamp_value\"\nFROM \"scott\".\"EMP\"";
     final String expectedBiqQuery =
         "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS timestamp_value\n"
@@ -8130,13 +8129,13 @@ class RelToSqlConverterTest {
   @Test public void testToDateFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.TO_DATE,
-        builder.literal("2009/03/20"), builder.literal("yyyy/MM/DD"));
+        builder.literal("2009/03/20"), builder.literal("yyyy/MM/dd"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(parseTSNode1, "date_value"))
         .build();
     final String expectedSql =
-        "SELECT TO_DATE('2009/03/20', 'yyyy/MM/DD') AS \"date_value\"\n"
+        "SELECT TO_DATE('2009/03/20', 'yyyy/MM/dd') AS \"date_value\"\n"
             + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery =
         "SELECT DATE(PARSE_TIMESTAMP('%Y/%m/%d', '2009/03/20')) AS date_value\n"
@@ -8623,7 +8622,7 @@ class RelToSqlConverterTest {
   @Test public void testCaseExprForE4() {
     final RelBuilder builder = relBuilder().scan("EMP");
     final RexNode condition = builder.call(SqlLibraryOperators.FORMAT_DATE,
-            builder.literal("EEEE"), builder.field("HIREDATE"));
+            builder.literal("E4"), builder.field("HIREDATE"));
     final RelNode root = relBuilder().scan("EMP").filter(condition).build();
     final String expectedSF = "SELECT *\n"
             + "FROM \"scott\".\"EMP\"\n"

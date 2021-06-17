@@ -62,6 +62,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_MONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E3;
+import static org.apache.calcite.sql.SqlDateTimeFormat.E4;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 
@@ -89,6 +90,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
         put(ABBREVIATEDDAYOFWEEK, ABBREVIATED_NAME_OF_DAY.value);
         put(ABBREVIATEDMONTH, ABBREVIATED_MONTH.value);
         put(DAYOFWEEK, ABBREVIATED_NAME_OF_DAY.value);
+        put(E4, ABBREVIATED_NAME_OF_DAY.value);
       }};
 
   private static Map<String, String> timeUnitEquivalentMap = new HashMap<>();
