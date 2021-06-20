@@ -8051,7 +8051,7 @@ class RelToSqlConverterTest {
     final RexNode parseTSNode16 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
         builder.literal("yyyy- MM-dd@HH: -mm:ss"), builder.literal("2015- 09-1109: -07:23"));
     final RexNode parseTSNode17 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
-        builder.literal("yyyy-MM-dd-HH:mm:ss.S(3)@ZZ"), builder.literal("2015- 09-1109: -07:23"));
+        builder.literal("yyyy-MM-dd-HH:mm:ss.S(3)@ZZ"), builder.literal("2015-09-11-09:07:23"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(parseTSNode1, "date1"), builder.alias(parseTSNode2, "date2"),
@@ -8081,7 +8081,7 @@ class RelToSqlConverterTest {
             + "PARSE_TIMESTAMP('YYYY-MM-dd''T''hh:mm:ss', '2012-05-09T04:12:12') AS \"timestamp6\""
             + ", PARSE_TIMESTAMP('yyyy- MM-dd  HH: -mm:ss', '2015- 09-11  09: -07:23') AS \"timestamp7\""
             + ", PARSE_TIMESTAMP('yyyy- MM-dd@HH: -mm:ss', '2015- 09-1109: -07:23') AS \"timestamp8\""
-            + ", PARSE_TIMESTAMP('yyyy-MM-dd-HH:mm:ss.S(3)@ZZ', '2015- 09-1109: -07:23') AS \"timestamp9\"\n"
+            + ", PARSE_TIMESTAMP('yyyy-MM-dd-HH:mm:ss.S(3)@ZZ', '2015-09-11-09:07:23') AS \"timestamp9\"\n"
             + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery =
         "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS date1,"
@@ -8100,7 +8100,7 @@ class RelToSqlConverterTest {
             + "PARSE_TIMESTAMP('%FT%I:%m:%S', '2012-05-09T04:12:12') AS timestamp6,"
             + " PARSE_TIMESTAMP('%Y- %m-%d  %I: -%m:%S', '2015- 09-11  09: -07:23') AS timestamp7,"
             + " PARSE_TIMESTAMP('%Y- %m-%d%I: -%m:%S', '2015- 09-1109: -07:23') AS timestamp8,"
-            + " PARSE_TIMESTAMP('%F-%I:%m:%E3S%Ez', '2015- 09-1109: -07:23') AS timestamp9\n"
+            + " PARSE_TIMESTAMP('%F-%I:%m:%E3S%Ez', '2015-09-11-09:07:23') AS timestamp9\n"
             + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));

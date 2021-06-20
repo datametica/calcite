@@ -552,7 +552,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     case MINUS:
       if (call.getOperator() == SqlLibraryOperators.TIMESTAMP_SUB
-          && isIntervalHourAndSecond(call)) {
+              && isIntervalHourAndSecond(call)) {
         unparseIntervalOperandsBasedFunctions(writer, call, leftPrec, rightPrec);
       } else {
         BigQueryDateTimestampInterval minusInterval = new BigQueryDateTimestampInterval();
@@ -1092,18 +1092,10 @@ public class BigQuerySqlDialect extends SqlDialect {
   @Override protected String getDateTimeFormatString(
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     String dateTimeFormat = super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
-    dateTimeFormat = dateTimeFormat
-        .replace("%Y-%m-%d", "%F")
-        .replace("'", "");
-    Matcher matcher = Pattern.compile("(.*?)(%S[:\\.](?=[0-9*]S))").matcher(dateTimeFormat);
-    while (matcher.find()) {
-      dateTimeFormat =
-          dateTimeFormat.substring(0, matcher.start(2))
-              + "%E."
-              + dateTimeFormat.substring(matcher.end(2));
-    }
     return dateTimeFormat
-        .replaceAll("%E\\.", "%E");
+        .replace("%Y-%m-%d", "%F")
+        .replace("'", "")
+        .replace("%S.", "%E");
   }
 
   /**
