@@ -120,6 +120,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMINSEC;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.U;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
+import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYHH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24;
@@ -254,6 +255,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(U, "%u");
         put(NUMERIC_TIME_ZONE, "%Ez");
         put(SEC_FROM_MIDNIGHT, "SEC_FROM_MIDNIGHT");
+        put(YYYYHH, "%Y%I");
       }};
 
   private static final String OR = "|";
