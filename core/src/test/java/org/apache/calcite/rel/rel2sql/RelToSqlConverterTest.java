@@ -8133,6 +8133,25 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testToTimestampFunctionYYYYHH() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.TO_TIMESTAMP,
+        builder.literal("01/01/200105:10 AM"), builder.literal("mm/dd/yyyyhh:mi am"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseTSNode1, "timestamp_value"))
+        .build();
+    final String expectedSql = "SELECT TO_TIMESTAMP('01/01/200105:10 AM', 'mm/dd/yyyyhh:mi am') "
+        + "AS \"timestamp_value\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT PARSE_TIMESTAMP('%m/%d/%Y%I:%M %p', '01/01/200105:10 "
+        + "AM') AS timestamp_value\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testToDateFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.TO_DATE,
