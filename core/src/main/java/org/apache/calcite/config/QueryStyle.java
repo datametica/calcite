@@ -20,13 +20,13 @@ package org.apache.calcite.config;
  *this class is used to set some config property from mig side.
  */
 public class QueryStyle {
-  public boolean isExpandStar() {
-    return expandStar;
+  public boolean isExpandProjection() {
+    return expandProjection;
   }
 
-  public void setExpandStar(boolean expandStar) {
-    this.expandStar = expandStar;
+  public void setExpandProjection(boolean expandProjection) {
+    this.expandProjection = expandProjection;
   }
 
-  boolean expandStar;
+  boolean expandProjection;
 }
