@@ -1342,4 +1342,10 @@ public class BigQuerySqlDialect extends SqlDialect {
         typeAlias, typeName, SqlParserPos.ZERO);
     return new SqlDataTypeSpec(typeNameSpec, SqlParserPos.ZERO);
   }
+  @Override public void quoteStringLiteral(StringBuilder buf, String charsetName,
+      String val) {
+    buf.append(literalQuoteString);
+    buf.append(val.replace(literalEndQuoteString, literalEscapedQuote));
+    buf.append(literalEndQuoteString);
+  }
 }
