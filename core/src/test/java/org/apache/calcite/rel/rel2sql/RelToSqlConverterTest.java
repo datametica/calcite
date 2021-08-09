@@ -26,6 +26,8 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.logical.RavenDistinctProject;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.CoreRules;
@@ -38,6 +40,7 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSubQuery;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
@@ -64,6 +67,7 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlConformance;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.test.CalciteAssert;
 import org.apache.calcite.test.MockSqlOperatorTable;
@@ -85,6 +89,7 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -9046,5 +9051,41 @@ class RelToSqlConverterTest {
     sql(query)
         .withBigQuery()
         .ok(expectedBQSql);
+  }
+
+  @Test public void testRavenDistinctProject() {
+    final RelBuilder builder = relBuilder();
+    builder.scan("EMP");
+    List<RexNode> rexNode = new ArrayList<>();
+    rexNode.add(builder.field("SAL"));
+    rexNode.add(builder.field("DEPTNO"));
+    RelNode relNode = builder.build();
+    List<String> fieldNames = new ArrayList<>();
+    for (String field : ((LogicalTableScan) relNode).deriveRowType().getFieldNames()) {
+      if (field.contains("DEPTNO") || field.contains("SAL")) {
+        fieldNames.add(field);
+      }
+    }
+    RelDataType rowType = RexUtil.
+        createStructType(relNode.getCluster().getTypeFactory(), rexNode, fieldNames,
+            SqlValidatorUtil.F_SUGGESTER);
+
+    RavenDistinctProject newRavenDistinctProject = new RavenDistinctProject(relNode.getCluster(),
+        relNode.getTraitSet(), relNode, rexNode, rowType, true);
+    builder.push(newRavenDistinctProject);
+    builder.aggregate(builder.groupKey(builder.field("DEPTNO")));
+
+    final RelNode root = builder.build();
+    final String expectedHive = "SELECT DEPTNO\n"
+        + "FROM (SELECT DISTINCT SAL, DEPTNO\n"
+        + "FROM scott.EMP) t0\n"
+        + "GROUP BY DEPTNO";
+    final String expectedBigQuery = "SELECT DEPTNO\n"
+        + "FROM (SELECT DISTINCT SAL, DEPTNO\n"
+        + "FROM scott.EMP) AS t0\n"
+        + "GROUP BY DEPTNO";
+    relFn(b -> root)
+        .withHive().ok(expectedHive)
+        .withBigQuery().ok(expectedBigQuery);
   }
 }
