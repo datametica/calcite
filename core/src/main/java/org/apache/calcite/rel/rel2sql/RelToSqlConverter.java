@@ -47,6 +47,7 @@ import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
+import org.apache.calcite.rel.logical.RavenDistinctProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
@@ -72,6 +73,7 @@ import org.apache.calcite.sql.SqlMatchRecognize;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
@@ -1112,6 +1114,38 @@ public class RelToSqlConverter extends SqlImplementor
     for (CorrelationId id : relNode.getVariablesSet()) {
       correlTableMap.put(id, x.qualifiedContext());
     }
+  }
+
+  /** Visits a RavenDistinctProject; called by {@link #dispatch} via reflection. */
+  public Result visit(RavenDistinctProject e) {
+    Result x = visitRoot(castToLogicalProject(e));
+    if (!e.isDistinct()) {
+      return x;
+    }
+    SqlSelect sqlSelect;
+    if (x.node instanceof SqlSelect) {
+      sqlSelect = (SqlSelect) x.node;
+    } else {
+      sqlSelect = wrapSelect(x.node);
+    }
+    SqlNodeList keywordList = sqlSelect.getKeywordList();
+    SqlNode distinctSqlNode = SqlSelectKeyword.DISTINCT.symbol(POS);
+    if (keywordList.isEmpty()) {
+      keywordList = SqlNodeList.of(distinctSqlNode);
+    } else if (!keywordList.contains(distinctSqlNode)) {
+      keywordList.add(distinctSqlNode);
+    }
+    sqlSelect = new SqlSelect(sqlSelect.getParserPosition(), keywordList, sqlSelect.getSelectList(),
+        sqlSelect.getFrom(), sqlSelect.getWhere(), sqlSelect.getGroup(), sqlSelect.getHaving(),
+        sqlSelect.getWindowList(), sqlSelect.getOrderList(), sqlSelect.getOffset(),
+        sqlSelect.getFetch(), SqlNodeList.EMPTY);
+    return result(sqlSelect, x.clauses, e, x.getAliases());
+  }
+
+  private static LogicalProject castToLogicalProject(RavenDistinctProject rLogicalProject) {
+    return new LogicalProject(rLogicalProject.getCluster(), rLogicalProject.getTraitSet(),
+        ImmutableList.of(), rLogicalProject.getInput(), rLogicalProject.getProjects(),
+        rLogicalProject.getRowType());
   }
 
   /** Stack frame. */

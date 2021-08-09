@@ -60,6 +60,7 @@ import org.apache.calcite.rel.hint.Hintable;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.RavenDistinctProject;
 import org.apache.calcite.rel.metadata.RelColumnMapping;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
@@ -1935,7 +1936,8 @@ public class RelBuilder {
       // pretend that one field is used.
       if (fieldsUsed.isEmpty()) {
         r = ((Project) r).getInput();
-      } else if (fieldsUsed.size() < r.getRowType().getFieldCount()) {
+      } else if (fieldsUsed.size() < r.getRowType().getFieldCount()
+          && !(r instanceof RavenDistinctProject)) {
         // Some fields are computed but not used. Prune them.
         final Map<Integer, Integer> map = new HashMap<>();
         for (int source : fieldsUsed) {
