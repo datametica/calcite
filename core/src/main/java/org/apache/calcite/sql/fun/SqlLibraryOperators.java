@@ -1244,4 +1244,13 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction DATETIME_TRUNC =
+      new SqlFunction("DATETIME_TRUNC",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIME,
+          null,
+          OperandTypes.ANY_ANY,
+          SqlFunctionCategory.TIMEDATE);
 }

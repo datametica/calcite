@@ -925,9 +925,20 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       writer.endFunCall(date_diff);
       break;
+    case "DATETIME_TRUNC":
+      unparseForTimeTrunc(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseForTimeTrunc(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlWriter.Frame frame = writer.startFunCall(getFunName(call));
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(",");
+    writer.print(call.operand(1).toString().replaceAll("'", ""));
+    writer.endFunCall(frame);
   }
 
   private void secFromMidnight(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {

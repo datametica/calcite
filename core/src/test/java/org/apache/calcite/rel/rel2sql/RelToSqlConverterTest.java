@@ -8133,6 +8133,25 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testDateTimeTruncFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.DATETIME_TRUNC,
+        builder.literal("2009-03-20 12:25:50.78654"), builder.literal("SECOND"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseTSNode1, "timestamp_value"))
+        .build();
+    final String expectedSql =
+        "SELECT DATETIME_TRUNC('2009-03-20 12:25:50.78654', 'SECOND') AS " +
+            "\"timestamp_value\"\nFROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery =
+        "SELECT DATETIME_TRUNC('2009-03-20 12:25:50.78654', SECOND) AS timestamp_value\n" +
+            "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void toTimestampFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.TO_TIMESTAMP,
