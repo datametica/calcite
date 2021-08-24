@@ -1251,6 +1251,6 @@ public abstract class SqlLibraryOperators {
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIME,
           null,
-          OperandTypes.ANY_ANY,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.ANY),
           SqlFunctionCategory.TIMEDATE);
 }
