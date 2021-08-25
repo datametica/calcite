@@ -406,7 +406,7 @@ public abstract class Aggregate extends SingleRel implements Hintable {
       if (aggCall.e.name != null) {
         base = aggCall.e.name;
       } else {
-        base = "$f" + (groupList.size() + aggCall.i);
+        base = SqlUtil.GENERATED_FIELD_ALIAS_PREFIX + (groupList.size() + aggCall.i);
       }
       String name = base;
       int i = 0;

@@ -83,6 +83,10 @@ public abstract class SqlUtil {
    * queries are unlikely to accidentally reference the generated name. */
   public static final String GENERATED_EXPR_ALIAS_PREFIX = "EXPR$";
 
+  /** Used as a prefix to generate field aliases for those RexCalls that are not assigned a
+   * specific name. */
+  public static final String GENERATED_FIELD_ALIAS_PREFIX = "$f";
+
   //~ Methods ----------------------------------------------------------------
 
   /** Returns the AND of two expressions.
@@ -826,7 +830,8 @@ public abstract class SqlUtil {
    */
   public static boolean isGeneratedAlias(String alias) {
     assert alias != null;
-    return alias.toUpperCase(Locale.ROOT).startsWith(GENERATED_EXPR_ALIAS_PREFIX);
+    return alias.toUpperCase(Locale.ROOT).startsWith(GENERATED_EXPR_ALIAS_PREFIX)
+        || alias.startsWith(GENERATED_FIELD_ALIAS_PREFIX);
   }
 
   /**
