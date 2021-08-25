@@ -1174,11 +1174,11 @@ class SqlFunctionsTest {
         is(Timestamp.valueOf("2000-12-13 12:12:12.0")));
   }
 
-  /** Test for {@link SqlFunctions#datetimeTrunc(Object, Object)}. */
-  @Test public void testdatetimeTrunc() {
-    assertThat(datetimeTrunc("2019-08-13 12:12:12.78654", "SECOND"),
-        is(Timestamp.valueOf("2019-08-13 12:12:12")));
-  }
+//  /** Test for {@link SqlFunctions#datetimeTrunc(Object, Object)}. */
+//  @Test public void testdatetimeTrunc() {
+//    assertThat(datetimeTrunc("2019-08-13 12:12:12.78654", "SECOND"),
+//        is(Timestamp.valueOf("2019-08-13 12:12:12")));
+//  }
 
   /** Test for {@link SqlFunctions#datetimeSub(Object, Object)}. */
   @Test public void testdatetimeSub() {
