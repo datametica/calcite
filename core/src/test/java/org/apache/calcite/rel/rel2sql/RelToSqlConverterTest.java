@@ -8142,11 +8142,11 @@ class RelToSqlConverterTest {
         .project(builder.alias(parseTSNode1, "timestamp_value"))
         .build();
     final String expectedSql =
-        "SELECT DATETIME_TRUNC('2009-03-20 12:25:50.78654', 'SECOND') AS "
-            + "\"timestamp_value\"\nFROM \"scott\".\"EMP\"";
+        "SELECT DATETIME_TRUNC('2009-03-20 12:25:50.78654', 'SECOND') AS " +
+            "\"timestamp_value\"\nFROM \"scott\".\"EMP\"";
     final String expectedBiqQuery =
-        "SELECT DATETIME_TRUNC('2009-03-20 12:25:50.78654', SECOND) AS timestamp_value\n"
-            + "FROM scott.EMP";
+        "SELECT DATETIME_TRUNC('2009-03-20 12:25:50.78654', SECOND) AS timestamp_value\n" +
+            "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));

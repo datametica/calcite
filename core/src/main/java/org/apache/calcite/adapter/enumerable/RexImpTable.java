@@ -118,7 +118,6 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.COSH;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_ADD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_SUB;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FROM_UNIX_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_MOD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYNAME;
@@ -419,7 +418,6 @@ public class RexImpTable {
     defineOtherFunctionMethod();
     defineMethod(DATE_MOD, BuiltInMethod.DATE_MOD.method, NullPolicy.NONE);
     defineMethod(TIMESTAMP_TO_DATE, BuiltInMethod.TIMESTAMP_TO_DATE.method, NullPolicy.STRICT);
-    defineMethod(DATETIME_TRUNC, BuiltInMethod.DATETIME_TRUNC.method, NullPolicy.STRICT);
 
     map.put(TRIM, new TrimImplementor());
 

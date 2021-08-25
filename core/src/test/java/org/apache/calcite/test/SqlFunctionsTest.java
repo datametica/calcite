@@ -88,7 +88,6 @@ import static org.apache.calcite.runtime.SqlFunctions.weekNumberOfCalendar;
 import static org.apache.calcite.runtime.SqlFunctions.weekNumberOfMonth;
 import static org.apache.calcite.runtime.SqlFunctions.weekNumberOfYear;
 import static org.apache.calcite.runtime.SqlFunctions.yearNumberOfCalendar;
-import static org.apache.calcite.runtime.SqlFunctions.datetimeTrunc;
 import static org.apache.calcite.test.Matchers.within;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -1173,12 +1172,6 @@ class SqlFunctionsTest {
   @Test public void testdatetimeAdd() {
     assertThat(datetimeAdd("2000-12-12 12:12:12", "INTERVAL 1 DAY"),
         is(Timestamp.valueOf("2000-12-13 12:12:12.0")));
-  }
-
-  /** Test for {@link SqlFunctions#datetimeTrunc(Object, Object)}. */
-  @Test public void testdatetimeTrunc() {
-    assertThat(datetimeTrunc("2019-08-13 12:12:12.78654", "SECOND"),
-        is(Timestamp.valueOf("2019-08-13 12:12:12")));
   }
 
   /** Test for {@link SqlFunctions#datetimeSub(Object, Object)}. */
