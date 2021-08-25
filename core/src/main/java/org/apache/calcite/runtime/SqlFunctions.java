@@ -3362,31 +3362,31 @@ public class SqlFunctions {
     return new Timestamp(cal.getTime().getTime());
   }
 
-//  /**
-//   * datetimevalue: 1997-09-13 12:12:12.78654
-//   * part:
-//   * SECOND:
-//   */
-//  public static Object datetimeTrunc(Object datetime, Object part) {
-//    String truncPart = (String) part;
-//    String dateTimeValue = (String) datetime;
-//    Timestamp ts;
-//    switch (StringUtils.upperCase(truncPart)) {
-//    case "SECOND":
-//      if (dateTimeValue.length() > 19) {
-//        ts = Timestamp.valueOf(dateTimeValue.substring(0, 19));
-//      } else {
-//        ts = Timestamp.valueOf(dateTimeValue);
-//      }
-//      break;
-//    default: throw new IllegalArgumentException(" unknown interval type");
-//    }
-//    Calendar cal = Calendar.getInstance(TimeZone.getDefault(),
-//        Locale.getDefault(Locale.Category.FORMAT));
-//    cal.setTime(ts);
-//    ts.setTime(cal.getTime().getTime());
-//    return new Timestamp(cal.getTime().getTime());
-//  }
+  /**
+   * datetimevalue: 1997-09-13 12:12:12.78654
+   * part:
+   * SECOND:
+   */
+  public static Object datetimeTrunc(Object datetime, Object part) {
+    String truncPart = (String) part;
+    String dateTimeValue = (String) datetime;
+    Timestamp ts;
+    switch (StringUtils.upperCase(truncPart)) {
+    case "SECOND":
+      if (dateTimeValue.length() > 19) {
+        ts = Timestamp.valueOf(dateTimeValue.substring(0, 19));
+      } else {
+        ts = Timestamp.valueOf(dateTimeValue);
+      }
+      break;
+    default: throw new IllegalArgumentException(" unknown interval type");
+    }
+    Calendar cal = Calendar.getInstance(TimeZone.getDefault(),
+        Locale.getDefault(Locale.Category.FORMAT));
+    cal.setTime(ts);
+    ts.setTime(cal.getTime().getTime());
+    return new Timestamp(cal.getTime().getTime());
+  }
 
   public static Object datetimeSub(Object datetime, Object interval) {
     String[] split = ((String) interval).split("\\s+");

@@ -118,6 +118,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.COSH;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_ADD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_SUB;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATETIME_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FROM_UNIX_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_MOD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYNAME;
