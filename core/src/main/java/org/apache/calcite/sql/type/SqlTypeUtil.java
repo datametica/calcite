@@ -341,6 +341,14 @@ public abstract class SqlTypeUtil {
     return SqlTypeFamily.TIMESTAMP.contains(type);
   }
 
+  public static boolean isDatetimetype(RelDataType type) {
+    return type.getSqlTypeName() == SqlTypeName.DATETIME;
+  }
+
+  public static boolean isTime(RelDataType type) {
+    return SqlTypeFamily.TIME.contains(type);
+  }
+
   /** Returns whether a type is some kind of INTERVAL. */
   @SuppressWarnings("contracts.conditional.postcondition.not.satisfied")
   @EnsuresNonNullIf(expression = "#1.getIntervalQualifier()", result = true)
@@ -1744,4 +1752,5 @@ public abstract class SqlTypeUtil {
       return true;
     }
   }
+
 }

@@ -233,6 +233,9 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker NUMERIC_NUMERIC =
       family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC);
 
+  public static final SqlSingleOperandTypeChecker DATETIME_DATETIME =
+      family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME);
+
   public static final SqlSingleOperandTypeChecker EXACT_NUMERIC =
       family(SqlTypeFamily.EXACT_NUMERIC);
 
@@ -542,7 +545,7 @@ public abstract class OperandTypes {
 
   public static final SqlSingleOperandTypeChecker MINUS_OPERATOR =
       // TODO:  compatibility check
-      OperandTypes.or(NUMERIC_NUMERIC, INTERVAL_SAME_SAME, DATETIME_INTERVAL);
+      OperandTypes.or(NUMERIC_NUMERIC, INTERVAL_SAME_SAME, DATETIME_INTERVAL, DATETIME_DATETIME);
 
   public static final FamilyOperandTypeChecker MINUS_DATE_OPERATOR =
       new FamilyOperandTypeChecker(

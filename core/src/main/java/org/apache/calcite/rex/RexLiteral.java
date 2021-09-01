@@ -337,6 +337,7 @@ public class RexLiteral extends RexNode {
     case TIME_WITH_LOCAL_TIME_ZONE:
       return value instanceof TimeString;
     case TIMESTAMP:
+    case DATETIME:
       return value instanceof TimestampString;
     case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       return value instanceof TimestampString;

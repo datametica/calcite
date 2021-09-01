@@ -9075,4 +9075,20 @@ class RelToSqlConverterTest {
       .withBigQuery()
       .ok(expectedBQSql);
   }
+
+  @Test public void test() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatTimestampRexNode = builder.call(SqlStdOperatorTable.MINUS,
+        builder.cast(builder.scan("EMP").field(4), SqlTypeName.DATETIME),
+        builder.cast(builder.scan("EMP").field(4), SqlTypeName.DATETIME));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatTimestampRexNode, "FD"))
+        .build();
+    final String expectedBiqQuery = "SELECT CAST(HIREDATE AS DATETIME) - CAST(HIREDATE AS "
+        + "DATETIME) AS FD\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
 }

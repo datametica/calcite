@@ -76,6 +76,7 @@ class TypeCoercionTest extends SqlValidatorTestCase {
   private RelDataType charType;
   private RelDataType varcharType;
   private RelDataType varchar20Type;
+  private RelDataType datetimeType;
 
   TypeCoercionTest() {
     // tool tester impl.
@@ -105,6 +106,7 @@ class TypeCoercionTest extends SqlValidatorTestCase {
     dateType = dataTypeFactory.createSqlType(SqlTypeName.DATE);
     timeType = dataTypeFactory.createSqlType(SqlTypeName.TIME);
     timestampType = dataTypeFactory.createSqlType(SqlTypeName.TIMESTAMP);
+    datetimeType = dataTypeFactory.createSqlType(SqlTypeName.DATETIME);
     binaryType = dataTypeFactory.createSqlType(SqlTypeName.BINARY);
     varbinaryType = dataTypeFactory.createSqlType(SqlTypeName.VARBINARY);
     charType = dataTypeFactory.createSqlType(SqlTypeName.CHAR);
@@ -757,7 +759,7 @@ class TypeCoercionTest extends SqlValidatorTestCase {
     RelDataType checkedType11 = dateType;
     checkShouldCast(
         checkedType11,
-        combine(ImmutableList.of(timestampType, checkedType11),
+        combine(ImmutableList.of(timestampType, datetimeType, checkedType11),
             charTypes));
     shouldNotCast(checkedType11, SqlTypeFamily.DECIMAL);
     shouldNotCast(checkedType11, SqlTypeFamily.NUMERIC);
@@ -771,16 +773,26 @@ class TypeCoercionTest extends SqlValidatorTestCase {
     shouldNotCast(checkedType12, SqlTypeFamily.DECIMAL);
     shouldNotCast(checkedType12, SqlTypeFamily.NUMERIC);
     shouldNotCast(checkedType12, SqlTypeFamily.INTEGER);
+    shouldNotCast(checkedType12, SqlTypeFamily.DATETIME);
 
     // TIMESTAMP
     RelDataType checkedType13 = timestampType;
     checkShouldCast(
         checkedType13,
-        combine(ImmutableList.of(dateType, checkedType13),
+        combine(ImmutableList.of(dateType, datetimeType, checkedType13),
             charTypes));
     shouldNotCast(checkedType13, SqlTypeFamily.DECIMAL);
     shouldNotCast(checkedType13, SqlTypeFamily.NUMERIC);
     shouldNotCast(checkedType13, SqlTypeFamily.INTEGER);
+
+//     DATETIME
+    RelDataType checkedType16 = datetimeType;
+    checkShouldCast(
+        checkedType16, combine(ImmutableList.of(dateType, timestampType, checkedType16),
+            charTypes));
+    shouldNotCast(checkedType13, SqlTypeFamily.DECIMAL);
+    shouldNotCast(checkedType13, SqlTypeFamily.NUMERIC);
+    shouldNotCast(checkedType16, SqlTypeFamily.INTEGER);
 
     // NULL
     RelDataType checkedType14 = nullType;
