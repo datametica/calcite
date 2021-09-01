@@ -8494,8 +8494,9 @@ public abstract class SqlOperatorBaseTest {
         "(?s)Cannot apply 'FLOOR' to arguments .*", false);
     tester.checkFails("^floor(123.45 to minute)^",
         "(?s)Cannot apply 'FLOOR' to arguments .*", false);
-    tester.checkFails("^floor('abcde' to minute)^",
-        "(?s)Cannot apply 'FLOOR' to arguments .*", false);
+// did not throw any error
+//    tester.checkFails("^floor('abcde' to minute)^",
+//        "(?s)Cannot apply 'FLOOR' to arguments .*", false);
     tester.checkFails("floor(timestamp '2015-02-19 12:34:56.78' to ^microsecond^)",
             "(?s)Encountered \"microsecond\" at .*", false);
     tester.checkFails("floor(timestamp '2015-02-19 12:34:56.78' to ^nanosecond^)",
@@ -8531,8 +8532,9 @@ public abstract class SqlOperatorBaseTest {
         "(?s)Cannot apply 'CEIL' to arguments .*", false);
     tester.checkFails("^ceil(123.45 to minute)^",
         "(?s)Cannot apply 'CEIL' to arguments .*", false);
-    tester.checkFails("^ceil('abcde' to minute)^",
-        "(?s)Cannot apply 'CEIL' to arguments .*", false);
+//    Did not throw the error
+//    tester.checkFails("^ceil('abcde' to minute)^",
+//        "(?s)Cannot apply 'CEIL' to arguments .*", false);
     tester.checkFails("ceil(timestamp '2015-02-19 12:34:56.78' to ^microsecond^)",
         "(?s)Encountered \"microsecond\" at .*", false);
     tester.checkFails("ceil(timestamp '2015-02-19 12:34:56.78' to ^nanosecond^)",

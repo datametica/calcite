@@ -673,7 +673,12 @@ public abstract class AbstractTypeCoercion implements TypeCoercion {
         SqlTypeFamily.EXACT_NUMERIC,
         SqlTypeFamily.INTEGER);
     List<SqlTypeFamily> dateTimeFamilies = ImmutableList.of(SqlTypeFamily.DATE,
-        SqlTypeFamily.TIME, SqlTypeFamily.TIMESTAMP);
+        SqlTypeFamily.TIME, SqlTypeFamily.TIMESTAMP, SqlTypeFamily.DATETIME);
+
+    // we do not want to cast time to datetime datatype
+    if (SqlTypeUtil.isTime(in) && expected.getTypeNames().contains(SqlTypeName.DATETIME)) {
+      return null;
+    }
     // If the expected type is already a parent of the input type, no need to cast.
     if (expected.getTypeNames().contains(in.getSqlTypeName())) {
       return in;
@@ -690,11 +695,13 @@ public abstract class AbstractTypeCoercion implements TypeCoercion {
       return factory.decimalOf(in);
     }
     // DATE to TIMESTAMP
-    if (SqlTypeUtil.isDate(in) && expected == SqlTypeFamily.TIMESTAMP) {
+    if ((SqlTypeUtil.isDate(in) || SqlTypeUtil.isDatetimetype(in))
+        && expected == SqlTypeFamily.TIMESTAMP) {
       return factory.createSqlType(SqlTypeName.TIMESTAMP);
     }
     // TIMESTAMP to DATE.
-    if (SqlTypeUtil.isTimestamp(in) && expected == SqlTypeFamily.DATE) {
+    if ((SqlTypeUtil.isTimestamp(in) || SqlTypeUtil.isDatetimetype(in))
+        && expected == SqlTypeFamily.DATE) {
       return factory.createSqlType(SqlTypeName.DATE);
     }
     // If the function accepts any NUMERIC type and the input is a STRING,
