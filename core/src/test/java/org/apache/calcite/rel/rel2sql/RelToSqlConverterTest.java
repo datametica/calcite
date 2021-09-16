@@ -9052,6 +9052,52 @@ class RelToSqlConverterTest {
         .ok(expectedBQSql);
   }
 
+  @Test public void testDateUnderscoreSeparator() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatTimestampRexNode = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYYMMDD_HH24MISS"), builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatTimestampRexNode, "FD"))
+        .build();
+    final String expectedBiqQuery = "SELECT FORMAT_TIMESTAMP('%Y%m%d_%H%M%S', HIREDATE) AS FD\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+
+  @Test public void testGroupingFunction() {
+    String query = "SELECT \"first_name\",\"last_name\", "
+        + "grouping(\"first_name\")+ grouping(\"last_name\") "
+        + "from \"foodmart\".\"employee\" group by \"first_name\",\"last_name\"";
+    final String expectedBQSql = "SELECT first_name, last_name, CASE WHEN first_name IS NULL THEN"
+        + " 1 ELSE 0 END + CASE WHEN last_name IS NULL THEN 1 ELSE 0 END\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY first_name, last_name";
+
+    sql(query)
+      .withBigQuery()
+      .ok(expectedBQSql);
+  }
+
+  @Test public void testhashbucket() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatDateRexNode = builder.call(SqlLibraryOperators.HASHBUCKET,
+        builder.call(SqlLibraryOperators.HASHROW, builder.scan("EMP").field(0)));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatDateRexNode, "FD"))
+        .build();
+    final String expectedSql = "SELECT HASHBUCKET(HASHROW(\"EMPNO\")) AS \"FD\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT HASHROW(EMPNO) AS FD\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+
   RelNode createLogicalValueRel(RexNode col1, RexNode col2) {
     final RelBuilder builder = relBuilder();
     RelDataTypeField field = new RelDataTypeFieldImpl("ZERO", 0,
