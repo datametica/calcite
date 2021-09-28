@@ -34,8 +34,11 @@ import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
+import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.runtime.FlatLists;
@@ -85,6 +88,7 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -3843,8 +3847,7 @@ class RelToSqlConverterTest {
     String expected = "SELECT CONVERT(DATETIME, CONVERT(VARCHAR(10), "
         + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date] )) % 7, [hire_date] ), 126))\n"
         + "FROM [foodmart].[employee]";
-    sql(query)
-        .withMssql()
+    sql(query).withMssql()
         .ok(expected);
   }
 
@@ -5702,6 +5705,14 @@ class RelToSqlConverterTest {
     sql(query).withSpark().ok(expected);
   }
 
+  @Test void testCrossJoinEmulationForBigQuery() {
+    String query = "select * from \"employee\", \"department\"";
+    final String expected = "SELECT *\n"
+        + "FROM foodmart.employee\n"
+        + "CROSS JOIN foodmart.department";
+    sql(query).withBigQuery().ok(expected);
+  }
+
   @Test void testSubstringInSpark() {
     final String query = "select substring(\"brand_name\" from 2) "
         + "from \"product\"\n";
@@ -5810,7 +5821,7 @@ class RelToSqlConverterTest {
   @Test public void testRegexSubstrFunction2Args() {
     final String query = "select regexp_substr('choco chico chipo', '.*cho*p*c*?.*')"
         + "from \"foodmart\".\"product\"";
-    final String expected = "SELECT REGEXP_EXTRACT('choco chico chipo', '.*cho*p*c*?.*')\n"
+    final String expected = "SELECT REGEXP_SUBSTR('choco chico chipo', '.*cho*p*c*?.*')\n"
         + "FROM foodmart.product";
     sql(query)
         .withBigQuery()
@@ -5821,8 +5832,8 @@ class RelToSqlConverterTest {
     final String query = "select \"product_id\", regexp_substr('choco chico chipo', "
         + "'.*cho*p*c*?.*', 7)\n"
         + "from \"foodmart\".\"product\" where \"product_id\" = 1";
-    final String expected = "SELECT product_id, REGEXP_EXTRACT(SUBSTR('choco chico chipo', 7), "
-        + "'.*cho*p*c*?.*')\n"
+    final String expected = "SELECT product_id, REGEXP_SUBSTR('choco chico chipo', "
+        + "'.*cho*p*c*?.*', 7)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1";
     sql(query)
@@ -5834,8 +5845,8 @@ class RelToSqlConverterTest {
     final String query = "select \"product_id\", regexp_substr('chocolate chip cookies', 'c+.{2}',"
         + " 4, 2)\n"
         + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3)";
-    final String expected = "SELECT product_id, REGEXP_EXTRACT_ALL(SUBSTR('chocolate chip "
-        + "cookies', 4), 'c+.{2}') [OFFSET(1)]\n"
+    final String expected = "SELECT product_id, REGEXP_SUBSTR('chocolate chip "
+        + "cookies', 'c+.{2}', 4, 2)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3";
     sql(query)
@@ -5848,8 +5859,7 @@ class RelToSqlConverterTest {
         + " 1, 2, 'i')\n"
         + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3, 4)";
     final String expected = "SELECT "
-        + "REGEXP_EXTRACT_ALL(SUBSTR('chocolate Chip cookies', 1), '(?i)c+.{2}') [OFFSET"
-        + "(1)]\n"
+        + "REGEXP_SUBSTR('chocolate Chip cookies', '(?i)c+.{2}', 1, 2)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3 OR product_id = 4";
     sql(query)
@@ -5859,17 +5869,16 @@ class RelToSqlConverterTest {
 
   @Test public void testRegexSubstrFunction5ArgswithBackSlash() {
     final String query = "select regexp_substr('chocolate Chip cookies','[-\\_] V[0-9]+',"
-        + " 1,1,'i')\n"
+        + "1,1,'i')\n"
         + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3, 4)";
     final String expected = "SELECT "
-        + "REGEXP_EXTRACT_ALL(SUBSTR('chocolate Chip cookies', 1), '(?i)[-\\\\_] V[0-9]+') [OFFSET(0)]\n"
+        + "REGEXP_SUBSTR('chocolate Chip cookies', '(?i)[-\\\\_] V[0-9]+', 1, 1)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3 OR product_id = 4";
     sql(query)
         .withBigQuery()
         .ok(expected);
   }
-
 
   @Test public void testTimestampFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
@@ -7889,6 +7898,45 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
   }
 
+  @Test public void testFormatTimestampFormatsRelToSql() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatTimestampRexNode2 = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("HH24MI"), builder.scan("EMP").field(4));
+    final RexNode formatTimestampRexNode3 = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("HH24MISS"), builder.scan("EMP").field(4));
+    final RexNode formatTimestampRexNode4 = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYYMMDDHH24MISS"), builder.scan("EMP").field(4));
+    final RexNode formatTimestampRexNode5 = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYYMMDDHHMISS"), builder.scan("EMP").field(4));
+    final RexNode formatTimestampRexNode6 = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYYMMDDHH24MI"), builder.scan("EMP").field(4));
+    final RexNode formatTimestampRexNode7 = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYYMMDDHH24"), builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatTimestampRexNode2, "FD2"),
+            builder.alias(formatTimestampRexNode3, "FD3"),
+            builder.alias(formatTimestampRexNode4, "FD4"),
+            builder.alias(formatTimestampRexNode5, "FD5"),
+            builder.alias(formatTimestampRexNode6, "FD6"),
+            builder.alias(formatTimestampRexNode7, "FD7"))
+        .build();
+    final String expectedSql = "SELECT FORMAT_TIMESTAMP('HH24MI', \"HIREDATE\") AS \"FD2\", "
+        + "FORMAT_TIMESTAMP('HH24MISS', \"HIREDATE\") AS \"FD3\", "
+        + "FORMAT_TIMESTAMP('YYYYMMDDHH24MISS', \"HIREDATE\") AS \"FD4\", "
+        + "FORMAT_TIMESTAMP('YYYYMMDDHHMISS', \"HIREDATE\") AS \"FD5\", FORMAT_TIMESTAMP"
+        + "('YYYYMMDDHH24MI', \"HIREDATE\") AS \"FD6\", FORMAT_TIMESTAMP('YYYYMMDDHH24', "
+        + "\"HIREDATE\") AS \"FD7\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT FORMAT_TIMESTAMP('%H%M', HIREDATE) AS FD2, "
+        + "FORMAT_TIMESTAMP('%H%M%S', HIREDATE) AS FD3, FORMAT_TIMESTAMP('%Y%m%d%H%M%S', "
+        + "HIREDATE) AS FD4, FORMAT_TIMESTAMP('%Y%m%d%I%M%S', HIREDATE) AS FD5, FORMAT_TIMESTAMP"
+        + "('%Y%m%d%H%M', HIREDATE) AS FD6, FORMAT_TIMESTAMP('%Y%m%d%H', HIREDATE) AS FD7\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testFormatTimeRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode formatTimeRexNode = builder.call(SqlLibraryOperators.FORMAT_TIME,
@@ -7948,19 +7996,31 @@ class RelToSqlConverterTest {
             builder.literal("DDMMYY"), builder.literal("2008-12-25 15:30:00"));
     final RexNode formatDateNode2 = builder.call(SqlLibraryOperators.FORMAT_DATETIME,
             builder.literal("YY/MM/DD"), builder.literal("2012-12-25 12:50:10"));
+    final RexNode formatDateNode3 = builder.call(SqlLibraryOperators.FORMAT_DATETIME,
+        builder.literal("YY-MM-01"), builder.literal("2012-12-25 12:50:10"));
+    final RexNode formatDateNode4 = builder.call(SqlLibraryOperators.FORMAT_DATETIME,
+        builder.literal("YY-MM-DD 00:00:00"), builder.literal("2012-12-25 12:50:10"));
     final RelNode root = builder
             .scan("EMP")
             .project(builder.alias(formatDateNode1, "date1"),
-                    builder.alias(formatDateNode2, "date2"))
+                    builder.alias(formatDateNode2, "date2"),
+                    builder.alias(formatDateNode3, "date3"),
+                    builder.alias(formatDateNode4, "date4"))
             .build();
     final String expectedSql = "SELECT FORMAT_DATETIME('DDMMYY', '2008-12-25 15:30:00') AS "
-            + "\"date1\", FORMAT_DATETIME('YY/MM/DD', '2012-12-25 12:50:10') AS \"date2\"\n"
+            + "\"date1\", FORMAT_DATETIME('YY/MM/DD', '2012-12-25 12:50:10') AS \"date2\", "
+            + "FORMAT_DATETIME('YY-MM-01', '2012-12-25 12:50:10') AS \"date3\", FORMAT_DATETIME"
+            + "('YY-MM-DD 00:00:00', '2012-12-25 12:50:10') AS \"date4\"\n"
             + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT FORMAT_DATETIME('%d%m%y', '2008-12-25 15:30:00') "
-            + "AS date1, FORMAT_DATETIME('%y/%m/%d', '2012-12-25 12:50:10') AS date2\n"
+            + "AS date1, FORMAT_DATETIME('%y/%m/%d', '2012-12-25 12:50:10') AS date2,"
+            + " FORMAT_DATETIME('%y-%m-01', '2012-12-25 12:50:10') AS date3,"
+            + " FORMAT_DATETIME('%y-%m-%d 00:00:00', '2012-12-25 12:50:10') AS date4\n"
             + "FROM scott.EMP";
     final String expectedSpark = "SELECT DATE_FORMAT('2008-12-25 15:30:00', 'ddMMyy') date1, "
-            + "DATE_FORMAT('2012-12-25 12:50:10', 'yy/MM/dd') date2\n"
+            + "DATE_FORMAT('2012-12-25 12:50:10', 'yy/MM/dd') date2,"
+            + " DATE_FORMAT('2012-12-25 12:50:10', 'yy-MM-01') date3,"
+            + " DATE_FORMAT('2012-12-25 12:50:10', 'yy-MM-dd 00:00:00') date4\n"
             + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -7970,20 +8030,88 @@ class RelToSqlConverterTest {
   @Test public void testParseTimestampFunctionFormat() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
-        builder.literal("yyyy-MM-dd HH24:MI:SS"), builder.literal("2009-03-20 12:25:50"));
+        builder.literal("YYYY-MM-dd HH24:MI:SS"), builder.literal("2009-03-20 12:25:50"));
     final RexNode parseTSNode2 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
-        builder.literal("MI dd-yyyy-MM SS HH24"), builder.literal("25 20-2009-03 50 12"));
+        builder.literal("MI dd-YYYY-MM SS HH24"), builder.literal("25 20-2009-03 50 12"));
+    final RexNode parseTSNode3 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("yyyy@MM@dd@hh@mm@ss"), builder.literal("20200903020211"));
+    final RexNode parseTSNode4 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("yyyy@MM@dd@HH@mm@ss"), builder.literal("20200903210211"));
+    final RexNode parseTSNode5 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("HH@mm@ss"), builder.literal("215313"));
+    final RexNode parseTSNode6 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("MM@dd@yy"), builder.literal("090415"));
+    final RexNode parseTSNode7 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("MM@dd@yy"), builder.literal("Jun1215"));
+    final RexNode parseTSNode8 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("yyyy@MM@dd@HH"), builder.literal("2015061221"));
+    final RexNode parseTSNode9 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("yyyy@dd@mm"), builder.literal("20150653"));
+    final RexNode parseTSNode10 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("yyyy@mm@dd"), builder.literal("20155308"));
+    final RexNode parseTSNode11 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("YYYY-MM-dd@HH:mm:ss"), builder.literal("2009-03-2021:25:50"));
+    final RexNode parseTSNode12 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("YYYY-MM-dd@hh:mm:ss"), builder.literal("2009-03-2007:25:50"));
+    final RexNode parseTSNode13 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("YYYY-MM-dd@hh:mm:ss z"), builder.literal("2009-03-20 12:25:50.222"));
+    final RexNode parseTSNode14 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("YYYY-MM-dd'T'hh:mm:ss"), builder.literal("2012-05-09T04:12:12"));
+    final RexNode parseTSNode15 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("yyyy- MM-dd  HH: -mm:ss"), builder.literal("2015- 09-11  09: -07:23"));
+    final RexNode parseTSNode16 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("yyyy- MM-dd@HH: -mm:ss"), builder.literal("2015- 09-1109: -07:23"));
+    final RexNode parseTSNode17 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+        builder.literal("yyyy-MM-dd-HH:mm:ss.S(3)@ZZ"), builder.literal("2015-09-11-09:07:23"));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.alias(parseTSNode1, "date1"), builder.alias(parseTSNode2, "date2"))
+        .project(builder.alias(parseTSNode1, "date1"), builder.alias(parseTSNode2, "date2"),
+            builder.alias(parseTSNode3, "timestamp1"), builder.alias(parseTSNode4, "timestamp2"),
+            builder.alias(parseTSNode5, "time1"), builder.alias(parseTSNode6, "date1"),
+            builder.alias(parseTSNode7, "date2"), builder.alias(parseTSNode8, "date3"),
+            builder.alias(parseTSNode9, "date5"),
+            builder.alias(parseTSNode10, "date6"), builder.alias(parseTSNode11, "timestamp3"),
+            builder.alias(parseTSNode12, "timestamp4"), builder.alias(parseTSNode13, "timestamp5"),
+            builder.alias(parseTSNode14, "timestamp6"), builder.alias(parseTSNode15, "timestamp7"),
+            builder.alias(parseTSNode16, "timestamp8"), builder.alias(parseTSNode17, "timestamp9"))
         .build();
     final String expectedSql =
-        "SELECT PARSE_TIMESTAMP('yyyy-MM-dd HH24:MI:SS', '2009-03-20 12:25:50') AS \"date1\","
-            + " PARSE_TIMESTAMP('MI dd-yyyy-MM SS HH24', '25 20-2009-03 50 12') AS \"date2\"\n"
+        "SELECT PARSE_TIMESTAMP('YYYY-MM-dd HH24:MI:SS', '2009-03-20 12:25:50') AS \"date1\","
+            + " PARSE_TIMESTAMP('MI dd-YYYY-MM SS HH24', '25 20-2009-03 50 12') AS \"date2\","
+            + " PARSE_TIMESTAMP('yyyy@MM@dd@hh@mm@ss', '20200903020211') AS \"timestamp1\","
+            + " PARSE_TIMESTAMP('yyyy@MM@dd@HH@mm@ss', '20200903210211') AS \"timestamp2\","
+            + " PARSE_TIMESTAMP('HH@mm@ss', '215313') AS \"time1\", "
+            + "PARSE_TIMESTAMP('MM@dd@yy', '090415') AS \"date10\", "
+            + "PARSE_TIMESTAMP('MM@dd@yy', 'Jun1215') AS \"date20\", "
+            + "PARSE_TIMESTAMP('yyyy@MM@dd@HH', '2015061221') AS \"date3\", "
+            + "PARSE_TIMESTAMP('yyyy@dd@mm', '20150653') AS \"date5\", "
+            + "PARSE_TIMESTAMP('yyyy@mm@dd', '20155308') AS \"date6\", "
+            + "PARSE_TIMESTAMP('YYYY-MM-dd@HH:mm:ss', '2009-03-2021:25:50') AS \"timestamp3\", "
+            + "PARSE_TIMESTAMP('YYYY-MM-dd@hh:mm:ss', '2009-03-2007:25:50') AS \"timestamp4\", "
+            + "PARSE_TIMESTAMP('YYYY-MM-dd@hh:mm:ss z', '2009-03-20 12:25:50.222') AS \"timestamp5\", "
+            + "PARSE_TIMESTAMP('YYYY-MM-dd''T''hh:mm:ss', '2012-05-09T04:12:12') AS \"timestamp6\""
+            + ", PARSE_TIMESTAMP('yyyy- MM-dd  HH: -mm:ss', '2015- 09-11  09: -07:23') AS \"timestamp7\""
+            + ", PARSE_TIMESTAMP('yyyy- MM-dd@HH: -mm:ss', '2015- 09-1109: -07:23') AS \"timestamp8\""
+            + ", PARSE_TIMESTAMP('yyyy-MM-dd-HH:mm:ss.S(3)@ZZ', '2015-09-11-09:07:23') AS \"timestamp9\"\n"
             + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery =
-        "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS date1, "
-            + "PARSE_TIMESTAMP('%M %d-%Y-%m %S %H', '25 20-2009-03 50 12') AS date2\n"
+        "SELECT PARSE_TIMESTAMP('%F %H:%M:%S', '2009-03-20 12:25:50') AS date1,"
+            + " PARSE_TIMESTAMP('%M %d-%Y-%m %S %H', '25 20-2009-03 50 12') AS date2,"
+            + " PARSE_TIMESTAMP('%Y%m%d%I%m%S', '20200903020211') AS timestamp1,"
+            + " PARSE_TIMESTAMP('%Y%m%d%I%m%S', '20200903210211') AS timestamp2,"
+            + " PARSE_TIMESTAMP('%I%m%S', '215313') AS time1,"
+            + " PARSE_TIMESTAMP('%m%d%y', '090415') AS date10,"
+            + " PARSE_TIMESTAMP('%m%d%y', 'Jun1215') AS date20,"
+            + " PARSE_TIMESTAMP('%Y%m%d%I', '2015061221') AS date3,"
+            + " PARSE_TIMESTAMP('%Y%d%m', '20150653') AS date5,"
+            + " PARSE_TIMESTAMP('%Y%m%d', '20155308') AS date6,"
+            + " PARSE_TIMESTAMP('%F%I:%m:%S', '2009-03-2021:25:50') AS timestamp3,"
+            + " PARSE_TIMESTAMP('%F%I:%m:%S', '2009-03-2007:25:50') AS timestamp4, "
+            + "PARSE_TIMESTAMP('%F%I:%m:%S %Z', '2009-03-20 12:25:50.222') AS timestamp5, "
+            + "PARSE_TIMESTAMP('%FT%I:%m:%S', '2012-05-09T04:12:12') AS timestamp6,"
+            + " PARSE_TIMESTAMP('%Y- %m-%d  %I: -%m:%S', '2015- 09-11  09: -07:23') AS timestamp7,"
+            + " PARSE_TIMESTAMP('%Y- %m-%d%I: -%m:%S', '2015- 09-1109: -07:23') AS timestamp8,"
+            + " PARSE_TIMESTAMP('%F-%I:%m:%E3S%Ez', '2015-09-11-09:07:23') AS timestamp9\n"
             + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
@@ -8007,6 +8135,63 @@ class RelToSqlConverterTest {
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void toTimestampFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.TO_TIMESTAMP,
+        builder.literal("Jan 15, 1989, 11:00:06 AM"), builder.literal("MMM dd, YYYY,HH:MI:SS AM"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseTSNode1, "timestamp_value"))
+        .build();
+    final String expectedSql =
+        "SELECT TO_TIMESTAMP('Jan 15, 1989, 11:00:06 AM', 'MMM dd, YYYY,HH:MI:SS AM') AS "
+        + "\"timestamp_value\"\nFROM \"scott\".\"EMP\"";
+    final String expectedSF =
+        "SELECT TO_TIMESTAMP('Jan 15, 1989, 11:00:06 AM' , 'MON DD, YYYY,HH:MI:SS AM') AS "
+        + "\"timestamp_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSF));
+  }
+
+  @Test public void datediffFunctionWithTwoOperands() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.DATE_DIFF,
+        builder.literal("1994-07-21"), builder.literal("1993-07-21"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseTSNode1, "date_diff_value"))
+        .build();
+    final String expectedSql =
+        "SELECT DATE_DIFF('1994-07-21', '1993-07-21') AS \"date_diff_value\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBQ =
+        "SELECT DATE_DIFF('1994-07-21', '1993-07-21') AS date_diff_value\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQ));
+  }
+
+  @Test public void datediffFunctionWithThreeOperands() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.DATE_DIFF,
+        builder.literal("1994-07-21"), builder.literal("1993-07-21"), builder.literal("Month"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseTSNode1, "date_diff_value"))
+        .build();
+    final String expectedSql =
+        "SELECT DATE_DIFF('1994-07-21', '1993-07-21', 'Month') AS \"date_diff_value\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBQ =
+        "SELECT DATE_DIFF('1994-07-21', '1993-07-21', Month) AS date_diff_value\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQ));
   }
 
   @Test public void testToDateFunction() {
@@ -8773,5 +8958,190 @@ class RelToSqlConverterTest {
     sql(query)
             .withBigQuery()
             .ok(expectedBQ);
+  }
+
+  @Test public void testSecFromMidnightFormatTimestamp() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatTimestampRexNode = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("SEC_FROM_MIDNIGHT"), builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatTimestampRexNode, "FD"))
+        .build();
+    final String expectedSql = "SELECT FORMAT_TIMESTAMP('SEC_FROM_MIDNIGHT', \"HIREDATE\") AS"
+        + " \"FD\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT CAST(DATE_DIFF(HIREDATE, CAST(CAST(HIREDATE AS DATE) "
+        + "AS TIMESTAMP), SECOND) AS STRING) AS FD\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testGetQuarterFromDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatDateRexNode = builder.call(SqlLibraryOperators.FORMAT_DATE,
+        builder.literal("QUARTER"), builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatDateRexNode, "FD"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT FORMAT_DATE('%Q', HIREDATE) AS FD\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+
+  @Test public void testExtractDay() {
+    String query = "SELECT EXTRACT(DAY FROM CURRENT_DATE), EXTRACT(DAY FROM CURRENT_TIMESTAMP)";
+    final String expectedSFSql = "SELECT DAY(CURRENT_DATE), DAY(CURRENT_TIMESTAMP)";
+    final String expectedBQSql = "SELECT EXTRACT(DAY FROM CURRENT_DATE), "
+        + "EXTRACT(DAY FROM CURRENT_TIMESTAMP)";
+    final String expectedMsSql = "SELECT DAY(CAST(GETDATE() AS DATE)), DAY(GETDATE())";
+
+    sql(query)
+        .withSnowflake()
+        .ok(expectedSFSql)
+        .withBigQuery()
+        .ok(expectedBQSql)
+        .withMssql()
+        .ok(expectedMsSql);
+  }
+
+  @Test public void testExtractMonth() {
+    String query = "SELECT EXTRACT(MONTH FROM CURRENT_DATE), EXTRACT(MONTH FROM CURRENT_TIMESTAMP)";
+    final String expectedSFSql = "SELECT MONTH(CURRENT_DATE), MONTH(CURRENT_TIMESTAMP)";
+    final String expectedBQSql = "SELECT EXTRACT(MONTH FROM CURRENT_DATE), "
+        + "EXTRACT(MONTH FROM CURRENT_TIMESTAMP)";
+    final String expectedMsSql = "SELECT MONTH(CAST(GETDATE() AS DATE)), MONTH(GETDATE())";
+
+    sql(query)
+        .withSnowflake()
+        .ok(expectedSFSql)
+        .withBigQuery()
+        .ok(expectedBQSql)
+        .withMssql()
+        .ok(expectedMsSql);
+  }
+
+  @Test public void testExtractYear() {
+    String query = "SELECT EXTRACT(YEAR FROM CURRENT_DATE), EXTRACT(YEAR FROM CURRENT_TIMESTAMP)";
+    final String expectedSFSql = "SELECT YEAR(CURRENT_DATE), YEAR(CURRENT_TIMESTAMP)";
+    final String expectedBQSql = "SELECT EXTRACT(YEAR FROM CURRENT_DATE), "
+        + "EXTRACT(YEAR FROM CURRENT_TIMESTAMP)";
+    final String expectedMsSql = "SELECT YEAR(CAST(GETDATE() AS DATE)), YEAR(GETDATE())";
+
+    sql(query)
+        .withSnowflake()
+        .ok(expectedSFSql)
+        .withBigQuery()
+        .ok(expectedBQSql)
+        .withMssql()
+        .ok(expectedMsSql);
+  }
+
+  @Test public void testIntervalMultiplyWithInteger() {
+    String query = "select \"hire_date\" + 10 * INTERVAL '00:01:00' HOUR "
+        + "TO SECOND from \"employee\"";
+    final String expectedBQSql = "SELECT TIMESTAMP_ADD(hire_date, INTERVAL 10 * 60 SECOND)\n"
+        + "FROM foodmart.employee";
+
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBQSql);
+  }
+
+  @Test public void testDateUnderscoreSeparator() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatTimestampRexNode = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYYMMDD_HH24MISS"), builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatTimestampRexNode, "FD"))
+        .build();
+    final String expectedBiqQuery = "SELECT FORMAT_TIMESTAMP('%Y%m%d_%H%M%S', HIREDATE) AS FD\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+
+  @Test public void testGroupingFunction() {
+    String query = "SELECT \"first_name\",\"last_name\", "
+        + "grouping(\"first_name\")+ grouping(\"last_name\") "
+        + "from \"foodmart\".\"employee\" group by \"first_name\",\"last_name\"";
+    final String expectedBQSql = "SELECT first_name, last_name, CASE WHEN first_name IS NULL THEN"
+        + " 1 ELSE 0 END + CASE WHEN last_name IS NULL THEN 1 ELSE 0 END\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY first_name, last_name";
+
+    sql(query)
+      .withBigQuery()
+      .ok(expectedBQSql);
+  }
+
+  @Test public void testhashbucket() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatDateRexNode = builder.call(SqlLibraryOperators.HASHBUCKET,
+        builder.call(SqlLibraryOperators.HASHROW, builder.scan("EMP").field(0)));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatDateRexNode, "FD"))
+        .build();
+    final String expectedSql = "SELECT HASHBUCKET(HASHROW(\"EMPNO\")) AS \"FD\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT HASHROW(EMPNO) AS FD\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+
+  RelNode createLogicalValueRel(RexNode col1, RexNode col2) {
+    final RelBuilder builder = relBuilder();
+    RelDataTypeField field = new RelDataTypeFieldImpl("ZERO", 0,
+        builder.getTypeFactory().createSqlType(SqlTypeName.INTEGER));
+    List<RelDataTypeField> fieldList = new ArrayList<>();
+    fieldList.add(field);
+    RelRecordType type = new RelRecordType(fieldList);
+    builder.values(
+        ImmutableList.of(
+            ImmutableList.of(
+                builder.getRexBuilder().makeZeroLiteral(
+                    builder.getTypeFactory().createSqlType(SqlTypeName.INTEGER))
+            )), type);
+    builder.project(col1, col2);
+    return builder.build();
+  }
+
+  @Test public void testMultipleUnionWithLogicalValue() {
+    final RelBuilder builder = relBuilder();
+    builder.push(
+        createLogicalValueRel(builder.alias(builder.literal("ALA"), "col1"),
+            builder.alias(builder.literal("AmericaAnchorage"), "col2")));
+    builder.push(
+        createLogicalValueRel(builder.alias(builder.literal("ALAW"), "col1"),
+            builder.alias(builder.literal("USAleutian"), "col2")));
+    builder.union(true);
+    builder.push(
+        createLogicalValueRel(builder.alias(builder.literal("AST"), "col1"),
+            builder.alias(builder.literal("AmericaHalifax"), "col2")));
+    builder.union(true);
+
+    final RelNode root = builder.build();
+    final String expectedHive = "SELECT 'ALA' col1, 'AmericaAnchorage' col2\n"
+        + "UNION ALL\n"
+        + "SELECT 'ALAW' col1, 'USAleutian' col2\n"
+        + "UNION ALL\n"
+        + "SELECT 'AST' col1, 'AmericaHalifax' col2";
+    final String expectedBigQuery = "SELECT 'ALA' AS col1, 'AmericaAnchorage' AS col2\n"
+        + "UNION ALL\n"
+        + "SELECT 'ALAW' AS col1, 'USAleutian' AS col2\n"
+        + "UNION ALL\n"
+        + "SELECT 'AST' AS col1, 'AmericaHalifax' AS col2";
+    relFn(b -> root)
+        .withHive2().ok(expectedHive)
+        .withBigQuery().ok(expectedBigQuery);
   }
 }

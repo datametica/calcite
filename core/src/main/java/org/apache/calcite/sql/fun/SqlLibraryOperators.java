@@ -910,7 +910,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction PARSE_TIMESTAMP =
       new SqlFunction("PARSE_TIMESTAMP",
         SqlKind.OTHER_FUNCTION,
-        ReturnTypes.DATE_NULLABLE,
+        ReturnTypes.TIMESTAMP_NULLABLE,
         null,
         OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING),
         SqlFunctionCategory.TIMEDATE);
@@ -984,7 +984,9 @@ public abstract class SqlLibraryOperators {
       OperandTypes.ANY_ANY,
       SqlFunctionCategory.TIMEDATE);
 
-  @LibraryOperator(libraries = {SNOWFLAKE})
+  /** Returns the index of search string in source string
+   *  0 is returned when no match is found. */
+  @LibraryOperator(libraries = {SNOWFLAKE, BIG_QUERY})
   public static final SqlFunction INSTR = new SqlFunction(
           "INSTR",
           SqlKind.OTHER_FUNCTION,
@@ -1022,14 +1024,14 @@ public abstract class SqlLibraryOperators {
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIMESTAMP, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION);
+          SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction TIMESTAMPINTSUB = new SqlFunction("TIMESTAMPINTSUB",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIMESTAMP, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION);
+          SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction WEEKNUMBER_OF_YEAR =
@@ -1089,7 +1091,10 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction DATE_DIFF =
       new SqlFunction("DATE_DIFF", SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER, null,
-          OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.DATE),
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.DATE, SqlTypeFamily.DATE,
+            SqlTypeFamily.STRING),
+            number -> number == 2),
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {STANDARD})
@@ -1239,4 +1244,24 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction HASHBUCKET =
+      new SqlFunction(
+          "HASHBUCKET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.INTEGER,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction HASHROW =
+      new SqlFunction(
+          "HASHROW",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
 }
