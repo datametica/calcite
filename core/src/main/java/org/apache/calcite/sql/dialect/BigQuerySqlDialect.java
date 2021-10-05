@@ -994,7 +994,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         operand.unparse(writer, leftPrec, rightPrec);
       }
       writer.sep("AS");
-      writer.literal("DATETIME");
+      writer.literal("TIMESTAMP");
       writer.endFunCall(secondsCastFrame);
       writer.endFunCall(unixSecondsFrame);
       break;
@@ -1006,7 +1006,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         operand.unparse(writer, leftPrec, rightPrec);
       }
       writer.sep("AS");
-      writer.literal("DATETIME");
+      writer.literal("TIMESTAMP");
       writer.endFunCall(millisCastFrame);
       writer.endFunCall(unixMillisFrame);
       break;
@@ -1018,7 +1018,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         operand.unparse(writer, leftPrec, rightPrec);
       }
       writer.sep("AS");
-      writer.literal("DATETIME");
+      writer.literal("TIMESTAMP");
       writer.endFunCall(microsCastFrame);
       writer.endFunCall(unixMicrosFrame);
       break;
