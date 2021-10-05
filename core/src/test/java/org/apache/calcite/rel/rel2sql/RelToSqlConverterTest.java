@@ -34,8 +34,11 @@ import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
+import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.runtime.FlatLists;
@@ -85,6 +88,7 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -1583,7 +1587,7 @@ class RelToSqlConverterTest {
         + "CAST(CAST(employee_id AS STRING) AS STRING), "
         + "CAST(CAST(employee_id AS STRING) AS BYTES), "
         + "CAST(CAST(employee_id AS STRING) AS BYTES), "
-        + "CAST(CAST(employee_id AS STRING) AS TIMESTAMP), "
+        + "CAST(CAST(employee_id AS STRING) AS DATETIME), "
         + "CAST(CAST(employee_id AS STRING) AS FLOAT64), "
         + "CAST(CAST(employee_id AS STRING) AS NUMERIC), "
         + "CAST(CAST(employee_id AS STRING) AS DATE), "
@@ -5802,7 +5806,7 @@ class RelToSqlConverterTest {
     final String expectedBiqquery = "SELECT employee_id\n"
         + "FROM foodmart.employee\n"
         + "WHERE 10 = CAST('10' AS INT64) AND birth_date = '1914-02-02' OR hire_date = CAST"
-        + "(CONCAT('1996-01-01 ', '00:00:00') AS TIMESTAMP)";
+        + "(CONCAT('1996-01-01 ', '00:00:00') AS DATETIME)";
     final String mssql = "SELECT [employee_id]\n"
         + "FROM [foodmart].[employee]\n"
         + "WHERE 10 = '10' AND [birth_date] = '1914-02-02' OR [hire_date] = CONCAT('1996-01-01 ', '00:00:00')";
@@ -5887,7 +5891,7 @@ class RelToSqlConverterTest {
     final String expectedSql = "SELECT CURRENT_TIMESTAMP(6) AS \"CT\"\n"
         + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT CAST(FORMAT_TIMESTAMP('%F %H:%M:%E6S', "
-        + "CURRENT_TIMESTAMP) AS TIMESTAMP) AS CT\n"
+        + "CURRENT_DATETIME()) AS DATETIME) AS CT\n"
         + "FROM scott.EMP";
     final String expectedSpark = "SELECT CAST(DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss"
         + ".ssssss') AS TIMESTAMP) CT\n"
@@ -5971,7 +5975,7 @@ class RelToSqlConverterTest {
     String query = "select \"hire_date\" + -10 * INTERVAL '1' MONTH from \"employee\"";
     final String expectedBigQuery = "SELECT CAST(DATETIME_ADD(CAST(hire_date AS DATETIME), "
         + "INTERVAL "
-        + "-10 MONTH) AS TIMESTAMP)\n"
+        + "-10 MONTH) AS DATETIME)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withBigQuery()
@@ -6121,7 +6125,7 @@ class RelToSqlConverterTest {
     String query = "select cast(\"birth_date\" as timestamp) + INTERVAL\n"
             + "'2' minute from \"employee\"";
     final String expectedBigQuery = "SELECT TIMESTAMP_ADD(CAST(birth_date AS "
-            + "TIMESTAMP), INTERVAL 2 MINUTE)\n"
+            + "DATETIME), INTERVAL 2 MINUTE)\n"
             + "FROM foodmart.employee";
     sql(query)
             .withBigQuery()
@@ -6132,7 +6136,7 @@ class RelToSqlConverterTest {
     String query = "select cast(\"birth_date\" as timestamp) + INTERVAL\n"
             + "'2' hour from \"employee\"";
     final String expectedBigQuery = "SELECT TIMESTAMP_ADD(CAST(birth_date AS "
-            + "TIMESTAMP), INTERVAL 2 HOUR)\n"
+            + "DATETIME), INTERVAL 2 HOUR)\n"
             + "FROM foodmart.employee";
     sql(query)
             .withBigQuery()
@@ -6142,7 +6146,7 @@ class RelToSqlConverterTest {
     String query = "select cast(\"birth_date\" as timestamp) + INTERVAL '2'\n"
             + "second from \"employee\"";
     final String expectedBigQuery = "SELECT TIMESTAMP_ADD(CAST(birth_date AS"
-            + " TIMESTAMP), INTERVAL 2 SECOND)\n"
+            + " DATETIME), INTERVAL 2 SECOND)\n"
             + "FROM foodmart.employee";
     sql(query)
             .withBigQuery()
@@ -6384,8 +6388,8 @@ class RelToSqlConverterTest {
     String query = "SELECT CURRENT_TIMESTAMP + INTERVAL '06:10:30' HOUR TO SECOND,"
         + "CURRENT_TIMESTAMP - INTERVAL '06:10:30' HOUR TO SECOND "
         + "FROM \"employee\"";
-    final String expectedBQ = "SELECT TIMESTAMP_ADD(CURRENT_TIMESTAMP, INTERVAL 22230 SECOND), "
-            + "TIMESTAMP_SUB(CURRENT_TIMESTAMP, INTERVAL 22230 SECOND)\n"
+    final String expectedBQ = "SELECT TIMESTAMP_ADD(CURRENT_DATETIME(), INTERVAL 22230 SECOND), "
+            + "TIMESTAMP_SUB(CURRENT_DATETIME(), INTERVAL 22230 SECOND)\n"
             + "FROM foodmart.employee";
     sql(query)
         .withBigQuery()
@@ -6471,7 +6475,7 @@ class RelToSqlConverterTest {
     String query = "select current_timestamp";
     final String expectedHiveQuery = "SELECT CURRENT_TIMESTAMP `CURRENT_TIMESTAMP`";
     final String expectedSparkQuery = "SELECT CURRENT_TIMESTAMP `CURRENT_TIMESTAMP`";
-    final String expectedBigQuery = "SELECT CURRENT_TIMESTAMP AS CURRENT_TIMESTAMP";
+    final String expectedBigQuery = "SELECT CURRENT_DATETIME() AS CURRENT_TIMESTAMP";
 
     sql(query)
         .withHiveIdentifierQuoteString()
@@ -6766,7 +6770,7 @@ class RelToSqlConverterTest {
     final String expectedBiqquery = "SELECT employee_id\n"
         + "FROM foodmart.employee\n"
         + "WHERE 10 = CAST('10' AS INT64) AND birth_date = '1914-02-02' OR hire_date = "
-        + "CAST(CONCAT('1996-01-01 ', '00:00:00') AS TIMESTAMP)";
+        + "CAST(CONCAT('1996-01-01 ', '00:00:00') AS DATETIME)";
     sql(query)
         .ok(expected)
         .withBigQuery()
@@ -7717,13 +7721,15 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"employee\"";
     final String expected = "SELECT CAST(birth_date AS TIMESTAMP)\n"
         + "FROM foodmart.employee";
+    final String expectedBigQuery = "SELECT CAST(birth_date AS DATETIME)\n"
+        + "FROM foodmart.employee";
     sql(query)
         .withHive()
         .ok(expected)
         .withSpark()
         .ok(expected)
         .withBigQuery()
-        .ok(expected);
+        .ok(expectedBigQuery);
   }
 
   @Test public void testCastToTimestampWithPrecision() {
@@ -7734,7 +7740,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = expectedHive;
     final String expectedBigQuery = "SELECT CAST(FORMAT_TIMESTAMP('%F %H:%M:%E3S', CAST"
-        + "(birth_date AS TIMESTAMP)) AS TIMESTAMP)\n"
+        + "(birth_date AS DATETIME)) AS DATETIME)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -8968,7 +8974,7 @@ class RelToSqlConverterTest {
         + " \"FD\"\n"
         + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT CAST(DATE_DIFF(HIREDATE, CAST(CAST(HIREDATE AS DATE) "
-        + "AS TIMESTAMP), SECOND) AS STRING) AS FD\n"
+        + "AS DATETIME), SECOND) AS STRING) AS FD\n"
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -8993,7 +8999,7 @@ class RelToSqlConverterTest {
     String query = "SELECT EXTRACT(DAY FROM CURRENT_DATE), EXTRACT(DAY FROM CURRENT_TIMESTAMP)";
     final String expectedSFSql = "SELECT DAY(CURRENT_DATE), DAY(CURRENT_TIMESTAMP)";
     final String expectedBQSql = "SELECT EXTRACT(DAY FROM CURRENT_DATE), "
-        + "EXTRACT(DAY FROM CURRENT_TIMESTAMP)";
+        + "EXTRACT(DAY FROM CURRENT_DATETIME())";
     final String expectedMsSql = "SELECT DAY(CAST(GETDATE() AS DATE)), DAY(GETDATE())";
 
     sql(query)
@@ -9009,7 +9015,7 @@ class RelToSqlConverterTest {
     String query = "SELECT EXTRACT(MONTH FROM CURRENT_DATE), EXTRACT(MONTH FROM CURRENT_TIMESTAMP)";
     final String expectedSFSql = "SELECT MONTH(CURRENT_DATE), MONTH(CURRENT_TIMESTAMP)";
     final String expectedBQSql = "SELECT EXTRACT(MONTH FROM CURRENT_DATE), "
-        + "EXTRACT(MONTH FROM CURRENT_TIMESTAMP)";
+        + "EXTRACT(MONTH FROM CURRENT_DATETIME())";
     final String expectedMsSql = "SELECT MONTH(CAST(GETDATE() AS DATE)), MONTH(GETDATE())";
 
     sql(query)
@@ -9025,7 +9031,7 @@ class RelToSqlConverterTest {
     String query = "SELECT EXTRACT(YEAR FROM CURRENT_DATE), EXTRACT(YEAR FROM CURRENT_TIMESTAMP)";
     final String expectedSFSql = "SELECT YEAR(CURRENT_DATE), YEAR(CURRENT_TIMESTAMP)";
     final String expectedBQSql = "SELECT EXTRACT(YEAR FROM CURRENT_DATE), "
-        + "EXTRACT(YEAR FROM CURRENT_TIMESTAMP)";
+        + "EXTRACT(YEAR FROM CURRENT_DATETIME())";
     final String expectedMsSql = "SELECT YEAR(CAST(GETDATE() AS DATE)), YEAR(GETDATE())";
 
     sql(query)
@@ -9074,5 +9080,79 @@ class RelToSqlConverterTest {
     sql(query)
       .withBigQuery()
       .ok(expectedBQSql);
+  }
+
+  @Test public void testhashbucket() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatDateRexNode = builder.call(SqlLibraryOperators.HASHBUCKET,
+        builder.call(SqlLibraryOperators.HASHROW, builder.scan("EMP").field(0)));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatDateRexNode, "FD"))
+        .build();
+    final String expectedSql = "SELECT HASHBUCKET(HASHROW(\"EMPNO\")) AS \"FD\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT HASHROW(EMPNO) AS FD\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testConcatFunction() {
+    String query = "select '%''.' || '\\\\PWAPIKB01E\\Labelfiles\\'";
+    final String expectedBQSql = "SELECT CONCAT('%\\'.', '\\\\\\\\PWAPIKB01E\\\\Labelfiles"
+        + "\\\\')";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBQSql);
+  }
+
+
+  RelNode createLogicalValueRel(RexNode col1, RexNode col2) {
+    final RelBuilder builder = relBuilder();
+    RelDataTypeField field = new RelDataTypeFieldImpl("ZERO", 0,
+        builder.getTypeFactory().createSqlType(SqlTypeName.INTEGER));
+    List<RelDataTypeField> fieldList = new ArrayList<>();
+    fieldList.add(field);
+    RelRecordType type = new RelRecordType(fieldList);
+    builder.values(
+        ImmutableList.of(
+            ImmutableList.of(
+                builder.getRexBuilder().makeZeroLiteral(
+                    builder.getTypeFactory().createSqlType(SqlTypeName.INTEGER))
+            )), type);
+    builder.project(col1, col2);
+    return builder.build();
+  }
+
+  @Test public void testMultipleUnionWithLogicalValue() {
+    final RelBuilder builder = relBuilder();
+    builder.push(
+        createLogicalValueRel(builder.alias(builder.literal("ALA"), "col1"),
+            builder.alias(builder.literal("AmericaAnchorage"), "col2")));
+    builder.push(
+        createLogicalValueRel(builder.alias(builder.literal("ALAW"), "col1"),
+            builder.alias(builder.literal("USAleutian"), "col2")));
+    builder.union(true);
+    builder.push(
+        createLogicalValueRel(builder.alias(builder.literal("AST"), "col1"),
+            builder.alias(builder.literal("AmericaHalifax"), "col2")));
+    builder.union(true);
+
+    final RelNode root = builder.build();
+    final String expectedHive = "SELECT 'ALA' col1, 'AmericaAnchorage' col2\n"
+        + "UNION ALL\n"
+        + "SELECT 'ALAW' col1, 'USAleutian' col2\n"
+        + "UNION ALL\n"
+        + "SELECT 'AST' col1, 'AmericaHalifax' col2";
+    final String expectedBigQuery = "SELECT 'ALA' AS col1, 'AmericaAnchorage' AS col2\n"
+        + "UNION ALL\n"
+        + "SELECT 'ALAW' AS col1, 'USAleutian' AS col2\n"
+        + "UNION ALL\n"
+        + "SELECT 'AST' AS col1, 'AmericaHalifax' AS col2";
+    relFn(b -> root)
+        .withHive2().ok(expectedHive)
+        .withBigQuery().ok(expectedBigQuery);
   }
 }

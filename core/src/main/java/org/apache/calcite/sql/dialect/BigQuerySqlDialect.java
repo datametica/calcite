@@ -129,7 +129,17 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24MI;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24MISS;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHHMISS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.*;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.ACOS;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_DIFF;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIME;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATETIME;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_TIMESTAMP;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_CONTAINS;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_MICROS;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_MILLIS;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_SECONDS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CEIL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
@@ -190,6 +200,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   private static final Pattern IDENTIFIER_REGEX =
       Pattern.compile("[A-Za-z][A-Za-z0-9_]*");
 
+  private static final String TEMP_REGEX = "\\s?°([CcFf])";
   /**
    * Creates a BigQuerySqlDialect.
    */
@@ -495,7 +506,12 @@ public class BigQuerySqlDialect extends SqlDialect {
       final SqlWriter.Frame concatFrame = writer.startFunCall("CONCAT");
       for (SqlNode operand : call.getOperandList()) {
         writer.sep(",");
-        operand.unparse(writer, leftPrec, rightPrec);
+        if (operand instanceof SqlCharStringLiteral) {
+          SqlNode literalValue = handleBackSlashes(operand);
+          literalValue.unparse(writer, leftPrec, rightPrec);
+        } else {
+          operand.unparse(writer, leftPrec, rightPrec);
+        }
       }
       writer.endFunCall(concatFrame);
       break;
@@ -574,6 +590,15 @@ public class BigQuerySqlDialect extends SqlDialect {
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private SqlNode handleBackSlashes(SqlNode operand) {
+    if (requireNonNull(((SqlCharStringLiteral) operand).toValue()).matches(TEMP_REGEX)) {
+      return operand;
+    }
+    String modifiedString = operand.toString().replaceAll("\\\\", "\\\\\\\\");
+    return modifiedString.equals(operand.toString()) ? operand : SqlLiteral.createCharString(
+            requireNonNull(unquoteStringLiteral(modifiedString)), SqlParserPos.ZERO);
   }
 
   @Override public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
@@ -690,7 +715,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
     if (isDateTimeCall(call) && isIntervalYearAndMonth(call)) {
       writer.sep("AS", true);
-      writer.literal("TIMESTAMP");
+      writer.literal("DATETIME");
       writer.endFunCall(castTimeStampFrame);
     }
   }
@@ -784,7 +809,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       } else {
         final SqlWriter.Frame currentDatetimeFunc = writer.startFunCall("CURRENT_DATETIME");
         writer.endFunCall(currentDatetimeFunc);
-              }
+      }
       break;
     case "CURRENT_USER":
     case "SESSION_USER":
@@ -815,12 +840,13 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       break;
     case "PARSE_TIMESTAMP":
-      final SqlWriter.Frame parseDatetimeFrame = writer.startFunCall("PARSE_DATETIME");
-      for (SqlNode operand : call.getOperandList()) {
-        writer.sep(",");
-        operand.unparse(writer, leftPrec, rightPrec);
-      }
-      writer.endFunCall(parseDatetimeFrame);
+      String dateFormat = call.operand(0) instanceof SqlCharStringLiteral
+          ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
+          .getValue()
+          : call.operand(0).toString();
+      SqlCall formatCall = PARSE_DATETIME.createCall(SqlParserPos.ZERO,
+          createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
+      super.unparseCall(writer, formatCall, leftPrec, rightPrec);
       break;
     case "FORMAT_TIME":
       unparseFormatCall(writer, call, leftPrec, rightPrec);
@@ -932,24 +958,31 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       writer.endFunCall(date_diff);
       break;
+    case "HASHBUCKET":
+      if (!call.getOperandList().isEmpty()) {
+        unparseCall(writer, call.operand(0), leftPrec, rightPrec);
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
     case "TIMESTAMP_SECONDS":
       final SqlWriter.Frame timestampSecondsCastFrame = writer.startFunCall("CAST");
       TIMESTAMP_SECONDS.unparse(writer, call, leftPrec, rightPrec);
-      writer.sep(" AS ");
+      writer.sep("AS");
       writer.literal("DATETIME");
       writer.endFunCall(timestampSecondsCastFrame);
       break;
     case "TIMESTAMP_MILLIS":
       final SqlWriter.Frame timestampMillisCastFrame = writer.startFunCall("CAST");
       TIMESTAMP_MILLIS.unparse(writer, call, leftPrec, rightPrec);
-      writer.sep(" AS ");
+      writer.sep("AS");
       writer.literal("DATETIME");
       writer.endFunCall(timestampMillisCastFrame);
       break;
     case "TIMESTAMP_MICROS":
       final SqlWriter.Frame timestampMicrosCastFrame = writer.startFunCall("CAST");
       TIMESTAMP_MICROS.unparse(writer, call, leftPrec, rightPrec);
-      writer.sep(" AS ");
+      writer.sep("AS");
       writer.literal("DATETIME");
       writer.endFunCall(timestampMicrosCastFrame);
       break;
@@ -960,7 +993,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         writer.sep(",");
         operand.unparse(writer, leftPrec, rightPrec);
       }
-      writer.sep(" AS ");
+      writer.sep("AS");
       writer.literal("DATETIME");
       writer.endFunCall(secondsCastFrame);
       writer.endFunCall(unixSecondsFrame);
@@ -972,7 +1005,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         writer.sep(",");
         operand.unparse(writer, leftPrec, rightPrec);
       }
-      writer.sep(" AS ");
+      writer.sep("AS");
       writer.literal("DATETIME");
       writer.endFunCall(millisCastFrame);
       writer.endFunCall(unixMillisFrame);
@@ -984,7 +1017,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         writer.sep(",");
         operand.unparse(writer, leftPrec, rightPrec);
       }
-      writer.sep(" AS ");
+      writer.sep("AS");
       writer.literal("DATETIME");
       writer.endFunCall(microsCastFrame);
       writer.endFunCall(unixMicrosFrame);
