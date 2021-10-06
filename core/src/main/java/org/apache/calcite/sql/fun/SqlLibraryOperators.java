@@ -1273,4 +1273,14 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction FARM_FINGERPRINT =
+      new SqlFunction(
+          "FARM_FINGERPRINT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
 }
