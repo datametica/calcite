@@ -390,16 +390,8 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   private boolean applyStarInProjectionForJoin(RelNode e) {
-    if (style == null) {
-      return false;
-    }
-    if (style.isExpandProjection()) {
-      return false;
-    }
-    if (!checkForJoinInRel(e)) {
-      return false;
-    }
-    if (!isOuterMostProject()) {
+    if (style == null || style.isExpandProjection() || !checkForJoinInRel(e)
+        || !isOuterMostProject()) {
       return false;
     }
     return true;
