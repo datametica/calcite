@@ -135,7 +135,6 @@ public class RelToSqlConverter extends SqlImplementor
   @SuppressWarnings("argument.type.incompatible")
   public RelToSqlConverter(SqlDialect dialect) {
     super(dialect);
-    //style = new QueryStyle();
     dispatcher = ReflectUtil.createMethodDispatcher(Result.class, this, "visit",
       RelNode.class);
   }
@@ -380,8 +379,7 @@ public class RelToSqlConverter extends SqlImplementor
         }
         addSelect(selectList, sqlExpr, e.getRowType());
       }
-      if (style != null && !style.isExpandProjection() && checkForJoinInRel(e)
-          && isOuterMostProject()) {
+      if (applyStarInProjectionForJoin(e)) {
         modifySelectList(selectList, builder);
       }
 
@@ -390,6 +388,23 @@ public class RelToSqlConverter extends SqlImplementor
     }
     return builder.result();
   }
+
+  private boolean applyStarInProjectionForJoin(RelNode e) {
+    if (style == null) {
+      return false;
+    }
+    if (style.isExpandProjection()) {
+      return false;
+    }
+    if (!checkForJoinInRel(e)) {
+      return false;
+    }
+    if (!isOuterMostProject()) {
+      return false;
+    }
+    return true;
+  }
+
   private boolean isOuterMostProject() {
     Iterator i = stack.iterator();
     int count = 0;
@@ -401,24 +416,17 @@ public class RelToSqlConverter extends SqlImplementor
     return count == 1;
   }
   private void modifySelectList(List<SqlNode> selectList, Builder builder) {
-    Map<String, List<SqlNode>> tableMap = createTableNameAndColumnListMap(builder);
+    Map<String, List<String>> tableColumnMap = createTableNameAndColumnListMap(builder);
     List<String> stringSelectList = new ArrayList<>();
     //creating current select List in String format , because we dot have equals mehtod overridden,
     //So to compare the object we have created list in String format
-    for (SqlNode n : selectList) {
-      stringSelectList.add(n.toString());
+    for (SqlNode projectionsColumn : selectList) {
+      stringSelectList.add(projectionsColumn.toString());
     }
-    for (Map.Entry entry : tableMap.entrySet()) {
-      Boolean found = true;
-      for (SqlNode node : (List<SqlNode>) entry.getValue()) {
-        if (!stringSelectList.contains(node.toString())) {
-          found = false;
-          break;
-        }
-      }
-      if (found) {
-        for (SqlNode node : (List<SqlNode>) entry.getValue()) {
-          int index = stringSelectList.indexOf(node.toString());
+    for (Map.Entry entry : tableColumnMap.entrySet()) {
+      if (stringSelectList.containsAll((List) entry.getValue())) {
+        for (String column : (List<String>) entry.getValue()) {
+          int index = stringSelectList.indexOf(column);
           selectList.remove(index);
           stringSelectList.remove(index);
         }
@@ -430,21 +438,21 @@ public class RelToSqlConverter extends SqlImplementor
     }
   }
 
-  private Map<String, List<SqlNode>> createTableNameAndColumnListMap(Builder builder) {
-    Map<String, List<SqlNode>> tableMap = new HashMap<>();
+  private Map<String, List<String>> createTableNameAndColumnListMap(Builder builder) {
+    Map<String, List<String>> tableColumnMap = new HashMap<>();
     for (SqlNode node :builder.context.fieldList()) {
       if (node instanceof SqlIdentifier && ((SqlIdentifier) node).names.size() > 1) {
         String k = ((SqlIdentifier) node).getComponent(0).toString();
-        if (tableMap.containsKey(k)) {
-          tableMap.get(k).add(node);
+        if (tableColumnMap.containsKey(k)) {
+          tableColumnMap.get(k).add(node.toString());
         } else {
-          List<SqlNode> list = new ArrayList<>();
-          list.add(node);
-          tableMap.put(k, list);
+          List<String> list = new ArrayList<>();
+          list.add(node.toString());
+          tableColumnMap.put(k, list);
         }
       }
     }
-    return tableMap;
+    return tableColumnMap;
   }
   private  boolean checkForJoinInRel(RelNode relNode) {
     boolean[] isJoinPresent = {false};
@@ -1180,8 +1188,6 @@ public class RelToSqlConverter extends SqlImplementor
     if (lowerName.startsWith("expr$")) {
       // Put it in ordinalMap
       ordinalMap.put(lowerName, node);
-    } else if (node.getKind() == SqlKind.IDENTIFIER && alias.equalsIgnoreCase(name)) {
-      //do nothing
     } else if (alias == null || !alias.equals(name)) {
       node = as(node, name);
     }
