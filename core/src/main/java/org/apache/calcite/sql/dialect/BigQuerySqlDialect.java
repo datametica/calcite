@@ -34,6 +34,7 @@ import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlIntervalQualifier;
@@ -140,6 +141,9 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_CONTAINS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_MICROS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_MILLIS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_SECONDS;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_MICROS;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_MILLIS;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_SECONDS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CEIL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
@@ -973,65 +977,46 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       break;
     case "TIMESTAMP_SECONDS":
-      final SqlWriter.Frame timestampSecondsCastFrame = writer.startFunCall("CAST");
-      TIMESTAMP_SECONDS.unparse(writer, call, leftPrec, rightPrec);
-      writer.sep("AS");
-      writer.literal("DATETIME");
-      writer.endFunCall(timestampSecondsCastFrame);
+      castAsDatetime(writer, call, leftPrec, rightPrec, TIMESTAMP_SECONDS);
       break;
     case "TIMESTAMP_MILLIS":
-      final SqlWriter.Frame timestampMillisCastFrame = writer.startFunCall("CAST");
-      TIMESTAMP_MILLIS.unparse(writer, call, leftPrec, rightPrec);
-      writer.sep("AS");
-      writer.literal("DATETIME");
-      writer.endFunCall(timestampMillisCastFrame);
+      castAsDatetime(writer, call, leftPrec, rightPrec, TIMESTAMP_MILLIS);
       break;
     case "TIMESTAMP_MICROS":
-      final SqlWriter.Frame timestampMicrosCastFrame = writer.startFunCall("CAST");
-      TIMESTAMP_MICROS.unparse(writer, call, leftPrec, rightPrec);
-      writer.sep("AS");
-      writer.literal("DATETIME");
-      writer.endFunCall(timestampMicrosCastFrame);
+      castAsDatetime(writer, call, leftPrec, rightPrec, TIMESTAMP_MICROS);
       break;
     case "UNIX_SECONDS":
-      final SqlWriter.Frame unixSecondsFrame = writer.startFunCall("UNIX_SECONDS");
-      final SqlWriter.Frame secondsCastFrame = writer.startFunCall("CAST");
-      for (SqlNode operand : call.getOperandList()) {
-        writer.sep(",");
-        operand.unparse(writer, leftPrec, rightPrec);
-      }
-      writer.sep("AS");
-      writer.literal("TIMESTAMP");
-      writer.endFunCall(secondsCastFrame);
-      writer.endFunCall(unixSecondsFrame);
+      castOperandToTimestamp(writer, call, leftPrec, rightPrec, UNIX_SECONDS);
       break;
     case "UNIX_MILLIS":
-      final SqlWriter.Frame unixMillisFrame = writer.startFunCall("UNIX_MILLIS");
-      final SqlWriter.Frame millisCastFrame = writer.startFunCall("CAST");
-      for (SqlNode operand : call.getOperandList()) {
-        writer.sep(",");
-        operand.unparse(writer, leftPrec, rightPrec);
-      }
-      writer.sep("AS");
-      writer.literal("TIMESTAMP");
-      writer.endFunCall(millisCastFrame);
-      writer.endFunCall(unixMillisFrame);
+      castOperandToTimestamp(writer, call, leftPrec, rightPrec, UNIX_MILLIS);
       break;
     case "UNIX_MICROS":
-      final SqlWriter.Frame unixMicrosFrame = writer.startFunCall("UNIX_MICROS");
-      final SqlWriter.Frame microsCastFrame = writer.startFunCall("CAST");
-      for (SqlNode operand : call.getOperandList()) {
-        writer.sep(",");
-        operand.unparse(writer, leftPrec, rightPrec);
-      }
-      writer.sep("AS");
-      writer.literal("TIMESTAMP");
-      writer.endFunCall(microsCastFrame);
-      writer.endFunCall(unixMicrosFrame);
+      castOperandToTimestamp(writer, call, leftPrec, rightPrec, UNIX_MICROS);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void castAsDatetime(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
+      SqlFunction sqlFunction) {
+    final SqlWriter.Frame castFrame = writer.startFunCall("CAST");
+    sqlFunction.unparse(writer, call, leftPrec, rightPrec);
+    writer.sep("AS");
+    writer.literal("DATETIME");
+    writer.endFunCall(castFrame);
+  }
+
+  private void castOperandToTimestamp(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
+      SqlFunction sqlFunction) {
+    final SqlWriter.Frame sqlFunctionFrame = writer.startFunCall(sqlFunction.getName());
+    final SqlWriter.Frame castFrame = writer.startFunCall("CAST");
+    call.getOperandList().get(0).unparse(writer, leftPrec, rightPrec);
+    writer.sep("AS");
+    writer.literal("TIMESTAMP");
+    writer.endFunCall(castFrame);
+    writer.endFunCall(sqlFunctionFrame);
   }
 
   private void secFromMidnight(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
