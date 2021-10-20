@@ -915,6 +915,15 @@ public abstract class SqlLibraryOperators {
         OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING),
         SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction PARSE_DATETIME =
+      new SqlFunction("PARSE_DATETIME",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG1_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING),
+          SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction UNIX_TIMESTAMP =
       new SqlFunction(
@@ -1274,14 +1283,4 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING,
           SqlFunctionCategory.SYSTEM);
-
-  @LibraryOperator(libraries = {TERADATA})
-  public static final SqlFunction TRUNC =
-      new SqlFunction(
-          "TRUNC",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DATE,
-          null,
-          OperandTypes.family(SqlTypeFamily.DATE,
-          SqlTypeFamily.STRING), SqlFunctionCategory.SYSTEM);
 }
