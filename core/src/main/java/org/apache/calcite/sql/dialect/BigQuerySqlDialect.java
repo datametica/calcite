@@ -591,6 +591,17 @@ public class BigQuerySqlDialect extends SqlDialect {
     case GROUPING:
       unparseGroupingFunction(writer, call, leftPrec, rightPrec);
       break;
+    case CAST:
+      if (call.operand(1).toString().equals("`TIMESTAMP`")) {
+        SqlWriter.Frame castDateTimeFrame = writer.startFunCall("CAST");
+        call.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.sep("AS", true);
+        writer.literal("DATETIME");
+        writer.endFunCall(castDateTimeFrame);
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
