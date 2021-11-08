@@ -380,13 +380,38 @@ public class RelToSqlConverter extends SqlImplementor
         addSelect(selectList, sqlExpr, e.getRowType());
       }
       if (applyStarInProjectionForJoin(e)) {
-        modifySelectList(selectList, builder);
+        //Map map= getTableProjectionFieldMapping(e);
+        modifySelectList(selectList, e);
+
       }
 
       builder.setSelect(new SqlNodeList(selectList, POS));
 
     }
     return builder.result();
+  }
+
+  private Map<String, List<String>> getTableProjectionFieldMapping(RelNode inputRelNode) {
+    Map<String, List<String>> tableColumnFieldMap = new HashMap<>();
+    new RelVisitor() {
+      @Override public void visit(RelNode node, int ordinal, RelNode parent) {
+        if (node instanceof TableScan) {
+
+          TableScan tableScan = (TableScan) node;
+          if (tableScan.getTable().getQualifiedName().size() > 1) {
+            String tableName = tableScan.getTable().getQualifiedName().get(1);
+            List<String> columnList = tableScan.getTable().getRowType().getFieldNames().stream()
+                .map(
+                    it -> new SqlIdentifier(
+                        Arrays.asList(tableName, it), null, POS, null).toString())
+                .collect(Collectors.toList());
+            tableColumnFieldMap.put(tableName, columnList);
+          }
+        }
+        super.visit(node, ordinal, parent);
+      }
+    }.go(inputRelNode);
+    return tableColumnFieldMap;
   }
 
   private boolean applyStarInProjectionForJoin(RelNode e) {
@@ -407,8 +432,8 @@ public class RelToSqlConverter extends SqlImplementor
     }
     return count == 1;
   }
-  private void modifySelectList(List<SqlNode> selectList, Builder builder) {
-    Map<String, List<String>> tableColumnMap = createTableNameAndColumnListMap(builder);
+  private void modifySelectList(List<SqlNode> selectList, RelNode e) {
+    Map<String, List<String>> tableColumnMap = getTableProjectionFieldMapping(e);
     List<String> stringSelectList = new ArrayList<>();
     //creating current select List in String format , because we dot have equals mehtod overridden,
     //So to compare the object we have created list in String format
@@ -416,36 +441,38 @@ public class RelToSqlConverter extends SqlImplementor
       stringSelectList.add(projectionsColumn.toString());
     }
     for (Map.Entry entry : tableColumnMap.entrySet()) {
-      if (stringSelectList.containsAll((List) entry.getValue())) {
+      int firstIndex = -1;
+      int prevIndex = -1;
+      boolean replace = true;
+      for (String column : (List<String>) entry.getValue()) {
+        int index = stringSelectList.indexOf(column);
+        if (index == -1) {
+          replace = false;
+          break;
+        }
+        if (firstIndex == -1) {
+          firstIndex = index;
+        }
+        if (prevIndex != -1 && prevIndex != index - 1) {
+          replace = false;
+          break;
+        }
+        prevIndex = index;
+      }
+      if (replace) {
         for (String column : (List<String>) entry.getValue()) {
           int index = stringSelectList.indexOf(column);
           selectList.remove(index);
           stringSelectList.remove(index);
         }
-        SqlNode sqlExpr = SqlIdentifier.star(
-            Arrays.asList(entry.getKey() + ".*"), POS, ImmutableList.of(POS));
-        selectList.add(sqlExpr);
-
+        SqlNode sqlExpr = SqlIdentifier.star(Arrays.asList(entry.getKey().toString(), "*"), POS,
+            null);
+        selectList.add(firstIndex, sqlExpr);
+        stringSelectList.add(firstIndex, sqlExpr.toString());
       }
     }
   }
 
-  private Map<String, List<String>> createTableNameAndColumnListMap(Builder builder) {
-    Map<String, List<String>> tableColumnMap = new HashMap<>();
-    for (SqlNode node :builder.context.fieldList()) {
-      if (node instanceof SqlIdentifier && ((SqlIdentifier) node).names.size() > 1) {
-        String k = ((SqlIdentifier) node).getComponent(0).toString();
-        if (tableColumnMap.containsKey(k)) {
-          tableColumnMap.get(k).add(node.toString());
-        } else {
-          List<String> list = new ArrayList<>();
-          list.add(node.toString());
-          tableColumnMap.put(k, list);
-        }
-      }
-    }
-    return tableColumnMap;
-  }
   private  boolean checkForJoinInRel(RelNode relNode) {
     boolean[] isJoinPresent = {false};
     RelVisitor visitor = new RelVisitor() {

@@ -9238,13 +9238,27 @@ class RelToSqlConverterTest {
       .ok(expectedBQSql);
   }
   @Test public void testStarForJoin() {
-    String query = "SELECT e.\"first_name\" as f_name,d.* \n"
+    String query = "SELECT d.*,e.\"first_name\" as f_name \n"
         +
         "FROM \"department\" d ,\"employee\" e where e.\"department_id\" = d.\"department_id\"";
-    final String expectedBQSql = "SELECT employee.first_name AS F_NAME, department.*\n"
+    final String expectedBQSql = "SELECT department.*, employee.first_name AS F_NAME\n"
           + "FROM foodmart.department\n"
           + "CROSS JOIN foodmart.employee\n"
           + "WHERE employee.department_id = department.department_id";
+    sql(query)
+        .withBigQuery()
+        .withQueryStyle(new QueryStyle(false))
+        .ok(expectedBQSql);
+  }
+  @Test public void testStarForJoinwithorderchange() {
+    String query = "SELECT e.\"first_name\" as f_name, d.\"department_description\","
+        + " d.\"department_id\" \n"
+        + "FROM \"department\" d ,\"employee\" e where e.\"department_id\" = d.\"department_id\"";
+    final String expectedBQSql = "SELECT employee.first_name AS F_NAME, "
+        + "department.department_description, department.department_id\n"
+        + "FROM foodmart.department\n"
+        + "CROSS JOIN foodmart.employee\n"
+        + "WHERE employee.department_id = department.department_id";
     sql(query)
         .withBigQuery()
         .withQueryStyle(new QueryStyle(false))
