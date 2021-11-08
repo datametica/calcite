@@ -9309,7 +9309,7 @@ class RelToSqlConverterTest {
         .build();
     final String expectedSql = "SELECT ROWID() AS \"FD\"\n"
         + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT GENERATE_UUID() ATpchTestS FD\n"
+    final String expectedBiqQuery = "SELECT GENERATE_UUID() AS FD\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
@@ -9326,5 +9326,21 @@ class RelToSqlConverterTest {
     sql(query)
         .withBigQuery()
         .ok(expectedBQSql);
+  }
+
+  @Test public void testTimeAdd() {
+    final RelBuilder builder = relBuilder();
+    final RexNode rowidRexNode = builder.call(SqlLibraryOperators.TIME_ADD,
+        builder.literal("00:00:00"), builder.literal("INTERVAL 10000 SECOND"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(rowidRexNode, "FD"))
+        .build();
+    final String expectedBiqQuery = "SELECT TIME_ADD('00:00:00', 'INTERVAL 10000 SECOND') AS FD\n"
+        + "FROM scott.EMP";
+
+
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 }
