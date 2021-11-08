@@ -9382,7 +9382,7 @@ class RelToSqlConverterTest {
         .build();
     final String expectedSql = "SELECT ROWID() AS \"FD\"\n"
         + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT GENERATE_UUID() ATpchTestS FD\n"
+    final String expectedBiqQuery = "SELECT GENERATE_UUID() AS FD\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
