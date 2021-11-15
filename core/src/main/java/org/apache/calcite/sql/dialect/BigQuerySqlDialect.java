@@ -131,20 +131,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24MI;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24MISS;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHHMISS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.ACOS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_DIFF;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIME;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATETIME;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_TIMESTAMP;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_CONTAINS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_MICROS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_MILLIS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_SECONDS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_MICROS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_MILLIS;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_SECONDS;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.*;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CEIL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
@@ -1024,9 +1011,18 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "UNIX_MICROS":
       castOperandToTimestamp(writer, call, leftPrec, rightPrec, UNIX_MICROS);
       break;
+    case "INTERVAL_SECONDS":
+      unparseIntervalSeconds(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseIntervalSeconds(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    writer.print("INTERVAL ");
+    call.operand(0).unparse(writer, 0, 0);
+    writer.print("SECOND");
   }
 
   private void castAsDatetime(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
