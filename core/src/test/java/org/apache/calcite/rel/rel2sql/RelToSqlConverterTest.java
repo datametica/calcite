@@ -44,9 +44,14 @@ import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.*;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlDialect.Context;
 import org.apache.calcite.sql.SqlDialect.DatabaseProduct;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.SqlWriterConfig;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.dialect.HiveSqlDialect;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
@@ -9327,7 +9332,8 @@ class RelToSqlConverterTest {
     final RelBuilder builder = relBuilder();
 
     final RexNode createRexNode = builder.call(SqlLibraryOperators.TIME_ADD,
-        builder.literal("00:00:00"), builder.call(SqlLibraryOperators.INTERVAL_SECONDS,builder.literal(10000)));
+        builder.literal("00:00:00"),
+        builder.call(SqlLibraryOperators.INTERVAL_SECONDS, builder.literal(10000)));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(createRexNode, "FD"))
@@ -9340,7 +9346,7 @@ class RelToSqlConverterTest {
     final RelBuilder builder = relBuilder();
 
     final RexNode createRexNode = builder.call
-        (SqlLibraryOperators.INTERVAL_SECONDS,builder.literal(10000));
+        (SqlLibraryOperators.INTERVAL_SECONDS, builder.literal(10000));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(createRexNode, "FD"))
