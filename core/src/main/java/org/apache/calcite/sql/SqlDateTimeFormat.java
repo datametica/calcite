@@ -37,6 +37,7 @@ public enum SqlDateTimeFormat {
   MMDDYYYY("MMDDYYYY"),
   MMDDYY("MMDDYY"),
   YYYYMM("YYYYMM"),
+  YYYYMMM("yyyymmm"),
   YYYYMMDD("YYYYMMDD"),
   YYMMDD("YYMMDD"),
   MMYY("MMYY"),
