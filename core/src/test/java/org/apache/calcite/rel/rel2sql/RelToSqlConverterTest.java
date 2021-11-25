@@ -9368,4 +9368,17 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"";
     sql(query).ok(expected);
   }
+
+  @Test public void testYYYYMMMformat() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseDatetimeRexNode = builder.call(SqlLibraryOperators.FORMAT_DATE,
+        builder.literal("yyyymmm"), builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseDatetimeRexNode, "FD"))
+        .build();
+    final String expectedBiqQuery = "SELECT FORMAT_DATE('%Y%b', HIREDATE) AS FD\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
 }

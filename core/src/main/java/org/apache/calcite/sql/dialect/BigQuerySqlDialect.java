@@ -132,6 +132,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24MI;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24MISS;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHHMISS;
+import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMM;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.ACOS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_DIFF;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIME;
@@ -245,6 +246,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(AMPM, "%p");
         put(TIMEZONE, "%Z");
         put(YYYYMM, "%Y%m");
+        put(YYYYMMM, "%Y%b");
         put(MMYY, "%m%y");
         put(MONTH_NAME, "%B");
         put(ABBREVIATED_MONTH, "%b");
