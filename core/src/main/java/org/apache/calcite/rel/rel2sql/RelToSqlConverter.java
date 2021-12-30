@@ -138,12 +138,14 @@ public class RelToSqlConverter extends SqlImplementor
     dispatcher = ReflectUtil.createMethodDispatcher(Result.class, this, "visit",
       RelNode.class);
   }
+
   public RelToSqlConverter(SqlDialect dialect, QueryStyle style) {
     super(dialect);
     this.style = style;
     dispatcher = ReflectUtil.createMethodDispatcher(Result.class, this, "visit",
         RelNode.class);
   }
+
   /** Dispatches a call to the {@code visit(Xxx e)} method where {@code Xxx}
    * most closely matches the runtime type of the argument. */
   protected Result dispatch(RelNode e) {
@@ -392,7 +394,13 @@ public class RelToSqlConverter extends SqlImplementor
   /** Visits a Project; called by {@link #dispatch} via reflection. */
   public Result visit(Project e) {
     UnpivotRelToSqlUtil unpivotRelToSqlUtil = new UnpivotRelToSqlUtil();
-    final Result x = visitInput(e, 0, Clause.SELECT);
+    // If the input is a Sort, wrap SELECT is not required.
+    final Result x;
+    if (e.getInput() instanceof Sort) {
+      x = visitInput(e, 0);
+    } else {
+      x = visitInput(e, 0, Clause.SELECT);
+    }
     final Builder builder = x.builder(e);
     if (dialect.supportsUnpivot()
         && unpivotRelToSqlUtil.isRelEquivalentToUnpivotExpansionWithIncludeNulls(e, builder)) {
