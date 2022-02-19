@@ -3866,12 +3866,12 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"\n"
         + "UNION ALL\n"
         + "SELECT *\n"
-        + "FROM (SELECT \"product_id\"\n"
+        + "FROM SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "WHERE \"product_id\" > 10\n"
         + "INTERSECT ALL\n"
         + "SELECT \"product_id\"\n"
-        + "FROM \"foodmart\".\"product\")";
+        + "FROM \"foodmart\".\"product\"";
     sql(discardedParenthesesQuery).ok(discardedParenthesesRes);
 
     // Parentheses will be retained because sub-query has LIMIT or OFFSET.
@@ -3888,13 +3888,13 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"\n"
         + "UNION ALL\n"
         + "SELECT *\n"
-        + "FROM ((SELECT \"product_id\"\n"
+        + "FROM (SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "FETCH NEXT 10 ROWS ONLY)\n"
         + "INTERSECT ALL\n"
         + "(SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
-        + "OFFSET 10 ROWS)))\n"
+        + "OFFSET 10 ROWS))\n"
         + "EXCEPT ALL\n"
         + "(SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
@@ -3926,16 +3926,6 @@ class RelToSqlConverterTest {
         + "ORDER BY \"product_id\"\n"
         + "FETCH NEXT 2 ROWS ONLY)";
     sql(retainLimitQuery).ok(retainLimitResult);
-  }
-
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-4674">[CALCITE-4674]
-   * Excess quotes in generated SQL when STAR is a column alias</a>. */
-  @Test void testAliasOnStarNoExcessQuotes() {
-    final String query = "select \"customer_id\" as \"*\" from \"customer\"";
-    final String expected = "SELECT \"customer_id\" AS \"*\"\n"
-        + "FROM \"foodmart\".\"customer\"";
-    sql(query).ok(expected);
   }
 
   @Test void testLiteral() {
