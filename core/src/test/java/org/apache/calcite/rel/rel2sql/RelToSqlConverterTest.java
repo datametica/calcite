@@ -3292,9 +3292,7 @@ class RelToSqlConverterTest {
     String query = "select * from \"department\" where \"department_id\" in (\n"
         + "  select \"department_id\" from \"employee\"\n"
         + "  where \"store_id\" < 150)";
-    final String expected = "SELECT "
-        + "\"department\".\"department_id\", \"department\""
-        + ".\"department_description\"\n"
+    final String expected = "SELECT \"department\".*\n"
         + "FROM \"foodmart\".\"department\"\nINNER JOIN "
         + "(SELECT \"department_id\"\nFROM \"foodmart\".\"employee\"\n"
         + "WHERE \"store_id\" < 150\nGROUP BY \"department_id\") AS \"t1\" "
@@ -9564,4 +9562,103 @@ class RelToSqlConverterTest {
         .withBigQuery()
         .ok(expectedBQSql);
   }
+
+  @Test public void testWhenAllColumn() {
+    String query =
+        "select * from \"foodmart\".\"product\" as p, \"foodmart\".\"employee\" as e";
+    final String expected = "SELECT *\n"
+        + "FROM \"foodmart\".\"product\",\n"
+        + "\"foodmart\".\"employee\"";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testWhenT1AllColumnAndT2AllColumn() {
+    String query =
+        "select e.*, p.* from \"foodmart\".\"product\" as p, \"foodmart\".\"employee\" as e";
+    final String expected = "SELECT \"employee\".*, \"product\".*\n"
+        + "FROM \"foodmart\".\"product\",\n"
+        + "\"foodmart\".\"employee\"";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testWhenT1AllColumnAndT2AllColumnT3AllColumn() {
+    String query =
+        "select e.*, p.*, d.* from \"foodmart\".\"product\" as p, \"foodmart\".\"employee\" as e,"
+            + "\"foodmart\".\"department\" as d";
+    final String expected = "SELECT \"employee\".*, \"product\".*, \"department\".*\n"
+        + "FROM \"foodmart\".\"product\",\n"
+        + "\"foodmart\".\"employee\",\n"
+        + "\"foodmart\".\"department\"";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testWhenT1AllColumnAndT2SomaColumn() {
+    String query =
+        "select e.*, p.\"product_id\", p.\"brand_name\" from \"foodmart\".\"product\" as p, "
+            + "\"foodmart\".\"employee\" as e";
+    final String expected = "SELECT \"employee\".*, \"product\".\"product_id\", "
+        + "\"product\".\"brand_name\"\n"
+        + "FROM \"foodmart\".\"product\",\n"
+        + "\"foodmart\".\"employee\"";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testWhenT1AllColumnAndT2SomaColumnWithWhereClause() {
+    String query =
+        "select e.*, p.\"product_id\", p.\"brand_name\" from \"foodmart\".\"product\" as p, "
+            + "\"foodmart\".\"employee\" as e where p.\"product_id\" > 10";
+    final String expected = "SELECT \"employee\".*, \"product\".\"product_id\", "
+        + "\"product\".\"brand_name\"\n"
+        + "FROM \"foodmart\".\"product\",\n"
+        + "\"foodmart\".\"employee\"\n"
+        + "WHERE \"product\".\"product_id\" > 10";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testWhenT1AllColumnAndT2SomaColumnWithWhereClauseSomaFunctionInProjection() {
+    String query =
+        "select e.*, p.\"product_id\", p.\"brand_name\", p.\"gross_weight\" + 100, "
+            + "p.\"net_weight\" + 10 from \"foodmart\".\"product\" as p, "
+            + "\"foodmart\".\"employee\" as e where p.\"product_id\" > 10";
+    final String expected =
+        "SELECT \"employee\".*, \"product\".\"product_id\", \"product\".\"brand_name\", "
+            + "\"product\".\"gross_weight\" + 100, \"product\".\"net_weight\" + 10\n"
+          + "FROM \"foodmart\".\"product\",\n"
+          + "\"foodmart\".\"employee\"\n"
+          + "WHERE \"product\".\"product_id\" > 10";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testWhenT1AllColumnAndT2AllColumnSubQueryT3AllColumnSubQuery() {
+    String query =
+        "select e.*, p.*, d.* from (select \"product_id\", \"brand_name\", \"gross_weight\", "
+            + "\"net_weight\" from \"foodmart\".\"product\") as p, \"foodmart\".\"employee\" as e,"
+            + "(select \"department_description\" from \"foodmart\".\"department\") as d";
+    final String expected = "SELECT \"employee\".*, \"t\".*, \"t0\".*\n"
+          + "FROM (SELECT \"product_id\", \"brand_name\", \"gross_weight\", "
+          + "\"net_weight\"\n"
+          + "FROM \"foodmart\".\"product\") AS \"t\",\n"
+          + "\"foodmart\".\"employee\",\n"
+          + "(SELECT \"department_description\"\n"
+          + "FROM \"foodmart\".\"department\") AS \"t0\"";
+    sql(query).ok(expected);
+  }
+
+  @Test public void testWhenT1AllColumnAndT2SomeColumnSubQueryT3AllColumnSubQuery() {
+    String query =
+        "select e.*, p.\"product_id\", p.\"brand_name\", d.* from (select \"product_id\", "
+            + "\"brand_name\", \"gross_weight\", \"net_weight\" from \"foodmart\".\"product\") as p"
+            + ", \"foodmart\".\"employee\" as e,"
+            + "(select \"department_description\" from \"foodmart\".\"department\") as d";
+    final String expected = "SELECT \"employee\".*, \"t\".\"product_id\", \"t\".\"brand_name\", "
+        + "\"t0\".*\n"
+        + "FROM (SELECT \"product_id\", \"brand_name\", \"gross_weight\", "
+        + "\"net_weight\"\n"
+        + "FROM \"foodmart\".\"product\") AS \"t\",\n"
+        + "\"foodmart\".\"employee\",\n"
+        + "(SELECT \"department_description\"\n"
+        + "FROM \"foodmart\".\"department\") AS \"t0\"";
+    sql(query).ok(expected);
+  }
+
 }

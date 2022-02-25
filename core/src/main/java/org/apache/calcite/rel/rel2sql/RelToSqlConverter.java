@@ -361,25 +361,140 @@ public class RelToSqlConverter extends SqlImplementor
     final Builder builder = x.builder(e);
     if (!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
         || style.isExpandProjection()) {
-      final List<SqlNode> selectList = new ArrayList<>();
-      for (RexNode ref : e.getProjects()) {
-        SqlNode sqlExpr = builder.context.toSql(null, ref);
-        RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
-
-        if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
-          sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
-        }
-
-        if (SqlUtil.isNullLiteral(sqlExpr, false)
-            && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
-          sqlExpr = castNullType(sqlExpr, targetField.getType());
-        }
-        addSelect(selectList, sqlExpr, e.getRowType());
-      }
-
-      builder.setSelect(new SqlNodeList(selectList, POS));
+      builder.setSelect(new SqlNodeList(generateStarSelectList(e, builder, x.getAliases()), POS));
     }
     return builder.result();
+  }
+
+  List<SqlNode> generateStarSelectList(Project relNode, Builder builder,
+      Map<String, RelDataType> aliases) {
+    assert relNode.getProjects().size() == relNode.getRowType().getFieldCount();
+    List<RelDataTypeField> originalProjectFieldList = relNode.getRowType().getFieldList();
+    List<RelDataTypeField> projectFieldFromSourceTableList = new ArrayList<>();
+    List<String> sourceTableList =
+        getSourceTables(relNode, projectFieldFromSourceTableList, aliases);
+
+    List<SqlNode> selectList = new ArrayList<>();
+    int i = 0;
+    while (i < sourceTableList.size()) {
+      String sourceTable = sourceTableList.get(i);
+
+      int j = i + 1;
+      while (j < sourceTableList.size()) {
+        if (!sourceTable.equals(sourceTableList.get(j))) {
+          break;
+        }
+        j++;
+      }
+
+      if (!(sourceTable.equals("NOT REQUIRED") || sourceTable.equals("NOT FOUND"))
+          && isStar(relNode.getProjects().subList(i, j),
+          projectFieldFromSourceTableList.subList(i, j), sourceTable, aliases)) {
+        selectList.add(new SqlIdentifier(ImmutableList.of(sourceTable, ""), POS));
+      } else {
+        for (int k = i; k < j; k++) {
+          addToSelectList(
+              relNode.getProjects().get(k), builder, selectList, originalProjectFieldList.get(k));
+        }
+      }
+      i = j;
+    }
+    return selectList;
+  }
+
+  List<String> getSourceTables(Project relNode, List<RelDataTypeField> projectFieldList,
+      Map<String, RelDataType> aliases) {
+    List<String> sourceTables = new ArrayList<>();
+    List<RexNode> projects = relNode.getProjects();
+    List<RelDataTypeField> projectFields = relNode.getRowType().getFieldList();
+    for (int i = 0; i < projects.size(); i++) {
+      if (projects.get(i) instanceof RexInputRef) {
+        RexInputRef ref = (RexInputRef) projects.get(i);
+        sourceTables.add(
+            getSourceTableOfField(relNode.getInput(), projectFields.get(i),
+            projectFieldList, ref.getIndex(), aliases));
+      } else {
+        sourceTables.add("NOT REQUIRED");
+        projectFieldList.add(projectFields.get(i));
+      }
+    }
+    return sourceTables;
+  }
+
+  String getSourceTableOfField(RelNode relNode, RelDataTypeField field,
+      List<RelDataTypeField> projectFieldList, int index, Map<String, RelDataType> aliases) {
+    if (relNode instanceof TableScan || relNode instanceof Project || relNode instanceof Aggregate
+        || relNode instanceof Window) {
+      RelDataTypeField tableField = relNode.getRowType().getFieldList().get(index);
+      projectFieldList.add(tableField);
+      if (equals(tableField, field) || field.getName().startsWith(tableField.getName())) {
+        return getTableName(aliases, relNode.getRowType());
+      }
+      return "NOT FOUND";
+    } else if (relNode instanceof Join) {
+      Join join = (Join) relNode;
+      if (index < join.getLeft().getRowType().getFieldCount()) {
+        return getSourceTableOfField(join.getLeft(), field, projectFieldList, index, aliases);
+      } else {
+        return getSourceTableOfField(join.getRight(), field, projectFieldList,
+            index - join.getLeft().getRowType().getFieldCount(), aliases);
+      }
+    } else if (relNode instanceof Values) {
+      return "NOT REQUIRED";
+    }
+    return getSourceTableOfField(relNode.getInputs().get(0), field, projectFieldList, index,
+        aliases);
+  }
+
+  String getTableName(Map<String, RelDataType> aliases, RelDataType rowType) {
+    String table = "NOT FOUND";
+    for (String s : aliases.keySet()) {
+      if (aliases.get(s).equals(rowType)) {
+        table = s;
+        break;
+      }
+    }
+    return table;
+  }
+
+  private static boolean equals(RelDataTypeField field1, RelDataTypeField field2) {
+    if (field1 == field2) {
+      return true;
+    }
+    return field1.getName().equals(field2.getName()) && field1.getType().equals(field2.getType());
+  }
+
+  boolean isStar(
+      List<RexNode> projects, List<RelDataTypeField> projectFieldList, String sourceTable,
+      Map<String, RelDataType> aliases) {
+    List<RelDataTypeField> sourceTableFieldList = aliases.get(sourceTable).getFieldList();
+    if (sourceTableFieldList.size() != projectFieldList.size()) {
+      return false;
+    }
+    for (int i = 0; i < projectFieldList.size(); i++) {
+      if (!(projects.get(i) instanceof RexInputRef)) {
+        return false;
+      }
+      if (!equals(projectFieldList.get(i), sourceTableFieldList.get(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private void addToSelectList(
+      RexNode ref, Builder builder, List<SqlNode> selectList, RelDataTypeField targetField) {
+    SqlNode sqlExpr = builder.context.toSql(null, ref);
+
+    if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
+      sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
+    }
+
+    if (SqlUtil.isNullLiteral(sqlExpr, false)
+        && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
+      sqlExpr = castNullType(sqlExpr, targetField.getType());
+    }
+    addSelect(selectList, sqlExpr, targetField.getName());
   }
 
   /** Wraps a NULL literal in a CAST operator to a target type.
@@ -1100,6 +1215,10 @@ public class RelToSqlConverter extends SqlImplementor
   @Override public void addSelect(List<SqlNode> selectList, SqlNode node,
       RelDataType rowType) {
     String name = rowType.getFieldNames().get(selectList.size());
+    addSelect(selectList, node, name);
+  }
+
+  public void addSelect(List<SqlNode> selectList, SqlNode node, String name) {
     String alias = SqlValidatorUtil.getAlias(node, -1);
     final String lowerName = name.toLowerCase(Locale.ROOT);
     if (lowerName.startsWith("expr$")) {

@@ -167,8 +167,7 @@ class JdbcAdapterTest {
             + "        JdbcTableScan(table=[[SCOTT, DEPT]])")
         .runs()
         .enable(CalciteAssert.DB == CalciteAssert.DatabaseInstance.HSQLDB)
-        .planHasSql("SELECT \"t\".\"EMPNO\", \"t\".\"ENAME\", "
-            + "\"t\".\"DEPTNO\", \"t0\".\"DNAME\"\n"
+        .planHasSql("SELECT \"t\".*, \"t0\".\"DNAME\"\n"
             + "FROM (SELECT \"EMPNO\", \"ENAME\", \"DEPTNO\"\n"
             + "FROM \"SCOTT\".\"EMP\") AS \"t\"\n"
             + "INNER JOIN (SELECT \"DEPTNO\", \"DNAME\"\n"
@@ -353,8 +352,7 @@ class JdbcAdapterTest {
             + "        JdbcTableScan(table=[[SCOTT, DEPT]])")
         .runs()
         .enable(CalciteAssert.DB == CalciteAssert.DatabaseInstance.HSQLDB)
-        .planHasSql("SELECT \"t\".\"EMPNO\", \"t\".\"ENAME\", "
-            + "\"t0\".\"DEPTNO\", \"t0\".\"DNAME\"\n"
+        .planHasSql("SELECT \"t\".\"EMPNO\", \"t\".\"ENAME\", \"t0\".*\n"
             + "FROM (SELECT \"EMPNO\", \"ENAME\", \"DEPTNO\"\nFROM \"SCOTT\".\"EMP\") AS \"t\"\n"
             + "INNER JOIN (SELECT \"DEPTNO\", \"DNAME\"\n"
             + "FROM \"SCOTT\".\"DEPT\") AS \"t0\" ON \"t\".\"DEPTNO\" = \"t0\".\"DEPTNO\"");
@@ -393,8 +391,7 @@ class JdbcAdapterTest {
             + "        JdbcTableScan(table=[[SCOTT, DEPT]])")
         .runs()
         .enable(CalciteAssert.DB == CalciteAssert.DatabaseInstance.HSQLDB)
-        .planHasSql("SELECT \"t0\".\"EMPNO\", \"t0\".\"ENAME\", "
-            + "\"t1\".\"DEPTNO\", \"t1\".\"DNAME\"\n"
+        .planHasSql("SELECT \"t0\".\"EMPNO\", \"t0\".\"ENAME\", \"t1\".*\n"
             + "FROM (SELECT \"EMPNO\", \"ENAME\", \"DEPTNO\"\n"
             + "FROM \"SCOTT\".\"EMP\"\n"
             + "WHERE CAST(\"DEPTNO\" AS INTEGER) = 20) AS \"t0\"\n"
