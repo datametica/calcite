@@ -1707,6 +1707,10 @@ public abstract class SqlImplementor {
           && needNewSubQuery(expectedRel, this.clauses, clauses2);
     }
 
+    public Map<String, RelDataType> getAliases() {
+      return aliases;
+    }
+
     /** Creates a builder for the SQL of the given relational expression,
      * using the clauses that you declared when you called
      * {@link #visitInput(RelNode, int, Set)}. */
