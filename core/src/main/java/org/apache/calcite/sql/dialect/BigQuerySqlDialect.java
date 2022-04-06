@@ -206,7 +206,7 @@ public class BigQuerySqlDialect extends SqlDialect {
    * by zero or more letters, digits or _.
    */
   private static final Pattern IDENTIFIER_REGEX =
-      Pattern.compile("[A-Za-z][A-Za-z0-9_]*");
+      Pattern.compile("[A-Za-z][A-Za-z0-9_]*(\\.\\*)*$");
 
   private static final String TEMP_REGEX = "\\s?°([CcFf])";
   /**

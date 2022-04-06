@@ -17,6 +17,7 @@
 package org.apache.calcite.rel.rel2sql;
 
 import org.apache.calcite.config.NullCollation;
+import org.apache.calcite.config.QueryStyle;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitDef;
@@ -119,11 +120,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class RelToSqlConverterTest {
 
+ // private  QueryStyle style;
   /** Initiates a test case with a given SQL query. */
+
   private Sql sql(String sql) {
+   // style = new QueryStyle();
     return new Sql(CalciteAssert.SchemaSpec.JDBC_FOODMART, sql,
         CalciteSqlDialect.DEFAULT, SqlParser.Config.DEFAULT,
         UnaryOperator.identity(), null, ImmutableList.of());
+
   }
 
   private Sql sqlTest(String sql) {
@@ -212,6 +217,7 @@ class RelToSqlConverterTest {
 
   /** Converts a relational expression to SQL in a given dialect. */
   private static String toSql(RelNode root, SqlDialect dialect) {
+
     return toSql(root, dialect, c ->
         c.withAlwaysUseParentheses(false)
             .withSelectListItemsOnSeparateLines(false)
@@ -219,11 +225,28 @@ class RelToSqlConverterTest {
             .withIndentation(0));
   }
 
+  private static String toSql(RelNode root, SqlDialect dialect, QueryStyle style) {
+
+    return toSql(root, dialect, c ->
+        c.withAlwaysUseParentheses(false)
+            .withSelectListItemsOnSeparateLines(false)
+            .withUpdateSetListNewline(false)
+            .withIndentation(0), style);
+  }
+
   /** Converts a relational expression to SQL in a given dialect
    * and with a particular writer configuration. */
   private static String toSql(RelNode root, SqlDialect dialect,
       UnaryOperator<SqlWriterConfig> transform) {
     final RelToSqlConverter converter = new RelToSqlConverter(dialect);
+    final SqlNode sqlNode = converter.visitRoot(root).asStatement();
+    return sqlNode.toSqlString(c -> transform.apply(c.withDialect(dialect)))
+        .getSql();
+  }
+
+  private static String toSql(RelNode root, SqlDialect dialect,
+      UnaryOperator<SqlWriterConfig> transform, QueryStyle style) {
+    final RelToSqlConverter converter = new RelToSqlConverter(dialect, style);
     final SqlNode sqlNode = converter.visitRoot(root).asStatement();
     return sqlNode.toSqlString(c -> transform.apply(c.withDialect(dialect)))
         .getSql();
@@ -8348,6 +8371,7 @@ class RelToSqlConverterTest {
     private final List<Function<RelNode, RelNode>> transforms;
     private final SqlParser.Config parserConfig;
     private final UnaryOperator<SqlToRelConverter.Config> config;
+    private  final QueryStyle style;
 
     Sql(CalciteAssert.SchemaSpec schemaSpec, String sql, SqlDialect dialect,
         SqlParser.Config parserConfig,
@@ -8362,6 +8386,7 @@ class RelToSqlConverterTest {
       this.transforms = ImmutableList.copyOf(transforms);
       this.parserConfig = parserConfig;
       this.config = config;
+      this.style = null;
     }
 
     Sql(SchemaPlus schema, String sql, SqlDialect dialect,
@@ -8376,11 +8401,32 @@ class RelToSqlConverterTest {
       this.transforms = ImmutableList.copyOf(transforms);
       this.parserConfig = parserConfig;
       this.config = config;
+      this.style = null;
+    }
+
+    Sql(SchemaPlus schema, String sql, SqlDialect dialect,
+        SqlParser.Config parserConfig,
+        UnaryOperator<SqlToRelConverter.Config> config,
+        Function<RelBuilder, RelNode> relFn,
+        List<Function<RelNode, RelNode>> transforms, QueryStyle style) {
+      this.schema = schema;
+      this.sql = sql;
+      this.dialect = dialect;
+      this.relFn = relFn;
+      this.transforms = ImmutableList.copyOf(transforms);
+      this.parserConfig = parserConfig;
+      this.config = config;
+      this.style = style;
     }
 
     Sql dialect(SqlDialect dialect) {
       return new Sql(schema, sql, dialect, parserConfig, config, relFn,
           transforms);
+    }
+
+    Sql withQueryStyle(QueryStyle style) {
+      return new Sql(schema, sql, dialect, parserConfig, config, relFn,
+          transforms, style);
     }
 
     Sql relFn(Function<RelBuilder, RelNode> relFn) {
@@ -8588,7 +8634,7 @@ class RelToSqlConverterTest {
         for (Function<RelNode, RelNode> transform : transforms) {
           rel = transform.apply(rel);
         }
-        return toSql(rel, dialect);
+        return toSql(rel, dialect, style);
       } catch (Exception e) {
         throw TestUtil.rethrow(e);
       }
@@ -9281,6 +9327,33 @@ class RelToSqlConverterTest {
     sql(query)
       .withBigQuery()
       .ok(expectedBQSql);
+  }
+  @Test public void testStarForJoin() {
+    String query = "SELECT d.*,e.\"first_name\" as f_name \n"
+        +
+        "FROM \"department\" d ,\"employee\" e where e.\"department_id\" = d.\"department_id\"";
+    final String expectedBQSql = "SELECT department.*, employee.first_name AS F_NAME\n"
+          + "FROM foodmart.department\n"
+          + "CROSS JOIN foodmart.employee\n"
+          + "WHERE employee.department_id = department.department_id";
+    sql(query)
+        .withBigQuery()
+        .withQueryStyle(new QueryStyle(false))
+        .ok(expectedBQSql);
+  }
+  @Test public void testStarForJoinwithorderchange() {
+    String query = "SELECT e.\"first_name\" as f_name, d.\"department_description\","
+        + " d.\"department_id\" \n"
+        + "FROM \"department\" d ,\"employee\" e where e.\"department_id\" = d.\"department_id\"";
+    final String expectedBQSql = "SELECT employee.first_name AS F_NAME, "
+        + "department.department_description, department.department_id\n"
+        + "FROM foodmart.department\n"
+        + "CROSS JOIN foodmart.employee\n"
+        + "WHERE employee.department_id = department.department_id";
+    sql(query)
+        .withBigQuery()
+        .withQueryStyle(new QueryStyle(false))
+        .ok(expectedBQSql);
   }
 
   @Test public void testDateMinus() {

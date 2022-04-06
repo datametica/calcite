@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Calc;
@@ -45,6 +46,7 @@ import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.core.Window;
+import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.type.RelDataType;
@@ -101,10 +103,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -131,7 +135,6 @@ public class RelToSqlConverter extends SqlImplementor
   @SuppressWarnings("argument.type.incompatible")
   public RelToSqlConverter(SqlDialect dialect) {
     super(dialect);
-    style = new QueryStyle();
     dispatcher = ReflectUtil.createMethodDispatcher(Result.class, this, "visit",
       RelNode.class);
   }
@@ -361,7 +364,7 @@ public class RelToSqlConverter extends SqlImplementor
     parseCorrelTable(e, x);
     final Builder builder = x.builder(e);
     if (!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
-        || style.isExpandProjection()) {
+        || (style != null && style.isExpandProjection())) {
       final List<SqlNode> selectList = new ArrayList<>();
       for (RexNode ref : e.getProjects()) {
         SqlNode sqlExpr = builder.context.toSql(null, ref);
@@ -377,19 +380,118 @@ public class RelToSqlConverter extends SqlImplementor
         }
         addSelect(selectList, sqlExpr, e.getRowType());
       }
+      if (applyStarInProjectionForJoin(e)) {
+        //Map map= getTableProjectionFieldMapping(e);
+        modifySelectList(selectList, e);
+
+      }
 
       builder.setSelect(new SqlNodeList(selectList, POS));
+
     }
     return builder.result();
   }
 
-  /** Wraps a NULL literal in a CAST operator to a target type.
-   *
-   * @param nullLiteral NULL literal
-   * @param type Target type
-   *
-   * @return null literal wrapped in CAST call
-   */
+  private Map<String, List<String>> getTableProjectionFieldMapping(RelNode inputRelNode) {
+    Map<String, List<String>> tableColumnFieldMap = new HashMap<>();
+    new RelVisitor() {
+      @Override public void visit(RelNode node, int ordinal, RelNode parent) {
+        if (node instanceof TableScan) {
+
+          TableScan tableScan = (TableScan) node;
+          if (tableScan.getTable().getQualifiedName().size() > 1) {
+            String tableName = tableScan.getTable().getQualifiedName().get(1);
+            List<String> columnList = tableScan.getTable().getRowType().getFieldNames().stream()
+                .map(
+                    it -> new SqlIdentifier(
+                        Arrays.asList(tableName, it), null, POS, null).toString())
+                .collect(Collectors.toList());
+            tableColumnFieldMap.put(tableName, columnList);
+          }
+        }
+        super.visit(node, ordinal, parent);
+      }
+    }.go(inputRelNode);
+    return tableColumnFieldMap;
+  }
+
+  private boolean applyStarInProjectionForJoin(RelNode e) {
+    if (style == null || style.isExpandProjection() || !checkForJoinInRel(e)
+        || !isOuterMostProject()) {
+      return false;
+    }
+    return true;
+  }
+
+  private boolean isOuterMostProject() {
+    Iterator i = stack.iterator();
+    int count = 0;
+    while (i.hasNext()) {
+      if (((Frame) i.next()).r instanceof Project) {
+        count++;
+      }
+    }
+    return count == 1;
+  }
+  private void modifySelectList(List<SqlNode> selectList, RelNode e) {
+    Map<String, List<String>> tableColumnMap = getTableProjectionFieldMapping(e);
+    List<String> stringSelectList = new ArrayList<>();
+    //creating current select List in String format , because we dot have equals mehtod overridden,
+    //So to compare the object we have created list in String format
+    for (SqlNode projectionsColumn : selectList) {
+      stringSelectList.add(projectionsColumn.toString());
+    }
+    for (Map.Entry entry : tableColumnMap.entrySet()) {
+      int firstIndex = -1;
+      int prevIndex = -1;
+      boolean replace = true;
+      for (String column : (List<String>) entry.getValue()) {
+        int index = stringSelectList.indexOf(column);
+        if (index == -1) {
+          replace = false;
+          break;
+        }
+        if (firstIndex == -1) {
+          firstIndex = index;
+        }
+        if (prevIndex != -1 && prevIndex != index - 1) {
+          replace = false;
+          break;
+        }
+        prevIndex = index;
+      }
+      if (replace) {
+        for (String column : (List<String>) entry.getValue()) {
+          int index = stringSelectList.indexOf(column);
+          selectList.remove(index);
+          stringSelectList.remove(index);
+        }
+        SqlNode sqlExpr = SqlIdentifier.star(Arrays.asList(entry.getKey().toString(), "*"), POS,
+            null);
+        selectList.add(firstIndex, sqlExpr);
+        stringSelectList.add(firstIndex, sqlExpr.toString());
+      }
+    }
+  }
+
+  private  boolean checkForJoinInRel(RelNode relNode) {
+    boolean[] isJoinPresent = {false};
+    RelVisitor visitor = new RelVisitor() {
+      @Override public void visit(RelNode node, int ordinal, RelNode parent) {
+        if (node instanceof LogicalJoin) {
+          isJoinPresent[0] = true;
+        }
+
+        if (isJoinPresent[0]) {
+          return;
+        }
+        super.visit(node, ordinal, parent);
+      }
+    };
+    visitor.go(relNode);
+    return isJoinPresent[0];
+  }
+
   private SqlNode castNullType(SqlNode nullLiteral, RelDataType type) {
     final SqlNode typeNode = dialect.getCastSpec(type);
     if (typeNode == null) {
