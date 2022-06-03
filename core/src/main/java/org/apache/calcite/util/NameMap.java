@@ -38,7 +38,12 @@ public class NameMap<V> {
 
   /** Creates a NameSet based on an existing set. */
   private NameMap(NavigableMap<String, V> map) {
-    this.map = map;
+    if ("true".equals(System.getProperty("useParallelTranslation"))) {
+      //  Make the map thread safe if processing in parallel/multi-threaded environment
+      this.map = Collections.synchronizedNavigableMap(map);
+    } else {
+      this.map = map;
+    }
     assert this.map.comparator() == COMPARATOR;
   }
 
