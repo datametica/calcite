@@ -35,15 +35,15 @@ import static org.apache.calcite.util.CaseInsensitiveComparator.COMPARATOR;
  * @param <V> Value type */
 public class NameMap<V> {
   private final NavigableMap<String, V> map;
-  public static final String TRUE_FLAG = "true";
+  private static final String FALSE_FLAG = "false";
 
   /** Creates a NameSet based on an existing set. */
   private NameMap(NavigableMap<String, V> map) {
-    if (TRUE_FLAG.equals(System.getProperty("useParallelTranslation"))) {
+    if (FALSE_FLAG.equals(System.getProperty("useParallelTranslation"))) {
+      this.map = map;
+    } else {
       //  Make the map thread safe if processing in parallel/multi-threaded environment
       this.map = Collections.synchronizedNavigableMap(map);
-    } else {
-      this.map = map;
     }
     assert this.map.comparator() == COMPARATOR;
   }
