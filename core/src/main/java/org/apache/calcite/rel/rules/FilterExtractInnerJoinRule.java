@@ -199,7 +199,7 @@ public class FilterExtractInnerJoinRule
    * we call the method recursively.*/
   private boolean isOperandIndexLessThanEndIndex(RexNode operand, int endIndex) {
     if (operand.getClass().equals(RexCall.class)) {
-      return ((RexCall) operand).operands.size() >= 0
+      return ((RexCall) operand).operands.size() > 0
           && isOperandIndexLessThanEndIndex(((RexCall) operand).operands.get(0), endIndex);
     }
     if (operand.getClass().equals(RexInputRef.class)) {
