@@ -174,6 +174,8 @@ public class BigQuerySqlDialect extends SqlDialect {
       .withDatabaseProduct(SqlDialect.DatabaseProduct.BIG_QUERY)
       .withLiteralQuoteString("'")
       .withLiteralEscapedQuoteString("\\'")
+      .withEscapeCharacterString("\\")
+      .withEscapeCharacterEscapedString("\\\\")
       .withIdentifierQuoteString("`")
       .withNullCollation(NullCollation.LOW)
       .withUnquotedCasing(Casing.UNCHANGED)
@@ -698,8 +700,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private SqlCharStringLiteral makeRegexNode(SqlCall call) {
-    String regexLiteral = call.operand(1).toString();
-    regexLiteral = (regexLiteral.substring(1, regexLiteral.length() - 1)).replace("\\", "\\\\");
+    String regexLiteral = ((SqlCharStringLiteral) call.operand(1)).getValueAs(NlsString.class).getValue();
     if (call.operandCount() == 5 && call.operand(4).toString().equals("'i'")) {
       regexLiteral = "(?i)".concat(regexLiteral);
     }
