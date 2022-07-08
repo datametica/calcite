@@ -394,10 +394,10 @@ public class SqlDialect {
         || identifierEndQuoteString == null
         || identifierEscapedQuote == null
         || !identifierNeedsQuote(val)) {
-      buf.append(val.replace(escapeCharacterString, escapeCharacterEscapedString));
+      buf.append(val);
     } else {
       buf.append(identifierQuoteString);
-      buf.append(val.replace(identifierEndQuoteString, identifierEscapedQuote).replace(escapeCharacterString, escapeCharacterEscapedString));
+      buf.append(val.replace(identifierEndQuoteString, identifierEscapedQuote));
       buf.append(identifierEndQuoteString);
     }
     return buf;
@@ -456,7 +456,7 @@ public class SqlDialect {
         buf.append(charsetName);
       }
       buf.append(literalQuoteString);
-      buf.append(val.replace(literalEndQuoteString, literalEscapedQuote));
+      buf.append(val.replace(literalEndQuoteString, literalEscapedQuote).replace(escapeCharacterString, escapeCharacterEscapedString));
       buf.append(literalEndQuoteString);
     }
   }
@@ -1798,7 +1798,7 @@ public class SqlDialect {
       return literalEscapedQuoteString;
     }
 
-    @Override public Context withEscapeCharacterEscapedString(
+    @Override public Context withLiteralEscapedQuoteString(
         String literalEscapedQuoteString) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
@@ -1823,8 +1823,8 @@ public class SqlDialect {
       return escapeCharacterEscapedString;
     }
 
-    @Override public Context withLiteralEscapedQuoteString(
-        String literalEscapedQuoteString) {
+    @Override public Context withEscapeCharacterEscapedString(
+        String escapeCharacterEscapedString) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString, escapeCharacterString, escapeCharacterEscapedString,
