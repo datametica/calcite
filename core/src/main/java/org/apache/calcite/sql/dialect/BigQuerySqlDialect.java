@@ -1054,9 +1054,18 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "INTERVAL_SECONDS":
       unparseIntervalSeconds(writer, call, leftPrec, rightPrec);
       break;
+    case "FALSE":
+    case "TRUE":
+      unparseBoolean(writer, call);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseBoolean(SqlWriter writer, SqlCall call) {
+    writer.print(call.getOperator().getName());
+    writer.print(" ");
   }
 
   private void unparseIntervalSeconds(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {

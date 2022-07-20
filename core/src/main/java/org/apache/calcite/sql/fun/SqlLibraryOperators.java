@@ -1329,4 +1329,24 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.family(SqlTypeFamily.DATE,
           SqlTypeFamily.STRING), SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {NETEZZA})
+  public static final SqlFunction TRUE =
+      new SqlFunction(
+          "TRUE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          null,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {NETEZZA})
+  public static final SqlFunction FALSE =
+      new SqlFunction(
+          "FALSE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          null,
+          SqlFunctionCategory.SYSTEM);
 }

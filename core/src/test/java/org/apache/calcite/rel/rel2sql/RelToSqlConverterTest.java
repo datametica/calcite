@@ -106,6 +106,7 @@ import java.util.stream.IntStream;
 
 import static org.apache.calcite.avatica.util.TimeUnit.DAY;
 import static org.apache.calcite.avatica.util.TimeUnit.MICROSECOND;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRUE;
 import static org.apache.calcite.test.Matchers.isLinux;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -9904,6 +9905,20 @@ class RelToSqlConverterTest {
         + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT FORMAT_TIMESTAMP('%c', CURRENT_DATETIME()) AS FD2\n"
         + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testBoolean() {
+    final RelBuilder builder = relBuilder();
+    final RexNode trueRexNode = builder.call(TRUE);
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(trueRexNode, "dm"))
+        .build();
+    final String expectedSql = "SELECT TRUE() AS \"dm\"\n" +
+        "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT TRUE  AS dm\n" +
+        "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
