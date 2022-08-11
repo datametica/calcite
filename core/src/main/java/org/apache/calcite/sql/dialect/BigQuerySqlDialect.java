@@ -109,6 +109,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMYY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MMYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTHNAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH_NAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NAME_OF_DAY;
@@ -249,6 +250,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(TIMEZONE, "%Z");
         put(YYYYMM, "%Y%m");
         put(MMYY, "%m%y");
+        put(MMYYYY, "%m%Y");
         put(MONTH_NAME, "%B");
         put(ABBREVIATED_MONTH, "%b");
         put(NAME_OF_DAY, "%A");
