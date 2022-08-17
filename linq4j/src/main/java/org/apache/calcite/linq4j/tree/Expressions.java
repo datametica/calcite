@@ -2792,7 +2792,7 @@ public abstract class Expressions {
   }
 
   /**
-   * Creates Statements with Raise Notice Statement.
+   * Creates Statement with Raise Notice Statement.
    */
   public static NoticeStatement notice_(Expression expression) {
     return new NoticeStatement(expression);
