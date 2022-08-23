@@ -31,6 +31,7 @@ public enum SqlDateTimeFormat {
   ABBREVIATEDMONTH("MMM"),
   MONTHNAME("MMMM"),
   TWODIGITYEAR("YY"),
+  THREEDIGITYEAR("YYY"),
   FOURDIGITYEAR("YYYY"),
   DDMMYYYY("DDMMYYYY"),
   DDMMYY("DDMMYY"),
@@ -81,7 +82,8 @@ public enum SqlDateTimeFormat {
   QUARTER("QUARTER"),
   WEEK_OF_YEAR("WW"),
   WEEK_OF_MONTH("W"),
-  TIMEOFDAY("TIMEOFDAY");
+  TIMEOFDAY("TIMEOFDAY"),
+  DAY_OF_WEEK("D");
 
   public final String value;
 

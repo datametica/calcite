@@ -1105,6 +1105,16 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "'SEC_FROM_MIDNIGHT'":
       secFromMidnight(writer, call, leftPrec, rightPrec);
       break;
+    case "'D'" :
+    case "'YYY'" :
+      final SqlWriter.Frame cast = writer.startFunCall("CAST");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.sep("AS");
+      writer.literal("STRING");
+      writer.keyword("FORMAT");
+      writer.sep(call.operand(0).toString());
+      writer.endFunCall(cast);
+      break;
     default:
       unparseFormatCall(writer, call, leftPrec, rightPrec);
     }
