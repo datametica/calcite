@@ -953,6 +953,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING),
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction STRING_FORMAT =
+      new SqlFunction("STRING_FORMAT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000,
+          null,
+          OperandTypes.DATETIME,
+          SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction UNIX_TIMESTAMP =
       new SqlFunction(

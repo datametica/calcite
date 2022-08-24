@@ -89,6 +89,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR1;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFMONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFYEAR;
+import static org.apache.calcite.sql.SqlDateTimeFormat.DAY_OF_WEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E3;
@@ -109,6 +110,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMYY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTHNAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH_NAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NAME_OF_DAY;
@@ -127,6 +129,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMIN;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMINSEC;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.U;
+import static org.apache.calcite.sql.SqlDateTimeFormat.WEEKOFYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
@@ -273,6 +276,9 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(SEC_FROM_MIDNIGHT, "SEC_FROM_MIDNIGHT");
         put(QUARTER, "%Q");
         put(TIMEOFDAY, "%c");
+        put(DAY_OF_WEEK, "D");
+        put(WEEKOFYEAR, "%V");
+        put(MONTH, "RN");
       }};
 
   private static final String OR = "|";
@@ -891,6 +897,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseFormatDatetime(writer, call, leftPrec, rightPrec);
       break;
     case "PARSE_TIMESTAMP":
+    case "PARSE_DATETIME":
       String dateFormat = call.operand(0) instanceof SqlCharStringLiteral
           ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
           .getValue()
@@ -898,6 +905,9 @@ public class BigQuerySqlDialect extends SqlDialect {
       SqlCall formatCall = PARSE_DATETIME.createCall(SqlParserPos.ZERO,
           createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
       super.unparseCall(writer, formatCall, leftPrec, rightPrec);
+      break;
+    case "STRING_FORMAT":
+      unparseStringFormat(writer, call, leftPrec, rightPrec);
       break;
     case "FORMAT_TIME":
       unparseFormatCall(writer, call, leftPrec, rightPrec);
@@ -1067,6 +1077,15 @@ public class BigQuerySqlDialect extends SqlDialect {
     }
   }
 
+  private void unparseStringFormat(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWriter.Frame cast = writer.startFunCall("CAST");
+    call.operand(1).unparse(writer, leftPrec, rightPrec);
+    writer.sep("AS");
+    writer.literal("STRING FORMAT");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.endFunCall(cast);
+  }
+
   private void unparseBoolean(SqlWriter writer, SqlCall call) {
     writer.print(call.getOperator().getName());
     writer.print(" ");
@@ -1105,16 +1124,17 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "'SEC_FROM_MIDNIGHT'":
       secFromMidnight(writer, call, leftPrec, rightPrec);
       break;
-    case "'D'" :
-    case "'YYY'" :
-      final SqlWriter.Frame cast = writer.startFunCall("CAST");
-      call.operand(1).unparse(writer, leftPrec, rightPrec);
-      writer.sep("AS");
-      writer.literal("STRING");
-      writer.keyword("FORMAT");
-      writer.sep(call.operand(0).toString());
-      writer.endFunCall(cast);
-      break;
+//    case "'D'" :
+//    case "'YYY'" :
+//    case "'RM'" :
+//      final SqlWriter.Frame cast = writer.startFunCall("CAST");
+//      call.operand(1).unparse(writer, leftPrec, rightPrec);
+//      writer.sep("AS");
+//      writer.literal("STRING");
+//      writer.keyword("FORMAT");
+//      writer.sep(call.operand(0).toString());
+//      writer.endFunCall(cast);
+//      break;
     default:
       unparseFormatCall(writer, call, leftPrec, rightPrec);
     }
