@@ -97,7 +97,6 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_FORMAT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FROM_UNIXTIME;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.RAISE_ERROR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SPLIT;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.FLOOR;
@@ -612,7 +611,10 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   private void unparseCurrentTime(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    int precision = Integer.parseInt(((SqlLiteral) call.operand(0)).getValue().toString());
+    int precision = 0;
+    if (call.operandCount() == 1) {
+      precision = Integer.parseInt(((SqlLiteral) call.operand(0)).getValue().toString());
+    }
     SqlCall timeStampCastCall = new CastCallBuilder(this)
         .makeCastCallForTimeWithTimestamp(
             SqlLibraryOperators.CURRENT_TIMESTAMP.createCall(SqlParserPos.ZERO), precision);
