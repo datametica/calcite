@@ -101,6 +101,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONSIX;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTHREE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTWO;
+import static org.apache.calcite.sql.SqlDateTimeFormat.HM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOURMINSEC;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR_OF_DAY_12;
@@ -279,6 +280,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(DAY_OF_WEEK, "D");
         put(WEEKOFYEAR, "%V");
         put(MONTH, "RN");
+        put(HM, "1208");
       }};
 
   private static final String OR = "|";
@@ -1083,10 +1085,10 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseStringFormat(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     final SqlWriter.Frame cast = writer.startFunCall("CAST");
-    call.operand(1).unparse(writer, leftPrec, rightPrec);
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.sep("AS");
     writer.literal("STRING FORMAT");
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    call.operand(1).unparse(writer, leftPrec, rightPrec);
     writer.endFunCall(cast);
   }
 
