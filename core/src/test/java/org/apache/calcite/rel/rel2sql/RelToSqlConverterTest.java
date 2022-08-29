@@ -10238,4 +10238,21 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+  @Test public void testCCandIW() {
+    final RelBuilder builder = relBuilder();
+    final RexNode nodeCC = builder.call(SqlLibraryOperators.FORMAT_DATE, builder.literal("CC"),
+        builder.cast(builder.literal("2022-06-07"), SqlTypeName.DATE));
+    final RexNode nodeIW = builder.call(SqlLibraryOperators.FORMAT_DATE, builder.literal("IW"),
+        builder.cast(builder.literal("2023-05-07"), SqlTypeName.DATE));
+    final RelNode root = builder.scan("EMP").project(builder.alias(nodeCC, "dm1"),
+        builder.alias(nodeIW, "dm2")).build();
+    final String expectedSql = "SELECT FORMAT_DATE('CC', DATE '2022-06-07') AS \"dm1\", "
+        + "FORMAT_DATE('IW', DATE '2023-05-07') AS \"dm2\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT FORMAT_DATE('%C', DATE '2022-06-07') AS dm1, "
+        + "FORMAT_DATE('%V', DATE '2023-05-07') AS dm2\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
 }

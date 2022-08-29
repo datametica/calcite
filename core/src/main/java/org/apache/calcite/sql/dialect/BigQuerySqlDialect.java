@@ -86,6 +86,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.AMPM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR1;
+import static org.apache.calcite.sql.SqlDateTimeFormat.CENTURY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFMONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFYEAR;
@@ -278,10 +279,11 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(NUMERIC_TIME_ZONE, "%Ez");
         put(SEC_FROM_MIDNIGHT, "SEC_FROM_MIDNIGHT");
         put(QUARTER, "%Q");
-        put(TIMEOFDAY, "%C");
+        put(TIMEOFDAY, "%c");
         put(DAY_OF_WEEK, "D");
         put(WEEKOFYEAR, "%V");
         put(MONTH, "RN");
+        put(CENTURY, "%C");
         put(HM, "1208");
       }};
 
