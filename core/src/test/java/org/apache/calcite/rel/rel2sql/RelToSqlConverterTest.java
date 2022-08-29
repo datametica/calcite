@@ -10221,19 +10221,19 @@ class RelToSqlConverterTest {
         builder.literal("D"));
     final RexNode nodeWOY = builder.call(SqlLibraryOperators.STRING_FORMAT,
         builder.cast(builder.literal("2022-06-07"), SqlTypeName.DATE),
-        builder.literal("WEEKOFYEAR"));
+        builder.literal("YYY"));
     final RexNode nodeMonth = builder.call(SqlLibraryOperators.STRING_FORMAT,
         builder.cast(builder.literal("2022-06-07"), SqlTypeName.DATE),
-        builder.literal("MONTH"));
+        builder.literal("RM"));
     final RelNode root = builder.scan("EMP").project(builder.alias(nodeD, "dm1"),
         builder.alias(nodeWOY, "dm2"), builder.alias(nodeMonth, "dm3")).build();
     final String expectedSql = "SELECT STRING_FORMAT(DATE '2022-06-07', 'D') AS \"dm1\", "
-        + "STRING_FORMAT(DATE '2022-06-07', 'WEEKOFYEAR') AS \"dm2\", STRING_FORMAT(DATE "
-        + "'2022-06-07', 'MONTH') AS \"dm3\"\n"
+        + "STRING_FORMAT(DATE '2022-06-07', 'YYY') AS \"dm2\", STRING_FORMAT(DATE '2022-06-07', "
+        + "'RM') AS \"dm3\"\n"
         + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT CAST(DATE '2022-06-07' AS STRING FORMAT 'D') AS dm1, "
-        + "CAST(DATE '2022-06-07' AS STRING FORMAT 'WEEKOFYEAR') AS dm2, CAST(DATE '2022-06-07' AS "
-        + "STRING FORMAT 'MONTH') AS dm3\n"
+        + "CAST(DATE '2022-06-07' AS STRING FORMAT 'YYY') AS dm2, CAST(DATE '2022-06-07' AS "
+        + "STRING FORMAT 'RN') AS dm3\n"
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
