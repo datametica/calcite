@@ -1087,8 +1087,16 @@ public class BigQuerySqlDialect extends SqlDialect {
     final SqlWriter.Frame cast = writer.startFunCall("CAST");
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.sep("AS");
-    writer.literal("STRING FORMAT");
-    call.operand(1).unparse(writer, leftPrec, rightPrec);
+    writer.keyword("STRING FORMAT");
+    String dateFormat = call.operand(0) instanceof SqlCharStringLiteral
+        ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(1)).getValue()))
+        .getValue() : call.operand(1).toString();
+    String format = createDateTimeFormatSqlCharLiteral(dateFormat).getValue().toString();
+    if (format == null || format.equals("")) {
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+    } else {
+      writer.literal(format);
+    }
     writer.endFunCall(cast);
   }
 
