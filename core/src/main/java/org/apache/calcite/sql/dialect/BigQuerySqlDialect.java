@@ -86,9 +86,11 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.AMPM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR1;
+import static org.apache.calcite.sql.SqlDateTimeFormat.CENTURY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFMONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFYEAR;
+import static org.apache.calcite.sql.SqlDateTimeFormat.DAY_OF_WEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E3;
@@ -100,6 +102,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONSIX;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTHREE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTWO;
+import static org.apache.calcite.sql.SqlDateTimeFormat.HM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOURMINSEC;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR_OF_DAY_12;
@@ -109,6 +112,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMYY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTHNAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTH_NAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NAME_OF_DAY;
@@ -120,6 +124,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.QUARTER;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECOND;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECONDS_PRECISION;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SEC_FROM_MIDNIGHT;
+import static org.apache.calcite.sql.SqlDateTimeFormat.THREEDIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEOFDAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEZONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOUR;
@@ -127,6 +132,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMIN;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMINSEC;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.U;
+import static org.apache.calcite.sql.SqlDateTimeFormat.WEEKOFYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
@@ -225,6 +231,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(MONTHNAME, "%B");
         put(TWODIGITYEAR, "%y");
         put(FOURDIGITYEAR, "%Y");
+        put(THREEDIGITYEAR, "YYY");
         put(DDMMYYYY, "%d%m%Y");
         put(DDMMYY, "%d%m%y");
         put(MMDDYYYY, "%m%d%Y");
@@ -273,6 +280,11 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(SEC_FROM_MIDNIGHT, "SEC_FROM_MIDNIGHT");
         put(QUARTER, "%Q");
         put(TIMEOFDAY, "%c");
+        put(DAY_OF_WEEK, "D");
+        put(WEEKOFYEAR, "%V");
+        put(MONTH, "RN");
+        put(CENTURY, "%C");
+        put(HM, "1208");
       }};
 
   private static final String OR = "|";
@@ -895,6 +907,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseFormatDatetime(writer, call, leftPrec, rightPrec);
       break;
     case "PARSE_TIMESTAMP":
+    case "PARSE_DATETIME":
       String dateFormat = call.operand(0) instanceof SqlCharStringLiteral
           ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
           .getValue()
@@ -902,6 +915,9 @@ public class BigQuerySqlDialect extends SqlDialect {
       SqlCall formatCall = PARSE_DATETIME.createCall(SqlParserPos.ZERO,
           createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
       super.unparseCall(writer, formatCall, leftPrec, rightPrec);
+      break;
+    case "STRING_FORMAT":
+      unparseStringFormat(writer, call, leftPrec, rightPrec);
       break;
     case "FORMAT_TIME":
       unparseFormatCall(writer, call, leftPrec, rightPrec);
@@ -1069,6 +1085,23 @@ public class BigQuerySqlDialect extends SqlDialect {
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseStringFormat(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    final SqlWriter.Frame cast = writer.startFunCall("CAST");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.sep("AS");
+    writer.keyword("STRING FORMAT");
+    String dateFormat = call.operand(0) instanceof SqlCharStringLiteral
+        ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(1)).getValue()))
+        .getValue() : call.operand(1).toString();
+    String format = createDateTimeFormatSqlCharLiteral(dateFormat).getValue().toString();
+    if (format == null || format.equals("")) {
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+    } else {
+      writer.literal(format);
+    }
+    writer.endFunCall(cast);
   }
 
   private void unparseBoolean(SqlWriter writer, SqlCall call) {
