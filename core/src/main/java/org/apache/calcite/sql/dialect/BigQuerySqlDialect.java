@@ -934,6 +934,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseFormatDatetime(writer, call, leftPrec, rightPrec);
       break;
     case "PARSE_TIMESTAMP":
+    case "PARSE_DATETIME":
       String dateFormat = call.operand(0) instanceof SqlCharStringLiteral
           ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
           .getValue()

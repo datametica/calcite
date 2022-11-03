@@ -9388,6 +9388,19 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testParseDatetimeOperator() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseDatetimeRexNode = builder.call(SqlLibraryOperators.PARSE_DATETIME,
+        builder.literal("YYYY-MM-DD HH24:MI:SS.sssss"), builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseDatetimeRexNode, "FD"))
+        .build();
+    final String expectedBiqQuery = "SELECT PARSE_DATETIME('%F %H:%M:%E*S', HIREDATE) AS FD\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testUnixFunctions() {
     final RelBuilder builder = relBuilder();
     final RexNode unixSecondsRexNode = builder.call(SqlLibraryOperators.UNIX_SECONDS,
