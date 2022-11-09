@@ -2223,6 +2223,9 @@ public abstract class SqlImplementor {
       if (selectList == null) {
         return false;
       }
+      if (hasAnalyticalFunctionInNestedProject(rel)) {
+        return true;
+      }
       List<RexInputRef> rexInputRefsInAnalytical = new ArrayList<>();
       for (RexNode rexNode : rel.getChildExps()) {
         if (relToSqlUtils.isAnalyticalRex(rexNode)) {
@@ -2240,6 +2243,32 @@ public abstract class SqlImplementor {
         }
         if (hasAnalyticalFunction) {
           return true;
+        }
+      }
+      return false;
+    }
+
+    private boolean hasAnalyticalFunctionInNestedProject(Project projectRel) {
+      Project nestedProjectRel = (Project) projectRel.getInput(0);
+      for (int i = 0; i < projectRel.getRowType().getFieldNames().size(); i++) {
+        if (containsNestedWindowFunction(projectRel.getChildExps().get(i), nestedProjectRel)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    private boolean containsNestedWindowFunction(RexNode rexNode, Project inputProject) {
+      if (rexNode instanceof RexOver) {
+        return true;
+      } else if (rexNode instanceof RexInputRef) {
+        return relToSqlUtils.isAnalyticalRex(inputProject.getChildExps()
+            .get(((RexInputRef) rexNode).getIndex()));
+      } if (rexNode instanceof RexCall) {
+        for (RexNode operand : ((RexCall) rexNode).getOperands()) {
+          if (containsNestedWindowFunction(operand, inputProject)) {
+            return true;
+          }
         }
       }
       return false;
