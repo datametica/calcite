@@ -726,7 +726,15 @@ public class SparkSqlDialect extends SqlDialect {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
       return;
-
+    case "PARSE_TIMESTAMP":
+      formatString =
+              creteDateTimeFormatSqlCharLiteral(call.operand(0).toString());
+      SqlWriter.Frame castToTimestampFrame = writer.startFunCall("TO_TIMESTAMP");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.sep(",", true);
+      formatString.unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(castToTimestampFrame);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
