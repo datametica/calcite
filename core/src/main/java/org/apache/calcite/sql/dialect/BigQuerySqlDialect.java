@@ -106,7 +106,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONTWO;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOURMINSEC;
 import static org.apache.calcite.sql.SqlDateTimeFormat.HOUR_OF_DAY_12;
-import static org.apache.calcite.sql.SqlDateTimeFormat.MILISECONDS_4;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_4;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_5;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
@@ -275,7 +275,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(YYYYMMDDHH24, "%Y%m%d%H");
         put(YYYYMMDDHHMISS, "%Y%m%d%I%M%S");
         put(MILLISECONDS_5, "*S");
-        put(MILISECONDS_4, "4S");
+        put(MILLISECONDS_4, "4S");
         put(U, "%u");
         put(NUMERIC_TIME_ZONE, "%Ez");
         put(SEC_FROM_MIDNIGHT, "SEC_FROM_MIDNIGHT");
@@ -376,6 +376,10 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.print("OPTIONS(description=" + title + ")");
   }
 
+  @Override public boolean supportsUnpivot() {
+    return true;
+  }
+
   @Override public boolean castRequiredForStringOperand(RexCall node) {
     if (super.castRequiredForStringOperand(node)) {
       return true;
@@ -399,14 +403,18 @@ public class BigQuerySqlDialect extends SqlDialect {
       switch (call.type.getSqlTypeName()) {
       case DATE:
         switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_DAY_HOUR:
+          if (call.op.kind == SqlKind.MINUS) {
+            return MINUS;
+          }
+          return PLUS;
         case INTERVAL_DAY:
         case INTERVAL_MONTH:
         case INTERVAL_YEAR:
-        case INTERVAL_HOUR_SECOND:
-        case INTERVAL_DAY_HOUR:
         case INTERVAL_DAY_MINUTE:
         case INTERVAL_MINUTE_SECOND:
-        case INTERVAL_HOUR_MINUTE:
         case INTERVAL_DAY_SECOND:
           if (call.op.kind == SqlKind.MINUS) {
             return SqlLibraryOperators.DATE_SUB;
@@ -1024,7 +1032,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseCall(writer, parseTimestampCall, leftPrec, rightPrec);
       break;
     case "DATE_MOD":
-      unparseDateModule(writer, call, leftPrec, rightPrec);
+      unparseDateMod(writer, call, leftPrec, rightPrec);
       break;
     case "TIMESTAMPINTMUL":
       unparseTimestampIntMul(writer, call, leftPrec, rightPrec);
@@ -1103,7 +1111,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseHashrowFunction(writer, call, leftPrec, rightPrec);
       break;
     case "TRUNC":
-      final SqlWriter.Frame trunc = writer.startFunCall(getTruncFunctionName(call));
+      final SqlWriter.Frame trunc = getTruncFrame(writer, call);
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       writer.print(",");
       writer.sep(removeSingleQuotes(call.operand(1)));
@@ -1850,5 +1858,28 @@ public class BigQuerySqlDialect extends SqlDialect {
     SqlCall farmFingerprintCall = FARM_FINGERPRINT.createCall(SqlParserPos.ZERO,
         farmFingerprintOperandCall);
     super.unparseCall(writer, farmFingerprintCall, leftPrec, rightPrec);
+  }
+
+  private SqlWriter.Frame getTruncFrame(SqlWriter writer, SqlCall call) {
+    SqlWriter.Frame frame = null;
+    String dateFormatOperand = call.operand(1).toString();
+    boolean isDateTimeOperand = call.operand(0).toString().contains("DATETIME");
+    if (isDateTimeOperand) {
+      frame = writer.startFunCall("DATETIME_TRUNC");
+    } else {
+      switch (dateFormatOperand) {
+      case "'HOUR'":
+      case "'MINUTE'":
+      case "'SECOND'":
+      case "'MILLISECOND'":
+      case "'MICROSECOND'":
+        frame = writer.startFunCall("TIME_TRUNC");
+        break;
+      default:
+        frame = writer.startFunCall("DATE_TRUNC");
+
+      }
+    }
+    return frame;
   }
 }
