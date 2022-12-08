@@ -60,7 +60,7 @@ import java.util.function.Supplier;
  */
 public class Frameworks {
 
-    /**
+  /**
    * Caches an instance of the JDBC driver.
    */
   private static final Supplier<Driver> DRIVER_SUPPLIER =
@@ -183,7 +183,7 @@ public class Frameworks {
         info.setProperty(CalciteConnectionProperty.TYPE_SYSTEM.camelName(),
             config.getTypeSystem().getClass().getName());
       }
-            // Connect via a Driver instance. Don't use DriverManager because driver
+      // Connect via a Driver instance. Don't use DriverManager because driver
       // auto-loading can get broken by shading and jar-repacking.
       //  DriverManager.getConnection("jdbc:calcite:", info);
       final CalciteServerStatement statement;
