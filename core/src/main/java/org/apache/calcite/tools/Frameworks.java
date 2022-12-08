@@ -59,13 +59,13 @@ import java.util.function.Supplier;
  * server first.
  */
 public class Frameworks {
-  
+
     /**
    * Caches an instance of the JDBC driver.
    */
   private static final Supplier<Driver> DRIVER_SUPPLIER =
       Suppliers.memoize(Driver::new);
-  
+
   private Frameworks() {
   }
 
