@@ -587,7 +587,7 @@ public class SqlDialect {
         RelDataTypeSystem.DEFAULT);
   }
 
-  protected void unparseDateModule(SqlWriter writer, SqlCall call,
+  protected void unparseDateMod(SqlWriter writer, SqlCall call,
                                  int leftPrec, int rightPrec) {
     final SqlWriter.Frame frame = writer.startFunCall("MOD");
     writer.print("(");
@@ -785,6 +785,10 @@ public class SqlDialect {
   }
 
   public boolean supportsQualifyClause() {
+    return false;
+  }
+
+  public boolean supportsUnpivot() {
     return false;
   }
 
@@ -1910,27 +1914,4 @@ public class SqlDialect {
     }
   }
 
-  protected String getTruncFunctionName(SqlCall call) {
-    String dateFormatOperand = call.operand(1).toString();
-    boolean isDateTimeOperand = call.operand(0).toString().contains("DATETIME");
-    if (isDateTimeOperand) {
-      return "DATETIME_TRUNC";
-    }
-    switch (dateFormatOperand) {
-    case "'HOUR'":
-    case "'MINUTE'":
-    case "'SECOND'":
-    case "'MILLISECOND'":
-    case "'MICROSECOND'":
-      return "TIME_TRUNC";
-    case "'DAY'":
-    case "'WEEK'":
-    case "'YEAR'":
-    case "'MONTH'":
-    case "'QUARTER'":
-      return "DATE_TRUNC";
-    default:
-      return "TRUNC";
-    }
-  }
 }
