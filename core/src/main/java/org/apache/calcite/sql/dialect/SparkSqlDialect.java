@@ -112,6 +112,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.RAISE_ERROR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SPLIT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_CHAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CEIL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
@@ -743,6 +744,12 @@ public class SparkSqlDialect extends SqlDialect {
       writer.sep(",");
       writer.literal(creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()).toString());
       writer.endFunCall(dateDiffFrame);
+      break;
+    case "PARSE_TIMESTAMP":
+      formatString = creteDateTimeFormatSqlCharLiteral(call.operand(0).toString());
+      formatCall = TO_TIMESTAMP.createCall(SqlParserPos.ZERO, call.operand(1),
+              formatString);
+      super.unparseCall(writer, formatCall, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);

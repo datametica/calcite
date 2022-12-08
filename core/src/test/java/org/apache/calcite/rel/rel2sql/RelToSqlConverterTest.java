@@ -10992,4 +10992,74 @@ class RelToSqlConverterTest {
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
+
+  @Test public void testToTimestampFunctionForSpark() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("YYYY-MM-dd HH24:MI:SS"), builder.literal("2009-03-20 12:25:50"));
+    final RexNode parseTSNode2 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("MI dd-YYYY-MM SS HH24"), builder.literal("25 20-2009-03 50 12"));
+    final RexNode parseTSNode3 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy@MM@dd@hh@mm@ss"), builder.literal("20200903020211"));
+    final RexNode parseTSNode4 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy@MM@dd@HH@mm@ss"), builder.literal("20200903210211"));
+    final RexNode parseTSNode5 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("HH@mm@ss"), builder.literal("215313"));
+    final RexNode parseTSNode6 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("MM@dd@yy"), builder.literal("090415"));
+    final RexNode parseTSNode7 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("MM@dd@yy"), builder.literal("Jun1215"));
+    final RexNode parseTSNode8 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy@MM@dd@HH"), builder.literal("2015061221"));
+    final RexNode parseTSNode9 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy@dd@mm"), builder.literal("20150653"));
+    final RexNode parseTSNode10 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy@mm@dd"), builder.literal("20155308"));
+    final RexNode parseTSNode11 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("YYYY-MM-dd@HH:mm:ss"), builder.literal("2009-03-2021:25:50"));
+    final RexNode parseTSNode12 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("YYYY-MM-dd@hh:mm:ss"), builder.literal("2009-03-2007:25:50"));
+    final RexNode parseTSNode13 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("YYYY-MM-dd@hh:mm:ss z"), builder.literal("2009-03-20 12:25:50.222"));
+    final RexNode parseTSNode14 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("YYYY-MM-dd'T'hh:mm:ss"), builder.literal("2012-05-09T04:12:12"));
+    final RexNode parseTSNode15 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy- MM-dd  HH: -mm:ss"), builder.literal("2015- 09-11  09: -07:23"));
+    final RexNode parseTSNode16 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy- MM-dd@HH: -mm:ss"), builder.literal("2015- 09-1109: -07:23"));
+
+    final RelNode root = builder
+            .scan("EMP")
+            .project(builder.alias(parseTSNode1, "date1"), builder.alias(parseTSNode2, "date2"),
+                    builder.alias(parseTSNode3, "timestamp1"), builder.alias(parseTSNode4, "timestamp2"),
+                    builder.alias(parseTSNode5, "time1"), builder.alias(parseTSNode6, "date1"),
+                    builder.alias(parseTSNode7, "date2"), builder.alias(parseTSNode8, "date3"),
+                    builder.alias(parseTSNode9, "date5"),
+                    builder.alias(parseTSNode10, "date6"), builder.alias(parseTSNode11, "timestamp3"),
+                    builder.alias(parseTSNode12, "timestamp4"), builder.alias(parseTSNode13, "timestamp5"),
+                    builder.alias(parseTSNode14, "timestamp6"), builder.alias(parseTSNode15, "timestamp7"),
+                    builder.alias(parseTSNode16, "timestamp8")).build();
+
+    final String expectedSparkSql =
+            "SELECT TO_TIMESTAMP('2009-03-20 12:25:50', 'yyyy-MM-dd HH:mm:ss') date1,"
+                    + " TO_TIMESTAMP('25 20-2009-03 50 12', 'mm dd-yyyy-MM ss HH') date2,"
+                    + " TO_TIMESTAMP('20200903020211', 'yyyyMMddhhMMss') timestamp1,"
+                    + " TO_TIMESTAMP('20200903210211', 'yyyyMMddhhMMss') timestamp2,"
+                    + " TO_TIMESTAMP('215313', 'hhMMss') time1,"
+                    + " TO_TIMESTAMP('090415', 'MMddyy') date10,"
+                    + " TO_TIMESTAMP('Jun1215', 'MMddyy') date20,"
+                    + " TO_TIMESTAMP('2015061221', 'yyyyMMddhh') date3,"
+                    + " TO_TIMESTAMP('20150653', 'yyyyddMM') date5,"
+                    + " TO_TIMESTAMP('20155308', 'yyyyMMdd') date6,"
+                    + " TO_TIMESTAMP('2009-03-2021:25:50', 'yyyy-MM-ddhh:MM:ss') timestamp3,"
+                    + " TO_TIMESTAMP('2009-03-2007:25:50', 'yyyy-MM-ddhh:MM:ss') timestamp4, "
+                    + "TO_TIMESTAMP('2009-03-20 12:25:50.222', 'yyyy-MM-ddhh:MM:ss z') timestamp5, "
+                    + "TO_TIMESTAMP('2012-05-09T04:12:12', 'yyyy-MM-dd''T''hh:MM:ss') timestamp6,"
+                    + " TO_TIMESTAMP('2015- 09-11  09: -07:23', 'yyyy- MM-dd  hh: -MM:ss') timestamp7,"
+                    + " TO_TIMESTAMP('2015- 09-1109: -07:23', 'yyyy- MM-ddhh: -MM:ss') timestamp8\n"
+                    + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkSql));
+  }
+
 }

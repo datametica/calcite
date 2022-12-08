@@ -945,7 +945,7 @@ public abstract class SqlLibraryOperators {
         OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING),
         SqlFunctionCategory.TIMEDATE);
 
-  @LibraryOperator(libraries = {BIG_QUERY})
+  @LibraryOperator(libraries = {BIG_QUERY, SPARK})
   public static final SqlFunction PARSE_DATETIME =
       new SqlFunction("PARSE_DATETIME",
           SqlKind.OTHER_FUNCTION,
