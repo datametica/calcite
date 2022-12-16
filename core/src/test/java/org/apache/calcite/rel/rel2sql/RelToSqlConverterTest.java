@@ -10992,4 +10992,39 @@ class RelToSqlConverterTest {
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
+
+  @Test public void testToTimestampFunctionForSpark() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("YYYY-MM-dd HH24:MI:SS"), builder.literal("2009-03-20 12:25:50"));
+    final RexNode parseTSNode2 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("MI dd-YYYY-MM SS HH24"), builder.literal("25 20-2009-03 50 12"));
+    final RexNode parseTSNode3 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("YYYY-MM-dd HH24:MI:SS"), builder.literal("2009-03-20 21:25:50"));
+    final RexNode parseTSNode4 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy- MM-dd  HH24: -MI:SS"),
+            builder.literal("2015- 09-11  09: -07:23"));
+    final RexNode parseTSNode5 = builder.call(SqlLibraryOperators.PARSE_TIMESTAMP,
+            builder.literal("yyyy- MM-dd HH24: -MI:ss"),
+            builder.literal("2015- 09-11 09: -07:23"));
+
+    final RelNode root = builder
+            .scan("EMP")
+            .project(builder.alias(parseTSNode1, "date1"),
+                    builder.alias(parseTSNode2, "date2"),
+                    builder.alias(parseTSNode3, "timestamp1"),
+                    builder.alias(parseTSNode4, "timestamp2"),
+                    builder.alias(parseTSNode5, "timestamp3")).build();
+
+    final String expectedSparkSql =
+            "SELECT TO_TIMESTAMP('2009-03-20 12:25:50', 'yyyy-MM-dd HH:mm:ss') date1,"
+                    + " TO_TIMESTAMP('25 20-2009-03 50 12', 'mm dd-yyyy-MM ss HH') date2,"
+                    + " TO_TIMESTAMP('2009-03-20 21:25:50', 'yyyy-MM-dd HH:mm:ss') timestamp1,"
+                    + " TO_TIMESTAMP('2015- 09-11  09: -07:23', 'yyyy- MM-dd  HH: -mm:ss') timestamp2,"
+                    + " TO_TIMESTAMP('2015- 09-11 09: -07:23', 'yyyy- MM-dd HH: -mm:ss') timestamp3\n"
+                    + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkSql));
+  }
+
 }
