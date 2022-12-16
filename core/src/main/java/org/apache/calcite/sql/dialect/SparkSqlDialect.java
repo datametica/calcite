@@ -611,7 +611,7 @@ public class SparkSqlDialect extends SqlDialect {
     switch (call.getOperator().getName()) {
     case "DATE_FORMAT":
       SqlCharStringLiteral formatString =
-          creteDateTimeFormatSqlCharLiteral(call.operand(1).toString());
+          createDateTimeFormatSqlCharLiteral(call.operand(1).toString());
       SqlWriter.Frame dateFormatFrame = writer.startFunCall(call.getOperator().getName());
       call.operand(0).unparse(writer, 0, 0);
       writer.sep(",", true);
@@ -644,7 +644,7 @@ public class SparkSqlDialect extends SqlDialect {
       break;
     case "STR_TO_DATE":
       SqlCall toDateCall = TO_DATE.createCall(SqlParserPos.ZERO, call.operand(0),
-          creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()));
+          createDateTimeFormatSqlCharLiteral(call.operand(1).toString()));
       unparseCall(writer, toDateCall, leftPrec, rightPrec);
       break;
     case "RPAD":
@@ -742,11 +742,11 @@ public class SparkSqlDialect extends SqlDialect {
       writer.sep(",");
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       writer.sep(",");
-      writer.literal(creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()).toString());
+      writer.literal(createDateTimeFormatSqlCharLiteral(call.operand(1).toString()).toString());
       writer.endFunCall(dateDiffFrame);
       break;
     case "PARSE_TIMESTAMP":
-      formatString = creteDateTimeFormatSqlCharLiteral(call.operand(0).toString());
+      formatString = createDateTimeFormatSqlCharLiteral(call.operand(0).toString());
       formatCall = TO_TIMESTAMP.createCall(SqlParserPos.ZERO, call.operand(1),
               formatString);
       super.unparseCall(writer, formatCall, leftPrec, rightPrec);
@@ -835,7 +835,7 @@ public class SparkSqlDialect extends SqlDialect {
     call.operand(1).unparse(writer, leftPrec, rightPrec);
   }
 
-  private SqlCharStringLiteral creteDateTimeFormatSqlCharLiteral(String format) {
+  private SqlCharStringLiteral createDateTimeFormatSqlCharLiteral(String format) {
     String formatString = getDateTimeFormatString(unquoteStringLiteral(format),
         DATE_TIME_FORMAT_MAP);
     return SqlLiteral.createCharString(formatString, SqlParserPos.ZERO);
