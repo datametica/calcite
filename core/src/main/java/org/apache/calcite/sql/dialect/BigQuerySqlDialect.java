@@ -18,6 +18,7 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
@@ -420,6 +421,8 @@ public class BigQuerySqlDialect extends SqlDialect {
             return SqlLibraryOperators.DATE_SUB;
           }
           return SqlLibraryOperators.DATE_ADD;
+        case INTERVAL_SECOND:
+          return SqlLibraryOperators.DATETIME_ADD;
         default:
           return super.getTargetFunc(call);
         }
@@ -439,13 +442,17 @@ public class BigQuerySqlDialect extends SqlDialect {
           if (call.op.kind == SqlKind.MINUS) {
             return SqlLibraryOperators.TIMESTAMP_SUB;
           }
-          return SqlLibraryOperators.TIMESTAMP_ADD;
+          if (call.getOperands().get(1).getType().getIntervalQualifier().timeUnitRange
+              == TimeUnitRange.MILLISECOND) {
+            return SqlLibraryOperators.DATETIME_ADD;
+          }
+          return PLUS;
         case INTERVAL_MONTH:
         case INTERVAL_YEAR:
           if (call.op.kind == SqlKind.MINUS) {
             return SqlLibraryOperators.DATETIME_SUB;
           }
-          return SqlLibraryOperators.DATETIME_ADD;
+          return PLUS;
         }
       case TIME:
         switch (call.getOperands().get(1).getType().getSqlTypeName()) {
