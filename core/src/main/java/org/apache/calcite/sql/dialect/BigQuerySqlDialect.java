@@ -421,8 +421,6 @@ public class BigQuerySqlDialect extends SqlDialect {
             return SqlLibraryOperators.DATE_SUB;
           }
           return SqlLibraryOperators.DATE_ADD;
-        case INTERVAL_SECOND:
-          return SqlLibraryOperators.DATETIME_ADD;
         default:
           return super.getTargetFunc(call);
         }
@@ -458,13 +456,6 @@ public class BigQuerySqlDialect extends SqlDialect {
           }
           return PLUS;
         }
-      case INTERVAL_HOUR_SECOND:
-        if (call.getOperands().get(1).getType().getSqlTypeName() != SqlTypeName.TIMESTAMP
-            && call.getOperands().get(1).getType().getIntervalQualifier().timeUnitRange
-            == TimeUnitRange.MILLISECOND) {
-          return SqlLibraryOperators.DATETIME_ADD;
-        }
-        return super.getTargetFunc(call);
       case TIME:
         switch (call.getOperands().get(1).getType().getSqlTypeName()) {
         case INTERVAL_MINUTE:

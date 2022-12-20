@@ -97,8 +97,6 @@ public enum SqlTypeName {
       false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
   INTERVAL_SECOND(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
       false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
-  INTERVAL_MILLISECOND(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
-      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
   CHAR(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.CHAR,
       SqlTypeFamily.CHARACTER),
   VARCHAR(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.VARCHAR,
@@ -207,8 +205,7 @@ public enum SqlTypeName {
           SqlTypeName.INTERVAL_HOUR_SECOND,
           SqlTypeName.INTERVAL_MINUTE,
           SqlTypeName.INTERVAL_MINUTE_SECOND,
-          SqlTypeName.INTERVAL_SECOND,
-          SqlTypeName.INTERVAL_MILLISECOND);
+          SqlTypeName.INTERVAL_SECOND);
 
   public static final Set<SqlTypeName> INTERVAL_TYPES =
       Sets.immutableEnumSet(
@@ -833,8 +830,6 @@ public enum SqlTypeName {
       return TimeUnit.MINUTE;
     case INTERVAL_SECOND:
       return TimeUnit.SECOND;
-    case INTERVAL_MILLISECOND:
-      return TimeUnit.MILLISECOND;
     default:
       throw new AssertionError(this);
     }
@@ -863,8 +858,6 @@ public enum SqlTypeName {
     case INTERVAL_MINUTE_SECOND:
     case INTERVAL_SECOND:
       return TimeUnit.SECOND;
-    case INTERVAL_MILLISECOND:
-      return TimeUnit.MILLISECOND;
     default:
       throw new AssertionError(this);
     }

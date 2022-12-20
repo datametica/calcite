@@ -614,42 +614,6 @@ public class SqlIntervalQualifier extends SqlNode {
   }
 
   /**
-   * Validates an INTERVAL literal against a MILLISECOND interval qualifier.
-   *
-   * @throws org.apache.calcite.runtime.CalciteContextException if the interval
-   * value is illegal
-   */
-  private int[] evaluateIntervalLiteralAsMilliSecond(
-      RelDataTypeSystem typeSystem, int sign,
-      String value,
-      String originalValue,
-      SqlParserPos pos) {
-    BigDecimal milliSecond;
-
-    // validate as MILLISECONDS(startPrecision), e.g. 'MS'
-    String intervalPattern = "(\\d+)";
-
-    Matcher m = Pattern.compile(intervalPattern).matcher(value);
-    if (m.matches()) {
-      // Break out  field values
-      try {
-        milliSecond = parseField(m, 1);
-      } catch (NumberFormatException e) {
-        throw invalidValueException(pos, originalValue);
-      }
-
-      // Validate individual fields
-      checkLeadFieldInRange(typeSystem, sign, milliSecond, TimeUnit.MILLISECOND, pos);
-
-      // package values up for return
-      return fillIntervalValueArray(sign, ZERO, ZERO, ZERO, ZERO, milliSecond);
-    } else {
-      throw invalidValueException(pos, originalValue);
-    }
-  }
-
-
-  /**
    * Validates an INTERVAL literal against a DAY TO HOUR interval qualifier.
    *
    * @throws org.apache.calcite.runtime.CalciteContextException if the interval
@@ -1199,8 +1163,6 @@ public class SqlIntervalQualifier extends SqlNode {
     case SECOND:
       return evaluateIntervalLiteralAsSecond(typeSystem, sign, value, value0,
           pos);
-    case MILLISECOND:
-      return evaluateIntervalLiteralAsMilliSecond(typeSystem, sign, value, value0, pos);
     default:
       throw invalidValueException(pos, value0);
     }

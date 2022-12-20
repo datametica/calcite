@@ -115,7 +115,6 @@ import java.util.stream.IntStream;
 import static org.apache.calcite.avatica.util.TimeUnit.DAY;
 import static org.apache.calcite.avatica.util.TimeUnit.HOUR;
 import static org.apache.calcite.avatica.util.TimeUnit.MICROSECOND;
-import static org.apache.calcite.avatica.util.TimeUnit.MILLISECOND;
 import static org.apache.calcite.avatica.util.TimeUnit.MINUTE;
 import static org.apache.calcite.avatica.util.TimeUnit.MONTH;
 import static org.apache.calcite.avatica.util.TimeUnit.SECOND;
@@ -10737,7 +10736,7 @@ class RelToSqlConverterTest {
     final RelBuilder builder = relBuilder();
     final RexNode formatIntegerCastRexNode = builder.cast(
         builder.call(SqlLibraryOperators.FORMAT,
-            builder.literal("'%.4f'"), builder.scan("EMP").field(5)), SqlTypeName.INTEGER);
+        builder.literal("'%.4f'"), builder.scan("EMP").field(5)), SqlTypeName.INTEGER);
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatIntegerCastRexNode, "FORMATCALL"))
@@ -10984,24 +10983,6 @@ class RelToSqlConverterTest {
         .build();
     final String expectedBigQuery = "SELECT CURRENT_DATE + (INTERVAL 1 YEAR + INTERVAL 1 MONTH) "
         + "AS FD"
-        + "\nFROM scott.EMP";
-    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
-  }
-
-  @Test public void testCurrentDatePlusIntervalMillisecond() {
-    final RelBuilder builder = relBuilder();
-
-    final RexNode createRexNode = builder.call(SqlStdOperatorTable.PLUS,
-            builder.call(CURRENT_DATE),
-            builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(61),
-                new SqlIntervalQualifier(MILLISECOND, 1, MILLISECOND,
-                    -1, SqlParserPos.ZERO)));
-    final RelNode root = builder
-        .scan("EMP")
-        .project(builder.alias(createRexNode, "FD"))
-        .build();
-    final String expectedBigQuery = "SELECT DATETIME_ADD(CAST(CURRENT_DATE AS DATETIME), "
-        + "INTERVAL 61 MILLISECOND) AS FD"
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }

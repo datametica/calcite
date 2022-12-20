@@ -19,7 +19,6 @@ package org.apache.calcite.rex;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.avatica.util.TimeUnit;
-import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.CalciteSystemProperty;
 import org.apache.calcite.linq4j.function.Functions;
 import org.apache.calcite.rel.RelNode;
@@ -33,7 +32,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserUtil;
-import org.apache.calcite.sql.type.IntervalSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.CompositeList;
 import org.apache.calcite.util.ConversionUtil;
@@ -544,13 +542,7 @@ public class RexLiteral extends RexNode {
   }
 
   private String intervalString(BigDecimal v) {
-    final List<TimeUnit> timeUnits;
-    if (((IntervalSqlType) type).getIntervalQualifier().timeUnitRange
-        == TimeUnitRange.MILLISECOND) {
-      timeUnits = getTimeUnits(SqlTypeName.INTERVAL_MILLISECOND);
-    } else {
-      timeUnits = getTimeUnits(type.getSqlTypeName());
-    }
+    final List<TimeUnit> timeUnits = getTimeUnits(type.getSqlTypeName());
     final StringBuilder b = new StringBuilder();
     for (TimeUnit timeUnit : timeUnits) {
       final BigDecimal[] result = v.divideAndRemainder(timeUnit.multiplier);
