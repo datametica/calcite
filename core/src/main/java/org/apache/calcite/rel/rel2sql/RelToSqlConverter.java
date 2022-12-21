@@ -395,10 +395,11 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   public boolean isNotExistClausePresentInRel(Filter e) {
-    if (e.getCondition() instanceof RexCall &&
-        ((RexCall) e.getCondition()).getOperator().getKind() == SqlKind.NOT &&
-        ((RexCall) e.getCondition()).getOperands().get(0) instanceof RexCall &&
-        ((RexCall) ((RexCall) e.getCondition()).getOperands().get(0)).getOperator().getKind() == SqlKind.EXISTS) {
+    if (e.getCondition() instanceof RexCall
+        && ((RexCall) e.getCondition()).getOperator().getKind() == SqlKind.NOT
+        && ((RexCall) e.getCondition()).getOperands().get(0) instanceof RexCall
+        && ((RexCall) ((RexCall) e.getCondition()).getOperands().get(0)).getOperator().getKind()
+        == SqlKind.EXISTS) {
       return true;
     }
     return false;
