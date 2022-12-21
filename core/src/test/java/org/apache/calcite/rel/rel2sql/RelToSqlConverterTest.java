@@ -4259,7 +4259,7 @@ class RelToSqlConverterTest {
         + "INTERVAL '10' HOUR > TIMESTAMP '2005-10-17 00:00:00' ";
     final String expect1 = "SELECT *\n"
         + "FROM foodmart.employee\n"
-        + "WHERE TIMESTAMP_ADD(hire_date, INTERVAL 10 HOUR)"
+        + "WHERE hire_date + INTERVAL 10 HOUR"
         + " > CAST('2005-10-17 00:00:00' AS DATETIME)";
     sql(sql1).withBigQuery().ok(expect1);
 
@@ -6223,9 +6223,7 @@ class RelToSqlConverterTest {
 
   @Test public void testTimestampPlusIntervalMonthFunctionWithArthOps() {
     String query = "select \"hire_date\" + -10 * INTERVAL '1' MONTH from \"employee\"";
-    final String expectedBigQuery = "SELECT CAST(DATETIME_ADD(CAST(hire_date AS DATETIME), "
-        + "INTERVAL "
-        + "-10 MONTH) AS DATETIME)\n"
+    final String expectedBigQuery = "SELECT hire_date + -10 * INTERVAL 1 MONTH\n"
         + "FROM foodmart.employee";
     sql(query)
         .withBigQuery()
@@ -6370,34 +6368,31 @@ class RelToSqlConverterTest {
 
   @Test public void testIntervalMinute() {
     String query = "select cast(\"birth_date\" as timestamp) + INTERVAL\n"
-            + "'2' minute from \"employee\"";
-    final String expectedBigQuery = "SELECT TIMESTAMP_ADD(CAST(birth_date AS "
-            + "DATETIME), INTERVAL 2 MINUTE)\n"
-            + "FROM foodmart.employee";
+        + "'2' minute from \"employee\"";
+    final String expectedBigQuery = "SELECT CAST(birth_date AS DATETIME) + INTERVAL 2 MINUTE\n"
+        + "FROM foodmart.employee";
     sql(query)
-            .withBigQuery()
-            .ok(expectedBigQuery);
+        .withBigQuery()
+        .ok(expectedBigQuery);
   }
 
   @Test public void testIntervalHour() {
     String query = "select cast(\"birth_date\" as timestamp) + INTERVAL\n"
-            + "'2' hour from \"employee\"";
-    final String expectedBigQuery = "SELECT TIMESTAMP_ADD(CAST(birth_date AS "
-            + "DATETIME), INTERVAL 2 HOUR)\n"
-            + "FROM foodmart.employee";
+        + "'2' hour from \"employee\"";
+    final String expectedBigQuery = "SELECT CAST(birth_date AS DATETIME) + INTERVAL 2 HOUR\n"
+        + "FROM foodmart.employee";
     sql(query)
-            .withBigQuery()
-            .ok(expectedBigQuery);
+        .withBigQuery()
+        .ok(expectedBigQuery);
   }
   @Test public void testIntervalSecond() {
     String query = "select cast(\"birth_date\" as timestamp) + INTERVAL '2'\n"
-            + "second from \"employee\"";
-    final String expectedBigQuery = "SELECT TIMESTAMP_ADD(CAST(birth_date AS"
-            + " DATETIME), INTERVAL 2 SECOND)\n"
-            + "FROM foodmart.employee";
+        + "second from \"employee\"";
+    final String expectedBigQuery = "SELECT CAST(birth_date AS DATETIME) + INTERVAL 2 SECOND\n"
+        + "FROM foodmart.employee";
     sql(query)
-            .withBigQuery()
-            .ok(expectedBigQuery);
+        .withBigQuery()
+        .ok(expectedBigQuery);
   }
 
   @Test public void testDateSubInterFunction() {
@@ -6635,9 +6630,9 @@ class RelToSqlConverterTest {
     String query = "SELECT CURRENT_TIMESTAMP + INTERVAL '06:10:30' HOUR TO SECOND,"
         + "CURRENT_TIMESTAMP - INTERVAL '06:10:30' HOUR TO SECOND "
         + "FROM \"employee\"";
-    final String expectedBQ = "SELECT TIMESTAMP_ADD(CURRENT_DATETIME(), INTERVAL 22230 SECOND), "
-            + "TIMESTAMP_SUB(CURRENT_DATETIME(), INTERVAL 22230 SECOND)\n"
-            + "FROM foodmart.employee";
+    final String expectedBQ = "SELECT CURRENT_DATETIME() + INTERVAL 22230 SECOND, "
+        + "TIMESTAMP_SUB(CURRENT_DATETIME(), INTERVAL 22230 SECOND)\n"
+        + "FROM foodmart.employee";
     sql(query)
         .withBigQuery()
         .ok(expectedBQ);
@@ -6687,8 +6682,8 @@ class RelToSqlConverterTest {
         .project(plusCall)
         .build();
 
-    final String expectedBigQuery = "SELECT TIMESTAMP_ADD(TIMESTAMP '2022-02-18 08:23:45',"
-        + " INTERVAL 1 MICROSECOND) AS `$f0`";
+    final String expectedBigQuery = "SELECT TIMESTAMP '2022-02-18 08:23:45' + "
+        + "INTERVAL 1 MICROSECOND AS `$f0`";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
@@ -9128,7 +9123,7 @@ class RelToSqlConverterTest {
   @Test public void octetLengthWithLiteral() {
     final RelBuilder builder = relBuilder().scan("EMP");
     final RexNode condition = builder.call(SqlLibraryOperators.OCTET_LENGTH,
-            builder.literal("ENAME"));
+        builder.literal("ENAME"));
     final RelNode root = relBuilder().scan("EMP").filter(condition).build();
 
     final String expectedBQ = "SELECT *\n"
@@ -9494,7 +9489,7 @@ class RelToSqlConverterTest {
   @Test public void testIntervalMultiplyWithInteger() {
     String query = "select \"hire_date\" + 10 * INTERVAL '00:01:00' HOUR "
         + "TO SECOND from \"employee\"";
-    final String expectedBQSql = "SELECT TIMESTAMP_ADD(hire_date, INTERVAL 10 * 60 SECOND)\n"
+    final String expectedBQSql = "SELECT hire_date + 10 * INTERVAL 60 SECOND\n"
         + "FROM foodmart.employee";
 
     sql(query)
@@ -10202,8 +10197,7 @@ class RelToSqlConverterTest {
         .project(builder.alias(createRexNode, "FD"))
         .build();
     final String expectedBiqQuery =
-        "SELECT TIMESTAMP_ADD(CAST('1999-07-01 15:00:00-08:00' AS DATETIME), "
-            + "INTERVAL 1 MICROSECOND) AS FD\n"
+        "SELECT CAST('1999-07-01 15:00:00-08:00' AS DATETIME) + INTERVAL 1 MICROSECOND AS FD\n"
             + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }

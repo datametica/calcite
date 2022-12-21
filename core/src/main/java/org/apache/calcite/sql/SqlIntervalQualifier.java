@@ -1133,6 +1133,7 @@ public class SqlIntervalQualifier extends SqlNode {
     case MONTH:
       return evaluateIntervalLiteralAsMonth(typeSystem, sign, value, value0,
           pos);
+    case WEEK:
     case DAY:
       return evaluateIntervalLiteralAsDay(typeSystem, sign, value, value0, pos);
     case DAY_TO_HOUR:
