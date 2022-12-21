@@ -130,6 +130,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMIN;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMINSEC;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.U;
+import static org.apache.calcite.sql.SqlDateTimeFormat.WEEK_OF_YEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
@@ -281,6 +282,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(SEC_FROM_MIDNIGHT, "SEC_FROM_MIDNIGHT");
         put(QUARTER, "%Q");
         put(TIMEOFDAY, "%c");
+        put(WEEK_OF_YEAR, "%W");
       }};
 
   private static final String OR = "|";
@@ -353,6 +355,10 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   @Override public boolean supportsColumnAliasInSort() {
     return true;
+  }
+
+  @Override public boolean supportsColumnListForWithItem() {
+    return false;
   }
 
   @Override public boolean supportsAliasedValues() {
@@ -1041,6 +1047,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseRandomfunction(writer, call, leftPrec, rightPrec);
       break;
     case DateTimestampFormatUtil.WEEKNUMBER_OF_YEAR:
+    case DateTimestampFormatUtil.ISO_WEEKOFYEAR:
     case DateTimestampFormatUtil.YEARNUMBER_OF_CALENDAR:
     case DateTimestampFormatUtil.MONTHNUMBER_OF_YEAR:
     case DateTimestampFormatUtil.QUARTERNUMBER_OF_YEAR:
