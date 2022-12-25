@@ -1447,4 +1447,7 @@ public class SqlPrettyWriter implements SqlWriter {
     }
   }
 
+  public boolean queryHasGroupByOridinal() {
+    return false;
+  }
 }

@@ -18,6 +18,7 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.util.SqlVisitor;
@@ -25,7 +26,9 @@ import org.apache.calcite.sql.util.SqlVisitor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
@@ -226,6 +229,8 @@ public class SqlSelectOperator extends SqlOperator {
         if (writer.getDialect().getConformance().isGroupByOrdinal()) {
           final SqlWriter.Frame groupFrame =
               writer.startList(SqlWriter.FrameTypeEnum.GROUP_BY_LIST);
+          Map<String, Integer> colIndexByColNameOrAliasInfpMap =
+                  getColIndexByColNameOrAlias(writer, selectClause);
           List<SqlNode> visitedLiteralNodeList = new ArrayList<>();
           for (SqlNode groupKey : select.groupBy.getList()) {
             if (!groupKey.toString().equalsIgnoreCase("NULL")) {
@@ -258,7 +263,12 @@ public class SqlSelectOperator extends SqlOperator {
                     });
               } else {
                 writer.sep(",");
-                groupKey.unparse(writer, 2, 3);
+                Integer columnIndex = colIndexByColNameOrAliasInfpMap.get(groupKey.toString());
+                if (columnIndex != null) {
+                  writer.print(columnIndex);
+                } else {
+                  groupKey.unparse(writer, 2, 3);
+                }
               }
             }
           }
@@ -292,5 +302,35 @@ public class SqlSelectOperator extends SqlOperator {
 
   @Override public boolean argumentMustBeScalar(int ordinal) {
     return ordinal == SqlSelect.WHERE_OPERAND;
+  }
+
+  private Map<String, Integer> getColIndexByColNameOrAlias(SqlWriter writer, SqlNodeList selectClause) {
+    Map<String, Integer> colIndexByColNameOrAliasInfpMap = new HashMap<>();
+    Integer columnIndex = 1;
+    String name = null;
+    SqlNode[] operands = null;
+    if (((SqlPrettyWriter)writer).queryHasGroupByOridinal()) {
+      for (SqlNode node : selectClause) {
+        if (node instanceof SqlCall) {
+          SqlCall sqlCall = (SqlCall) node;
+          operands = sqlCall.getOperandList().toArray(new SqlNode[0]);
+          if (node.getKind() == SqlKind.AS) {
+            name = operands[1].toString();
+            colIndexByColNameOrAliasInfpMap.put(operands[0].toString(), columnIndex);
+          } else {
+            name = node.toString();
+          }
+        } else if(node instanceof SqlLiteral){
+          SqlLiteral sqlLiteral = (SqlLiteral) node;
+          name = sqlLiteral.toString();
+        } else if(node instanceof SqlIdentifier){
+          SqlIdentifier sqlIdentifier = (SqlIdentifier) node;
+          name = sqlIdentifier.toString();
+        }
+        colIndexByColNameOrAliasInfpMap.put(name, columnIndex);
+        columnIndex++;
+      }
+    }
+    return colIndexByColNameOrAliasInfpMap;
   }
 }
