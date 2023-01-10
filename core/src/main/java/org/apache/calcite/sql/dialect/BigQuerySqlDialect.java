@@ -88,7 +88,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_MONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.AMPM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR1;
+import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR_WITH_DOT;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFMONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFYEAR;
@@ -118,7 +118,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NUMERICMONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NUMERIC_TIME_ZONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR;
-import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR1;
+import static org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR_WITH_DOT;
 import static org.apache.calcite.sql.SqlDateTimeFormat.QUARTER;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECOND;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECONDS_PRECISION;
@@ -130,6 +130,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMIN;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMINSEC;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.U;
+import static org.apache.calcite.sql.SqlDateTimeFormat.WEEK_OF_YEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDD;
@@ -263,9 +264,9 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(ABBREVIATED_NAME_OF_DAY, "%a");
         put(HOUR_OF_DAY_12, "%l");
         put(POST_MERIDIAN_INDICATOR, "%p");
-        put(POST_MERIDIAN_INDICATOR1, "%p");
+        put(POST_MERIDIAN_INDICATOR_WITH_DOT, "%p");
         put(ANTE_MERIDIAN_INDICATOR, "%p");
-        put(ANTE_MERIDIAN_INDICATOR1, "%p");
+        put(ANTE_MERIDIAN_INDICATOR_WITH_DOT, "%p");
         put(E3, "%a");
         put(E4, "%A");
         put(TWENTYFOURHOURMIN, "%H%M");
@@ -281,6 +282,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(SEC_FROM_MIDNIGHT, "SEC_FROM_MIDNIGHT");
         put(QUARTER, "%Q");
         put(TIMEOFDAY, "%c");
+        put(WEEK_OF_YEAR, "%W");
       }};
 
   private static final String OR = "|";
@@ -353,6 +355,10 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   @Override public boolean supportsColumnAliasInSort() {
     return true;
+  }
+
+  @Override public boolean supportsColumnListForWithItem() {
+    return false;
   }
 
   @Override public boolean supportsAliasedValues() {
@@ -685,6 +691,19 @@ public class BigQuerySqlDialect extends SqlDialect {
         call.getOperator().unparse(writer, call, leftPrec, rightPrec);
       }
       break;
+    case IN:
+      if (call.operand(0) instanceof SqlLiteral
+          && call.operand(1) instanceof SqlNodeList
+          && ((SqlNodeList) call.operand(1)).get(0).getKind() == SqlKind.UNNEST) {
+        call.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.print("IN");
+        writer.setNeedWhitespace(true);
+        writer.print(call.operand(1).toSqlString(writer.getDialect()).toString());
+        break;
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+        break;
+      }
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -1041,6 +1060,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseRandomfunction(writer, call, leftPrec, rightPrec);
       break;
     case DateTimestampFormatUtil.WEEKNUMBER_OF_YEAR:
+    case DateTimestampFormatUtil.ISO_WEEKOFYEAR:
     case DateTimestampFormatUtil.YEARNUMBER_OF_CALENDAR:
     case DateTimestampFormatUtil.MONTHNUMBER_OF_YEAR:
     case DateTimestampFormatUtil.QUARTERNUMBER_OF_YEAR:
@@ -1061,6 +1081,24 @@ public class BigQuerySqlDialect extends SqlDialect {
       SqlCall extractCall = EXTRACT.createCall(SqlParserPos.ZERO,
               daySymbolLiteral, call.operand(0));
       super.unparseCall(writer, extractCall, leftPrec, rightPrec);
+      break;
+    case "HOUR":
+      SqlNode hourSymbolLiteral = SqlLiteral.createSymbol(TimeUnit.HOUR, SqlParserPos.ZERO);
+      SqlCall extractHourCall = EXTRACT.createCall(SqlParserPos.ZERO,
+          hourSymbolLiteral, call.operand(0));
+      unparseExtractFunction(writer, extractHourCall, leftPrec, rightPrec);
+      break;
+    case "MINUTE":
+      SqlNode minuteSymbolLiteral = SqlLiteral.createSymbol(TimeUnit.MINUTE, SqlParserPos.ZERO);
+      SqlCall extractMinuteCall = EXTRACT.createCall(SqlParserPos.ZERO,
+          minuteSymbolLiteral, call.operand(0));
+      unparseExtractFunction(writer, extractMinuteCall, leftPrec, rightPrec);
+      break;
+    case "SECOND":
+      SqlNode secondSymbolLiteral = SqlLiteral.createSymbol(TimeUnit.SECOND, SqlParserPos.ZERO);
+      SqlCall extractSecondCall = EXTRACT.createCall(SqlParserPos.ZERO,
+          secondSymbolLiteral, call.operand(0));
+      unparseExtractFunction(writer, extractSecondCall, leftPrec, rightPrec);
       break;
     case "MONTHS_BETWEEN":
       unparseMonthsBetween(writer, call, leftPrec, rightPrec);

@@ -8215,6 +8215,23 @@ class RelToSqlConverterTest {
             isLinux(expectedDOMBiqQuery));
   }
 
+  @Test public void testYYYYWW() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dayOfYearWithYYYYRexNode = builder.call(SqlLibraryOperators.FORMAT_DATE,
+        builder.literal("YYYY-WW"), builder.scan("EMP").field(4));
+
+    final RelNode doyRoot = builder
+        .scan("EMP")
+        .project(builder.alias(dayOfYearWithYYYYRexNode, "FD"))
+        .build();
+
+    final String expectedDOYBiqQuery = "SELECT FORMAT_DATE('%Y-%W', HIREDATE) AS FD\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(doyRoot, DatabaseProduct.BIG_QUERY.getDialect()),
+        isLinux(expectedDOYBiqQuery));
+  }
+
   @Test public void testFormatTimestampRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode formatTimestampRexNode = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
@@ -8556,6 +8573,38 @@ class RelToSqlConverterTest {
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testToDateFunctionWithAMInFormat() {
+    final RelBuilder builder = relBuilder();
+    final RexNode toDateNode = builder.call(SqlLibraryOperators.TO_DATE,
+        builder.literal("January 15, 1989, 11:00 A.M."),
+        builder.literal("MMMM DD, YYYY, HH: MI A.M."));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(toDateNode, "date_value"))
+        .build();
+    final String expectedSparkQuery =
+        "SELECT TO_DATE('JANUARY 15, 1989, 11:00 AM', 'MMMM dd, yyyy, hh: mm a') date_value\n"
+            + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
+  }
+
+  @Test public void testToDateFunctionWithPMInFormat() {
+    final RelBuilder builder = relBuilder();
+    final RexNode toDateNode = builder.call(SqlLibraryOperators.TO_DATE,
+        builder.literal("January 15, 1989, 11:00 P.M."),
+        builder.literal("MMMM DD, YYYY, HH: MI P.M."));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(toDateNode, "date_value"))
+        .build();
+    final String expectedSparkQuery =
+        "SELECT TO_DATE('JANUARY 15, 1989, 11:00 PM', 'MMMM dd, yyyy, hh: mm a') date_value\n"
+            + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
   }
 
   /** Fluid interface to run tests. */
@@ -9310,6 +9359,33 @@ class RelToSqlConverterTest {
     sql(query)
             .withBigQuery()
             .ok(expectedBQ);
+  }
+
+  @Test public void testExtractHour() {
+    String query = "SELECT HOUR(TIMESTAMP '1999-06-23 10:30:47')";
+    final String expectedBQ = "SELECT EXTRACT(HOUR FROM CAST('1999-06-23 10:30:47' AS DATETIME))";
+
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBQ);
+  }
+
+  @Test public void testExtractMinute() {
+    String query = "SELECT MINUTE(TIMESTAMP '1999-06-23 10:30:47')";
+    final String expectedBQ = "SELECT EXTRACT(MINUTE FROM CAST('1999-06-23 10:30:47' AS DATETIME))";
+
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBQ);
+  }
+
+  @Test public void testExtractSecond() {
+    String query = "SELECT SECOND(TIMESTAMP '1999-06-23 10:30:47')";
+    final String expectedBQ = "SELECT EXTRACT(SECOND FROM CAST('1999-06-23 10:30:47' AS DATETIME))";
+
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBQ);
   }
 
   @Test public void testExtractEpoch() {
@@ -10991,5 +11067,41 @@ class RelToSqlConverterTest {
         + "AS FD"
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  // Unparsing "ABC" IN(UNNEST(ARRAY("ABC", "XYZ"))) --> "ABC" IN UNNEST(ARRAY["ABC", "XYZ"])
+  @Test public void inUnnestSqlNode() {
+    final RelBuilder builder = relBuilder();
+    RexNode arrayRex = builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+        builder.literal("ABC"), builder.literal("XYZ"));
+    RexNode unnestRex = builder.call(SqlStdOperatorTable.UNNEST, arrayRex);
+    final RexNode createRexNode = builder.call(SqlStdOperatorTable.IN, builder.literal("ABC"),
+        unnestRex);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(createRexNode, "array_contains"))
+        .build();
+    final String expectedBiqQuery = "SELECT 'ABC' IN UNNEST(ARRAY['ABC', 'XYZ']) "
+        + "AS array_contains\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void rowNumberOverFunctionAsWhereClauseInJoin() {
+    String query = " select \"A\".\"product_id\"\n"
+        + "    from (select \"product_id\", ROW_NUMBER() OVER (ORDER BY \"product_id\") AS RNK from \"product\") A\n"
+        + "    cross join \"sales_fact_1997\"\n"
+        + "    where \"RNK\" =1 \n"
+        + "    group by \"A\".\"product_id\"\n";
+    final String expectedBQ = "SELECT t.product_id\n"
+        + "FROM (SELECT product_id, ROW_NUMBER() OVER (ORDER BY product_id IS NULL, product_id) AS "
+        + "RNK\n"
+        + "FROM foodmart.product) AS t\n"
+        + "INNER JOIN foodmart.sales_fact_1997 ON TRUE\n"
+        + "WHERE t.RNK = 1\n"
+        + "GROUP BY t.product_id";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBQ);
   }
 }
