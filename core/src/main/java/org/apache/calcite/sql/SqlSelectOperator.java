@@ -304,12 +304,13 @@ public class SqlSelectOperator extends SqlOperator {
     return ordinal == SqlSelect.WHERE_OPERAND;
   }
 
-  private Map<String, Integer> getColIndexByColNameOrAlias(SqlWriter writer, SqlNodeList selectClause) {
+  private Map<String, Integer> getColIndexByColNameOrAlias(SqlWriter writer,
+                                                           SqlNodeList selectClause) {
     Map<String, Integer> colIndexByColNameOrAliasInfpMap = new HashMap<>();
     Integer columnIndex = 1;
     String name = null;
     SqlNode[] operands = null;
-    if (((SqlPrettyWriter)writer).queryHasGroupByOridinal()) {
+    if (((SqlPrettyWriter) writer).queryHasGroupByOridinal()) {
       for (SqlNode node : selectClause) {
         if (node instanceof SqlCall) {
           SqlCall sqlCall = (SqlCall) node;
@@ -320,10 +321,10 @@ public class SqlSelectOperator extends SqlOperator {
           } else {
             name = node.toString();
           }
-        } else if(node instanceof SqlLiteral){
+        } else if (node instanceof SqlLiteral) {
           SqlLiteral sqlLiteral = (SqlLiteral) node;
           name = sqlLiteral.toString();
-        } else if(node instanceof SqlIdentifier){
+        } else if (node instanceof SqlIdentifier) {
           SqlIdentifier sqlIdentifier = (SqlIdentifier) node;
           name = sqlIdentifier.toString();
         }
