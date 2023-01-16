@@ -229,8 +229,8 @@ public class SqlSelectOperator extends SqlOperator {
         if (writer.getDialect().getConformance().isGroupByOrdinal()) {
           final SqlWriter.Frame groupFrame =
               writer.startList(SqlWriter.FrameTypeEnum.GROUP_BY_LIST);
-          Map<String, Integer> colIndexByColNameOrAliasInfpMap =
-                  getColIndexByColNameOrAlias(writer, selectClause);
+          Map<String, Integer> colIndexByColNameOrAliasInfoMap =
+                  getIndexByColumnOrAliasName(writer, selectClause);
           List<SqlNode> visitedLiteralNodeList = new ArrayList<>();
           for (SqlNode groupKey : select.groupBy.getList()) {
             if (!groupKey.toString().equalsIgnoreCase("NULL")) {
@@ -263,7 +263,7 @@ public class SqlSelectOperator extends SqlOperator {
                     });
               } else {
                 writer.sep(",");
-                Integer columnIndex = colIndexByColNameOrAliasInfpMap.get(groupKey.toString());
+                Integer columnIndex = colIndexByColNameOrAliasInfoMap.get(groupKey.toString());
                 if (columnIndex != null) {
                   writer.print(columnIndex);
                 } else {
@@ -304,20 +304,20 @@ public class SqlSelectOperator extends SqlOperator {
     return ordinal == SqlSelect.WHERE_OPERAND;
   }
 
-  private Map<String, Integer> getColIndexByColNameOrAlias(SqlWriter writer,
+  private Map<String, Integer> getIndexByColumnOrAliasName(SqlWriter writer,
                                                            SqlNodeList selectClause) {
-    Map<String, Integer> colIndexByColNameOrAliasInfpMap = new HashMap<>();
+    Map<String, Integer> colIndexByColNameOrAliasInfoMap = new HashMap<>();
     Integer columnIndex = 1;
     String name = null;
     SqlNode[] operands = null;
-    if (((SqlPrettyWriter) writer).queryHasGroupByOridinal()) {
+    if (((SqlPrettyWriter) writer).isGroupByOrdinalPresent()) {
       for (SqlNode node : selectClause) {
         if (node instanceof SqlCall) {
           SqlCall sqlCall = (SqlCall) node;
           operands = sqlCall.getOperandList().toArray(new SqlNode[0]);
           if (node.getKind() == SqlKind.AS) {
             name = operands[1].toString();
-            colIndexByColNameOrAliasInfpMap.put(operands[0].toString(), columnIndex);
+            colIndexByColNameOrAliasInfoMap.put(operands[0].toString(), columnIndex);
           } else {
             name = node.toString();
           }
@@ -328,10 +328,10 @@ public class SqlSelectOperator extends SqlOperator {
           SqlIdentifier sqlIdentifier = (SqlIdentifier) node;
           name = sqlIdentifier.toString();
         }
-        colIndexByColNameOrAliasInfpMap.put(name, columnIndex);
+        colIndexByColNameOrAliasInfoMap.put(name, columnIndex);
         columnIndex++;
       }
     }
-    return colIndexByColNameOrAliasInfpMap;
+    return colIndexByColNameOrAliasInfoMap;
   }
 }
