@@ -1447,7 +1447,4 @@ public class SqlPrettyWriter implements SqlWriter {
     }
   }
 
-  public boolean isGroupByOrdinalPresent() {
-    return false;
-  }
 }
