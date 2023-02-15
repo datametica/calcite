@@ -299,6 +299,23 @@ class RelToSqlConverterTest {
     sql(query).ok("SELECT *\nFROM \"foodmart\".\"product\"");
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4901">[CALCITE-4901]
+   * JDBC adapter incorrectly adds ORDER BY columns to the SELECT list</a>. */
+  @Test void testOrderByNotInSelectList() {
+    // Before 4901 was fixed, the generated query would have "product_id" in its
+    // SELECT clause.
+    String query = "select count(1) as c\n"
+        + "from \"foodmart\".\"product\"\n"
+        + "group by \"product_id\"\n"
+        + "order by \"product_id\" desc";
+    final String expected = "SELECT COUNT(*) AS \"C\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY \"product_id\"\n"
+        + "ORDER BY \"product_id\" DESC";
+    sql(query).ok(expected);
+  }
+
   @Test void testAggregateFilterWhereToSqlFromProductTable() {
     String query = "select\n"
         + "  sum(\"shelf_width\") filter (where \"net_weight\" > 0),\n"
@@ -1123,6 +1140,32 @@ class RelToSqlConverterTest {
     relFn(relFn).ok(expected);
   }
 
+  @Test void testSortWithAnExpressionNotInTheProjectionWithTheSameNameAsThatInTheProjection() {
+    final RelBuilder builder = relBuilder();
+    final RelNode base = builder
+        .scan("EMP")
+        .project(
+            builder.alias(
+                builder.call(SqlStdOperatorTable.UPPER, builder.field("ENAME")), "EMPNO"
+            ),
+            builder.field("EMPNO")
+        )
+        .sort(1)
+        .project(builder.field(0))
+        .build();
+
+    // The expected string should deliberately have a subquery to handle a scenario in which
+    // the projection field has an alias with the same name as that of the field used in the
+    // ORDER BY
+    String expectedString = ""
+        + "SELECT \"EMPNO\"\n"
+        + "FROM (SELECT UPPER(\"ENAME\") AS \"EMPNO\", \"EMPNO\" AS \"EMPNO0\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "ORDER BY \"EMPNO0\") AS \"t0\"";
+
+    assertThat(toSql(base), isLinux(expectedString));
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1946">[CALCITE-1946]
    * JDBC adapter should generate sub-SELECT if dialect does not support nested
@@ -1705,7 +1748,7 @@ class RelToSqlConverterTest {
   @Test void testSelectQueryWithOrderByClause() {
     String query = "select \"product_id\" from \"product\"\n"
         + "order by \"net_weight\"";
-    final String expected = "SELECT \"product_id\", \"net_weight\"\n"
+    final String expected = "SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "ORDER BY \"net_weight\"";
     sql(query).ok(expected);
@@ -1723,8 +1766,7 @@ class RelToSqlConverterTest {
   @Test void testSelectQueryWithTwoOrderByClause() {
     String query = "select \"product_id\" from \"product\"\n"
         + "order by \"net_weight\", \"gross_weight\"";
-    final String expected = "SELECT \"product_id\", \"net_weight\","
-        + " \"gross_weight\"\n"
+    final String expected = "SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "ORDER BY \"net_weight\", \"gross_weight\"";
     sql(query).ok(expected);
@@ -1733,8 +1775,7 @@ class RelToSqlConverterTest {
   @Test void testSelectQueryWithAscDescOrderByClause() {
     String query = "select \"product_id\" from \"product\" "
         + "order by \"net_weight\" asc, \"gross_weight\" desc, \"low_fat\"";
-    final String expected = "SELECT"
-        + " \"product_id\", \"net_weight\", \"gross_weight\", \"low_fat\"\n"
+    final String expected = "SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "ORDER BY \"net_weight\", \"gross_weight\" DESC, \"low_fat\"";
     sql(query).ok(expected);
@@ -3238,13 +3279,13 @@ class RelToSqlConverterTest {
   @Test void testSelectQueryWithLimitOffsetClause() {
     String query = "select \"product_id\" from \"product\"\n"
         + "order by \"net_weight\" asc limit 100 offset 10";
-    final String expected = "SELECT \"product_id\", \"net_weight\"\n"
+    final String expected = "SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "ORDER BY \"net_weight\"\n"
         + "OFFSET 10 ROWS\n"
         + "FETCH NEXT 100 ROWS ONLY";
     // BigQuery uses LIMIT/OFFSET, and nulls sort low by default
-    final String expectedBigQuery = "SELECT product_id, net_weight\n"
+    final String expectedBigQuery = "SELECT product_id\n"
         + "FROM foodmart.product\n"
         + "ORDER BY net_weight IS NULL, net_weight\n"
         + "LIMIT 100\n"
@@ -6703,7 +6744,7 @@ class RelToSqlConverterTest {
                             .build();
 
     final String expectedBigQuery = "SELECT TIMESTAMP_SUB(TIMESTAMP '2022-02-18 08:23:45'"
-        + ", INTERVAL 1 MICROSECOND) AS `$f0`";
+        + ", INTERVAL 1 MICROSECOND)";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
@@ -6728,7 +6769,7 @@ class RelToSqlConverterTest {
         .build();
 
     final String expectedBigQuery = "SELECT TIMESTAMP_ADD(TIMESTAMP '2022-02-18 08:23:45',"
-        + " INTERVAL 1 MICROSECOND) AS `$f0`";
+        + " INTERVAL 1 MICROSECOND)";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
@@ -8647,6 +8688,30 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4740">[CALCITE-4740]
+   * JDBC adapter generates incorrect HAVING clause in BigQuery dialect</a>. */
+  @Test void testBigQueryHavingWithoutGeneratedAlias() {
+    final String sql = ""
+        + "SELECT \"DEPTNO\", COUNT(DISTINCT \"EMPNO\")\n"
+        + "FROM \"EMP\"\n"
+        + "GROUP BY \"DEPTNO\"\n"
+        + "HAVING COUNT(DISTINCT \"EMPNO\") > 0\n"
+        + "ORDER BY COUNT(DISTINCT \"EMPNO\") DESC";
+    final String expected = ""
+        + "SELECT DEPTNO, COUNT(DISTINCT EMPNO)\n"
+        + "FROM SCOTT.EMP\n"
+        + "GROUP BY DEPTNO\n"
+        + "HAVING COUNT(DISTINCT EMPNO) > 0\n"
+        + "ORDER BY COUNT(DISTINCT EMPNO) IS NULL DESC, COUNT(DISTINCT EMPNO) DESC";
+
+    // Convert rel node to SQL with BigQuery dialect,
+    // in which "isHavingAlias" is true.
+    sql(sql)
+        .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
+        .withBigQuery().ok(expected);
+  }
+
   /** Fluid interface to run tests. */
   static class Sql {
     private final SchemaPlus schema;
@@ -8891,7 +8956,7 @@ class RelToSqlConverterTest {
               getPlanner(null, parserConfig, schema, config);
           SqlNode parse = planner.parse(sql);
           SqlNode validate = planner.validate(parse);
-          rel = planner.rel(validate).rel;
+          rel = planner.rel(validate).project();
         }
         for (Function<RelNode, RelNode> transform : transforms) {
           rel = transform.apply(rel);
@@ -10506,7 +10571,7 @@ class RelToSqlConverterTest {
         .build();
 
     final String expectedBigQuery =
-        "SELECT CAST(CURRENT_DATETIME() AS TIMESTAMP_WITH_LOCAL_TIME_ZONE) AS `$f0`";
+        "SELECT CAST(CURRENT_DATETIME() AS TIMESTAMP_WITH_LOCAL_TIME_ZONE)";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
@@ -10718,9 +10783,9 @@ class RelToSqlConverterTest {
     final RelNode root = builder.scan("EMP")
         .project(dayOccurenceOfMonth)
         .build();
-    final String expectedSql = "SELECT DAYOCCURRENCE_OF_MONTH(CURRENT_DATE) AS \"$f0\"\n"
+    final String expectedSql = "SELECT DAYOCCURRENCE_OF_MONTH(CURRENT_DATE)\n"
         + "FROM \"scott\".\"EMP\"";
-    final String expectedSpark = "SELECT CEIL(DAY(CURRENT_DATE) / 7) $f0\n"
+    final String expectedSpark = "SELECT CEIL(DAY(CURRENT_DATE) / 7)\n"
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
@@ -10739,13 +10804,13 @@ class RelToSqlConverterTest {
             monthNumberOfYearCall,
             quarterNumberOfYearCall)
         .build();
-    final String expectedSql = "SELECT WEEKNUMBER_OF_YEAR(CURRENT_DATE) AS \"$f0\", "
-        + "MONTHNUMBER_OF_YEAR(CURRENT_TIMESTAMP) AS \"$f1\", "
-        + "QUARTERNUMBER_OF_YEAR(CURRENT_TIMESTAMP) AS \"$f2\""
+    final String expectedSql = "SELECT WEEKNUMBER_OF_YEAR(CURRENT_DATE), "
+        + "MONTHNUMBER_OF_YEAR(CURRENT_TIMESTAMP), "
+        + "QUARTERNUMBER_OF_YEAR(CURRENT_TIMESTAMP)"
         + "\nFROM \"scott\".\"EMP\"";
-    final String expectedSpark = "SELECT WEEKOFYEAR(CURRENT_DATE) $f0, "
-        + "MONTH(CURRENT_TIMESTAMP) $f1, "
-        + "QUARTER(CURRENT_TIMESTAMP) $f2\nFROM scott.EMP";
+    final String expectedSpark = "SELECT WEEKOFYEAR(CURRENT_DATE), "
+        + "MONTH(CURRENT_TIMESTAMP), "
+        + "QUARTER(CURRENT_TIMESTAMP)\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
   }
@@ -10763,13 +10828,13 @@ class RelToSqlConverterTest {
             weekNumberOfCalendarCall,
             yearNumberOfCalendarCall)
         .build();
-    final String expectedSql = "SELECT DAYNUMBER_OF_CALENDAR(CURRENT_TIMESTAMP) AS \"$f0\", "
-        + "WEEKNUMBER_OF_CALENDAR(CURRENT_TIMESTAMP) AS \"$f1\", "
-        + "YEARNUMBER_OF_CALENDAR(CURRENT_TIMESTAMP) AS \"$f2\""
+    final String expectedSql = "SELECT DAYNUMBER_OF_CALENDAR(CURRENT_TIMESTAMP), "
+        + "WEEKNUMBER_OF_CALENDAR(CURRENT_TIMESTAMP), "
+        + "YEARNUMBER_OF_CALENDAR(CURRENT_TIMESTAMP)"
         + "\nFROM \"scott\".\"EMP\"";
-    final String expectedSpark = "SELECT DATEDIFF(CURRENT_TIMESTAMP, DATE '1899-12-31') $f0,"
-        + " FLOOR((DATEDIFF(CURRENT_TIMESTAMP, DATE '1900-01-01') + 1) / 7) $f1,"
-        + " YEAR(CURRENT_TIMESTAMP) $f2"
+    final String expectedSpark = "SELECT DATEDIFF(CURRENT_TIMESTAMP, DATE '1899-12-31'),"
+        + " FLOOR((DATEDIFF(CURRENT_TIMESTAMP, DATE '1900-01-01') + 1) / 7),"
+        + " YEAR(CURRENT_TIMESTAMP)"
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
@@ -10850,7 +10915,7 @@ class RelToSqlConverterTest {
         .project(trunc)
         .build();
     final String expectedSparkSql = "SELECT CAST(DATE_TRUNC('DAY', TIMESTAMP '2017-02-14 "
-        + "20:38:40') AS DATE) $f0\nFROM scott.EMP";
+        + "20:38:40') AS DATE)\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkSql));
   }
 
@@ -10902,7 +10967,7 @@ class RelToSqlConverterTest {
         .project(builder.alias(toCharWithDate, "FD"), toCharWithNumber)
         .build();
     final String expectedSparkQuery = "SELECT "
-        + "DATE_FORMAT(DATE '1970-01-01', 'MM-dd-yyyy HH:mm:ss') FD, TO_CHAR(1000, '9999') $f1"
+        + "DATE_FORMAT(DATE '1970-01-01', 'MM-dd-yyyy HH:mm:ss') FD, TO_CHAR(1000, '9999')"
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
   }
@@ -11286,7 +11351,7 @@ class RelToSqlConverterTest {
 
     final String expectedBigQuery = "SELECT *\n"
         + "FROM scott.EMP\n"
-        + "WHERE (EMPNO, HIREDATE) = (((SELECT (EMPNO, HIREDATE) AS `$f0`\n"
+        + "WHERE (EMPNO, HIREDATE) = (((SELECT (EMPNO, HIREDATE)\n"
         + "FROM scott.EMP\n"
         + "WHERE EMPNO = '100')))";
 

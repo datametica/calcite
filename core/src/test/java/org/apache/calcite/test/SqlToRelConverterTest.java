@@ -682,7 +682,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
    * and rename the second column to "e0". */
   @Test void testDuplicateColumnsInSubQuery() {
     String sql = "select \"e\" from (\n"
-        + "select empno as \"e\", deptno as d, 1 as \"e0\" from EMP)";
+        + "select empno as \"e\", deptno as d, 1 as \"e0\" from EMP) as i";
     sql(sql).ok();
   }
 

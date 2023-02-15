@@ -83,6 +83,7 @@ import org.apache.calcite.schema.impl.ListTransientTable;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlLikeOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
@@ -2613,7 +2614,7 @@ public class RelBuilder {
     assert tupleList.size() == rowCount;
     final List<String> fieldNameList =
         Util.transformIndexed(Arrays.asList(fieldNames), (name, i) ->
-            name != null ? name : "expr$" + i);
+            name != null ? name : SqlUtil.deriveAliasFromOrdinal(i));
     return values(tupleList, fieldNameList);
   }
 

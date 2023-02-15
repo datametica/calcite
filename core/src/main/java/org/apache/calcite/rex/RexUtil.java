@@ -34,6 +34,7 @@ import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -1106,7 +1107,7 @@ public class RexUtil {
     for (int i = 0; i < exprs.size(); i++) {
       String name;
       if (names == null || (name = names.get(i)) == null) {
-        name = "$f" + i;
+        name = SqlUtil.GENERATED_FIELD_ALIAS_PREFIX + i;
       }
       builder.add(name, exprs.get(i).getType());
     }

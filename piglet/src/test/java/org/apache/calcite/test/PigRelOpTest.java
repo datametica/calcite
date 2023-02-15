@@ -468,15 +468,15 @@ class PigRelOpTest extends PigRelTestBase {
         + "HIREDATE, SAL, COMM, DEPTNO)) AS A\n"
         + "        FROM scott.EMP\n"
         + "        GROUP BY DEPTNO) AS $cor4,\n"
-        + "      LATERAL (SELECT COLLECT(ROW(ENAME, JOB, DEPTNO, SAL)) AS X\n"
-        + "        FROM (SELECT ENAME, JOB, DEPTNO, SAL\n"
-        + "            FROM UNNEST (SELECT $cor4.A AS $f0\n"
+        + "      LATERAL (SELECT X\n"
+        + "        FROM (SELECT 'all' AS $f0, COLLECT(ROW(ENAME, JOB, DEPTNO, SAL)) AS X\n"
+        + "            FROM UNNEST (SELECT $cor4.A\n"
         + "                FROM (VALUES (0)) AS t (ZERO)) "
         + "AS t2 (EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, DEPTNO)\n"
         + "            WHERE JOB <> 'CLERK'\n"
-        + "            ORDER BY SAL) AS t5\n"
-        + "        GROUP BY 'all') AS t8) AS $cor5,\n"
-        + "  LATERAL UNNEST (SELECT $cor5.X AS $f0\n"
+        + "            GROUP BY 'all'\n"
+        + "            ORDER BY SAL) AS t7) AS t8) AS $cor5,\n"
+        + "  LATERAL UNNEST (SELECT $cor5.X\n"
         + "    FROM (VALUES (0)) AS t (ZERO)) "
         + "AS t11 (ENAME, JOB, DEPTNO, SAL) AS t110\n"
         + "ORDER BY $cor5.group";
@@ -978,7 +978,7 @@ class PigRelOpTest extends PigRelTestBase {
 
     final String sql = ""
         + "SELECT ROW(DEPTNO, JOB) AS group,"
-        + " CAST(COUNT(ENAME) AS BIGINT) AS $f1\n"
+        + " CAST(COUNT(ENAME) AS BIGINT)\n"
         + "FROM scott.EMP\n"
         + "GROUP BY CUBE(DEPTNO, JOB)";
     pig(script).assertRel(hasTree(plan))
@@ -1027,7 +1027,7 @@ class PigRelOpTest extends PigRelTestBase {
         + "({null, MANAGER},3)\n";
     final String sql = ""
         + "SELECT ROW(DEPTNO, JOB) AS group, "
-        + "CAST(COUNT(ENAME) AS BIGINT) AS $f1\n"
+        + "CAST(COUNT(ENAME) AS BIGINT)\n"
         + "FROM scott.EMP\n"
         + "GROUP BY ROLLUP(DEPTNO, JOB)";
     pig(script).assertRel(hasTree(plan))
@@ -1059,7 +1059,7 @@ class PigRelOpTest extends PigRelTestBase {
         + "({(10,ACCOUNTING)})\n"
         + "({(30,SALES)})\n";
     final String sql = ""
-        + "SELECT COLLECT(ROW(DEPTNO, DNAME)) AS $f0\n"
+        + "SELECT COLLECT(ROW(DEPTNO, DNAME))\n"
         + "FROM scott.DEPT\n"
         + "GROUP BY DEPTNO";
     pig(script).assertRel(hasTree(plan))
@@ -1294,8 +1294,8 @@ class PigRelOpTest extends PigRelTestBase {
         + "(10,3,8750.00)\n"
         + "(30,6,9400.00)\n";
     final String sql = ""
-        + "SELECT DEPTNO AS group, CAST(COUNT(*) AS BIGINT) AS $f1, CAST(SUM(SAL) AS "
-        + "DECIMAL(19, 0)) AS $f2\n"
+        + "SELECT DEPTNO AS group, CAST(COUNT(*) AS BIGINT), CAST(SUM(SAL) AS "
+        + "DECIMAL(19, 0))\n"
         + "FROM scott.EMP\n"
         + "GROUP BY DEPTNO";
     pig(script).assertRel(hasTree(plan))
@@ -1348,7 +1348,7 @@ class PigRelOpTest extends PigRelTestBase {
         + "({10, null, 1981-11-17},1,5000.00)\n";
     final String sql = ""
         + "SELECT ROW(DEPTNO, MGR, HIREDATE) AS group, CAST(COUNT(*) AS "
-        + "BIGINT) AS $f1, CAST(SUM(SAL) AS DECIMAL(19, 0)) AS salSum\n"
+        + "BIGINT), CAST(SUM(SAL) AS DECIMAL(19, 0)) AS salSum\n"
         + "FROM scott.EMP\n"
         + "GROUP BY DEPTNO, MGR, HIREDATE\n"
         + "ORDER BY salSum";
@@ -1466,7 +1466,7 @@ class PigRelOpTest extends PigRelTestBase {
         + "({10, null, 1981-11-17},2,5000.00,5000.00)\n";
     final String sql = ""
         + "SELECT ROW(DEPTNO, MGR, HIREDATE) AS group, CAST(COUNT(*) AS "
-        + "BIGINT) + 1 AS $f1, CAST(SUM(SAL) AS DECIMAL(19, 0)) AS salSum, "
+        + "BIGINT) + 1, CAST(SUM(SAL) AS DECIMAL(19, 0)) AS salSum, "
         + "CAST(SUM(SAL) AS DECIMAL(19, 0)) / CAST(CAST(COUNT(*) AS BIGINT) "
         + "AS DECIMAL(19, 0)) AS salAvg\n"
         + "FROM scott.EMP\n"
@@ -1486,8 +1486,8 @@ class PigRelOpTest extends PigRelTestBase {
         + "BigDecimalSum(A.SAL) / COUNT(A) as salAvg, A;\n"
         + "D = ORDER C BY salSum;\n";
     final String sql2 = ""
-        + "SELECT ROW(DEPTNO, MGR, HIREDATE) AS group, CAST(COUNT(*) AS BIGINT) + 1"
-        + " AS $f1, CAST(SUM(SAL) AS DECIMAL(19, 0)) AS salSum, CAST(SUM(SAL) AS "
+        + "SELECT ROW(DEPTNO, MGR, HIREDATE) AS group, CAST(COUNT(*) AS BIGINT) + 1, "
+        + "CAST(SUM(SAL) AS DECIMAL(19, 0)) AS salSum, CAST(SUM(SAL) AS "
         + "DECIMAL(19, 0)) / CAST(CAST(COUNT(*) AS BIGINT) AS DECIMAL(19, 0)) AS "
         + "salAvg, COLLECT(ROW(EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, DEPTNO)"
         + ") AS A\n"
@@ -1504,8 +1504,7 @@ class PigRelOpTest extends PigRelTestBase {
         + "C = FOREACH B GENERATE group, A, COUNT(A);\n";
     final String sql3 = ""
         + "SELECT ROW(DEPTNO, MGR, HIREDATE) AS group, COLLECT(ROW(EMPNO, ENAME, "
-        + "JOB, MGR, HIREDATE, SAL, COMM, DEPTNO)) AS A, CAST(COUNT(*) AS BIGINT) "
-        + "AS $f2\n"
+        + "JOB, MGR, HIREDATE, SAL, COMM, DEPTNO)) AS A, CAST(COUNT(*) AS BIGINT)\n"
         + "FROM scott.EMP\n"
         + "GROUP BY DEPTNO, MGR, HIREDATE";
     pig(script3).assertSql(is(sql3));
@@ -1539,7 +1538,7 @@ class PigRelOpTest extends PigRelTestBase {
         + "      LogicalProject(DEPTNO=[$7], MGR=[$3], HIREDATE=[$4], COMM=[$6], SAL=[$5])\n"
         + "        LogicalTableScan(table=[[scott, EMP]])\n";
     final String sql = ""
-        + "SELECT DEPTNO, MGR, HIREDATE, CAST(COUNT(*) AS BIGINT) AS $f3, 1 AS newCol, "
+        + "SELECT DEPTNO, MGR, HIREDATE, CAST(COUNT(*) AS BIGINT), 1 AS newCol, "
         + "COLLECT(COMM) AS comArray, CAST(SUM(SAL) AS DECIMAL(19, 0)) AS salSum\n"
         + "FROM scott.EMP\n"
         + "GROUP BY DEPTNO, MGR, HIREDATE\n"
