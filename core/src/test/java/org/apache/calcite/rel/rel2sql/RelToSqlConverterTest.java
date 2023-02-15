@@ -1140,6 +1140,32 @@ class RelToSqlConverterTest {
     relFn(relFn).ok(expected);
   }
 
+  @Test void testSortWithAnExpressionNotInTheProjectionWithTheSameNameAsThatInTheProjection() {
+    final RelBuilder builder = relBuilder();
+    final RelNode base = builder
+        .scan("EMP")
+        .project(
+            builder.alias(
+                builder.call(SqlStdOperatorTable.UPPER, builder.field("ENAME")), "EMPNO"
+            ),
+            builder.field("EMPNO")
+        )
+        .sort(1)
+        .project(builder.field(0))
+        .build();
+
+    // The expected string should deliberately have a subquery to handle a scenario in which
+    // the projection field has an alias with the same name as that of the field used in the
+    // ORDER BY
+    String expectedString = ""
+        + "SELECT \"EMPNO\"\n"
+        + "FROM (SELECT UPPER(\"ENAME\") AS \"EMPNO\", \"EMPNO\" AS \"EMPNO0\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "ORDER BY \"EMPNO0\") AS \"t0\"";
+
+    assertThat(toSql(base), isLinux(expectedString));
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1946">[CALCITE-1946]
    * JDBC adapter should generate sub-SELECT if dialect does not support nested
@@ -11325,7 +11351,7 @@ class RelToSqlConverterTest {
 
     final String expectedBigQuery = "SELECT *\n"
         + "FROM scott.EMP\n"
-        + "WHERE (EMPNO, HIREDATE) = (((SELECT (EMPNO, HIREDATE) AS `$f0`\n"
+        + "WHERE (EMPNO, HIREDATE) = (((SELECT (EMPNO, HIREDATE)\n"
         + "FROM scott.EMP\n"
         + "WHERE EMPNO = '100')))";
 
