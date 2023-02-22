@@ -258,15 +258,7 @@ public class SqlSelectOperator extends SqlOperator {
                     });
               } else {
                 writer.sep(",");
-                // If group column is not part of select clause
-                int columnIndex = getColumnIndex(selectClause, groupKey);
-                if (columnIndex >= 0) {
-                  String ordinal = String.valueOf(columnIndex + 1);
-                  SqlLiteral.createExactNumeric(ordinal,
-                          SqlParserPos.ZERO).unparse(writer, 2, 3);
-                } else {
-                  groupKey.unparse(writer, 2, 3);
-                }
+                groupKey.unparse(writer, 2, 3);
               }
             }
           }
@@ -302,27 +294,4 @@ public class SqlSelectOperator extends SqlOperator {
     return ordinal == SqlSelect.WHERE_OPERAND;
   }
 
-  private int getColumnIndex(SqlNodeList selectClause, SqlNode groupKey) {
-    SqlNode[] operands;
-    String name = null;
-    for (SqlNode node : selectClause) {
-      if (node instanceof SqlIdentifier
-              || node instanceof SqlBasicCall) {
-        if (node instanceof SqlBasicCall) {
-          operands = ((SqlBasicCall) node).getOperandList().toArray(new SqlNode[0]);
-          if (node.getKind() == SqlKind.AS) {
-            name = operands[0].toString();
-          } else {
-            name = node.toString();
-          }
-        } else {
-          name = node.toString();
-        }
-      }
-      if (groupKey.toString().equals(name)) {
-        return selectClause.indexOf(node);
-      }
-    }
-    return -1;
-  }
 }
