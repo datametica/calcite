@@ -100,6 +100,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayDeque;
@@ -393,6 +394,12 @@ public class RelToSqlConverter extends SqlImplementor
   public Result visit(Project e) {
     UnpivotRelToSqlUtil unpivotRelToSqlUtil = new UnpivotRelToSqlUtil();
     final Result x = visitInput(e, 0, Clause.SELECT);
+//    boolean inputIsSort = e.getInput() instanceof Aggregate;
+//    if (inputIsSort) {
+//      x = visitInput(e, 0);
+//    } else {
+//      x = visitInput(e, 0, Clause.SELECT);
+//    }
     final Builder builder = x.builder(e);
     if (dialect.supportsUnpivot()
         && unpivotRelToSqlUtil.isRelEquivalentToUnpivotExpansionWithIncludeNulls(e, builder)) {
@@ -424,6 +431,31 @@ public class RelToSqlConverter extends SqlImplementor
           index = index + 1;
         }
 
+//        if (inputIsSort && builder.select.getGroup() != null
+//                && dialect.getConformance().isGroupByOrdinal()) {
+//          int maxOrderKey = e.getProjects().size();
+//          SqlNodeList groupList = requireNonNull(builder.select.getGroup());
+//          final List<SqlNode> newGroupList = new ArrayList<>();
+//          for (@NonNull SqlNode groupItem : groupList) {
+//            int i = SqlUtil.getGroupByOrdinal(groupItem);
+//            if (i > maxOrderKey) {
+//              SqlNode orderField = SqlUtil.stripAs(builder.select.getSelectList().get(i - 1));
+//              SqlNode newOrderItem = groupList.accept(new SqlShuttle() {
+//                @Override public @Nullable SqlNode visit(SqlLiteral literal) {
+//                  if (SqlUtil.getGroupByOrdinal(literal) == i) {
+//                    return orderField;
+//                  }
+//                  return super.visit(literal);
+//                }
+//              });
+//              newGroupList.add(requireNonNull(newOrderItem, "newOrderItem"));
+//            } else {
+//              newGroupList.add(groupItem);
+//            }
+//          }
+//          builder.setGroupBy(new SqlNodeList(newGroupList, POS));
+//        }
+
         if (x.node instanceof SqlSelect && ((SqlSelect) x.node).getGroup() != null) {
           SqlNodeList groupBySqlNodeList = ((SqlSelect) x.node).getGroup();
           final List<SqlNode> gropuList = new ArrayList<>();
@@ -431,8 +463,17 @@ public class RelToSqlConverter extends SqlImplementor
           SqlNode sqlNode = null;
           SqlCall sqlCall = null;
           for (SqlNode groupbyNode : groupBySqlNodeList) {
-            index = rexNodeByColumnInfoMap.get(groupbyNode.toString());
-            if (index != null) {
+            index = 0;
+            boolean matchFound = false;
+            for (RexNode ref : e.getProjects()) {
+              SqlNode sqlExpr = builder.context.toSql(null, ref);
+              matchFound = sqlExpr.toString().equals(groupbyNode.toString());
+              if(matchFound) {
+                break;
+              }
+              index ++;
+            }
+            if (matchFound) {
               sqlNode = selectList.get(index);
               if (sqlNode.getKind() == SqlKind.AS) {
                 sqlCall = (SqlCall) sqlNode;
