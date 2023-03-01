@@ -100,7 +100,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayDeque;
@@ -394,12 +393,6 @@ public class RelToSqlConverter extends SqlImplementor
   public Result visit(Project e) {
     UnpivotRelToSqlUtil unpivotRelToSqlUtil = new UnpivotRelToSqlUtil();
     final Result x = visitInput(e, 0, Clause.SELECT);
-//    boolean inputIsSort = e.getInput() instanceof Aggregate;
-//    if (inputIsSort) {
-//      x = visitInput(e, 0);
-//    } else {
-//      x = visitInput(e, 0, Clause.SELECT);
-//    }
     final Builder builder = x.builder(e);
     if (dialect.supportsUnpivot()
         && unpivotRelToSqlUtil.isRelEquivalentToUnpivotExpansionWithIncludeNulls(e, builder)) {
@@ -413,12 +406,10 @@ public class RelToSqlConverter extends SqlImplementor
       if ((!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
         final List<SqlNode> selectList = new ArrayList<>();
-        final Map<String, Integer> rexNodeByColumnInfoMap = new HashMap<>();
-        Integer index = 0;
         for (RexNode ref : e.getProjects()) {
           SqlNode sqlExpr = builder.context.toSql(null, ref);
           RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
-          rexNodeByColumnInfoMap.put(sqlExpr.toString(), index);
+
           if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
             sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
           }
@@ -428,68 +419,8 @@ public class RelToSqlConverter extends SqlImplementor
             sqlExpr = castNullType(sqlExpr, targetField.getType());
           }
           addSelect(selectList, sqlExpr, e.getRowType());
-          index = index + 1;
         }
-
-//        if (inputIsSort && builder.select.getGroup() != null
-//                && dialect.getConformance().isGroupByOrdinal()) {
-//          int maxOrderKey = e.getProjects().size();
-//          SqlNodeList groupList = requireNonNull(builder.select.getGroup());
-//          final List<SqlNode> newGroupList = new ArrayList<>();
-//          for (@NonNull SqlNode groupItem : groupList) {
-//            int i = SqlUtil.getGroupByOrdinal(groupItem);
-//            if (i > maxOrderKey) {
-//              SqlNode orderField = SqlUtil.stripAs(builder.select.getSelectList().get(i - 1));
-//              SqlNode newOrderItem = groupList.accept(new SqlShuttle() {
-//                @Override public @Nullable SqlNode visit(SqlLiteral literal) {
-//                  if (SqlUtil.getGroupByOrdinal(literal) == i) {
-//                    return orderField;
-//                  }
-//                  return super.visit(literal);
-//                }
-//              });
-//              newGroupList.add(requireNonNull(newOrderItem, "newOrderItem"));
-//            } else {
-//              newGroupList.add(groupItem);
-//            }
-//          }
-//          builder.setGroupBy(new SqlNodeList(newGroupList, POS));
-//        }
-
-        if (x.node instanceof SqlSelect && ((SqlSelect) x.node).getGroup() != null) {
-          SqlNodeList groupBySqlNodeList = ((SqlSelect) x.node).getGroup();
-          final List<SqlNode> gropuList = new ArrayList<>();
-          SqlNode[] operands = null;
-          SqlNode sqlNode = null;
-          SqlCall sqlCall = null;
-          for (SqlNode groupbyNode : groupBySqlNodeList) {
-            index = 0;
-            boolean matchFound = false;
-            for (RexNode ref : e.getProjects()) {
-              SqlNode sqlExpr = builder.context.toSql(null, ref);
-              matchFound = sqlExpr.toString().equals(groupbyNode.toString());
-              if(matchFound) {
-                break;
-              }
-              index ++;
-            }
-            if (matchFound) {
-              sqlNode = selectList.get(index);
-              if (sqlNode.getKind() == SqlKind.AS) {
-                sqlCall = (SqlCall) sqlNode;
-                operands = sqlCall.getOperandList().toArray(new SqlNode[0]);
-                gropuList.add(SqlLiteral.createCharString(operands[1].toString(),
-                        SqlParserPos.ZERO));
-              } else {
-                gropuList.add(SqlLiteral.createExactNumeric(String.valueOf(index + 1),
-                        SqlParserPos.ZERO));
-              }
-            } else {
-              gropuList.add(groupbyNode);
-            }
-          }
-          builder.setGroupBy(new SqlNodeList(gropuList, POS));
-        }
+        updateGroupBy(x, builder);
         builder.setSelect(new SqlNodeList(selectList, POS));
       }
       return builder.result();
@@ -578,7 +509,7 @@ public class RelToSqlConverter extends SqlImplementor
     final List<SqlNode> selectList = new ArrayList<>();
     final List<SqlNode> groupByList =
         generateGroupList(builder, selectList, e, groupKeyList);
-    return buildAggregate(e, builder, selectList, groupByList);
+    return buildAggregate(e, x, builder, selectList, groupByList);
   }
 
   /**
@@ -607,7 +538,7 @@ public class RelToSqlConverter extends SqlImplementor
    * @param groupByList The precomputed select list
    * @return The aggregate query result
    */
-  protected Builder buildAggregate(Aggregate e, Builder builder,
+  protected Builder buildAggregate(Aggregate e, Result x, Builder builder,
       List<SqlNode> selectList, List<SqlNode> groupByList) {
     for (AggregateCall aggCall : e.getAggCallList()) {
       SqlNode aggCallSqlNode = builder.context.toSql(aggCall);
@@ -621,6 +552,9 @@ public class RelToSqlConverter extends SqlImplementor
       // Some databases don't support "GROUP BY ()". We can omit it as long
       // as there is at least one aggregate function.
       builder.setGroupBy(new SqlNodeList(groupByList, POS));
+      if(e.getInput() instanceof LogicalProject) {
+        updateGroupBy(x, builder);
+      }
     }
     return builder;
   }
@@ -1254,6 +1188,49 @@ public class RelToSqlConverter extends SqlImplementor
   private void parseCorrelTable(RelNode relNode, Result x) {
     for (CorrelationId id : relNode.getVariablesSet()) {
       correlTableMap.put(id, x.qualifiedContext());
+    }
+  }
+
+  private void updateGroupBy(Result x, Builder builder) {
+    if (dialect.getConformance().isGroupByOrdinal() && builder.select.getGroup() != null) {
+      final List<SqlNode> gropuList = new ArrayList<>();
+      SqlNodeList selectClause = ((SqlSelect) x.node).getSelectList();
+      SqlNodeList groupClause = builder.select.getGroup();
+      Integer index;
+      boolean matchFound;
+      for (SqlNode groupByNode : groupClause) {
+        index = 0;
+        matchFound = false;
+        for (SqlNode projectionNode : selectClause) {
+          matchFound = isGroupByColumnFoundPresentInProjection(groupByNode, projectionNode);
+          if (matchFound) break;
+          index++;
+        }
+        gropuList.add(matchFound ? getIndexOrAliasAsSqlLiteral(selectClause, index) : groupByNode);
+      }
+      builder.setGroupBy(new SqlNodeList(gropuList, POS));
+    }
+  }
+
+  private boolean isGroupByColumnFoundPresentInProjection(SqlNode groupByNode, SqlNode projectionNode) {
+    if (projectionNode.getKind() == SqlKind.AS) {
+      return getOperands(projectionNode)[0].toString().equals(groupByNode.toString());
+    } else {
+      return projectionNode.toString().equals(groupByNode.toString());
+    }
+  }
+
+  private SqlNode[] getOperands(SqlNode sqlNode) {
+    SqlCall sqlCall = (SqlCall) sqlNode;
+    return sqlCall.getOperandList().toArray(new SqlNode[0]);
+  }
+
+  private SqlLiteral getIndexOrAliasAsSqlLiteral(SqlNodeList selectClause, Integer index) {
+    SqlNode sqlNode = selectClause.get(index);
+    if (sqlNode.getKind() == SqlKind.AS) {
+      return SqlLiteral.createCharString(getOperands(sqlNode)[1].toString(), SqlParserPos.ZERO);
+    } else {
+      return SqlLiteral.createExactNumeric(String.valueOf(index + 1), SqlParserPos.ZERO);
     }
   }
 
