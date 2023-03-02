@@ -552,7 +552,7 @@ public class RelToSqlConverter extends SqlImplementor
       // Some databases don't support "GROUP BY ()". We can omit it as long
       // as there is at least one aggregate function.
       builder.setGroupBy(new SqlNodeList(groupByList, POS));
-      if(e.getInput() instanceof LogicalProject) {
+      if (e.getInput() instanceof LogicalProject) {
         updateGroupBy(x, builder);
       }
     }
@@ -1196,14 +1196,16 @@ public class RelToSqlConverter extends SqlImplementor
       final List<SqlNode> gropuList = new ArrayList<>();
       SqlNodeList selectClause = ((SqlSelect) x.node).getSelectList();
       SqlNodeList groupClause = builder.select.getGroup();
-      Integer index;
+      int index;
       boolean matchFound;
       for (SqlNode groupByNode : groupClause) {
         index = 0;
         matchFound = false;
         for (SqlNode projectionNode : selectClause) {
           matchFound = isGroupByColumnFoundPresentInProjection(groupByNode, projectionNode);
-          if (matchFound) break;
+          if (matchFound) {
+            break;
+          }
           index++;
         }
         gropuList.add(matchFound ? getIndexOrAliasAsSqlLiteral(selectClause, index) : groupByNode);
@@ -1212,7 +1214,8 @@ public class RelToSqlConverter extends SqlImplementor
     }
   }
 
-  private boolean isGroupByColumnFoundPresentInProjection(SqlNode groupByNode, SqlNode projectionNode) {
+  private boolean isGroupByColumnFoundPresentInProjection(SqlNode groupByNode,
+                                                          SqlNode projectionNode) {
     if (projectionNode.getKind() == SqlKind.AS) {
       return getOperands(projectionNode)[0].toString().equals(groupByNode.toString());
     } else {
