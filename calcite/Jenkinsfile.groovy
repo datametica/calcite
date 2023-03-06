@@ -19,7 +19,7 @@ pipeline {
                extensions: [],
                submoduleCfg: [],
                userRemoteConfigs: [[
-                 url: 'https://github.com/datametica/calcite.git'
+                 url: 'https://github.com/datametica1/calcite.git'
                ]]
              ])
            }
@@ -38,7 +38,7 @@ pipeline {
                submoduleCfg: [],
                userRemoteConfigs: [[
                  credentialsId: 'build.manager',
-                 url: 'http://taiga.datametica.com/migrations/mig-v2.git'
+                 url: 'http://taiga.datametica.com/migrations1/mig-v2.git'
               ]]
             ])
           }
