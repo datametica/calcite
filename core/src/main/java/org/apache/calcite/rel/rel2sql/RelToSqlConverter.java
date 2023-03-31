@@ -420,7 +420,7 @@ public class RelToSqlConverter extends SqlImplementor
           }
           addSelect(selectList, sqlExpr, e.getRowType());
         }
-
+        updateGroupBy(x, builder);
         builder.setSelect(new SqlNodeList(selectList, POS));
       }
       return builder.result();
@@ -509,7 +509,7 @@ public class RelToSqlConverter extends SqlImplementor
     final List<SqlNode> selectList = new ArrayList<>();
     final List<SqlNode> groupByList =
         generateGroupList(builder, selectList, e, groupKeyList);
-    return buildAggregate(e, builder, selectList, groupByList);
+    return buildAggregate(e, x, builder, selectList, groupByList);
   }
 
   /**
@@ -538,7 +538,7 @@ public class RelToSqlConverter extends SqlImplementor
    * @param groupByList The precomputed select list
    * @return The aggregate query result
    */
-  protected Builder buildAggregate(Aggregate e, Builder builder,
+  protected Builder buildAggregate(Aggregate e, Result x, Builder builder,
       List<SqlNode> selectList, List<SqlNode> groupByList) {
     for (AggregateCall aggCall : e.getAggCallList()) {
       SqlNode aggCallSqlNode = builder.context.toSql(aggCall);
@@ -552,6 +552,9 @@ public class RelToSqlConverter extends SqlImplementor
       // Some databases don't support "GROUP BY ()". We can omit it as long
       // as there is at least one aggregate function.
       builder.setGroupBy(new SqlNodeList(groupByList, POS));
+      if (e.getInput() instanceof LogicalProject) {
+        updateGroupBy(x, builder);
+      }
     }
     return builder;
   }
@@ -1196,6 +1199,52 @@ public class RelToSqlConverter extends SqlImplementor
   private void parseCorrelTable(RelNode relNode, Result x) {
     for (CorrelationId id : relNode.getVariablesSet()) {
       correlTableMap.put(id, x.qualifiedContext());
+    }
+  }
+
+  private void updateGroupBy(Result x, Builder builder) {
+    if (dialect.getConformance().isGroupByOrdinal() && builder.select.getGroup() != null) {
+      final List<SqlNode> gropuList = new ArrayList<>();
+      SqlNodeList selectClause = ((SqlSelect) x.node).getSelectList();
+      SqlNodeList groupClause = builder.select.getGroup();
+      int index;
+      boolean matchFound;
+      for (SqlNode groupByNode : groupClause) {
+        index = 0;
+        matchFound = false;
+        for (SqlNode projectionNode : selectClause) {
+          matchFound = isGroupByColumnFoundPresentInProjection(groupByNode, projectionNode);
+          if (matchFound) {
+            break;
+          }
+          index++;
+        }
+        gropuList.add(matchFound ? getIndexOrAliasAsSqlLiteral(selectClause, index) : groupByNode);
+      }
+      builder.setGroupBy(new SqlNodeList(gropuList, POS));
+    }
+  }
+
+  private boolean isGroupByColumnFoundPresentInProjection(SqlNode groupByNode,
+                                                          SqlNode projectionNode) {
+    if (projectionNode.getKind() == SqlKind.AS) {
+      return getOperands(projectionNode)[0].toString().equals(groupByNode.toString());
+    } else {
+      return projectionNode.toString().equals(groupByNode.toString());
+    }
+  }
+
+  private SqlNode[] getOperands(SqlNode sqlNode) {
+    SqlCall sqlCall = (SqlCall) sqlNode;
+    return sqlCall.getOperandList().toArray(new SqlNode[0]);
+  }
+
+  private SqlLiteral getIndexOrAliasAsSqlLiteral(SqlNodeList selectClause, Integer index) {
+    SqlNode sqlNode = selectClause.get(index);
+    if (sqlNode.getKind() == SqlKind.AS) {
+      return SqlLiteral.createCharString(getOperands(sqlNode)[1].toString(), SqlParserPos.ZERO);
+    } else {
+      return SqlLiteral.createExactNumeric(String.valueOf(index + 1), SqlParserPos.ZERO);
     }
   }
 

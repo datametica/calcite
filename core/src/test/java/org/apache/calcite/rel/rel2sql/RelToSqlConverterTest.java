@@ -329,7 +329,7 @@ class RelToSqlConverterTest {
         + "SUM(shelf_width)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id > 0\n"
-        + "GROUP BY product_id";
+        + "GROUP BY 1";
     sql(query).withBigQuery().ok(expected);
   }
 
@@ -356,7 +356,7 @@ class RelToSqlConverterTest {
         + "THEN shelf_width ELSE NULL END) AS `20_W`,"
         + " COUNT(CASE WHEN product_id = 20 THEN 1 ELSE NULL END) AS `20_C`\n"
         + "FROM foodmart.product\n"
-        + "GROUP BY net_weight";
+        + "GROUP BY 1";
     sql(query).ok(expected)
         .withBigQuery().ok(expectedBigQuery);
   }
@@ -552,7 +552,7 @@ class RelToSqlConverterTest {
         + " \"product\" group by 'literal', sku + 1";
     final String bigQueryExpected = "SELECT 'literal' AS a, SKU + 1 AS B\n"
         + "FROM foodmart.product\n"
-        + "GROUP BY 1, B";
+        + "GROUP BY 'a', B";
     sql(query)
         .withBigQuery()
         .ok(bigQueryExpected);
@@ -563,7 +563,7 @@ class RelToSqlConverterTest {
         + " \"product\" group by sku + 1, 'literal'";
     final String bigQueryExpected = "SELECT 'literal' AS a, SKU + 1 AS b, SUM(product_id)\n"
         + "FROM foodmart.product\n"
-        + "GROUP BY b, 1";
+        + "GROUP BY b, 'a'";
     sql(query)
         .withBigQuery()
         .ok(bigQueryExpected);
@@ -578,10 +578,10 @@ class RelToSqlConverterTest {
         + "GROUP BY '1', SKU + 1";
     final String bigQueryExpected = "SELECT '1' AS a, SKU + 1 AS B, '1' AS d\n"
         + "FROM foodmart.product\n"
-        + "GROUP BY 1, B";
+        + "GROUP BY 'd', B";
     final String expectedSpark = "SELECT '1' a, SKU + 1 B, '1' d\n"
         + "FROM foodmart.product\n"
-        + "GROUP BY 1, B";
+        + "GROUP BY 'd', B";
     sql(query)
         .withHive()
         .ok(expectedSql)
@@ -622,7 +622,7 @@ class RelToSqlConverterTest {
     final String expectedMysql = "SELECT SUM(`product_id`)\n"
         + "FROM (SELECT `product_id`\n"
         + "FROM `foodmart`.`product`\n"
-        + "GROUP BY `product_class_id`, `product_id`) AS `t1`";
+        + "GROUP BY 1, 2) AS `t1`";
     sql(query)
         .ok(expected)
         .withMysql()
@@ -1146,7 +1146,7 @@ class RelToSqlConverterTest {
     final String expectedMySQL = "SELECT SUM(`net_weight1`) AS `net_weight_converted`\n"
         + "FROM (SELECT SUM(`net_weight`) AS `net_weight1`\n"
         + "FROM `foodmart`.`product`\n"
-        + "GROUP BY `product_id`) AS `t1`";
+        + "GROUP BY 1) AS `t1`";
     final String expectedPostgresql = "SELECT SUM(\"net_weight1\") AS \"net_weight_converted\"\n"
         + "FROM (SELECT SUM(\"net_weight\") AS \"net_weight1\"\n"
         + "FROM \"foodmart\".\"product\"\n"
@@ -1155,12 +1155,15 @@ class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT SUM(net_weight1) AS net_weight_converted\n"
         + "FROM (SELECT SUM(net_weight) AS net_weight1\n"
         + "FROM foodmart.product\n"
-        + "GROUP BY product_id) AS t1";
+        + "GROUP BY 1) AS t1";
     final String expectedHive = "SELECT SUM(net_weight1) net_weight_converted\n"
         + "FROM (SELECT SUM(net_weight) net_weight1\n"
         + "FROM foodmart.product\n"
         + "GROUP BY product_id) t1";
-    final String expectedSpark = expectedHive;
+    final String expectedSpark = "SELECT SUM(net_weight1) net_weight_converted\n"
+            + "FROM (SELECT SUM(net_weight) net_weight1\n"
+            + "FROM foodmart.product\n"
+            + "GROUP BY 1) t1";
     sql(query)
         .withOracle()
         .ok(expectedOracle)
@@ -1660,14 +1663,14 @@ class RelToSqlConverterTest {
     final String expectedMysql = "SELECT `product_id` + 1, `" + alias + "`\n"
         + "FROM (SELECT `product_id`, SUM(`gross_weight`) AS `" + alias + "`\n"
         + "FROM `foodmart`.`product`\n"
-        + "GROUP BY `product_id`\n"
+        + "GROUP BY 1\n"
         + "HAVING `" + alias + "` < 200) AS `t1`";
     // BigQuery has isHavingAlias=true, case-sensitive=false
     final String expectedBigQuery = upperAlias
         ? "SELECT product_id + 1, GROSS_WEIGHT\n"
             + "FROM (SELECT product_id, SUM(gross_weight) AS GROSS_WEIGHT\n"
             + "FROM foodmart.product\n"
-            + "GROUP BY product_id\n"
+            + "GROUP BY 1\n"
             + "HAVING GROSS_WEIGHT < 200) AS t1"
         // Before [CALCITE-3896] was fixed, we got
         // "HAVING SUM(gross_weight) < 200) AS t1"
@@ -1675,7 +1678,7 @@ class RelToSqlConverterTest {
         : "SELECT product_id + 1, gross_weight\n"
             + "FROM (SELECT product_id, SUM(gross_weight) AS gross_weight\n"
             + "FROM foodmart.product\n"
-            + "GROUP BY product_id\n"
+            + "GROUP BY 1\n"
             + "HAVING gross_weight < 200) AS t1";
     sql(query)
         .withPostgresql().ok(expectedPostgresql)
@@ -2365,12 +2368,12 @@ class RelToSqlConverterTest {
         + "FROM scott.DEPT\n"
         + "WHERE DEPTNO = 40))) AS SC_DEPTNO, COUNT(1) AS pid\n"
         + "FROM scott.EMP\n"
-        + "GROUP BY EMPNO";
+        + "GROUP BY 1";
     final String expectedSnowflake = "SELECT \"EMPNO\", (((SELECT \"DEPTNO\"\n"
         + "FROM \"scott\".\"DEPT\"\n"
         + "WHERE \"DEPTNO\" = 40))) AS \"SC_DEPTNO\", COUNT(1) AS \"pid\"\n"
         + "FROM \"scott\".\"EMP\"\n"
-        + "GROUP BY \"EMPNO\"";
+        + "GROUP BY 1";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()),
         isLinux(expectedBigQuery));
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
@@ -4386,7 +4389,7 @@ class RelToSqlConverterTest {
     final String expectedMysql = "SELECT"
         + " DATE_FORMAT(`hire_date`, '%Y-%m-%d %H:%i:00')\n"
         + "FROM `foodmart`.`employee`\n"
-        + "GROUP BY DATE_FORMAT(`hire_date`, '%Y-%m-%d %H:%i:00')";
+        + "GROUP BY 1";
     sql(query)
         .withHsqldb()
         .ok(expected)
@@ -6970,7 +6973,7 @@ class RelToSqlConverterTest {
         + "FROM (SELECT department.department_id AS department_id0, employee.department_id\n"
         + "FROM foodmart.employee\n"
         + "INNER JOIN foodmart.department ON employee.department_id = department.department_id\n"
-        + "GROUP BY department_id0, employee.department_id) AS t0";
+        + "GROUP BY department_id0, 2) AS t0";
     sql(query).withBigQuery().ok(expected);
   }
 
@@ -7207,14 +7210,12 @@ class RelToSqlConverterTest {
         + "FROM (SELECT product_id, MAX(product_id) OVER "
         + "(PARTITION BY product_id RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS ABC\n"
         + "FROM foodmart.product) AS t\n"
-        + "GROUP BY product_id, ABC";
+        + "GROUP BY 1, ABC";
     final String expectedSnowFlake = "SELECT \"product_id\", MAX(\"product_id\") OVER "
         + "(PARTITION BY \"product_id\" ORDER BY \"product_id\" ROWS "
         + "BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS \"ABC\"\n"
         + "FROM \"foodmart\".\"product\"\n"
-        + "GROUP BY \"product_id\", MAX(\"product_id\") OVER (PARTITION BY \"product_id\" "
-        + "ORDER BY \"product_id\" ROWS BETWEEN UNBOUNDED PRECEDING AND "
-        + "UNBOUNDED FOLLOWING)";
+        + "GROUP BY 1, 'ABC'";
     final String mssql = "SELECT [product_id], MAX([product_id]) OVER (PARTITION "
         + "BY [product_id] ORDER BY [product_id] ROWS BETWEEN UNBOUNDED PRECEDING AND "
         + "UNBOUNDED FOLLOWING) AS [ABC]\n"
@@ -7225,7 +7226,7 @@ class RelToSqlConverterTest {
         + "FROM (SELECT product_id, MAX(product_id) OVER (PARTITION BY product_id RANGE BETWEEN "
         + "UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) ABC\n"
         + "FROM foodmart.product) t\n"
-        + "GROUP BY product_id, ABC";
+        + "GROUP BY 1, ABC";
     sql(query)
       .withHive()
       .ok(expected)
@@ -7297,20 +7298,20 @@ class RelToSqlConverterTest {
         + "RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
         + "FROM (SELECT first_name, department_id, COUNT(*) department_id_number\n"
         + "FROM foodmart.employee\n"
-        + "GROUP BY first_name, department_id) t0";
+        + "GROUP BY 1, 2) t0";
     final String expectedBQ = "SELECT first_name, department_id_number, "
         + "ROW_NUMBER() OVER (ORDER BY department_id IS NULL, department_id), SUM(department_id) "
         + "OVER (ORDER BY department_id IS NULL, department_id "
         + "RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
         + "FROM (SELECT first_name, department_id, COUNT(*) AS department_id_number\n"
         + "FROM foodmart.employee\n"
-        + "GROUP BY first_name, department_id) AS t0";
+        + "GROUP BY 1, 2) AS t0";
     final String expectedSnowFlake = "SELECT \"first_name\", \"department_id_number\", "
         + "ROW_NUMBER() OVER (ORDER BY \"department_id\"), SUM(\"department_id\") "
         + "OVER (ORDER BY \"department_id\" RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
         + "FROM (SELECT \"first_name\", \"department_id\", COUNT(*) AS \"department_id_number\"\n"
         + "FROM \"foodmart\".\"employee\"\n"
-        + "GROUP BY \"first_name\", \"department_id\") AS \"t0\"";
+        + "GROUP BY 1, 2) AS \"t0\"";
     final String mssql = "SELECT [first_name], [department_id_number], ROW_NUMBER()"
         + " OVER (ORDER BY CASE WHEN [department_id] IS NULL THEN 1 ELSE 0 END,"
         + " [department_id]), SUM([department_id]) OVER (ORDER BY CASE WHEN [department_id] IS NULL"
@@ -9699,7 +9700,7 @@ class RelToSqlConverterTest {
     final String expectedBQSql = "SELECT first_name, last_name, CASE WHEN first_name IS NULL THEN"
         + " 1 ELSE 0 END + CASE WHEN last_name IS NULL THEN 1 ELSE 0 END\n"
         + "FROM foodmart.employee\n"
-        + "GROUP BY first_name, last_name";
+        + "GROUP BY 1, 2";
 
     sql(query)
       .withBigQuery()
@@ -11155,7 +11156,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.product) AS t\n"
         + "INNER JOIN foodmart.sales_fact_1997 ON TRUE\n"
         + "WHERE t.RNK = 1\n"
-        + "GROUP BY t.product_id";
+        + "GROUP BY 1";
     sql(query)
         .withBigQuery()
         .ok(expectedBQ);

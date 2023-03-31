@@ -229,8 +229,7 @@ public class SqlSelectOperator extends SqlOperator {
           List<SqlNode> visitedLiteralNodeList = new ArrayList<>();
           for (SqlNode groupKey : select.groupBy.getList()) {
             if (!groupKey.toString().equalsIgnoreCase("NULL")) {
-              if (groupKey.getKind() == SqlKind.LITERAL
-                  || groupKey.getKind() == SqlKind.DYNAMIC_PARAM
+              if (groupKey.getKind() == SqlKind.DYNAMIC_PARAM
                   || groupKey.getKind() == SqlKind.MINUS_PREFIX) {
                 select.selectList.getList().
                     forEach(new Consumer<SqlNode>() {
@@ -293,4 +292,5 @@ public class SqlSelectOperator extends SqlOperator {
   @Override public boolean argumentMustBeScalar(int ordinal) {
     return ordinal == SqlSelect.WHERE_OPERAND;
   }
+
 }
