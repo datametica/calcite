@@ -62,7 +62,7 @@ public final class Blocks {
   public static BlockStatement create(Statement statement,
       BlockStatement block) {
     return Expressions.block(
-        Expressions.list(statement).appendAll(block.statements));
+        Expressions.list((Node) statement).appendAll(block.nodes));
   }
 
   /**
@@ -70,8 +70,8 @@ public final class Blocks {
    * throws.
    */
   public static Expression simple(BlockStatement block) {
-    if (block.statements.size() == 1) {
-      Statement statement = block.statements.get(0);
+    if (block.nodes.size() == 1) {
+      Statement statement = (Statement) block.nodes.get(0);
       if (statement instanceof GotoStatement) {
         return requireNonNull(((GotoStatement) statement).expression);
       }

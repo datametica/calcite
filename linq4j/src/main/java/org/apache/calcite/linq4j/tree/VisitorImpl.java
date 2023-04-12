@@ -39,7 +39,7 @@ public class VisitorImpl<@Nullable R> implements Visitor<R> {
   }
 
   @Override public R visit(BlockStatement blockStatement) {
-    return Expressions.acceptNodes(blockStatement.statements, this);
+    return Expressions.acceptNodes(blockStatement.nodes, this);
   }
 
   @Override public R visit(ClassDeclaration classDeclaration) {

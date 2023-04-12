@@ -270,7 +270,7 @@ public abstract class Expressions {
    * Creates a BlockExpression that contains the given statements.
    */
   public static BlockStatement block(
-      Iterable<? extends Statement> statements) {
+      Iterable<? extends Node> statements) {
     return block((Type) null, statements);
   }
 
@@ -278,7 +278,7 @@ public abstract class Expressions {
    * Creates a BlockExpression that contains the given statements,
    * using varargs.
    */
-  public static BlockStatement block(Statement... statements) {
+  public static BlockStatement block(Node... statements) {
     return block(toList(statements));
   }
 
@@ -287,13 +287,12 @@ public abstract class Expressions {
    * has no variables and has specific result type.
    */
   public static BlockStatement block(@Nullable Type type,
-      Iterable<? extends Statement> expressions) {
-    List<Statement> list = toList(expressions);
+      Iterable<? extends Node> expressions) {
+    List<Node> list = toList(expressions);
     if (type == null) {
-      if (list.size() > 0) {
-        type = list.get(list.size() - 1).getType();
-      } else {
-        type = Void.TYPE;
+      type = Void.TYPE;
+      if (list.size() > 0 && Statement.class.isInstance(list.get(list.size() - 1))) {
+        type = ((Statement) list.get(list.size() - 1)).getType();
       }
     }
     return new BlockStatement(list, type);
@@ -303,7 +302,7 @@ public abstract class Expressions {
    * Creates a BlockExpression that contains the given statements
    * and has a specific result type, using varargs.
    */
-  public static BlockStatement block(Type type, Statement... statements) {
+  public static BlockStatement block(Type type, Node... statements) {
     return block(type, toList(statements));
   }
 

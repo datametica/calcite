@@ -412,7 +412,7 @@ public class EnumerableWindow extends Window implements EnumerableRel {
           Expressions.lessThan(endX, prevEnd));
 
       BlockStatement resetWindowState = builder6.toBlock();
-      if (resetWindowState.statements.size() == 1) {
+      if (resetWindowState.nodes.size() == 1) {
         builder5.add(
             Expressions.declare(0, actualStart,
                 Expressions.condition(needRecomputeWindow, startX,
@@ -466,7 +466,7 @@ public class EnumerableWindow extends Window implements EnumerableRel {
       implementAdd(aggs, builder7, resultContextBuilder, rexArguments, jDecl);
 
       BlockStatement forBlock = builder7.toBlock();
-      if (!forBlock.statements.isEmpty()) {
+      if (!forBlock.nodes.isEmpty()) {
         // For instance, row_number does not use for loop to compute the value
         Statement forAggLoop = Expressions.for_(
             Arrays.asList(jDecl),

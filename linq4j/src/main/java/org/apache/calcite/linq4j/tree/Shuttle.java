@@ -55,8 +55,8 @@ public class Shuttle {
   }
 
   public BlockStatement visit(BlockStatement blockStatement,
-      List<Statement> statements) {
-    return statements.equals(blockStatement.statements)
+      List<Node> statements) {
+    return statements.equals(blockStatement.nodes)
         ? blockStatement
         : Expressions.block(statements);
   }
