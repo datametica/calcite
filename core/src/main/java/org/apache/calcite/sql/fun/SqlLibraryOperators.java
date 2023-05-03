@@ -635,6 +635,15 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.ARG0_NULLABLE_VARYING, null,
           OperandTypes.CBSTRING_INTEGER, SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction ORACLE_TO_CHAR =
+      new SqlFunction("TO_CHAR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.ANY,
+              SqlTypeFamily.STRING),
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
   public static final SqlFunction REPEAT =
       new SqlFunction(
@@ -1040,7 +1049,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction FORMAT_DATETIME = new SqlFunction(
       "FORMAT_DATETIME",
       SqlKind.OTHER_FUNCTION,
-      ReturnTypes.ARG0,
+      ReturnTypes.VARCHAR_2000_NULLABLE,
       null,
       OperandTypes.ANY_ANY,
       SqlFunctionCategory.TIMEDATE);
