@@ -1521,7 +1521,8 @@ public class SqlDialect {
         && standardDateFormat.charAt(indexofCurrentChar + 1) == 'M')
             || (standardDateFormat.charAt(indexofCurrentChar - 1) == 'M'
         && standardDateFormat.charAt(indexofCurrentChar - 2) == '.'
-        && standardDateFormat.charAt(indexofCurrentChar - 1) == 'A'));
+        && (standardDateFormat.charAt(indexofCurrentChar - 3) == 'A'
+                || standardDateFormat.charAt(indexofCurrentChar - 3) == 'P')));
   }
 
   private String getFinalFormat(
