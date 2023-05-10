@@ -8296,8 +8296,8 @@ class RelToSqlConverterTest {
         + "/ 86400)) AS \"unix_date\"\n"
         + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT DATE_FROM_UNIX_DATE(CAST(FLOOR(CAST"
-        + "('\\'20091223\\'' AS INT64) / 86400) AS INTEGER)) AS unix_date\n" +
-        "FROM scott.EMP";
+        + "('\\'20091223\\'' AS INT64) / 86400) AS INTEGER)) AS unix_date\n"
+        + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
