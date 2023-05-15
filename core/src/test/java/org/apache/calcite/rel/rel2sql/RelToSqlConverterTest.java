@@ -11843,4 +11843,24 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
   }
 
+  @Test public void testFormatTimestampInBQ() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatTimestampRexNode1 = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"),
+        builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP_WITH_TIME_ZONE));
+    final RexNode formatTimestampRexNode2 = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("YYYY-MM-DD"),
+        builder.getRexBuilder().makeDateLiteral(new DateString("1970-01-01")));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatTimestampRexNode1, "TIMESTAMP1"),
+            builder.alias(formatTimestampRexNode2, "DATE1"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT FORMAT_TIMESTAMP('%F %I:%M:%E5S', CURRENT_TIMESTAMP()"
+        + ") AS TIMESTAMP1, FORMAT_TIMESTAMP('%F', DATE '1970-01-01') AS DATE1\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
 }

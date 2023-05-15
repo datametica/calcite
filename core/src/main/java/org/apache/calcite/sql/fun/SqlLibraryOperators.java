@@ -60,6 +60,8 @@ import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_DATE;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_TIMESTAMP;
 
 /**
  * Defines functions and operators that are not part of standard SQL but
@@ -469,7 +471,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction FORMAT_TIMESTAMP = new SqlFunction("FORMAT_TIMESTAMP",
       SqlKind.OTHER_FUNCTION,
       ReturnTypes.VARCHAR_2000_NULLABLE, null,
-      OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.TIMESTAMP),
+      OperandTypes.or(STRING_DATE, STRING_TIMESTAMP),
       SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {HIVE, SPARK})
