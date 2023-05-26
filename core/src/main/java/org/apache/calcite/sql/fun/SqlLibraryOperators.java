@@ -1518,4 +1518,12 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_STRING_STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {TERADATA, SNOWFLAKE})
+  public static final SqlFunction GETBIT =
+      new SqlFunction("GETBIT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+          SqlFunctionCategory.NUMERIC);
 }

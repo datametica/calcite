@@ -1222,6 +1222,14 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "TRUE":
       unparseBoolean(writer, call);
       break;
+    case "GETBIT":
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.print(">> ");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.print("& ");
+      SqlNumericLiteral oneLiteral = SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO);
+      oneLiteral.unparse(writer, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
