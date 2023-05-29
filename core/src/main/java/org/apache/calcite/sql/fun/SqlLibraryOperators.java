@@ -1546,6 +1546,6 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("GETBIT",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER_NULLABLE, null,
-          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+          OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
           SqlFunctionCategory.NUMERIC);
 }
