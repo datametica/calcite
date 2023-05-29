@@ -2415,7 +2415,7 @@ class RelToSqlConverterTest {
 
   @Test void testPositionFunctionWithSlashForBigQuery() {
     final String query = "select position('\\,' IN 'ABC') from \"product\"";
-    final String expected = "SELECT STRPOS('ABC', '\\,')\n"
+    final String expected = "SELECT STRPOS('ABC', '\\\\,')\n"
         + "FROM foodmart.product";
     sql(query).withBigQuery().ok(expected);
   }
@@ -6206,7 +6206,7 @@ class RelToSqlConverterTest {
         + "1,1,'i')\n"
         + "from \"foodmart\".\"product\" where \"product_id\" in (1, 2, 3, 4)";
     final String expected = "SELECT "
-        + "REGEXP_SUBSTR('chocolate Chip cookies', '(?i)[-\\_] V[0-9]+', 1, 1)\n"
+        + "REGEXP_SUBSTR('chocolate Chip cookies', '(?i)[-\\\\_] V[0-9]+', 1, 1)\n"
         + "FROM foodmart.product\n"
         + "WHERE product_id = 1 OR product_id = 2 OR product_id = 3 OR product_id = 4";
     sql(query)
@@ -10305,7 +10305,7 @@ class RelToSqlConverterTest {
     String query =
         "SELECT '\\\\PWFSNFS01EFS\\imagenowcifs\\debitmemo' AS DM_SENDFILE_PATH1";
     final String expectedBQSql =
-        "SELECT '\\\\PWFSNFS01EFS\\imagenowcifs\\debitmemo' AS "
+        "SELECT '\\\\\\\\PWFSNFS01EFS\\\\imagenowcifs\\\\debitmemo' AS "
             + "DM_SENDFILE_PATH1";
 
     sql(query)
@@ -11080,7 +11080,7 @@ class RelToSqlConverterTest {
         + " 'US\\' AS \"AB\", 'Y' AS \"IBL_FG\", 'IBL' AS "
         + "\"PRSN_ORG_ROLE_CD\"";
     final String expectedBQSql = "SELECT 'No IBL' AS FIRST_NM,"
-        + " 'US\\' AS AB, 'Y' AS IBL_FG,"
+        + " 'US\\\\' AS AB, 'Y' AS IBL_FG,"
         + " 'IBL' AS PRSN_ORG_ROLE_CD";
     sql(query)
         .withBigQuery()
@@ -11090,7 +11090,7 @@ class RelToSqlConverterTest {
   @Test public void literalWithBackslashesInSelectList() {
     final String query = "SELECT \"first_name\", '', '', '', '', '', '\\'\n"
         + "  FROM \"foodmart\".\"employee\"";
-    final String expectedBQSql = "SELECT first_name, '', '', '', '', '', '\\'\n"
+    final String expectedBQSql = "SELECT first_name, '', '', '', '', '', '\\\\'\n"
         + "FROM foodmart.employee";
     sql(query)
         .withBigQuery()
@@ -11943,6 +11943,34 @@ class RelToSqlConverterTest {
         + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
   }
+
+  @Test public void testOracleLastDay() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode literalTimestamp = relBuilder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP);
+    RexNode lastDayNode = relBuilder.call(SqlLibraryOperators.ORACLE_LAST_DAY, literalTimestamp);
+    RelNode root = relBuilder
+        .project(lastDayNode)
+        .build();
+    final String expectedOracleSql = "SELECT LAST_DAY(CURRENT_TIMESTAMP) \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
+  }
+
+  @Test public void testOracleNextDayFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode nextDayRexNode = builder.call(SqlLibraryOperators.ORACLE_NEXT_DAY,
+        builder.call(CURRENT_DATE), builder.literal(DayOfWeek.SATURDAY.name()));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(nextDayRexNode, "next_day"))
+        .build();
+    final String expectedOracle = "SELECT NEXT_DAY(CURRENT_DATE, 'SATURDAY') \"next_day\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracle));
+  }
+
 
   @Test public void testForGetBitFunction() {
     final RelBuilder builder = relBuilder();
