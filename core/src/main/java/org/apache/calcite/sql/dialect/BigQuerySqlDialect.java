@@ -1224,16 +1224,20 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseBoolean(writer, call);
       break;
     case "GETBIT":
-      call.operand(0).unparse(writer, leftPrec, rightPrec);
-      writer.print(">> ");
-      call.operand(1).unparse(writer, leftPrec, rightPrec);
-      writer.print("& ");
-      SqlNumericLiteral oneLiteral = SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO);
-      oneLiteral.unparse(writer, leftPrec, rightPrec);
+      unparseGetBitFunction(writer, call, leftPrec, rightPrec);
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private static void unparseGetBitFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(">> ");
+    call.operand(1).unparse(writer, leftPrec, rightPrec);
+    writer.print("& ");
+    SqlNumericLiteral oneLiteral = SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO);
+    oneLiteral.unparse(writer, leftPrec, rightPrec);
   }
 
   private void unParseRegexpLike(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
