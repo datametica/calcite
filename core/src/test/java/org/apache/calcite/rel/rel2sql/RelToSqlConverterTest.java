@@ -11980,7 +11980,7 @@ class RelToSqlConverterTest {
         .project(builder.alias(getBitRexNode, "aa"))
         .build();
 
-    final String expectedBQ = "SELECT 8 >> 3 & 1 AS `$f0`";
+    final String expectedBQ = "SELECT 8 >> 3 & 1 AS aa";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQ));
   }
