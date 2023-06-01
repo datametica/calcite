@@ -502,6 +502,9 @@ public enum BuiltInMethod {
       "timestampWithLocalTimeZoneToTimeWithLocalTimeZone", long.class),
   TIMESTAMP_WITH_LOCAL_TIME_ZONE_TO_TIMESTAMP(SqlFunctions.class,
       "timestampWithLocalTimeZoneToTimestamp", long.class, TimeZone.class),
+
+  TIMESTAMP_STRING_TO_TIMESTAMP_WITH_TIME_ZONE(SqlFunctions.class,
+      "toTimestampWithTimeZone", String.class, TimeZone.class),
   TIMESTAMP_WITH_LOCAL_TIME_ZONE_TO_STRING(SqlFunctions.class,
       "timestampWithLocalTimeZoneToString", long.class, TimeZone.class),
   UNIX_DATE_TO_STRING(DateTimeUtils.class, "unixDateToString", int.class),

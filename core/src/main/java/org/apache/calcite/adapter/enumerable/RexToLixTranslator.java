@@ -404,6 +404,22 @@ public class RexToLixTranslator implements RexVisitor<RexToLixTranslator.Result>
         break;
       }
       break;
+    case TIMESTAMP_WITH_TIME_ZONE:
+      switch (sourceType.getSqlTypeName()) {
+      case TIMESTAMP:
+        convert = Expressions.call(
+            BuiltInMethod.TIMESTAMP_STRING_TO_TIMESTAMP_WITH_TIME_ZONE.method,
+            RexImpTable.optimize2(
+                operand,
+                Expressions.call(
+                    BuiltInMethod.UNIX_TIMESTAMP_TO_STRING.method,
+                    operand)),
+            Expressions.call(BuiltInMethod.TIME_ZONE.method, root));
+        break;
+      default:
+        break;
+      }
+      break;
     case BOOLEAN:
       switch (sourceType.getSqlTypeName()) {
       case CHAR:
