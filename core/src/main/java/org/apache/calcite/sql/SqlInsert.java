@@ -42,7 +42,7 @@ public class SqlInsert extends SqlCall {
               (SqlNodeList) operands[0],
               operands[1],
               operands[2],
-              (SqlNodeList) operands[3]);
+              (SqlNodeList) operands[3], null);
         }
       };
 
@@ -50,8 +50,23 @@ public class SqlInsert extends SqlCall {
   SqlNode targetTable;
   SqlNode source;
   @Nullable SqlNodeList columnList;
+  @Nullable SqlNode condition;
 
   //~ Constructors -----------------------------------------------------------
+
+  public SqlInsert(SqlParserPos pos,
+      SqlNodeList keywords,
+      SqlNode targetTable,
+      SqlNode source,
+      @Nullable SqlNodeList columnList, @Nullable SqlNode condition) {
+    super(pos);
+    this.keywords = keywords;
+    this.targetTable = targetTable;
+    this.source = source;
+    this.columnList = columnList;
+    this.condition = condition;
+    assert keywords != null;
+  }
 
   public SqlInsert(SqlParserPos pos,
       SqlNodeList keywords,
@@ -63,6 +78,7 @@ public class SqlInsert extends SqlCall {
     this.targetTable = targetTable;
     this.source = source;
     this.columnList = columnList;
+    this.condition = null;
     assert keywords != null;
   }
 
