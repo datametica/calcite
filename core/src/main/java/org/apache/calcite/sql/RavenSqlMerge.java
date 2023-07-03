@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.calcite.sql;
 
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -22,21 +21,21 @@ import org.apache.calcite.util.Pair;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/**
+ * Handles merge statement.
+ */
 public class RavenSqlMerge extends SqlMerge {
   SqlDelete deleteCall;
-  SqlInsert insertCall;
 
   public RavenSqlMerge(SqlParserPos pos, SqlNode targetTable, SqlNode condition, SqlNode source,
       @Nullable SqlUpdate updateCall, @Nullable SqlDelete deleteCall,
       @Nullable SqlInsert insertCall, @Nullable SqlSelect sourceSelect,
       @Nullable SqlIdentifier alias) {
     super(pos, targetTable, condition, source, updateCall, insertCall, sourceSelect, alias);
-    this.insertCall = insertCall;
     this.deleteCall = deleteCall;
   }
 
-  @Override
-  public void setOperand(int i, @Nullable SqlNode operand) {
+  @Override public void setOperand(int i, @Nullable SqlNode operand) {
     switch (i) {
     case 0:
       assert operand instanceof SqlIdentifier;
@@ -68,8 +67,7 @@ public class RavenSqlMerge extends SqlMerge {
     }
   }
 
-  @Override
-  public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+  @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
     final SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.SELECT, "MERGE INTO",
         "");
     final int opLeft = getOperator().getLeftPrec();
@@ -117,10 +115,6 @@ public class RavenSqlMerge extends SqlMerge {
         writer.newlineAndIndent();
         writer.keyword("WHEN MATCHED");
         if (deleteCall.condition != null) {
-          if(updateCall.condition != null) {
-            writer.keyword("AND");
-            updateCall.condition.unparse(writer, leftPrec, rightPrec);
-          }
           writer.keyword("AND");
           deleteCall.condition.unparse(writer, leftPrec, rightPrec);
         }
@@ -134,9 +128,9 @@ public class RavenSqlMerge extends SqlMerge {
     if (insertCall != null) {
       writer.newlineAndIndent();
       writer.keyword("WHEN NOT MATCHED");
-      if(insertCall.condition != null) {
+      if (insertCall.condition != null) {
         writer.keyword("AND");
-        insertCall.condition.unparse(writer,leftPrec,rightPrec);
+        insertCall.condition.unparse(writer, leftPrec, rightPrec);
       }
       writer.keyword("THEN INSERT");
       SqlNodeList targetColumnList = insertCall.getTargetColumnList();
