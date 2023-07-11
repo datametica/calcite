@@ -1124,7 +1124,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction ISO_WEEKOFYEAR = new SqlFunction(
       "ISOWEEK",
       SqlKind.OTHER_FUNCTION,
-      ReturnTypes.INTEGER,
+      ReturnTypes.INTEGER_NULLABLE,
       null,
       OperandTypes.DATETIME,
       SqlFunctionCategory.TIMEDATE);
