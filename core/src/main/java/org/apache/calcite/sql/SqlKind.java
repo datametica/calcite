@@ -164,6 +164,7 @@ public enum SqlKind {
   /** "{@code ALTER scope SET option = value}" statement. */
   SET_OPTION,
 
+  REX_INTERVAL,
   /** A dynamic parameter. */
   DYNAMIC_PARAM,
 

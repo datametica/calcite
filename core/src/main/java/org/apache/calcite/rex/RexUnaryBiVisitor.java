@@ -78,6 +78,11 @@ public class RexUnaryBiVisitor<@Nullable R> extends RexBiVisitorImpl<R, R> {
     return end(call, arg);
   }
 
+  @Override public R visitRexInterval(RexInterval call, R arg) {
+    super.visitRexInterval(call, arg);
+    return end(call, arg);
+  }
+
   @Override public R visitFieldAccess(RexFieldAccess fieldAccess, R arg) {
     super.visitFieldAccess(fieldAccess, arg);
     return end(fieldAccess, arg);

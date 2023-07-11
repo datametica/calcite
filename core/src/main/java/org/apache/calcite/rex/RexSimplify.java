@@ -1072,6 +1072,9 @@ public class RexSimplify {
     @Override public Boolean visitLocalRef(RexLocalRef localRef) {
       return false;
     }
+    @Override public Boolean visitRexInterval(RexInterval rexInterval) {
+      return false;
+    }
 
     @Override public Boolean visitLiteral(RexLiteral literal) {
       return true;

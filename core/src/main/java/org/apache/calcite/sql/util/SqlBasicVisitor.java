@@ -16,14 +16,7 @@
  */
 package org.apache.calcite.sql.util;
 
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
-import org.apache.calcite.sql.SqlDynamicParam;
-import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlIntervalQualifier;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.*;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -65,6 +58,9 @@ public class SqlBasicVisitor<@Nullable R> implements SqlVisitor<R> {
   }
 
   @Override public R visit(SqlDynamicParam param) {
+    return null;
+  }
+  @Override public R visit(SqlRexInterval param) {
     return null;
   }
 

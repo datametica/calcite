@@ -79,6 +79,7 @@ import org.apache.calcite.rex.RexDynamicParam;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexInterval;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexPatternFieldRef;
@@ -94,46 +95,7 @@ import org.apache.calcite.schema.ModifiableView;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.Wrapper;
-import org.apache.calcite.sql.JoinConditionType;
-import org.apache.calcite.sql.JoinType;
-import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlCallBinding;
-import org.apache.calcite.sql.SqlDataTypeSpec;
-import org.apache.calcite.sql.SqlDelete;
-import org.apache.calcite.sql.SqlDynamicParam;
-import org.apache.calcite.sql.SqlExplainFormat;
-import org.apache.calcite.sql.SqlExplainLevel;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlInsert;
-import org.apache.calcite.sql.SqlIntervalQualifier;
-import org.apache.calcite.sql.SqlJoin;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlMatchRecognize;
-import org.apache.calcite.sql.SqlMerge;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlNumericLiteral;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.SqlOrderBy;
-import org.apache.calcite.sql.SqlPivot;
-import org.apache.calcite.sql.SqlSampleSpec;
-import org.apache.calcite.sql.SqlSelect;
-import org.apache.calcite.sql.SqlSelectKeyword;
-import org.apache.calcite.sql.SqlSetOperator;
-import org.apache.calcite.sql.SqlSnapshot;
-import org.apache.calcite.sql.SqlUnnestOperator;
-import org.apache.calcite.sql.SqlUnpivot;
-import org.apache.calcite.sql.SqlUpdate;
-import org.apache.calcite.sql.SqlUtil;
-import org.apache.calcite.sql.SqlValuesOperator;
-import org.apache.calcite.sql.SqlWindow;
-import org.apache.calcite.sql.SqlWith;
-import org.apache.calcite.sql.SqlWithItem;
+import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.calcite.sql.fun.SqlInOperator;
@@ -3373,6 +3335,10 @@ public class SqlToRelConverter {
         dynamicParam.getIndex());
   }
 
+  public RexInterval convertRexInterval(final SqlRexInterval rexInterval) {
+    return rexBuilder.makeIntervalRex(rexInterval.node, rexInterval.intervalQualifier);
+  }
+
   /**
    * Creates a list of collations required to implement the ORDER BY clause,
    * if there is one. Populates <code>extraOrderExprs</code> with any sort
@@ -5250,6 +5216,10 @@ public class SqlToRelConverter {
       return convertDynamicParam(param);
     }
 
+    @Override public RexNode visit(SqlRexInterval param) {
+      return convertRexInterval(param);
+    }
+
     @Override public RexNode visit(SqlIntervalQualifier intervalQualifier) {
       return convertInterval(intervalQualifier);
     }
@@ -5476,6 +5446,10 @@ public class SqlToRelConverter {
     }
 
     @Override public Void visit(SqlDynamicParam param) {
+      return null;
+    }
+
+    @Override public Void visit(SqlRexInterval param) {
       return null;
     }
 

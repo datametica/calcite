@@ -31,23 +31,7 @@ import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.linq4j.tree.Statement;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexCorrelVariable;
-import org.apache.calcite.rex.RexDynamicParam;
-import org.apache.calcite.rex.RexFieldAccess;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexLocalRef;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexOver;
-import org.apache.calcite.rex.RexPatternFieldRef;
-import org.apache.calcite.rex.RexProgram;
-import org.apache.calcite.rex.RexRangeRef;
-import org.apache.calcite.rex.RexSubQuery;
-import org.apache.calcite.rex.RexTableInputRef;
-import org.apache.calcite.rex.RexUtil;
-import org.apache.calcite.rex.RexVisitor;
+import org.apache.calcite.rex.*;
 import org.apache.calcite.runtime.GeoFunctions;
 import org.apache.calcite.runtime.Geometries;
 import org.apache.calcite.sql.SqlIntervalQualifier;
@@ -1374,6 +1358,10 @@ public class RexToLixTranslator implements RexVisitor<RexToLixTranslator.Result>
   }
 
   @Override public Result visitCorrelVariable(RexCorrelVariable correlVariable) {
+    throw new RuntimeException("Cannot translate " + correlVariable
+        + ". Correlated variables should always be referenced by field access");
+  }
+  @Override public Result visitRexInterval(RexInterval correlVariable) {
     throw new RuntimeException("Cannot translate " + correlVariable
         + ". Correlated variables should always be referenced by field access");
   }

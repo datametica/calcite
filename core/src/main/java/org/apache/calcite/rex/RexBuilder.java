@@ -1257,6 +1257,12 @@ public class RexBuilder {
     return makeFlag(intervalQualifier.timeUnitRange);
   }
 
+  public RexInterval makeIntervalRex(RexNode node,
+      SqlIntervalQualifier intervalQualifier) {
+    assert intervalQualifier != null;
+    return new RexInterval(node, intervalQualifier);
+  }
+
   /**
    * Creates a literal representing an interval value, for example
    * {@code INTERVAL '3-7' YEAR TO MONTH}.

@@ -26,27 +26,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
-import org.apache.calcite.sql.JoinType;
-import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
-import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlCharStringLiteral;
-import org.apache.calcite.sql.SqlDataTypeSpec;
-import org.apache.calcite.sql.SqlDateTimeFormat;
-import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlIntervalLiteral;
-import org.apache.calcite.sql.SqlIntervalQualifier;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlNumericLiteral;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlSetOperator;
-import org.apache.calcite.sql.SqlSyntax;
-import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlCastFunction;
 import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
@@ -888,12 +868,20 @@ public class BigQuerySqlDialect extends SqlDialect {
     case OTHER_FUNCTION:
       unparseOtherFunction(writer, call.operand(1), leftPrec, rightPrec);
       break;
+    case REX_INTERVAL:
+      unparseRexIntervalFunction(writer, call.operand(1), leftPrec, rightPrec);
+      break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
 
     writer.endFunCall(frame);
 
+  }
+
+  private void unparseRexIntervalFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    writer.literal("INTERVAL 1234");
+//    unp(writer, (RexCall)call.node, leftPrec, rightPrec);
   }
 
   /**
@@ -1631,6 +1619,10 @@ public class BigQuerySqlDialect extends SqlDialect {
         .replace("%S.", "%E");
   }
 
+  @Override public void unparseSqlRexInterval(
+      SqlWriter writer, SqlRexInterval literal, int leftPrec, int rightPrec) {
+    writer.keyword("INTERVAL3");
+  }
   /**
    * BigQuery interval syntax: INTERVAL int64 time_unit.
    */

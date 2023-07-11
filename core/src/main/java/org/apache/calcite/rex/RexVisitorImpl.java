@@ -51,6 +51,10 @@ public class RexVisitorImpl<@Nullable R> implements RexVisitor<R> {
     return null;
   }
 
+  @Override public R visitRexInterval(RexInterval literal) {
+    return null;
+  }
+
   @Override public R visitOver(RexOver over) {
     R r = visitCall(over);
     if (!deep) {

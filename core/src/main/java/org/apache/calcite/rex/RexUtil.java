@@ -688,6 +688,10 @@ public class RexUtil {
       return true;
     }
 
+    @Override public Boolean visitRexInterval(RexInterval dynamicParam) {
+      return true;
+    }
+
     @Override public Boolean visitCall(RexCall call) {
       // Constant if operator meets the following conditions:
       // 1. It is deterministic;

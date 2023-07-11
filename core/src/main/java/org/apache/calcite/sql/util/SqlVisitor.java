@@ -25,6 +25,7 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlRexInterval;
 
 /**
  * Visitor class, follows the
@@ -90,6 +91,8 @@ public interface SqlVisitor<R> {
    * @see SqlDynamicParam#accept(SqlVisitor)
    */
   R visit(SqlDynamicParam param);
+
+  R visit(SqlRexInterval param);
 
   /**
    * Visits an interval qualifier.

@@ -140,6 +140,10 @@ public class LogicVisitor extends RexUnaryBiVisitor<@Nullable Logic> {
     return end(fieldAccess, arg);
   }
 
+  @Override public @Nullable Logic visitRexInterval(RexInterval call, @Nullable Logic arg) {
+    return end(call, arg);
+  }
+
   @Override public @Nullable Logic visitSubQuery(RexSubQuery subQuery, @Nullable Logic arg) {
     if (!subQuery.getType().isNullable()) {
       if (arg == Logic.TRUE_FALSE_UNKNOWN) {

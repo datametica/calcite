@@ -140,8 +140,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRUE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.YEARNUMBER_OF_CALENDAR;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_DATE;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IN;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.*;
 import static org.apache.calcite.test.Matchers.isLinux;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -12549,6 +12548,37 @@ class RelToSqlConverterTest {
         + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT TIME(TIME '11:15:00') AS date1\n"
         + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testInterval() {
+    final RelBuilder builder = relBuilder();
+    final SqlIntervalQualifier qualifier = new SqlIntervalQualifier(SECOND, 4, SECOND,
+        -1, SqlParserPos.ZERO);
+    final  RexNode secondOp = builder.call(MULTIPLY, builder.literal(60), builder.literal(60));
+    final  RexNode firstOp = builder.call(CURRENT_TIME);
+    final RexNode thirdOp = builder.getRexBuilder().makeIntervalRex(secondOp, qualifier);
+    final RexNode strToDateNode = builder.call(SqlLibraryOperators.DATE_ADD, firstOp, thirdOp);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(strToDateNode, "date1"))
+        .build();
+    final String expectedSql = "SELECT DATE_ADD(CURRENT_TIME, INTERVAL  SECOND(4)) AS \"date1\"\nFROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT DATE_ADD(CURRENT_TIME, INTERVAL 1234) AS date1\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testInterval2() {
+    final RelBuilder builder = relBuilder();
+    final  RexNode secondOp = builder.call(FLOOR,builder.call(MULTIPLY, builder.literal(60), builder.literal(60)));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(secondOp, "date1"))
+        .build();
+    final String expectedSql = "SELECT FLOOR(60*60) AS \"date1\"\nFROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }

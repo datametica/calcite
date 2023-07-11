@@ -87,6 +87,9 @@ public class RexBiVisitorImpl<@Nullable R, P> implements RexBiVisitor<R, P> {
     return null;
   }
 
+  @Override public R visitRexInterval(RexInterval rexInterval, P arg) {
+    return null;
+  }
   @Override public R visitRangeRef(RexRangeRef rangeRef, P arg) {
     return null;
   }

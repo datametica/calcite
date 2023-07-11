@@ -66,6 +66,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlPivot;
+import org.apache.calcite.sql.SqlRexInterval;
 import org.apache.calcite.sql.SqlSampleSpec;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
@@ -5220,6 +5221,9 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
   @Override public void validateDynamicParam(SqlDynamicParam dynamicParam) {
   }
+  @Override public void validateRexInterval(SqlRexInterval dynamicParam) {
+
+  }
 
   /**
    * Throws a validator exception with access to the validator context.
@@ -6214,6 +6218,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       throw Util.needToImplement(param);
     }
 
+    @Override public Void visit(SqlRexInterval param) {
+      throw Util.needToImplement(param);
+    }
+
     @Override public Void visit(SqlIntervalQualifier intervalQualifier) {
       throw Util.needToImplement(intervalQualifier);
     }
@@ -6234,6 +6242,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
     @Override public RelDataType visit(SqlLiteral literal) {
       return literal.createSqlType(typeFactory);
+    }
+
+    @Override public RelDataType visit(SqlRexInterval param) {
+      return param.node.getType();
     }
 
     @Override public RelDataType visit(SqlCall call) {
@@ -6976,6 +6988,9 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
 
     @Override public Set<String> visit(SqlDynamicParam param) {
+      return ImmutableSet.of();
+    }
+    @Override public Set<String> visit(SqlRexInterval param) {
       return ImmutableSet.of();
     }
   }

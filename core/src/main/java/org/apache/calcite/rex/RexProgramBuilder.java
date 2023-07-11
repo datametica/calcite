@@ -917,6 +917,11 @@ public class RexProgramBuilder {
       return registerInternal(expr, false);
     }
 
+    @Override public RexNode visitRexInterval(RexInterval rexInterval) {
+      final RexNode expr = super.visitRexInterval(rexInterval);
+      return registerInternal(expr, false);
+    }
+
     @Override public RexNode visitCorrelVariable(RexCorrelVariable variable) {
       final RexNode expr = super.visitCorrelVariable(variable);
       return registerInternal(expr, false);

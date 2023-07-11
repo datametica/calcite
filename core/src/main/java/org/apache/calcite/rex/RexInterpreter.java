@@ -115,6 +115,9 @@ public class RexInterpreter implements RexVisitor<Comparable> {
   @Override public Comparable visitDynamicParam(RexDynamicParam dynamicParam) {
     return getOrUnbound(dynamicParam);
   }
+  @Override public Comparable visitRexInterval(RexInterval dynamicParam) {
+    return getOrUnbound(dynamicParam);
+  }
 
   @Override public Comparable visitRangeRef(RexRangeRef rangeRef) {
     throw unbound(rangeRef);

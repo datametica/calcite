@@ -225,6 +225,10 @@ public class RexShuttle implements RexVisitor<RexNode> {
     return dynamicParam;
   }
 
+  @Override public RexNode visitRexInterval(RexInterval rexInterval) {
+    return rexInterval;
+  }
+
   @Override public RexNode visitRangeRef(RexRangeRef rangeRef) {
     return rangeRef;
   }
