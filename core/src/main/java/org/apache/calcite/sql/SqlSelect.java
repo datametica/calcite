@@ -290,15 +290,15 @@ public class SqlSelect extends SqlCall {
   // Override SqlCall, to introduce a sub-query frame.
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
     if (!writer.inQuery()
-        || getFetch() != null
+        || (getFetch() != null
             && (leftPrec > SqlInternalOperators.FETCH.getLeftPrec()
-                || rightPrec > SqlInternalOperators.FETCH.getLeftPrec())
-        || getOffset() != null
+                || rightPrec > SqlInternalOperators.FETCH.getRightPrec()))
+        || (getOffset() != null
             && (leftPrec > SqlInternalOperators.OFFSET.getLeftPrec()
-                || rightPrec > SqlInternalOperators.OFFSET.getLeftPrec())
-        || getOrderList() != null
+                || rightPrec > SqlInternalOperators.OFFSET.getRightPrec()))
+        || (hasOrderBy()
             && (leftPrec > SqlOrderBy.OPERATOR.getLeftPrec()
-                || rightPrec > SqlOrderBy.OPERATOR.getRightPrec())) {
+                || rightPrec > SqlOrderBy.OPERATOR.getRightPrec()))) {
       // If this SELECT is the topmost item in a sub-query, introduce a new
       // frame. (The topmost item in the sub-query might be a UNION or
       // ORDER. In this case, we don't need a wrapper frame.)
