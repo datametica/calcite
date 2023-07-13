@@ -12552,4 +12552,34 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test public void medianFunctionOnColumn() {
+    final RelBuilder builder = relBuilder();
+    final RexNode medianRexNode = builder.call(SqlLibraryOperators.MEDIAN,
+        builder.scan("EMP").field(0));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(medianRexNode, "aa"))
+        .build();
+
+    final String expectedBQ = "SELECT APPROX_QUANTILES(EMPNO, 2) [OFFSET (1) ] AS aa\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQ));
+  }
+
+  @Test public void medianFunctionOnLiteralValue() {
+    final RelBuilder builder = relBuilder();
+    final RexNode getBitRexNode = builder.call(SqlLibraryOperators.MEDIAN,
+        builder.literal(1));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(getBitRexNode, "aa"))
+        .build();
+
+    final String expectedBQ = "SELECT APPROX_QUANTILES(EMPNO, 2) [OFFSET (1) ] AS aa\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQ));
+  }
 }

@@ -1219,6 +1219,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "SHIFTRIGHT":
       unparseShiftLeftAndShiftRight(writer, call, false);
       break;
+    case "MEDIAN":
+      unparseMedian(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -1264,6 +1267,18 @@ public class BigQuerySqlDialect extends SqlDialect {
       secondOperand.unparse(writer, 0, 0);
     }
     writer.print(")");
+  }
+
+  private void unparseMedian(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlNode operand = call.operand(0);
+    SqlNumericLiteral twoLiteral = SqlLiteral.createExactNumeric("2", SqlParserPos.ZERO);
+    SqlCall approxQuantilesCall = SqlLibraryOperators.APPROX_QUANTILES.createCall(SqlParserPos.ZERO,
+        operand, twoLiteral);
+    unparseCall(writer, approxQuantilesCall, leftPrec, rightPrec);
+    writer.print("[OFFSET (");
+    SqlNumericLiteral offsetOperandValue = SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO);
+    writer.print(String.valueOf(offsetOperandValue));
+    writer.print(") ]");
   }
 
   private boolean isBasicCallWithNegativePrefix(SqlNode secondOperand) {
