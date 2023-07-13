@@ -25,10 +25,13 @@ import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalJoin;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.CoreRules;
@@ -114,8 +117,10 @@ import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -11382,6 +11387,51 @@ class RelToSqlConverterTest {
         .withBigQuery()
         .ok(expectedBQ);
   }
+
+
+
+  @Test public void testDynamicSchemaUnnestWithFilter() {
+    final RelBuilder builder = relBuilder();
+    LogicalValues logicalValues = LogicalValues.createOneRow(builder.getCluster());
+    CorrelationId correlationId = builder.getCluster().createCorrel();
+    Set<CorrelationId> correlationIdSet = new LinkedHashSet<>();
+    correlationIdSet.add(correlationId);
+    final RelDataType logiValalueRowType =
+        builder.getCluster().getTypeFactory().builder()
+            .add("ZERO", SqlTypeName.ANY).nullable(false)
+            .build();
+    RexNode correlRexNode = builder.getRexBuilder().makeCorrel(logiValalueRowType, correlationId);
+    RexNode correlFieldAccess = builder.getRexBuilder()
+        .makeFieldAccess(correlRexNode, "ZERO", false);
+    RexNode inputRefAny = builder.getRexBuilder().makeInputRef(logiValalueRowType, 0);
+    List<String> alias = new ArrayList<>();
+    alias.add("alias");
+    RelNode filterRel = builder
+        .scan("EMP")
+        .build();
+
+    RelNode uncollectRel = builder
+        .push(logicalValues)
+        .project(builder.alias(correlFieldAccess, "Zero"))
+        .uncollect(alias, false)
+        .build();
+
+    LogicalJoin logicalJoin = LogicalJoin.create(filterRel, uncollectRel, ImmutableList.of(),
+        builder.equals(builder.literal("a"),
+            builder.literal(1)), correlationIdSet, JoinRelType.INNER);
+
+    final RelNode root = builder
+        .push(logicalJoin)
+        .project(builder.alias(inputRefAny, "col2"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT EMP.EMPNO AS col2\n"
+        + "FROM scott.EMP\n"
+        + "INNER JOIN UNNEST(EMP.EMPNO AS Zero) AS t00 (alias) ON 'a' = 1";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+
 
   @Test public void testForRegexpLikeFunction() {
     final RelBuilder builder = relBuilder();

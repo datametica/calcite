@@ -1207,6 +1207,24 @@ LogicalProject(C_NATIONKEY=[$1], FAKE_COL3=[$2])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testDynamicSchemaUnnestWithFilter">
+        <Resource name="sql">
+            <![CDATA[select t1.c_nationkey, t3.fake_col3
+from SALES.CUSTOMER as t1,
+lateral (select t2."$unnest" as fake_col3
+         from unnest(t1.fake_col) as t2) as t3]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(C_NATIONKEY=[$1], T2=[$2])
+  LogicalJoin(condition=[=(CAST('a'):INTEGER NOT NULL, 1)], joinType=[inner])
+    LogicalTableScan(table=[[CATALOG, SALES, CUSTOMER]])
+    Uncollect
+      LogicalProject(FAKE_COL=[$cor0.FAKE_COL])
+        LogicalValues(tuples=[[{ 0 }]])
+]]>
+        </Resource>
+    </TestCase>
     <TestCase name="testOverAvg">
         <Resource name="plan">
             <![CDATA[
