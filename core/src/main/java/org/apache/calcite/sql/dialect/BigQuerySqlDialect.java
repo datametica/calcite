@@ -1270,10 +1270,9 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private void unparseMedian(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    SqlNode operand = call.operand(0);
-    SqlNumericLiteral twoLiteral = SqlLiteral.createExactNumeric("2", SqlParserPos.ZERO);
+    SqlNumericLiteral literalTwo = SqlLiteral.createExactNumeric("2", SqlParserPos.ZERO);
     SqlCall approxQuantilesCall = SqlLibraryOperators.APPROX_QUANTILES.createCall(SqlParserPos.ZERO,
-        operand, twoLiteral);
+        call.operand(0), literalTwo);
     unparseCall(writer, approxQuantilesCall, leftPrec, rightPrec);
     writer.print("[OFFSET (");
     SqlNumericLiteral offsetOperandValue = SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO);
