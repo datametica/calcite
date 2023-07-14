@@ -140,6 +140,30 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  @Test void testDistinctInParentAndSubQueryWithGroupBy() {
+    final String sql = "select distinct deptno = 2 from (\n"
+        + "  select distinct deptno as deptno from dept group by deptno)";
+    sql(sql).ok();
+  }
+
+  @Test void testAnalyticalFunctionInChildWithDistinctInSubQuery() {
+    final String sql = "select deptno from (\n"
+        + "  select distinct deptno, row_number() over (order by deptno desc) as num_row from dept)";
+    sql(sql).ok();
+  }
+
+  @Test void testAnalyticalFunctionInChildWithDistinctInSubQueryAndParent() {
+    final String sql = "select distinct deptno from (\n"
+        + "  select distinct deptno, row_number() over (order by deptno desc) as num_row from dept)";
+    sql(sql).ok();
+  }
+
+  @Test void testAnalyticalFunctionInParentWithDistinctInSubQueryAndParent() {
+    final String sql = "select distinct deptno, row_number() over (order by deptno desc) as num_row from (\n"
+        + "  select distinct deptno as deptno from dept)";
+    sql(sql).ok();
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2468">[CALCITE-2468]
    * struct type alias should not cause IndexOutOfBoundsException</a>.
