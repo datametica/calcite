@@ -1277,7 +1277,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.print("[OFFSET (");
     SqlNumericLiteral offsetOperandValue = SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO);
     writer.print(String.valueOf(offsetOperandValue));
-    writer.print(") ]");
+    writer.print(")]");
   }
 
   private boolean isBasicCallWithNegativePrefix(SqlNode secondOperand) {
