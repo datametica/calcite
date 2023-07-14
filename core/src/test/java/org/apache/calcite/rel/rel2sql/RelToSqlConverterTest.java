@@ -12132,7 +12132,7 @@ class RelToSqlConverterTest {
         .scan("EMP")
         .project(builder.alias(nextDayRexNode, "next_day"))
         .build();
-    final String expectedOracle = "SELECT NEXT_DAY(CURRENT_DATE, 'SATURDAY') \"next_day\"\n"
+    final String expectedOracle = "SELECT ORACLE_NEXT_DAY(CURRENT_DATE, 'SATURDAY') \"next_day\"\n"
         + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracle));
