@@ -5855,9 +5855,9 @@ class RelToSqlConverterTest {
         + "       lateral (select d.\"department_id\" + 1 as d_plusOne"
         + "                from (values(true)))";
 
-    final String expected = "SELECT \"$cor0\".\"department_id\", \"$cor0\".\"D_PLUSONE\"\n"
-        + "FROM \"foodmart\".\"department\" AS \"$cor0\",\n"
-        + "LATERAL (SELECT \"$cor0\".\"department_id\" + 1 AS \"D_PLUSONE\"\n"
+    final String expected = "SELECT \"department\".\"department_id\", \"t0\".\"D_PLUSONE\"\n"
+        + "FROM \"foodmart\".\"department\",\n"
+        + "LATERAL (SELECT \"department\".\"department_id\" + 1 AS \"D_PLUSONE\"\n"
         + "FROM (VALUES (TRUE)) AS \"t\" (\"EXPR$0\")) AS \"t0\"";
     sql(sql).ok(expected);
   }
@@ -5869,9 +5869,9 @@ class RelToSqlConverterTest {
     final String query = "select * from \"product\",\n"
         + "lateral table(RAMP(\"product\".\"product_id\"))";
     final String expected = "SELECT *\n"
-        + "FROM \"foodmart\".\"product\" AS \"$cor0\",\n"
+        + "FROM \"foodmart\".\"product\",\n"
         + "LATERAL (SELECT *\n"
-        + "FROM TABLE(RAMP(\"$cor0\".\"product_id\"))) AS \"t\"";
+        + "FROM TABLE(RAMP(\"product\".\"product_id\"))) AS \"t\"";
     sql(query).ok(expected);
   }
 
@@ -5881,8 +5881,7 @@ class RelToSqlConverterTest {
         + "            from \"department\") as t(did)";
 
     final String expected = "SELECT \"DEPTID\" + 1\n"
-        + "FROM UNNEST (SELECT COLLECT(\"department_id\") AS \"DEPTID\"\n"
-        + "FROM \"foodmart\".\"department\") AS \"t0\" (\"DEPTID\")";
+        + "FROM UNNEST(COLLECT(\"department_id\") AS \"DEPTID\") AS \"t0\" (\"DEPTID\")";
     sql(sql).ok(expected);
   }
 
@@ -5892,8 +5891,7 @@ class RelToSqlConverterTest {
         + "            from \"department\") as t(did)";
 
     final String expected = "SELECT \"col_0\" + 1\n"
-        + "FROM UNNEST (SELECT COLLECT(\"department_id\")\n"
-        + "FROM \"foodmart\".\"department\") AS \"t0\" (\"col_0\")";
+        + "FROM UNNEST(COLLECT(\"department_id\")) AS \"t0\" (\"col_0\")";
     sql(sql).ok(expected);
   }
 
@@ -6299,6 +6297,23 @@ class RelToSqlConverterTest {
         + "\nFROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT DATE_DIFF(CURRENT_DATETIME(), CURRENT_DATETIME(), HOUR)"
         + " AS HOURS"
+        + "\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testTimestampDiffFunctionRelToSql() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timestampDiffRexNode = builder.call(SqlLibraryOperators.TIMESTAMP_DIFF,
+        builder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP),
+        builder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP), builder.literal(HOUR));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(timestampDiffRexNode, "HOURS")).build();
+    final String expectedSql = "SELECT TIMESTAMP_DIFF(CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, HOUR)"
+        + " AS \"HOURS\""
+        + "\nFROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT TIMESTAMP_DIFF(CURRENT_DATETIME(), CURRENT_DATETIME(), "
+        + "HOUR) AS HOURS"
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -7045,6 +7060,25 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"employee\"";
     sql(query)
         .withOracle()
+        .ok(expected);
+  }
+
+
+  @Test void testDecimalInBQ() {
+    String query = "SELECT CAST(\"department_id\" AS DECIMAL(19,0)) FROM \"employee\"";
+    String expected = "SELECT CAST(department_id AS NUMERIC)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expected);
+  }
+
+  @Test void testDecimalWithMaxPrecisionInBQ() {
+    String query = "SELECT CAST(\"department_id\" AS DECIMAL(38,10)) FROM \"employee\"";
+    String expected = "SELECT CAST(department_id AS BIGNUMERIC)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
         .ok(expected);
   }
 
@@ -12475,6 +12509,25 @@ class RelToSqlConverterTest {
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test void testLiteralAfterGroupBy() {
+    String query = "SELECT D.\"department_id\",MIN(E.\"salary\") MINSAL, COUNT(E.\"salary\") "
+        + "SALCOUNT, 'INSIDE CTE1'\n"
+        + "FROM \"employee\" E \n"
+        + "FULL JOIN \"department\" D ON E.\"department_id\" = D.\"department_id\" \n"
+        + "GROUP BY D.\"department_id\"  \n"
+        + "HAVING MIN(E.\"salary\") < 1000";
+    final String expected = "SELECT department.department_id, MIN(employee.salary) AS MINSAL, "
+        + "COUNT(employee.salary) AS SALCOUNT, 'INSIDE CTE1'\n"
+        + "FROM foodmart.employee\n"
+        + "FULL JOIN foodmart.department ON employee.department_id = department.department_id\n"
+        + "GROUP BY department.department_id\n"
+        + "HAVING MINSAL < 1000";
+
+    sql(query)
+        .schema(CalciteAssert.SchemaSpec.JDBC_FOODMART)
+        .withBigQuery().ok(expected);
   }
 
   @Test void testBQCastToDecimal() {
