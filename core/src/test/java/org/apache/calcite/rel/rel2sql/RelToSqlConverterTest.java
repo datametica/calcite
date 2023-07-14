@@ -12606,11 +12606,11 @@ class RelToSqlConverterTest {
 
   @Test public void medianFunctionOnLiteralValue() {
     final RelBuilder builder = relBuilder();
-    final RexNode getBitRexNode = builder.call(SqlLibraryOperators.MEDIAN,
+    final RexNode medianRexNode = builder.call(SqlLibraryOperators.MEDIAN,
         builder.literal(1));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.alias(getBitRexNode, "aa"))
+        .project(builder.alias(medianRexNode, "aa"))
         .build();
 
     final String expectedBQ = "SELECT APPROX_QUANTILES(1, 2) [OFFSET (1) ] AS aa\n"
