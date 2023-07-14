@@ -18,6 +18,8 @@ package org.apache.calcite.rel.rel2sql;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
+import org.apache.calcite.plan.DistinctTrait;
+import org.apache.calcite.plan.DistinctTraitDef;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -1927,6 +1929,9 @@ public abstract class SqlImplementor {
     }
 
     private boolean ifSqlBasicCallAliased(SqlSelect sqlSelectNode) {
+      if (sqlSelectNode.getSelectList() == null) {
+        return false;
+      }
       for (SqlNode sqlNode: sqlSelectNode.getSelectList()) {
         if (sqlNode instanceof SqlBasicCall
             && ((SqlBasicCall) sqlNode).getOperator() != SqlStdOperatorTable.AS) {
@@ -1938,6 +1943,9 @@ public abstract class SqlImplementor {
 
 
     private boolean ifAliasUsedInHavingClause(List<String> aliases, SqlBasicCall havingClauseCall) {
+      if (havingClauseCall == null) {
+        return false;
+      }
       List<SqlNode> sqlNodes = havingClauseCall.getOperandList();
       for (SqlNode node : sqlNodes) {
         if (node instanceof SqlBasicCall) {
@@ -2008,7 +2016,8 @@ public abstract class SqlImplementor {
     }
 
     private boolean hasAggFunctionUsedInGroupBy(Project project) {
-      if (!(node instanceof SqlSelect && ((SqlSelect) node).getGroup() != null)) {
+      if (!(node instanceof SqlSelect && ((SqlSelect) node).getGroup() != null) &&
+          ((SqlSelect) node).getSelectList() != null) {
         return false;
       }
       List<RexNode> expressions = project.getChildExps();
@@ -2120,11 +2129,6 @@ public abstract class SqlImplementor {
         }
       }
 
-      if (rel instanceof Project && rel.getInput(0) instanceof Aggregate
-          && !dialect.supportAggInGroupByClause() && hasAggFunctionUsedInGroupBy((Project) rel)) {
-        return true;
-      }
-
       if (rel instanceof Project && rel.getInput(0) instanceof Project
           && !dialect.supportNestedAnalyticalFunctions()
           && hasNestedAnalyticalFunctions((Project) rel)) {
@@ -2137,10 +2141,19 @@ public abstract class SqlImplementor {
         return true;
       }
 
-      if (rel instanceof Project && rel.getInput(0) instanceof Aggregate
-          && dialect.getConformance().isGroupByAlias()
-          && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)) {
-        return true;
+      if ( rel instanceof Project && rel.getInput(0) instanceof Aggregate ) {
+        if ( dialect.getConformance().isGroupByAlias()
+            && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel) ||
+            !dialect.supportAggInGroupByClause() && hasAggFunctionUsedInGroupBy((Project) rel)) {
+          return true;
+        }
+
+        //check for distinct
+        Aggregate aggregate = (Aggregate)rel.getInput(0);
+        DistinctTrait distinctTrait = aggregate.getTraitSet().getTrait(DistinctTraitDef.INSTANCE);
+        if( distinctTrait != null && distinctTrait.isDistinct()) {
+          return true;
+        }
       }
 
       if (rel instanceof Aggregate && rel.getInput(0) instanceof Project

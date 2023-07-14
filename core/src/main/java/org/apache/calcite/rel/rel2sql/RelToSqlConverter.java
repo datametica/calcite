@@ -21,6 +21,7 @@ import org.apache.calcite.config.QueryStyle;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -520,13 +521,34 @@ public class RelToSqlConverter extends SqlImplementor
       }
       addSelect(selectList, aggCallSqlNode, e.getRowType());
     }
-    builder.setSelect(new SqlNodeList(selectList, POS));
+    if (!isStarInAggregateRel(e)) {
+      builder.setSelect(new SqlNodeList(selectList, POS));
+    }
     if (!groupByList.isEmpty() || e.getAggCallList().isEmpty()) {
       // Some databases don't support "GROUP BY ()". We can omit it as long
       // as there is at least one aggregate function.
       builder.setGroupBy(new SqlNodeList(groupByList, POS));
     }
     return builder;
+  }
+
+  /**
+   * Evaluates if projection fields can be replaced with aestrisk.
+   * @param e aggregate rel
+   * @return true if selectList is required to be added in sqlNode
+   */
+  boolean isStarInAggregateRel(Aggregate e) {
+    if (e.getAggCallList().size() > 0) {
+      return false;
+    }
+    RelNode input = e.getInput();
+    while (input != null) {
+      if (input instanceof Project || input instanceof TableScan) {
+        break;
+      }
+      input = input.getInput(0);
+    }
+    return e.getRowType().getFieldNames().equals(input.getRowType().getFieldNames());
   }
 
   /** Generates the GROUP BY items, for example {@code GROUP BY x, y},
