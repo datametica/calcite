@@ -19,34 +19,34 @@ package org.apache.calcite.plan;
 import org.apache.calcite.rel.RelNode;
 
 /**
- * This is supporting class for DistinctTrait which helps in identifying/evaluating DistinctTrait from trait set.
+ * This is supporting class for DistinctTrait
+ * which helps in identifying/evaluating DistinctTrait from trait set.
  */
 public class DistinctTraitDef extends RelTraitDef<DistinctTrait> {
 
-  public static DistinctTraitDef INSTANCE = new DistinctTraitDef();
+  public static DistinctTraitDef instance = new DistinctTraitDef();
 
-  @Override
-  public Class<DistinctTrait> getTraitClass() {
+  @Override public Class<DistinctTrait> getTraitClass() {
     return DistinctTrait.class;
   }
 
-  @Override
-  public String getSimpleName() {
+  @Override public String getSimpleName() {
     return DistinctTrait.class.getSimpleName();
   }
 
-  @Override
-  public RelNode convert(RelOptPlanner planner, RelNode rel, DistinctTrait toTrait, boolean allowInfiniteCostConverters) {
-    throw new UnsupportedOperationException("Method implementation not supported for TableAliasTrait");
+  @Override public RelNode convert(RelOptPlanner planner, RelNode rel,
+      DistinctTrait toTrait, boolean allowInfiniteCostConverters) {
+    throw new UnsupportedOperationException(
+        "Method implementation not supported for TableAliasTrait");
   }
 
-  @Override
-  public boolean canConvert(RelOptPlanner planner, DistinctTrait fromTrait, DistinctTrait toTrait) {
+  @Override public boolean canConvert(RelOptPlanner planner, DistinctTrait fromTrait,
+      DistinctTrait toTrait) {
     return false;
   }
 
-  @Override
-  public DistinctTrait getDefault() {
-    throw new UnsupportedOperationException("Default implementation not supported for TableAliasTrait");
+  @Override public DistinctTrait getDefault() {
+    throw new UnsupportedOperationException(
+        "Default implementation not supported for TableAliasTrait");
   }
 }

@@ -2032,8 +2032,8 @@ public abstract class SqlImplementor {
     }
 
     private boolean hasAggFunctionUsedInGroupBy(Project project) {
-      if (!(node instanceof SqlSelect && ((SqlSelect) node).getGroup() != null) &&
-          ((SqlSelect) node).getSelectList() != null) {
+      if (!(node instanceof SqlSelect && ((SqlSelect) node).getGroup() != null)
+          && ((SqlSelect) node).getSelectList() != null) {
         return false;
       }
       List<RexNode> expressions = project.getChildExps();
@@ -2163,17 +2163,17 @@ public abstract class SqlImplementor {
         return true;
       }
 
-      if ( rel instanceof Project && rel.getInput(0) instanceof Aggregate ) {
-        if ( dialect.getConformance().isGroupByAlias()
-            && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel) ||
-            !dialect.supportAggInGroupByClause() && hasAggFunctionUsedInGroupBy((Project) rel)) {
+      if (rel instanceof Project && rel.getInput(0) instanceof Aggregate) {
+        if (dialect.getConformance().isGroupByAlias()
+            && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)
+            || !dialect.supportAggInGroupByClause() && hasAggFunctionUsedInGroupBy((Project) rel)) {
           return true;
         }
 
         //check for distinct
-        Aggregate aggregate = (Aggregate)rel.getInput(0);
-        DistinctTrait distinctTrait = aggregate.getTraitSet().getTrait(DistinctTraitDef.INSTANCE);
-        if( distinctTrait != null && distinctTrait.isDistinct()) {
+        Aggregate aggregate = (Aggregate) rel.getInput(0);
+        DistinctTrait distinctTrait = aggregate.getTraitSet().getTrait(DistinctTraitDef.instance);
+        if (distinctTrait != null && distinctTrait.isDistinct()) {
           return true;
         }
       }

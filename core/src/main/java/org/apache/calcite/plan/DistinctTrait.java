@@ -19,7 +19,8 @@ package org.apache.calcite.plan;
 /***
  * Distinct type of queries are handled via "Group By" by Calcite.
  * In order to generate Distinct keyword in RelToSql phase DistinctTrait is used.
- * This model keeps the info for Aggregate Rel i.e, if a given aggregate rel is for "group by" or for "distinct"
+ * This model keeps the info for Aggregate Rel
+ * i.e, if a given aggregate rel is for "group by" or for "distinct"
  */
 public class DistinctTrait implements RelTrait {
   private final boolean distinctQuery;
@@ -34,26 +35,23 @@ public class DistinctTrait implements RelTrait {
     return distinctQuery;
   }
 
-  public boolean isDistinct(){
+  public boolean isDistinct() {
     return distinctQuery;
   }
 
-  public boolean isEvaluated(){
+  public boolean isEvaluated() {
     return evaluatedStruct;
   }
 
-  @Override
-  public RelTraitDef<DistinctTrait> getTraitDef() {
-    return DistinctTraitDef.INSTANCE;
+  @Override public RelTraitDef<DistinctTrait> getTraitDef() {
+    return DistinctTraitDef.instance;
   }
 
-  @Override
-  public boolean satisfies(RelTrait trait) {
+  @Override public boolean satisfies(RelTrait trait) {
     throw new UnsupportedOperationException("Method not implemented for TableAliasTrait");
   }
 
-  @Override
-  public void register(RelOptPlanner planner) {
+  @Override public void register(RelOptPlanner planner) {
     throw new UnsupportedOperationException("Registration not supported for TableAliasTrait");
   }
 
