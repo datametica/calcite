@@ -1676,18 +1676,14 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.NUMERIC);
 
   @LibraryOperator(libraries = {SNOWFLAKE, ORACLE, TERADATA})
-  public static final SqlFunction MEDIAN =
-      new SqlFunction("MEDIAN",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0_NULLABLE, null,
-          OperandTypes.family(SqlTypeFamily.NUMERIC),
-          SqlFunctionCategory.NUMERIC);
+  public static final SqlAggFunction MEDIAN =
+      new SqlMedianAggFunction(SqlKind.OTHER_FUNCTION, ReturnTypes.ARG0_NULLABLE);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction APPROX_QUANTILES =
       new SqlFunction("APPROX_QUANTILES",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0_NULLABLE, null,
+          ReturnTypes.DECIMAL_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.NUMERIC);
 }

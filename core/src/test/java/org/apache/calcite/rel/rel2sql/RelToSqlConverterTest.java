@@ -12613,7 +12613,7 @@ class RelToSqlConverterTest {
         .project(builder.alias(getBitRexNode, "aa"))
         .build();
 
-    final String expectedBQ = "SELECT APPROX_QUANTILES(EMPNO, 2) [OFFSET (1) ] AS aa\n"
+    final String expectedBQ = "SELECT APPROX_QUANTILES(1, 2) [OFFSET (1) ] AS aa\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQ));
