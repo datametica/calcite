@@ -159,8 +159,9 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
   }
 
   @Test void testAnalyticalFunctionInParentWithDistinctInSubQueryAndParent() {
-    final String sql = "select distinct deptno, row_number() over (order by deptno desc) as num_row from (\n"
-        + "  select distinct deptno as deptno from dept)";
+    final String sql = "select distinct deptno,"
+        + " row_number() over (order by deptno desc) as num_row from (\n"
+        + " select distinct deptno as deptno from dept)";
     sql(sql).ok();
   }
 
