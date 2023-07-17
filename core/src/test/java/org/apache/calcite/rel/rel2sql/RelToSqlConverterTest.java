@@ -12588,4 +12588,17 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  /* this is giving class cast exception SqlIdentifier to SqlBasicCall
+  when Analytical fuction is used in Aggregate*/
+  @Test public void testAnalyticFunctionInAggregate() {
+    final String query = "SELECT sum(case when \"employee_id\" = 100 then 1 else 0 end)\n"
+        + "FROM \"foodmart\".\"employee\"";
+    final String expected = "SELECT SUM(CASE WHEN employee_id = 100 THEN 1 ELSE 0 END)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .schema(CalciteAssert.SchemaSpec.JDBC_FOODMART)
+        .withBigQuery().ok(expected);
+  }
+
 }
