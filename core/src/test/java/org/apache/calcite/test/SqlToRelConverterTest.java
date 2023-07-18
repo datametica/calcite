@@ -4050,7 +4050,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
-  @Test void testCoalesceOnLieralsJoinNull() {
+  @Test void testCoalesceOnUnionOfLiteralsAndNull() {
     final String sql = "SELECT COALESCE (a.ids,0)"
         + " FROM ("
         + " SELECT 101 as ids union all"
