@@ -816,7 +816,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction TO_TIMESTAMP =
       new SqlFunction("TO_TIMESTAMP",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DATE_NULLABLE,
+          ReturnTypes.TIMESTAMP_NULLABLE,
           null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.TIMEDATE);
@@ -1248,6 +1248,14 @@ public abstract class SqlLibraryOperators {
             SqlTypeFamily.STRING),
             number -> number == 2),
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction TIMESTAMP_DIFF =
+      new SqlFunction("TIMESTAMP_DIFF", SqlKind.TIMESTAMP_DIFF,
+      ReturnTypes.INTEGER, null,
+      OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME,
+          SqlTypeFamily.STRING),
+      SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction DATEDIFF =
