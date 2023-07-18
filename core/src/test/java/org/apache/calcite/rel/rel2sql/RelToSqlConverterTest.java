@@ -12590,8 +12590,8 @@ class RelToSqlConverterTest {
   }
 
   /* this is giving class cast exception SqlIdentifier to SqlBasicCall
-  when Analytical fuction is used in Aggregate*/
-  @Test public void testAnalyticFunctionInAggregate() {
+  when case clause is used in Aggregate*/
+  @Test public void testCaseClauseInAggregate() {
     final String query = "SELECT sum(case when \"employee_id\" = 100 then 1 else 0 end)\n"
         + "FROM \"foodmart\".\"employee\"";
     final String expected = "SELECT SUM(CASE WHEN employee_id = 100 THEN 1 ELSE 0 END)\n"
