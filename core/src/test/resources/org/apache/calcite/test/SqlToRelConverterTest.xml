@@ -7378,7 +7378,7 @@ LogicalProject(EXPR$0=[ITEM(ARRAY(1, 2, 3, 4), 0)])
         </Resource>
     </TestCase>
 
-    <TestCase name="testCoalesceOnLieralsJoinNull">
+    <TestCase name="testCoalesceOnUnionOfLiteralsAndNull">
         <Resource name="sql">
             <![CDATA[SELECT COALESCE (a.ids,0)
         FROM (
