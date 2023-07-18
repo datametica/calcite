@@ -2033,7 +2033,7 @@ public abstract class SqlImplementor {
 
     private boolean hasAggFunctionUsedInGroupBy(Project project) {
       if (!(node instanceof SqlSelect && ((SqlSelect) node).getGroup() != null)
-          && ((SqlSelect) node).getSelectList() != null) {
+          || ((SqlSelect) node).getSelectList() == null) {
         return false;
       }
       List<RexNode> expressions = project.getChildExps();
