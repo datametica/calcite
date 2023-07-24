@@ -12601,4 +12601,14 @@ class RelToSqlConverterTest {
         .withBigQuery().ok(expected);
   }
 
+  @Test public void testCaseClauseWithStringLiteralInAggregate() {
+    final String query = "SELECT MIN(CASE WHEN \"first_name\" = 'Phyllis' THEN 1 else 0 END)\n"
+        + "FROM \"foodmart\".\"employee\"";
+    final String expected = "SELECT MIN(CASE WHEN first_name = 'Phyllis' THEN 1 ELSE 0 END)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .schema(CalciteAssert.SchemaSpec.JDBC_FOODMART)
+        .withBigQuery().ok(expected);
+  }
+
 }
