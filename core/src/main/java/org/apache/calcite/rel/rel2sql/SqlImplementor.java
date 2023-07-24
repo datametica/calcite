@@ -1993,7 +1993,8 @@ public abstract class SqlImplementor {
             if (whenOperand instanceof SqlCase) {
               present = hasAnalyticalFunctionInWhenClauseOfCase((SqlCall) whenOperand);
             } else {
-              present = hasAnalyticalFunction((SqlBasicCall) whenOperand);
+              present = whenOperand instanceof SqlBasicCall
+                  ? hasAnalyticalFunction((SqlBasicCall) whenOperand) : false;
             }
             if (present) {
               return true;
