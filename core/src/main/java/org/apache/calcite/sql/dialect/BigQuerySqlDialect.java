@@ -198,7 +198,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   public static final SqlDialect DEFAULT = new BigQuerySqlDialect(DEFAULT_CONTEXT);
 
-  public static final List<String> RESERVED_KEYWORDS =
+  private static final List<String> RESERVED_KEYWORDS =
       ImmutableList.copyOf(
           Arrays.asList("ALL", "AND", "ANY", "ARRAY", "AS", "ASC",
               "ASSERT_ROWS_MODIFIED", "AT", "BETWEEN", "BY", "CASE", "CAST",
