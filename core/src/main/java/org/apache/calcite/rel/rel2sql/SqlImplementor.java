@@ -1647,11 +1647,6 @@ public abstract class SqlImplementor {
           if (mappedSqlNode != null) {
             return mappedSqlNode;
           }
-          if (dialect instanceof BigQuerySqlDialect
-              && BigQuerySqlDialect.RESERVED_KEYWORDS.contains(field.getName().toUpperCase())) {
-            return new SqlIdentifier(ImmutableList.of(alias.getKey(), field.getName()),
-                POS);
-          }
           return new SqlIdentifier(!qualified
               ? ImmutableList.of(field.getName())
               : ImmutableList.of(alias.getKey(), field.getName()),
