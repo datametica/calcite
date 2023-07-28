@@ -12602,13 +12602,20 @@ class RelToSqlConverterTest {
   }
 
   @Test public void testCaseClauseWithStringLiteralInAggregate() {
-    final String query = "SELECT MIN(CASE WHEN \"first_name\" = 'Phyllis' THEN 1 else 0 END)\n"
-        + "FROM \"foodmart\".\"employee\"";
-    final String expected = "SELECT MIN(CASE WHEN first_name = 'Phyllis' THEN 1 ELSE 0 END)\n"
-        + "FROM foodmart.employee";
-    sql(query)
-        .schema(CalciteAssert.SchemaSpec.JDBC_FOODMART)
-        .withBigQuery().ok(expected);
+    final RelBuilder builder = relBuilder();
+    final RexNode caseRex = builder.call(SqlStdOperatorTable.CASE,
+        builder.literal("Datametica"), builder.literal(1), builder.literal(0));
+    final RexNode aggregateRex = builder.call(SqlStdOperatorTable.MIN, caseRex);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(aggregateRex)
+        .build();
+
+    final String expectedBiqQuery = "SELECT MIN(CASE WHEN 'Datametica' THEN 1 ELSE 0 END) "
+        + "AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
 }
