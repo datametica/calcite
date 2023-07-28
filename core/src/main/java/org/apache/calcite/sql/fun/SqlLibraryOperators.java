@@ -810,6 +810,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction ORACLE_TO_DATE_NEW =
+      new SqlFunction("TO_DATE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ORACLE_DATE_NULLABLE,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.TIMEDATE);
+
   /** The "TO_TIMESTAMP(string1, string2)" function; casts string1
    * to a TIMESTAMP using the format specified in string2. */
   @LibraryOperator(libraries = {POSTGRESQL, SNOWFLAKE})

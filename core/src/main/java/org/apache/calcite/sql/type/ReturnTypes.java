@@ -41,6 +41,7 @@ import java.util.function.UnaryOperator;
 
 import static org.apache.calcite.sql.type.NonNullableAccessors.getCharset;
 import static org.apache.calcite.sql.type.NonNullableAccessors.getCollation;
+import static org.apache.calcite.sql.type.SqlTypeName.ORACLE_DATE;
 import static org.apache.calcite.sql.validate.SqlNonNullableAccessors.getNamespace;
 import static org.apache.calcite.util.Static.RESOURCE;
 
@@ -284,6 +285,9 @@ public abstract class ReturnTypes {
   public static final SqlReturnTypeInference TIMESTAMP =
           explicit(SqlTypeName.TIMESTAMP);
 
+  public static final SqlReturnTypeInference ORACLE_DATE =
+          explicit(SqlTypeName.ORACLE_DATE);
+
   public static final SqlReturnTypeInference BINARY =
       explicit(SqlTypeName.BINARY);
 
@@ -313,6 +317,9 @@ public abstract class ReturnTypes {
    */
   public static final SqlReturnTypeInference TIMESTAMP_NULLABLE =
       TIMESTAMP.andThen(SqlTypeTransforms.TO_NULLABLE);
+
+  public static final SqlReturnTypeInference ORACLE_DATE_NULLABLE =
+      ORACLE_DATE.andThen(SqlTypeTransforms.TO_NULLABLE);
 
   /**
    * Type-inference strategy whereby the result type of a call is Double.

@@ -52,6 +52,7 @@ public enum SqlTypeFamily implements RelDataTypeFamily {
   BINARY,
   NUMERIC,
   DATE,
+  ORACLE_DATE,
   TIME,
   TIMESTAMP,
   BOOLEAN,
@@ -141,6 +142,8 @@ public enum SqlTypeFamily implements RelDataTypeFamily {
       return ImmutableList.of(SqlTypeName.DECIMAL);
     case DATE:
       return ImmutableList.of(SqlTypeName.DATE);
+    case ORACLE_DATE:
+      return ImmutableList.of(SqlTypeName.ORACLE_DATE);
     case TIME:
       return ImmutableList.of(SqlTypeName.TIME, SqlTypeName.TIME_WITH_LOCAL_TIME_ZONE);
     case TIMESTAMP:
