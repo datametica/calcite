@@ -12601,4 +12601,28 @@ class RelToSqlConverterTest {
         .withBigQuery().ok(expected);
   }
 
+  @Test public void testLastDayWithDatePart() {
+    final String query = "SELECT LAST_DAY(DATE '2009-12-20', 'MONTH')";
+    final String expected = "SELECT LAST_DAY(DATE '2009-12-20', MONTH)";
+    sql(query).withBigQuery().ok(expected);
+  }
+
+  @Test public void testDateIntegerArithmetic() {
+    final RelBuilder builder = relBuilder();
+
+    final RexNode minusDateNode = builder.call(SqlLibraryOperators.DATE_ARITHMETIC_MINUS,
+        builder.cast(builder.literal("2009-12-20"), SqlTypeName.DATE), builder.literal(1));
+
+    final RexNode plusDateNode = builder.call(SqlLibraryOperators.DATE_ARITHMETIC_PLUS,
+        builder.cast(builder.literal("2019-12-21"), SqlTypeName.DATE), builder.literal(4));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(minusDateNode, plusDateNode)
+        .build();
+    final String expectedBiqQuery = "SELECT DATE '2009-12-20' -1, DATE '2019-12-21' +4 " +
+        "AS `$f1`\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
 }
