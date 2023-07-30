@@ -457,7 +457,7 @@ class JdbcAdapterTest {
         + "  GROUP BY emp.deptno, dept.dname)";
     final String expected = "c=1\n";
     final String expectedSql = "SELECT COUNT(*) AS \"c\"\n"
-        + "FROM (SELECT \"t0\".\"DEPTNO\", \"t2\".\"DNAME\"\n"
+        + "FROM (SELECT \"t0\".\"DEPTNO\", \"t2\".\"DNAME\" AS \"Department Name\"\n"
         + "FROM (SELECT \"HISAL\"\n"
         + "FROM \"SCOTT\".\"SALGRADE\") AS \"t\"\n"
         + "INNER JOIN ((SELECT \"COMM\", \"DEPTNO\"\n"
@@ -467,7 +467,7 @@ class JdbcAdapterTest {
         + "WHERE \"DNAME\" LIKE '%A%') AS \"t2\" "
         + "ON \"t0\".\"DEPTNO\" = \"t2\".\"DEPTNO\") "
         + "ON \"t\".\"HISAL\" = \"t0\".\"COMM\"\n"
-        + "GROUP BY \"t0\".\"DEPTNO\", \"t2\".\"DNAME\") AS \"t3\"";
+        + "GROUP BY \"t0\".\"DEPTNO\", \"t2\".\"DNAME\") AS \"t4\"";
     CalciteAssert.model(JdbcTest.SCOTT_MODEL)
         .with(Lex.MYSQL)
         .query(sql)

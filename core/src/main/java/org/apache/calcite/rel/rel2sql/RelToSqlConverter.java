@@ -560,6 +560,9 @@ public class RelToSqlConverter extends SqlImplementor
       if (input instanceof Project || input instanceof TableScan) {
         break;
       }
+      if (input instanceof Join) {
+        return false;
+      }
       input = input.getInput(0);
     }
     return e.getRowType().getFieldNames().equals(input.getRowType().getFieldNames());

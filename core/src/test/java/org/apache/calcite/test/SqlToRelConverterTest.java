@@ -91,6 +91,11 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
         tester.getConformance());
   }
 
+  @Test void testStructTypeAlias1() {
+    final String sql = "select distinct empno as emp_id from emp";
+    sql(sql).ok();
+  }
+
   @Test void testDotLiteralAfterNestedRow() {
     final String sql = "select ((1,2),(3,4,5)).\"EXPR$1\".\"EXPR$2\" from emp";
     sql(sql).ok();

@@ -24,8 +24,7 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Aggregate.Group;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.logical.LogicalAggregate;
-import org.apache.calcite.rel.logical.RavenDistinctProject;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilder;
@@ -88,13 +87,25 @@ public class AggregateProjectMergeRule
     }
   }
 
+  public static List<String> getFieldListName(RelNode relNode) {
+    List<String> fieldNames = new ArrayList<String>();
+    for (RelDataTypeField field: relNode.getRowType().getFieldList()) {
+      fieldNames.add(field.getName());
+    }
+    return fieldNames;
+  }
+
   public static @Nullable RelNode apply(RelOptRuleCall call, Aggregate aggregate,
       Project project) {
-    // Find all fields which we need to be straightforward field projections.
-    if (aggregate instanceof LogicalAggregate && project instanceof RavenDistinctProject) {
+    final Set<Integer> interestingFields = RelOptUtil.getAllFields(aggregate);
+
+    // Check if project contains alias then don't merge.
+    List<String> projectFieldList = getFieldListName(project);
+    List<String> projectInputFieldList = getFieldListName(project.getInput());
+    if (!projectInputFieldList.containsAll(projectFieldList)
+        && !(aggregate.getAggCallList().size() > 0)) {
       return null;
     }
-    final Set<Integer> interestingFields = RelOptUtil.getAllFields(aggregate);
 
     // Build the map from old to new; abort if any entry is not a
     // straightforward field projection.
