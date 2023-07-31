@@ -1996,6 +1996,18 @@ LogicalProject(MYROW=[ROW(ROW(1))])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testDistinctWithFieldAlias">
+        <Resource name="sql">
+            <![CDATA[select distinct empno as emp_id from emp]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalAggregate(group=[{0}])
+  LogicalProject(EMP_ID=[$0])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
     <TestCase name="testJoinWithUnion">
         <Resource name="sql">
             <![CDATA[select grade
