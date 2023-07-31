@@ -35,7 +35,7 @@ import java.util.List;
 public class AggregateProjectMergeAliasRule extends AggregateProjectMergeRule {
 
   protected AggregateProjectMergeAliasRule(Config config) {
-    super((AggregateProjectMergeRule.Config) config);
+    super(AggregateProjectMergeRule.Config.DEFAULT);
   }
 
   public static List<String> getFieldListName(RelNode relNode) {
@@ -44,6 +44,15 @@ public class AggregateProjectMergeAliasRule extends AggregateProjectMergeRule {
       fieldNames.add(field.getName());
     }
     return fieldNames;
+  }
+
+  @Override public void onMatch(RelOptRuleCall call) {
+    final Aggregate aggregate = call.rel(0);
+    final Project project = call.rel(1);
+    RelNode x = apply(call, aggregate, project);
+    if (x != null) {
+      call.transformTo(x);
+    }
   }
 
   public static @Nullable RelNode apply(RelOptRuleCall call, Aggregate aggregate,
@@ -60,20 +69,22 @@ public class AggregateProjectMergeAliasRule extends AggregateProjectMergeRule {
 
   /** Rule configuration. */
   public interface Config extends RelRule.Config {
-    AggregateProjectMergeRule.Config DEFAULT = EMPTY.as(AggregateProjectMergeRule.Config.class)
+    AggregateProjectMergeAliasRule.Config DEFAULT =
+        EMPTY.as(AggregateProjectMergeAliasRule.Config.class)
         .withOperandFor(Aggregate.class, Project.class);
 
-    @Override default AggregateProjectMergeRule toRule() {
+    @Override default AggregateProjectMergeAliasRule toRule() {
       return new AggregateProjectMergeAliasRule(this);
     }
 
     /** Defines an operand tree for the given classes. */
-    default AggregateProjectMergeRule.Config withOperandFor(
+    default AggregateProjectMergeAliasRule.Config withOperandFor(
         Class<? extends Aggregate> aggregateClass,
         Class<? extends Project> projectClass) {
       return withOperandSupplier(b0 ->
           b0.operand(aggregateClass).oneInput(b1 ->
-              b1.operand(projectClass).anyInputs())).as(AggregateProjectMergeRule.Config.class);
+              b1.operand(projectClass).anyInputs()))
+          .as(AggregateProjectMergeAliasRule.Config.class);
     }
   }
 }
