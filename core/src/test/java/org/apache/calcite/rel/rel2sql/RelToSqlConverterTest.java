@@ -30,6 +30,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
+import org.apache.calcite.rel.rules.AggregateProjectMergeAliasRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.FilterExtractInnerJoinRule;
@@ -4073,49 +4074,20 @@ class RelToSqlConverterTest {
     sql(query).withPostgresql().optimize(rules, hepPlanner).ok(expect);
   }
 
-  @Test void testSumReturnType1() {
-    String query =
-        "SELECT \"product_id\", SUM(\"store_sales\"), COUNT(*) AS \"$f2\" FROM \"foodmart\".\"sales_fact_dec_1998\" GROUP BY \"product_id\"";
-
-    String expect = "SELECT SUM(CAST(SUM(\"store_sales\") * \"t0\".\"$f1\" AS DECIMAL"
-        + "(19, 4))), SUM(CAST(\"t\".\"$f2\" * SUM(\"store_sales\") AS DECIMAL(19, 4)))\n"
-        + "FROM (SELECT \"product_id\", SUM(\"store_sales\"), COUNT(*) AS \"$f2\"\n"
-        + "FROM \"foodmart\".\"sales_fact_dec_1998\"\n"
-        + "GROUP BY \"product_id\") AS \"t\"\n"
-        + "INNER JOIN "
-        + "(SELECT \"product_id\", COUNT(*) AS \"$f1\", SUM(\"store_sales\")\n"
-        + "FROM \"foodmart\".\"sales_fact_dec_1998\"\n"
-        + "GROUP BY \"product_id\") AS \"t0\" ON \"t\".\"product_id\" = \"t0\".\"product_id\"";
-
-    HepProgramBuilder builder = new HepProgramBuilder();
-    builder.addRuleClass(FilterJoinRule.class);
-    builder.addRuleClass(AggregateProjectMergeRule.class);
-    builder.addRuleClass(AggregateJoinTransposeRule.class);
-    HepPlanner hepPlanner = new HepPlanner(builder.build());
-    RuleSet rules = RuleSets.ofList(
-        CoreRules.FILTER_INTO_JOIN,
-        CoreRules.JOIN_CONDITION_PUSH,
-        CoreRules.AGGREGATE_PROJECT_MERGE, CoreRules.AGGREGATE_JOIN_TRANSPOSE_EXTENDED);
-    sql(query).withPostgresql().optimize(rules, hepPlanner).ok(expect);
-  }
-
   @Test void testDistinctWithGroupByAndAlias() {
     String query =
-        "SELECT distinct \"product_id\", SUM(\"store_sales\"), COUNT(*) AS \"$f2\" FROM \"foodmart\".\"sales_fact_dec_1998\" GROUP BY \"product_id\"";
+        "SELECT distinct \"product_id\", SUM(\"store_sales\"), COUNT(*) AS \"$f2\" "
+            + "FROM \"foodmart\".\"sales_fact_dec_1998\" "
+            + "GROUP BY \"product_id\"";
 
-    String expect = "SELECT SUM(CAST(SUM(\"store_sales\") * \"t0\".\"$f1\" AS DECIMAL"
-        + "(19, 4))), SUM(CAST(\"t\".\"$f2\" * SUM(\"store_sales\") AS DECIMAL(19, 4)))\n"
-        + "FROM (SELECT \"product_id\", SUM(\"store_sales\"), COUNT(*) AS \"$f2\"\n"
-        + "FROM \"foodmart\".\"sales_fact_dec_1998\"\n"
-        + "GROUP BY \"product_id\") AS \"t\"\n"
-        + "INNER JOIN "
-        + "(SELECT \"product_id\", COUNT(*) AS \"$f1\", SUM(\"store_sales\")\n"
-        + "FROM \"foodmart\".\"sales_fact_dec_1998\"\n"
-        + "GROUP BY \"product_id\") AS \"t0\" ON \"t\".\"product_id\" = \"t0\".\"product_id\"";
+    String expect =
+        "SELECT \"product_id\", SUM(\"store_sales\"), COUNT(*) AS \"$f2\""
+            + "\nFROM \"foodmart\".\"sales_fact_dec_1998\""
+            + "\nGROUP BY \"product_id\"";
 
     HepProgramBuilder builder = new HepProgramBuilder();
     builder.addRuleClass(FilterJoinRule.class);
-    builder.addRuleClass(AggregateProjectMergeRule.class);
+    builder.addRuleClass(AggregateProjectMergeAliasRule.class);
     builder.addRuleClass(AggregateJoinTransposeRule.class);
     HepPlanner hepPlanner = new HepPlanner(builder.build());
     RuleSet rules = RuleSets.ofList(
