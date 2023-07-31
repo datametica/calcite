@@ -262,6 +262,11 @@ public abstract class OperandTypes {
           // Second operand optional (operand index 0, 1)
           number -> number == 1);
 
+  public static final FamilyOperandTypeChecker DATETIME_OPTIONAL_STRING =
+      family(ImmutableList.of(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
+          // Second operand optional (operand index 0, 1)
+          number -> number == 1);
+
   public static final FamilyOperandTypeChecker STRING_STRING_STRING =
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.STRING);
 

@@ -184,6 +184,51 @@ public abstract class SqlLibraryOperators {
               .andThen(SqlTypeTransforms.TO_VARYING), null,
           OperandTypes.STRING, SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction DATE_ARITHMETIC_MINUS =
+      new SqlFunction(
+          "-",
+          SqlKind.MINUS,
+          ReturnTypes.ARG0,
+          null,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.TIMEDATE)
+      {
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          List<SqlNode> operands = call.getOperandList();
+          if (operands.size() == 2) {
+            SqlNode firstOperand = operands.get(0);
+            SqlNode secondOperand = operands.get(1);
+            firstOperand.unparse(writer, leftPrec, rightPrec);
+            writer.print("-");
+            secondOperand.unparse(writer, leftPrec, rightPrec);
+          }
+        }
+      };
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction DATE_ARITHMETIC_PLUS =
+      new SqlFunction(
+          "+",
+          SqlKind.PLUS,
+          ReturnTypes.ARG0,
+          null,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.TIMEDATE)
+      {
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          List<SqlNode> operands = call.getOperandList();
+          if (operands.size() == 2) {
+            SqlNode firstOperand = operands.get(0);
+            SqlNode secondOperand = operands.get(1);
+            firstOperand.unparse(writer, leftPrec, rightPrec);
+            writer.print("+");
+            secondOperand.unparse(writer, leftPrec, rightPrec);
+          }
+        }
+      };
+
+
   /** BIG_QUERY's "SUBSTR(string, position [, substringLength ])" function. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction SUBSTR_BIG_QUERY =
