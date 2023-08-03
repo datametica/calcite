@@ -42,7 +42,7 @@ public class SqlInsert extends SqlCall {
               (SqlNodeList) operands[0],
               operands[1],
               operands[2],
-              (SqlNodeList) operands[3], null);
+              (SqlNodeList) operands[3]);
         }
       };
 
