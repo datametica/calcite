@@ -22,6 +22,8 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -46,6 +48,23 @@ public class AggregateProjectMergeAliasRule extends AggregateProjectMergeRule {
     return fieldNames;
   }
 
+  public static boolean projectIsAliased(Project project) {
+    List<String> projectFieldList = getFieldListName(project);
+    RelNode input = project.getInput();
+    List<RexNode> rexNodes = project.getChildExps();
+    for (int i = 0; i < rexNodes.size(); i++) {
+      RexNode expr = rexNodes.get(i);
+      if (expr instanceof RexInputRef) {
+        if (!(
+            projectFieldList.get(i).equals(
+            input.getRowType().getFieldList().get(((RexInputRef) expr).getIndex()).getName()))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   @Override public void onMatch(RelOptRuleCall call) {
     final Aggregate aggregate = call.rel(0);
     final Project project = call.rel(1);
@@ -58,9 +77,7 @@ public class AggregateProjectMergeAliasRule extends AggregateProjectMergeRule {
   public static @Nullable RelNode apply(RelOptRuleCall call, Aggregate aggregate,
       Project project) {
     // Check if project contains alias then don't merge.
-    List<String> projectFieldList = getFieldListName(project);
-    List<String> projectInputFieldList = getFieldListName(project.getInput());
-    if (!projectInputFieldList.containsAll(projectFieldList)
+    if (!projectIsAliased(project)/*!projectInputFieldList.containsAll(projectFieldList)*/
         && !(aggregate.getAggCallList().size() > 0)) {
       return null;
     }
