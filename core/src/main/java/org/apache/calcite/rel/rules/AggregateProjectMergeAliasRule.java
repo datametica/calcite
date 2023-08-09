@@ -77,7 +77,7 @@ public class AggregateProjectMergeAliasRule extends AggregateProjectMergeRule {
   public static @Nullable RelNode apply(RelOptRuleCall call, Aggregate aggregate,
       Project project) {
     // Check if project contains alias then don't merge.
-    if (!projectIsAliased(project)/*!projectInputFieldList.containsAll(projectFieldList)*/
+    if (projectIsAliased(project)
         && !(aggregate.getAggCallList().size() > 0)) {
       return null;
     }
