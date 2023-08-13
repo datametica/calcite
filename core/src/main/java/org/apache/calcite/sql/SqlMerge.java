@@ -40,7 +40,7 @@ public class SqlMerge extends SqlCall {
   SqlNode condition;
   SqlNode source;
   @Nullable SqlUpdate updateCall;
-  @Nullable SqlMergeInsert insertCall;
+  @Nullable SqlInsert insertCall;
   @Nullable SqlDelete deleteCall;
   @Nullable SqlSelect sourceSelect;
   @Nullable SqlIdentifier alias;
@@ -60,7 +60,7 @@ public class SqlMerge extends SqlCall {
     this.condition = condition;
     this.source = source;
     this.updateCall = updateCall;
-    this.insertCall = (SqlMergeInsert) insertCall;
+    this.insertCall = insertCall;
     this.sourceSelect = sourceSelect;
     this.alias = alias;
   }
@@ -121,7 +121,7 @@ public class SqlMerge extends SqlCall {
       deleteCall = (@Nullable SqlDelete) operand;
       break;
     case 5:
-      insertCall = (@Nullable SqlMergeInsert) operand;
+      insertCall = (@Nullable SqlInsert) operand;
       break;
     case 6:
       sourceSelect = (@Nullable SqlSelect) operand;
@@ -215,13 +215,14 @@ public class SqlMerge extends SqlCall {
       unparseDeleteCall(writer, opLeft, opRight);
     }
 
-    SqlMergeInsert insertCall = this.insertCall;
+    SqlInsert insertCall = this.insertCall;
     if (insertCall != null) {
       writer.newlineAndIndent();
       writer.keyword("WHEN NOT MATCHED");
-      if (this.insertCall.condition != null) {
+      if (this.insertCall instanceof SqlMergeInsert
+          && ((SqlMergeInsert) this.insertCall).condition != null) {
         writer.keyword("AND");
-        this.insertCall.condition.unparse(writer, opLeft, opRight);
+        ((SqlMergeInsert) this.insertCall).condition.unparse(writer, opLeft, opRight);
       }
       writer.keyword("THEN INSERT");
       SqlNodeList targetColumnList = insertCall.getTargetColumnList();
@@ -236,7 +237,7 @@ public class SqlMerge extends SqlCall {
   private void unparseUpdateCall(SqlWriter writer, int opLeft, int opRight) {
     writer.newlineAndIndent();
     writer.keyword("WHEN MATCHED");
-      if (this.updateCall.condition != null) {
+    if (this.updateCall.condition != null) {
       writer.keyword("AND");
       this.updateCall.condition.unparse(writer, opLeft, opRight);
     }
@@ -252,11 +253,11 @@ public class SqlMerge extends SqlCall {
       writer.sep(",");
       SqlIdentifier id = (SqlIdentifier) pair.left;
         assert id != null;
-        id.unparse(writer, opLeft, opRight);
+      id.unparse(writer, opLeft, opRight);
       writer.keyword("=");
       SqlNode sourceExp = pair.right;
         assert sourceExp != null;
-        sourceExp.unparse(writer, opLeft, opRight);
+      sourceExp.unparse(writer, opLeft, opRight);
     }
     writer.endList(setFrame);
   }
