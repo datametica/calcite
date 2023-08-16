@@ -197,6 +197,11 @@ public class BasicSqlType extends AbstractSqlType {
     if (!withDetail) {
       return;
     }
+    if (!printPrecision) {
+      sb.append('(');
+      sb.append(getMaxNumericPrecision());
+      sb.append(')');
+    }
     if (wrappedCharset != null
         && !SqlCollation.IMPLICIT.getCharset().equals(wrappedCharset.getCharset())) {
       sb.append(" CHARACTER SET \"");
