@@ -490,7 +490,13 @@ public class RelToSqlConverter extends SqlImplementor
   private Builder visitAggregate(Aggregate e, List<Integer> groupKeyList,
       Clause... clauses) {
     // "select a, b, sum(x) from ( ... ) group by a, b"
-    final boolean ignoreClauses = e.getInput() instanceof Project;
+    boolean ignoreClauses = false;
+    if (e.getInput() instanceof Project) {
+      if (!(((Project) e.getInput()).getInput() instanceof Filter
+          && ((Filter) ((Project) e.getInput()).getInput()).getInput() instanceof Filter)) {
+        ignoreClauses = true;
+      }
+    }
     final Result x = visitInput(e, 0, isAnon(), ignoreClauses,
         ImmutableSet.copyOf(clauses));
     final Builder builder = x.builder(e);
