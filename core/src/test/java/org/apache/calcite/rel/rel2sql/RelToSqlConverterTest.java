@@ -11908,7 +11908,9 @@ class RelToSqlConverterTest {
     final String expectedSnowFlakeQuery = "SELECT TO_VARCHAR(DATE '1970-01-01', 'MM-DD-YYYY') AS "
         + "\"$f0\", TO_VARCHAR(1000, '9999') AS \"$f1\"\n"
         + "FROM \"scott\".\"EMP\"";
-    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowFlakeQuery));
+    assertThat(
+        toSql(root,
+        DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowFlakeQuery));
   }
 
   @Test public void testToDateforOracle() {
