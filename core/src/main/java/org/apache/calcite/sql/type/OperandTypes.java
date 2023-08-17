@@ -251,6 +251,9 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker BINARY =
       family(SqlTypeFamily.BINARY);
 
+  public static final SqlSingleOperandTypeChecker BINARY_BINARY =
+      family(SqlTypeFamily.BINARY, SqlTypeFamily.BINARY);
+
   public static final SqlSingleOperandTypeChecker STRING =
       family(SqlTypeFamily.STRING);
 
@@ -280,6 +283,9 @@ public abstract class OperandTypes {
 
   public static final SqlSingleOperandTypeChecker CHARACTER =
       family(SqlTypeFamily.CHARACTER);
+
+  public static final SqlSingleOperandTypeChecker CHARACTER_CHARACTER =
+      family(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER);
 
   public static final SqlSingleOperandTypeChecker DATETIME =
       family(SqlTypeFamily.DATETIME);

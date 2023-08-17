@@ -18,17 +18,7 @@ package org.apache.calcite.sql.fun;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlOperatorBinding;
-import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.SqlSyntax;
-import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
@@ -1096,6 +1086,37 @@ public abstract class SqlLibraryOperators {
           // Second operand is optional
           number -> number == 1),
         SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction BQ_SPLIT =
+      new SqlFunction("SPLIT",
+              SqlKind.OTHER_FUNCTION,
+              ReturnTypes.ARG0
+                  .andThen(SqlLibraryOperators::deriveTypeSplit)
+                  .andThen(SqlTypeTransforms.TO_ARRAY)
+                  .andThen(SqlTypeTransforms.TO_NULLABLE),
+              null,
+              OperandTypes.or(OperandTypes.CHARACTER_CHARACTER,
+                  OperandTypes.CHARACTER,
+                  OperandTypes.BINARY_BINARY,
+                  OperandTypes.BINARY),
+              SqlFunctionCategory.STRING);
+
+  static RelDataType deriveTypeSplit(SqlOperatorBinding operatorBinding,
+      RelDataType type) {
+    SqlTypeName typeName = isBinary(type) ? SqlTypeName.VARBINARY : SqlTypeName.VARCHAR;
+    return operatorBinding.getTypeFactory().createSqlType(typeName);
+  }
+
+  public static boolean isBinary(RelDataType type) {
+    SqlTypeName typeName = type.getSqlTypeName();
+    if (typeName == null) {
+      return false;
+    }
+    return SqlTypeFamily.BINARY.contains(type);
+  }
+
+  public static final SqlOperator OFFSET_ITEM = new SqlOffsetItemOperator();
 
   @LibraryOperator(libraries = {STANDARD})
   public static final SqlFunction STRING_SPLIT = new SqlFunction(
