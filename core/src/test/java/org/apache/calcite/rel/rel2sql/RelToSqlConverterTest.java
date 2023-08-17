@@ -11893,6 +11893,24 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedSparkQuery));
   }
 
+  @Test public void testToVarChar() {
+    final RelBuilder builder = relBuilder();
+
+    final RexNode toVarcharNode = builder.call(SqlLibraryOperators.TO_VARCHAR,
+        builder.getRexBuilder().makeDateLiteral(new DateString("1970-01-01")),
+        builder.literal("MM-DD-YYYY"));
+    final RexNode toVarcharWithNumber = builder.call(SqlLibraryOperators.TO_VARCHAR,
+        builder.literal(1000), builder.literal("9999"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(toVarcharNode, toVarcharWithNumber)
+        .build();
+    final String expectedSnowFlakeQuery = "SELECT TO_VARCHAR(DATE '1970-01-01', 'MM-DD-YYYY') AS "
+        + "\"$f0\", TO_VARCHAR(1000, '9999') AS \"$f1\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowFlakeQuery));
+  }
+
   @Test public void testToDateforOracle() {
     RelBuilder builder = relBuilder().scan("EMP");
     final RexNode oracleToDateCall = builder.call(SqlLibraryOperators.ORACLE_TO_DATE,

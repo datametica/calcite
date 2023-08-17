@@ -1123,7 +1123,7 @@ public abstract class SqlLibraryOperators {
         "TO_VARCHAR",
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.VARCHAR_2000_NULLABLE, null,
-        OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
+        OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING),
         SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
