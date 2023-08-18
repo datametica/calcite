@@ -197,7 +197,7 @@ public class BasicSqlType extends AbstractSqlType {
     if (!withDetail) {
       return;
     }
-    if (!printPrecision) {
+    if (!printPrecision && getSqlTypeName().equals(SqlTypeName.DECIMAL)) {
       sb.append('(');
       sb.append(getMaxNumericPrecision());
       sb.append(')');
