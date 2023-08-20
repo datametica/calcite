@@ -142,6 +142,8 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.YEARNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IN;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BQ_SPLIT;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OFFSET_ITEM;
 import static org.apache.calcite.test.Matchers.isLinux;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -12812,6 +12814,25 @@ class RelToSqlConverterTest {
         + " BY EMPNO, DEPTNO) AS `$f1`\n"
         + "FROM scott.EMP";
 //    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testBigQuerySplitOffset() {
+    final RelBuilder builder = relBuilder();
+    builder.push(builder.scan("EMP").build());
+
+    RexNode splitNode = builder.call(BQ_SPLIT, builder.literal("23.22"));
+    RexNode offsetNode = builder.call(OFFSET_ITEM, splitNode, builder.literal(0));
+    builder.build();
+    final RelNode root = builder
+        .scan("EMP")
+        .project(offsetNode)
+        .build();
+
+    final String expectedBiqQuery = "SELECT EMPNO, PERCENTILE_CONT(DEPTNO, '0.5') OVER (PARTITION"
+        + " BY EMPNO, DEPTNO) AS `$f1`\n"
+        + "FROM scott.EMP";
+
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 

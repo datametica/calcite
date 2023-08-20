@@ -399,6 +399,9 @@ public abstract class ReturnTypes {
   public static final SqlReturnTypeInference VARCHAR_2000 =
       explicit(SqlTypeName.VARCHAR, 2000);
 
+  public static final SqlReturnTypeInference ANY =
+      explicit(SqlTypeName.ANY);
+
   /**
    * Type-inference strategy that always returns "VARCHAR(2000)" with nulls
    * allowed if any of the operands allow nulls.
