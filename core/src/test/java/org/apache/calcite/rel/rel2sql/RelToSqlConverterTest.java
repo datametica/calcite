@@ -129,12 +129,14 @@ import static org.apache.calcite.avatica.util.TimeUnit.MONTH;
 import static org.apache.calcite.avatica.util.TimeUnit.SECOND;
 import static org.apache.calcite.avatica.util.TimeUnit.YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.BITNOT;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.BQ_SPLIT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.CURRENT_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_MOD;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYOCCURRENCE_OF_MONTH;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FALSE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.MONTHNUMBER_OF_YEAR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.OFFSET_ITEM;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.QUARTERNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRUE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_CALENDAR;
@@ -142,8 +144,8 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.YEARNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IN;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BQ_SPLIT;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OFFSET_ITEM;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.BQ_SPLIT;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.OFFSET_ITEM;
 import static org.apache.calcite.test.Matchers.isLinux;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -12800,43 +12802,6 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
-
-  @Test public void testSplit() {
-    final RelBuilder builder = relBuilder();
-    builder.push(builder.scan("EMP").build());
-
-//    final List<RexNode> percentileContRex = ImmutableList.of(builder.field("DEPTNO"),
-//        builder.literal("0.5"));
-//    final RelDataType decimalType =
-//        builder.getTypeFactory().createSqlType(SqlTypeName.DECIMAL);
-//    List<RexNode> partitionKeyRexNodes = ImmutableList.of(
-//        builder.field("EMPNO"), builder.field(
-//        "DEPTNO"));
-//    final RexNode overRex = builder.getRexBuilder().makeOver(decimalType,
-//        SqlStdOperatorTable.PERCENTILE_CONT,
-//        percentileContRex, partitionKeyRexNodes, ImmutableList.of(),
-//        RexWindowBounds.UNBOUNDED_PRECEDING, RexWindowBounds.UNBOUNDED_FOLLOWING,
-//        false, true, false, false, false);
-
-    RexNode splitrex = builder.call(SqlLibraryOperators.BQ_SPLIT, builder.literal("123.22"), builder.literal("."));
-    RexNode offset = builder.call(SqlLibraryOperators.OFFSET_ITEM, splitrex, builder.literal(0));
-
-    builder.build();
-    final RelNode root = builder
-        .scan("EMP")
-        .project(offset)
-        .build();
-    final String expectedSql = "SELECT \"EMPNO\", PERCENTILE_CONT(\"DEPTNO\", '0.5') OVER"
-        + " (PARTITION BY \"EMPNO\", \"DEPTNO\" RANGE BETWEEN UNBOUNDED PRECEDING AND "
-        + "UNBOUNDED FOLLOWING) AS \"$f1\"\n"
-        + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT EMPNO, PERCENTILE_CONT(DEPTNO, '0.5') OVER (PARTITION"
-        + " BY EMPNO, DEPTNO) AS `$f1`\n"
-        + "FROM scott.EMP";
-//    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
-    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
-  }
-
   @Test public void testBigQuerySplitOffset() {
     final RelBuilder builder = relBuilder();
     builder.push(builder.scan("EMP").build());
@@ -12849,8 +12814,7 @@ class RelToSqlConverterTest {
         .project(offsetNode)
         .build();
 
-    final String expectedBiqQuery = "SELECT EMPNO, PERCENTILE_CONT(DEPTNO, '0.5') OVER (PARTITION"
-        + " BY EMPNO, DEPTNO) AS `$f1`\n"
+    final String expectedBiqQuery = "SELECT SPLIT('23.22')[OFFSET(0)] AS `$f0`\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
