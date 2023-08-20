@@ -144,8 +144,6 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.YEARNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IN;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.BQ_SPLIT;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.OFFSET_ITEM;
 import static org.apache.calcite.test.Matchers.isLinux;
 
 import static org.hamcrest.CoreMatchers.is;
