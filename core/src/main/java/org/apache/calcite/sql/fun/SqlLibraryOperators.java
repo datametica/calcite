@@ -1460,14 +1460,6 @@ public abstract class SqlLibraryOperators {
               number -> number == 2 || number == 3 || number == 4),
           SqlFunctionCategory.STRING);
 
-  @LibraryOperator(libraries = {BIG_QUERY})
-  public static final SqlFunction BIT_XOR =
-      new SqlFunction("BIT_XOR",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER_NULLABLE, null,
-          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
-          SqlFunctionCategory.NUMERIC);
-
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction HASHBUCKET =
       new SqlFunction(
@@ -1486,16 +1478,6 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.INTEGER_NULLABLE,
           null,
           OperandTypes.ONE_OR_MORE,
-          SqlFunctionCategory.SYSTEM);
-
-  @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlFunction HASH_AGG =
-      new SqlFunction(
-          "HASH_AGG",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER_NULLABLE,
-          null,
-          OperandTypes.ANY,
           SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {BIG_QUERY})
@@ -1722,5 +1704,9 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {SNOWFLAKE, ORACLE, TERADATA})
   public static final SqlAggFunction MEDIAN =
       new SqlMedianAggFunction(SqlKind.MEDIAN, ReturnTypes.ARG0_NULLABLE);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction HASH_AGG =
+      new SqlHashAggFunction(SqlKind.HASH_AGG, ReturnTypes.BIGINT);
 
 }
