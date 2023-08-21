@@ -6219,8 +6219,8 @@ class RelToSqlConverterTest {
 
   @Test public void testTimestampFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode currentTimestampRexNode = builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP,
-        builder.literal(6));
+    final RexNode currentTimestampRexNode = builder.call(SqlLibraryOperators.TRY_TO_NUMBER,
+        builder.literal("aa"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(currentTimestampRexNode, "CT"))
