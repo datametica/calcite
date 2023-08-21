@@ -868,6 +868,9 @@ public enum SqlKind {
   /** The {@code STRING_AGG} aggregate function. */
   STRING_AGG,
 
+  /** The {@code HASH_AGG} aggregate function. */
+  HASH_AGG,
+
   /** The {@code COUNTIF} aggregate function. */
   COUNTIF,
 
@@ -1122,7 +1125,7 @@ public enum SqlKind {
           AVG, STDDEV_POP, STDDEV_SAMP, VAR_POP, VAR_SAMP, NTILE, COLLECT,
           FUSION, SINGLE_VALUE, ROW_NUMBER, RANK, PERCENT_RANK, DENSE_RANK,
           CUME_DIST, JSON_ARRAYAGG, JSON_OBJECTAGG, BIT_AND, BIT_OR, BIT_XOR,
-          LISTAGG, STRING_AGG, ARRAY_AGG, ARRAY_CONCAT_AGG, COUNTIF,
+          LISTAGG, STRING_AGG, HASH_AGG, ARRAY_AGG, ARRAY_CONCAT_AGG, COUNTIF,
           INTERSECTION, ANY_VALUE);
 
   /**
