@@ -399,6 +399,15 @@ public abstract class SqlLibraryOperators {
           .withFunctionType(SqlFunctionCategory.SYSTEM)
           .withSyntax(SqlSyntax.ORDERED_FUNCTION);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction HASH_AGG =
+      SqlBasicAggFunction
+          .create(SqlKind.HASH_AGG, ReturnTypes.BIGINT,
+              OperandTypes.ANY)
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withSyntax(SqlSyntax.FUNCTION);
+
+
   /** The "DATE(string)" function, equivalent to "CAST(string AS DATE). */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction DATE =
@@ -1704,9 +1713,5 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {SNOWFLAKE, ORACLE, TERADATA})
   public static final SqlAggFunction MEDIAN =
       new SqlMedianAggFunction(SqlKind.MEDIAN, ReturnTypes.ARG0_NULLABLE);
-
-  @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlAggFunction HASH_AGG =
-      new SqlHashAggFunction(SqlKind.HASH_AGG, ReturnTypes.BIGINT);
 
 }
