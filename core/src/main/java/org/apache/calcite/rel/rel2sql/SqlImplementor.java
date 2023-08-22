@@ -2147,9 +2147,15 @@ public abstract class SqlImplementor {
       // then new SELECT wrap is not required
       final Set<Clause> nonWrapSet = ImmutableSet.of(Clause.SELECT);
       for (Clause clause : expectedClauses) {
-        if (maxClause.ordinal() > clause.ordinal()
-            || (maxClause == clause
-                && !nonWrapSet.contains(clause))) {
+        if (maxClause.ordinal() > clause.ordinal()) {
+          if (clause.ordinal() == 2) {
+            DistinctTrait distinctTrait = rel.getTraitSet().getTrait(DistinctTraitDef.instance);
+            if (distinctTrait != null && distinctTrait.isDistinct()) {
+              return false;
+            }
+          }
+          return true;
+        } else if (maxClause == clause && !nonWrapSet.contains(clause)) {
           return true;
         }
       }
