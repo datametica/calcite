@@ -142,9 +142,9 @@ class SqlTypeFactoryTest {
     RelDataTypeFactory typeFactory = f.typeFactory;
     List<RelDataTypeField> fields = new ArrayList<>();
     RelDataTypeField field0 = new RelDataTypeFieldImpl(
-            "i", 0, typeFactory.createSqlType(SqlTypeName.INTEGER));
+        "i", 0, typeFactory.createSqlType(SqlTypeName.INTEGER));
     RelDataTypeField field1 = new RelDataTypeFieldImpl(
-            "s", 1, typeFactory.createSqlType(SqlTypeName.VARCHAR));
+        "s", 1, typeFactory.createSqlType(SqlTypeName.VARCHAR));
     fields.add(field0);
     fields.add(field1);
     final RelDataType recordType = new RelRecordType(fields); // nullable false by default
@@ -230,9 +230,11 @@ class SqlTypeFactoryTest {
     RelDataType tsWithPrecision2 = typeFactory.createSqlType(decimalSqlType, 2);
     RelDataType tsWithPrecision3 = typeFactory.createSqlType(decimalSqlType, 3);
 
-    assertThat(ts.toString(), is(decimalSqlType.getName()
+    assertThat(
+        ts.toString(), is(decimalSqlType.getName()
         + "(" + typeFactory.getTypeSystem().getMaxNumericPrecision() + ", 0)"));
-    assertThat(ts.getFullTypeString(), is(decimalSqlType.getName()
+    assertThat(
+        ts.getFullTypeString(), is(decimalSqlType.getName()
         + "(" + typeFactory.getTypeSystem().getMaxNumericPrecision()+ ", 0) NOT NULL"));
     assertThat(tsWithoutPrecision.toString(), is(decimalSqlType.getName()));
     assertThat(tsWithoutPrecision.getFullTypeString(),
