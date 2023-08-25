@@ -1013,6 +1013,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       }
       break;
     case "CURRENT_TIMESTAMP_TZ":
+    case "CURRENT_TIMESTAMP_LTZ":
       final SqlWriter.Frame currentTimestampFunc = writer.startFunCall("CURRENT_TIMESTAMP");
       writer.endFunCall(currentTimestampFunc);
       break;

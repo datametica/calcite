@@ -448,6 +448,11 @@ public abstract class SqlLibraryOperators {
       new SqlCurrentTimestampFunction("CURRENT_TIMESTAMP_TZ",
           SqlTypeName.TIMESTAMP_WITH_TIME_ZONE);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction CURRENT_TIMESTAMP_WITH_LOCAL_TIME_ZONE =
+      new SqlCurrentTimestampFunction("CURRENT_TIMESTAMP_LTZ",
+          SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
+
   /**
    * The REGEXP_EXTRACT(source_string, regex_pattern) returns the first substring in source_string
    * that matches the regex_pattern. Returns NULL if there is no match.
@@ -1105,6 +1110,9 @@ public abstract class SqlLibraryOperators {
       null,
       OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
+
+//  @LibraryOperator(libraries = {SNOWFLAKE})
+//  public static final SqlFunction SPLIT_TO_TABLE = new SplitToTableFunction();
 
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction SPLIT = new SqlFunction(
