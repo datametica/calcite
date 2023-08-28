@@ -969,7 +969,8 @@ public class SqlDialect {
     return this.getCastSpec(type);
   }
 
-  public SqlNode getCastCall(SqlNode operandToCast, RelDataType castFrom, RelDataType castTo) {
+  public SqlNode getCastCall(SqlKind sqlKind, SqlNode operandToCast,
+      RelDataType castFrom, RelDataType castTo) {
     return CAST.createCall(SqlParserPos.ZERO,
       operandToCast, Nullness.castNonNull(this.getCastSpec(castTo)));
   }
