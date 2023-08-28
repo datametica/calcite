@@ -1876,6 +1876,12 @@ public abstract class SqlImplementor {
                   }
                 }
               }
+            } else if (node instanceof SqlCall
+                && !SqlUtil.containsAgg(node)
+                && clauseList.contains(Clause.GROUP_BY)
+                && dialect.getConformance().isSortByOrdinal()) {
+              return SqlLiteral.createExactNumeric(
+                  Integer.toString(ordinal + 1), SqlParserPos.ZERO);
             }
             return node;
           }
@@ -1986,6 +1992,10 @@ public abstract class SqlImplementor {
         if (((SqlCall) sqlNode).getOperator() instanceof SqlCaseOperator) {
           for (SqlNode whenOperand : ((SqlCase) sqlNode).getWhenOperands()) {
             boolean present;
+            if (whenOperand instanceof SqlIdentifier) {
+              present = false;
+              break;
+            }
             if (whenOperand instanceof SqlCase) {
               present = hasAnalyticalFunctionInWhenClauseOfCase((SqlCall) whenOperand);
             } else {

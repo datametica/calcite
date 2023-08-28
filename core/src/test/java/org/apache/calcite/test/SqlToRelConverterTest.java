@@ -3842,6 +3842,39 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4644">[CALCITE-4644]
+   * Add PERCENTILE_CONT and PERCENTILE_DISC aggregate functions</a>. */
+  @Test void testPercentileCont() {
+    final String sql = "select\n"
+        + " percentile_cont(0.25) within group (order by deptno)\n"
+        + "from emp";
+    sql(sql).ok();
+  }
+
+  @Test void testPercentileContWithGroupBy() {
+    final String sql = "select deptno,\n"
+        + " percentile_cont(0.25) within group (order by empno desc)\n"
+        + "from emp\n"
+        + "group by deptno";
+    sql(sql).ok();
+  }
+
+  @Test void testPercentileDisc() {
+    final String sql = "select\n"
+        + " percentile_disc(0.25) within group (order by deptno)\n"
+        + "from emp";
+    sql(sql).ok();
+  }
+
+  @Test void testPercentileDiscWithGroupBy() {
+    final String sql = "select deptno,\n"
+        + " percentile_disc(0.25) within group (order by empno)\n"
+        + "from emp\n"
+        + "group by deptno";
+    sql(sql).ok();
+  }
+
   @Test void testOrderByRemoval1() {
     final String sql = "select * from (\n"
         + "  select empno from emp order by deptno offset 0) t\n"
@@ -4047,6 +4080,15 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select case when coalesce(ename, 'a') in ('1', '2')\n"
         + "then 'CKA' else 'QT' END, count(distinct deptno) from emp\n"
         + "group by case when coalesce(ename, 'a') in ('1', '2') then 'CKA' else 'QT' END";
+    sql(sql).ok();
+  }
+
+  @Test void testCoalesceOnUnionOfLiteralsAndNull() {
+    final String sql = "SELECT COALESCE (a.ids,0)"
+        + " FROM ("
+        + " SELECT 101 as ids union all"
+        + " SELECT 103 as ids union all"
+        + " SELECT null as ids) as a";
     sql(sql).ok();
   }
 
