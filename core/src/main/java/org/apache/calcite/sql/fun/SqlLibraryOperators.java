@@ -18,21 +18,27 @@ package org.apache.calcite.sql.fun;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOffsetItemOperator;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.SqlOffsetItemOperator;
-import org.apache.calcite.sql.type.*;
+import org.apache.calcite.sql.type.InferTypes;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SameOperandTypeChecker;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.util.Optionality;
 
 import com.google.common.collect.ImmutableList;
@@ -838,7 +844,7 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
 
-  /** Try_to_number function */
+  /** Try_to_number function. */
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction TRY_TO_NUMBER =
       new SqlFunction("TRY_TO_NUMBER",
@@ -873,44 +879,6 @@ public abstract class SqlLibraryOperators {
               OperandTypes.TIMESTAMP),
           SqlFunctionCategory.TIMEDATE);
 
-  @LibraryOperator(libraries = {BIG_QUERY})
-  public static final SqlFunction SAFE_CAST =
-      new SqlFunction("SAFE_CAST", SqlKind.OTHER_FUNCTION, null,
-          null, OperandTypes.ANY, SqlFunctionCategory.SYSTEM) {
-        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-          getUnparseForSafeCast(writer, call, leftPrec, rightPrec);
-        }
-        @Override
-        public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
-          final RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
-          SqlTypeName newSqlTypeName = getSqlTypeNameForSafeCast(opBinding);
-          return typeFactory.createSqlType(newSqlTypeName);
-        }
-      };
-
-  private static SqlTypeName getSqlTypeNameForSafeCast(SqlOperatorBinding opBinding) {
-    String sqlTypeValue = opBinding.getOperandLiteralValue(1, String.class);
-    sqlTypeValue = sqlTypeValue == "DATETIME" ?
-        SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE.getName() : sqlTypeValue;
-    if (sqlTypeValue != null && SqlTypeName.get(sqlTypeValue) != null) {
-      return SqlTypeName.get(sqlTypeValue);
-    }
-    throw new CalciteException("SqlTypeName is not supported", null);
-  }
-
-  private static void getUnparseForSafeCast(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    SqlWriter.Frame frame = writer.startFunCall(call.getOperator().getName());
-    call.getOperandList().get(0).unparse(writer, leftPrec, rightPrec);
-    writer.print("as ");
-    SqlTypeName sqlTypeName = SqlTypeName.get(call.getOperandList().get(1).toString().replaceAll("'", ""));
-    if (sqlTypeName != null) {
-      SqlNode secondOperand = writer.getDialect().getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, sqlTypeName));
-      secondOperand.unparse(writer, leftPrec, rightPrec);
-    } else {
-      writer.print(call.getOperandList().get(1).toString().replaceAll("'", ""));
-    }
-    writer.endFunCall(frame);
-  }
 
   /** The "TIMESTAMP_SECONDS(bigint)" function; returns a TIMESTAMP value
    * a given number of seconds after 1970-01-01 00:00:00. */
