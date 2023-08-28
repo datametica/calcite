@@ -6217,10 +6217,24 @@ class RelToSqlConverterTest {
         .ok(expected);
   }
 
+  @Test public void testTryToNumber() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tryToNumberNode = builder.call(SqlLibraryOperators.TRY_TO_NUMBER,
+        builder.literal("name"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(tryToNumberNode)
+        .build();
+
+    final String expectedSql = "SELECT TRY_TO_NUMBER('name') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testTimestampFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode currentTimestampRexNode = builder.call(SqlLibraryOperators.TRY_TO_NUMBER,
-        builder.literal("aa"));
+    final RexNode currentTimestampRexNode = builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP,
+        builder.literal(6));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(currentTimestampRexNode, "CT"))
