@@ -563,11 +563,8 @@ public class RelToSqlConverter extends SqlImplementor
     }
     RelNode input = e.getInput();
     while (input != null) {
-      if (input instanceof Project || input instanceof TableScan) {
+      if (input instanceof Project || input instanceof TableScan || input instanceof Join) {
         break;
-      }
-      if (input instanceof Join) {
-        return false;
       }
       input = input.getInput(0);
     }
