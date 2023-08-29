@@ -11958,7 +11958,8 @@ class RelToSqlConverterTest {
 
   @Test public void testStrPos() {
     RelBuilder builder = relBuilder().scan("EMP");
-    final RexNode strposCall = builder.call(SqlLibraryOperators.STRPOS, builder.literal("foo@example.com"),
+    final RexNode strposCall = builder.call(SqlLibraryOperators.STRPOS,
+        builder.literal("foo@example.com"),
         builder.literal("@"));
     RelNode root = builder
         .project(strposCall)
