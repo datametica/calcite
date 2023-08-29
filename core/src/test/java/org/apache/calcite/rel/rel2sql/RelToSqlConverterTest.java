@@ -30,7 +30,6 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
-import org.apache.calcite.rel.rules.AggregateProjectMergeAliasRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.FilterExtractInnerJoinRule;
@@ -4087,37 +4086,13 @@ class RelToSqlConverterTest {
 
     HepProgramBuilder builder = new HepProgramBuilder();
     builder.addRuleClass(FilterJoinRule.class);
-    builder.addRuleClass(AggregateProjectMergeAliasRule.class);
+    builder.addRuleClass(AggregateProjectMergeRule.class);
     builder.addRuleClass(AggregateJoinTransposeRule.class);
     HepPlanner hepPlanner = new HepPlanner(builder.build());
     RuleSet rules = RuleSets.ofList(
         CoreRules.FILTER_INTO_JOIN,
         CoreRules.JOIN_CONDITION_PUSH,
-        CoreRules.AGGREGATE_PROJECT_MERGE_ALIAS_RULE, CoreRules.AGGREGATE_JOIN_TRANSPOSE_EXTENDED);
-    sql(query).withPostgresql().optimize(rules, hepPlanner).ok(expect);
-  }
-
-  @Test void testAliasWithDistinct() {
-    String query =
-        "SELECT DISTINCT \"product_id\" AS \"p_id\""
-            + "FROM \"foodmart\".\"sales_fact_dec_1998\" "
-            + "GROUP BY \"product_id\"";
-
-    String expect =
-        "SELECT \"product_id\" AS \"p_id\""
-            + "\nFROM \"foodmart\".\"sales_fact_dec_1998\""
-            + "\nGROUP BY \"product_id\"";
-
-    HepProgramBuilder builder = new HepProgramBuilder();
-    builder.addRuleClass(FilterJoinRule.class);
-    builder.addRuleClass(AggregateProjectMergeAliasRule.class);
-    builder.addRuleClass(AggregateJoinTransposeRule.class);
-    HepPlanner hepPlanner = new HepPlanner(builder.build());
-    RuleSet rules = RuleSets.ofList(
-        CoreRules.FILTER_INTO_JOIN,
-        CoreRules.JOIN_CONDITION_PUSH,
-        CoreRules.AGGREGATE_PROJECT_MERGE_ALIAS_RULE,
-        CoreRules.AGGREGATE_JOIN_TRANSPOSE_EXTENDED);
+        CoreRules.AGGREGATE_PROJECT_MERGE, CoreRules.AGGREGATE_JOIN_TRANSPOSE_EXTENDED);
     sql(query).withPostgresql().optimize(rules, hepPlanner).ok(expect);
   }
 
@@ -4134,13 +4109,13 @@ class RelToSqlConverterTest {
 
     HepProgramBuilder builder = new HepProgramBuilder();
     builder.addRuleClass(FilterJoinRule.class);
-    builder.addRuleClass(AggregateProjectMergeAliasRule.class);
+    builder.addRuleClass(AggregateProjectMergeRule.class);
     builder.addRuleClass(AggregateJoinTransposeRule.class);
     HepPlanner hepPlanner = new HepPlanner(builder.build());
     RuleSet rules = RuleSets.ofList(
         CoreRules.FILTER_INTO_JOIN,
         CoreRules.JOIN_CONDITION_PUSH,
-        CoreRules.AGGREGATE_PROJECT_MERGE_ALIAS_RULE,
+        CoreRules.AGGREGATE_PROJECT_MERGE,
         CoreRules.AGGREGATE_JOIN_TRANSPOSE_EXTENDED);
     sql(query).withPostgresql().optimize(rules, hepPlanner).ok(expect);
   }
@@ -4158,13 +4133,13 @@ class RelToSqlConverterTest {
 
     HepProgramBuilder builder = new HepProgramBuilder();
     builder.addRuleClass(FilterJoinRule.class);
-    builder.addRuleClass(AggregateProjectMergeAliasRule.class);
+    builder.addRuleClass(AggregateProjectMergeRule.class);
     builder.addRuleClass(AggregateJoinTransposeRule.class);
     HepPlanner hepPlanner = new HepPlanner(builder.build());
     RuleSet rules = RuleSets.ofList(
         CoreRules.FILTER_INTO_JOIN,
         CoreRules.JOIN_CONDITION_PUSH,
-        CoreRules.AGGREGATE_PROJECT_MERGE_ALIAS_RULE,
+        CoreRules.AGGREGATE_PROJECT_MERGE,
         CoreRules.AGGREGATE_JOIN_TRANSPOSE_EXTENDED);
     sql(query).withPostgresql().optimize(rules, hepPlanner).ok(expect);
   }

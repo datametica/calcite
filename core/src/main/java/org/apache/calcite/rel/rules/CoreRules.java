@@ -59,9 +59,6 @@ public class CoreRules {
   public static final AggregateProjectMergeRule AGGREGATE_PROJECT_MERGE =
       AggregateProjectMergeRule.Config.DEFAULT.toRule();
 
-  public static final AggregateProjectMergeAliasRule AGGREGATE_PROJECT_MERGE_ALIAS_RULE =
-      AggregateProjectMergeAliasRule.Config.DEFAULT.toRule();
-
   /** Rule that removes constant keys from an {@link Aggregate}. */
   public static final AggregateProjectPullUpConstantsRule
       AGGREGATE_PROJECT_PULL_UP_CONSTANTS =
