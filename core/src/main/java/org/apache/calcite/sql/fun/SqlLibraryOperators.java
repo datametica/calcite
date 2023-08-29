@@ -1167,7 +1167,7 @@ public abstract class SqlLibraryOperators {
               number -> number == 2 || number == 3),
           SqlFunctionCategory.STRING);
 
-  @LibraryOperator(libraries = {MSSQL})
+  @LibraryOperator(libraries = {MSSQL, SNOWFLAKE})
   public static final SqlFunction CHARINDEX = new SqlFunction(
           "CHARINDEX",
           SqlKind.OTHER_FUNCTION,
@@ -1178,6 +1178,15 @@ public abstract class SqlLibraryOperators {
           SqlTypeFamily.INTEGER),
               number -> number == 2),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction STRPOS = new SqlFunction(
+      "STRPOS",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.INTEGER_NULLABLE,
+      null,
+      OperandTypes.STRING_STRING,
+      SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction TIME_DIFF = new SqlFunction(
