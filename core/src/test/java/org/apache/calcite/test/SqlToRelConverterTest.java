@@ -3364,6 +3364,13 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql3).with(getTesterWithDynamicTable()).ok();
   }
 
+  @Test void testDynamicSchemaUnnestWithFilter() {
+    final String sql3 = "select t1.c_nationkey, t2\n"
+        + "from SALES.CUSTOMER as t1,\n"
+        + "unnest(t1.fake_col) as t2 where 'a' = 1";
+    sql(sql3).with(getTesterWithDynamicTable()).ok();
+  }
+
   @Test void testStarDynamicSchemaUnnest() {
     final String sql3 = "select *\n"
         + "from SALES.CUSTOMER as t1,\n"
