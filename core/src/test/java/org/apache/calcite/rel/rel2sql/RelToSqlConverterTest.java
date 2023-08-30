@@ -3278,8 +3278,14 @@ class RelToSqlConverterTest {
         + "ORDER BY net_weight IS NULL, net_weight\n"
         + "LIMIT 100\n"
         + "OFFSET 10";
+    final String expectedMssql = "SELECT [product_id], [net_weight]\n"
+        + "FROM [foodmart].[product]\n"
+        + "ORDER BY CASE WHEN [net_weight] IS NULL THEN 1 ELSE 0 END, [net_weight]\n"
+        + "OFFSET 10 ROWS\n"
+        + "FETCH NEXT 100 ROWS ONLY";
     sql(query).ok(expected)
-        .withBigQuery().ok(expectedBigQuery);
+        .withBigQuery().ok(expectedBigQuery)
+        .withMssql().ok(expectedMssql);
   }
 
   @Test void testSelectQueryWithParameters() {
@@ -3301,7 +3307,29 @@ class RelToSqlConverterTest {
         + "ORDER BY \"product_id\"\n"
         + "OFFSET 10 ROWS\n"
         + "FETCH NEXT 100 ROWS ONLY";
-    sql(query).ok(expected);
+    final String expectedMssql = "SELECT [product_id]\n"
+        + "FROM [foodmart].[product]\n"
+        + "ORDER BY CASE WHEN [product_id] IS NULL THEN 1 ELSE 0 END, [product_id]\n"
+        + "OFFSET 10 ROWS\n"
+        + "FETCH NEXT 100 ROWS ONLY";
+    sql(query).ok(expected)
+        .withMssql().ok(expectedMssql);
+  }
+
+  @Test public void testSelectQueryWithFetchAndWithoutOffsetClause() {
+    String query = "select \"product_id\"  from \"product\" order by \"product_id\""
+        + " fetch next 100 rows only";
+    final String expected = "SELECT \"product_id\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "ORDER BY \"product_id\"\n"
+        + "FETCH NEXT 100 ROWS ONLY";
+    final String expectedMssql = "SELECT [product_id]\n"
+        + "FROM [foodmart].[product]\n"
+        + "ORDER BY CASE WHEN [product_id] IS NULL THEN 1 ELSE 0 END, [product_id]\n"
+        + "OFFSET 0 ROWS\n"
+        + "FETCH NEXT 100 ROWS ONLY";
+    sql(query).ok(expected)
+        .withMssql().ok(expectedMssql);
   }
 
   @Test void testSelectQueryWithFetchClause() {

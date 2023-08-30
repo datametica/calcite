@@ -160,6 +160,18 @@ public class MssqlSqlDialect extends SqlDialect {
     }
   }
 
+  /**
+   * For usage of Offset/Fetch in Mssql
+   * Using ANSI Standard Syntax OFFSET offset_value ROWS FETCH NEXT fetch_value ROWS ONLY
+   * */
+  @Override public void unparseOffsetFetch(
+      SqlWriter writer, SqlNode offset, SqlNode fetch) {
+    if (fetch != null && offset == null) {
+      offset = SqlLiteral.createExactNumeric("0", SqlParserPos.ZERO);
+    }
+    super.unparseOffsetFetch(writer, offset, fetch);
+  }
+
   @Override public void unparseDateTimeLiteral(SqlWriter writer,
       SqlAbstractDateTimeLiteral literal, int leftPrec, int rightPrec) {
     SqlCharStringLiteral charStringLiteral = SqlLiteral
@@ -210,8 +222,8 @@ public class MssqlSqlDialect extends SqlDialect {
           unparseSqlWindow(writer, call, leftPrec, rightPrec);
         }
         break;
-      case OTHER_FUNCTION:
       case OTHER:
+      case OTHER_FUNCTION:
         unparseOtherFunction(writer, call, leftPrec, rightPrec);
         break;
       case CEIL:
@@ -530,4 +542,5 @@ public class MssqlSqlDialect extends SqlDialect {
     }
     writer.endList(frame);
   }
+
 }
