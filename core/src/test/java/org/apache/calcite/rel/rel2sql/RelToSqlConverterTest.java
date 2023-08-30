@@ -11524,6 +11524,21 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testForBigQueryArray() {
+    final RelBuilder builder = relBuilder();
+    final RexNode array_node = builder.call(SqlLibraryOperators.ARRAY,
+        builder.literal("Mike"), builder.literal("Sam"), builder.literal("John"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(array_node)
+        .build();
+
+    final String expectedBiqQuery = "SELECT ARRAY['Mike', 'Sam', 'John'] AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
 
   @Test public void testForRegexpLikeFunctionWithThirdArgumentAsC() {
     final RelBuilder builder = relBuilder();

@@ -1714,4 +1714,25 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction MEDIAN =
       new SqlMedianAggFunction(SqlKind.MEDIAN, ReturnTypes.ARG0_NULLABLE);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ARRAY =
+      new SqlFunction(
+          "ARRAY",
+          SqlKind.ARRAY_QUERY_CONSTRUCTOR,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.SAME_VARIADIC,
+          SqlFunctionCategory.SYSTEM) {
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          writer.print("ARRAY[");
+          int nOperands = call.operandCount();
+          for (int i = 0; i < nOperands; i++) {
+            call.operand(i).unparse(writer, leftPrec, rightPrec);
+            if (i < nOperands - 1) {
+              writer.print(",");
+            }
+          }
+          writer.print("]");
+        }
+      };
 }
