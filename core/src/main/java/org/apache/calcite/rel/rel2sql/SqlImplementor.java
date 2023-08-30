@@ -82,6 +82,7 @@ import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
+import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlCaseOperator;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
@@ -1646,6 +1647,12 @@ public abstract class SqlImplementor {
               ordinalMap.get(field.getName().toLowerCase(Locale.ROOT));
           if (mappedSqlNode != null) {
             return mappedSqlNode;
+          }
+          if (alias.getKey().equals(field.getName())
+              && dialect instanceof BigQuerySqlDialect) {
+            return new SqlIdentifier(
+                ImmutableList.of(alias.getKey(),
+                field.getName()), POS);
           }
           return new SqlIdentifier(!qualified
               ? ImmutableList.of(field.getName())
