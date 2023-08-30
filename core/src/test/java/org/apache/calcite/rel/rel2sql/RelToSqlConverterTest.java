@@ -12816,6 +12816,20 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test void testSumAggregateFunctionRelNode() {
+    final Function<RelBuilder, RelNode> fn = b -> b.scan("EMP")
+        .aggregate(b.groupKey(),
+            b.aggregateCall(SqlStdOperatorTable.SUM, b.field(6))
+                .as("s"))
+        .build();
+
+    final String expectedBQsql = "SELECT SUM(COMM) AS s\n"
+        + "FROM scott.EMP";
+    relFn(fn)
+        .withBigQuery()
+        .ok(expectedBQsql);
+  }
+
   /* this is giving class cast exception SqlIdentifier to SqlBasicCall
   when case clause is used in Aggregate*/
   @Test public void testCaseClauseInAggregate() {

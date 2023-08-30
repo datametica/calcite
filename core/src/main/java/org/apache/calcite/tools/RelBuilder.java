@@ -3462,6 +3462,11 @@ public class RelBuilder {
       if (this.filter != null && !this.aggFunction.allowsFilter()) {
         throw new IllegalArgumentException("FILTER not allowed");
       }
+      RelDataType type = null;
+      if (args.size() == 1) {
+         RexNode aggregateFunctionNode = registrar.originalExtraNodes.get(args.get(0));
+         type = aggregateFunctionNode.getType();
+      }
       RelCollation collation =
           RelCollations.of(this.orderKeys
               .stream()
@@ -3471,7 +3476,7 @@ public class RelBuilder {
               .collect(Collectors.toList()));
       return AggregateCall.create(aggFunction, distinct, approximate,
           ignoreNulls, args, filterArg, collation, groupSet.cardinality(), r,
-          null, alias);
+          type, alias);
     }
 
     @Override public void register(Registrar registrar) {
