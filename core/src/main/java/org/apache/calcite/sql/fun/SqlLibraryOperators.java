@@ -1036,6 +1036,26 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NULL)),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_TO_NUMBER =
+      new SqlFunction(
+          "TO_NUMBER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DECIMAL_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC_OR_STRING, OperandTypes.STRING_INTEGER_INTEGER,
+              OperandTypes.NUMERIC_NUMERIC),
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ERROR =
+      new SqlFunction("ERROR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ANY,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction CONV =
           new SqlFunction(
@@ -1765,5 +1785,14 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {SNOWFLAKE, ORACLE, TERADATA})
   public static final SqlAggFunction MEDIAN =
       new SqlMedianAggFunction(SqlKind.MEDIAN, ReturnTypes.ARG0_NULLABLE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction LENGTH =
+      new SqlFunction("LENGTH",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
 
 }
