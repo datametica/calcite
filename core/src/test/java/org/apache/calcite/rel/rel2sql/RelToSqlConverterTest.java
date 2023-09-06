@@ -11464,6 +11464,28 @@ class RelToSqlConverterTest {
         .ok(expectedBQ);
   }
 
+  @Test public void testSnowflakeRegexpReplaceFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexReplace = builder.call(SqlLibraryOperators.SNOWFLAKE_REGEXP_REPLACE,
+        builder.literal("Customers - (NY)"), builder.literal("\\\\(|\\\\)"),
+        builder.literal(""));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(regexReplace)
+        .build();
+
+    final String expectedSnowflakeSql = "SELECT "
+        + "REGEXP_REPLACE('Customers - (NY)', '\\\\(|\\\\)', '') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    final String expectedBqSql = "SELECT "
+        + "REGEXP_REPLACE('Customers - (NY)', '\\\\(|\\\\)', '') AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
   @Test public void testForRegexpLikeFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode regexp_similar = builder.call(SqlLibraryOperators.REGEXP_LIKE,
