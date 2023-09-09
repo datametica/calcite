@@ -11503,7 +11503,7 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkSql));
   }
 
-  @Test public void testColumnListInWhereEquals() {
+  @Test public void testColumnListInWhereEqualsTest() {
     final RelBuilder builder = relBuilder();
     final RelNode scalarQueryRel = builder.
         scan("EMP")
