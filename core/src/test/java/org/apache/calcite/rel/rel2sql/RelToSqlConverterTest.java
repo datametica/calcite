@@ -11533,7 +11533,7 @@ class RelToSqlConverterTest {
   }
 
 
-  @Test public void testNextDayFunctionWithDateTest() {
+  @Test public void testNextDayFunctionWithDate() {
     final RelBuilder builder = relBuilder();
     final RexNode nextDayRexNode = builder.call(SqlLibraryOperators.NEXT_DAY,
         builder.literal("2023-02-22"), builder.literal(DayOfWeek.TUESDAY.name()));
