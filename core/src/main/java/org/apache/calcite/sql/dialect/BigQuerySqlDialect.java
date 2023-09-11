@@ -179,7 +179,6 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.REGEXP_SUBSTR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.TAN;
 import static org.apache.calcite.util.Util.isNumericLiteral;
-import static org.apache.calcite.util.Util.modifyRegexStringForMatchArgument;
 import static org.apache.calcite.util.Util.removeLeadingAndTrailingSingleQuotes;
 
 import static java.util.Objects.requireNonNull;
@@ -412,7 +411,19 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   @Override public void unparseTitleInColumnDefinition(SqlWriter writer, String title,
       int leftPrec, int rightPrec) {
+    char commentStart = title.charAt(0);
+    char commentEnd = title.charAt(title.length() - 1);
+    title = title.substring(1, title.length() - 1).replace("''", "\\'");
+    title = commentStart + title + commentEnd;
+    title = limitTitleLength(title);
     writer.print("OPTIONS(description=" + title + ")");
+  }
+
+  /**
+   * BQ(description char length): The maximum length is 1024 characters.
+   */
+  String limitTitleLength(String title) {
+    return title.length() > 1024 ? title.substring(0, 1023) + "'" : title;
   }
 
   @Override public boolean supportsUnpivot() {
@@ -1173,6 +1184,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "REGEXP_LIKE":
       unParseRegexpLike(writer, call, leftPrec, rightPrec);
       break;
+    case "REGEXP_SIMILAR":
+      unParseRegexpSimilar(writer, call, leftPrec, rightPrec);
+      break;
     case "REGEXP_CONTAINS":
       unparseRegexpContains(writer, call, leftPrec, rightPrec);
       break;
@@ -1278,6 +1292,10 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private void unParseRegexpLike(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    unparseIfRegexpContains(writer, call, leftPrec, rightPrec);
+  }
+
+  private void unParseRegexpSimilar(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     SqlWriter.Frame ifFrame = writer.startFunCall("IF");
     unparseIfRegexpContains(writer, call, leftPrec, rightPrec);
     writer.sep(",");
@@ -1339,7 +1357,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     String matchArgument = call.operand(2).toString().replaceAll("'", "");
     switch (matchArgument) {
     case "i":
-      return modifyRegexStringForMatchArgument(call, "(?i)");
+      return modifyRegexStringForMatchArgumentI(call, "(?i)");
     case "x":
       String updatedRegexForX = removeLeadingAndTrailingSingleQuotes
           (call.operand(1).toString().replaceAll("\\s+", ""));
@@ -1347,6 +1365,18 @@ public class BigQuerySqlDialect extends SqlDialect {
     default:
       return call.operand(1);
     }
+  }
+
+  private static SqlCharStringLiteral modifyRegexStringForMatchArgumentI(SqlCall call,
+      String matchArgumentRegexLiteral) {
+    String updatedRegexForI = removeLeadingAndTrailingSingleQuotes
+        (call.operand(1).toString());
+    if (updatedRegexForI.startsWith("^") && updatedRegexForI.endsWith("$")) {
+      updatedRegexForI = matchArgumentRegexLiteral.concat(updatedRegexForI);
+    } else {
+      updatedRegexForI = "^(?i)".concat(updatedRegexForI).concat("$");
+    }
+    return SqlLiteral.createCharString(updatedRegexForI, SqlParserPos.ZERO);
   }
 
   private void unparseRegexpContains(SqlWriter writer, SqlCall call,
@@ -1918,6 +1948,12 @@ public class BigQuerySqlDialect extends SqlDialect {
       case INTERVAL_DAY_SECOND:
       case INTERVAL_DAY_MINUTE:
       case INTERVAL_DAY_HOUR:
+      case INTERVAL_DAY:
+      case INTERVAL_HOUR:
+      case INTERVAL_MINUTE:
+      case INTERVAL_MONTH:
+      case INTERVAL_SECOND:
+      case INTERVAL_YEAR:
         return createSqlDataTypeSpecByName("INT64", typeName);
       // BigQuery only supports FLOAT64(aka. Double) for floating point types.
       case FLOAT:
