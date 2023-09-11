@@ -12390,6 +12390,22 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(snowflakeSql));
   }
 
+  @Test public void testToBooleanFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode toBooleanNode = builder.call(SqlLibraryOperators.TO_BOOLEAN,
+        builder.scan("EMP").field(0));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(
+            builder.alias(toBooleanNode, "boolean_result"))
+        .build();
+
+    final String snowflakeSql = "SELECT TO_BOOLEAN(\"EMPNO\") AS \"boolean_result\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(snowflakeSql));
+  }
+
   @Test public void testTryToTimestampFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode tryToTimestampNode = builder.call(SqlLibraryOperators.TRY_TO_TIMESTAMP,
