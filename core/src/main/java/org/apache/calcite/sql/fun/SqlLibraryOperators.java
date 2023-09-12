@@ -1120,9 +1120,6 @@ public abstract class SqlLibraryOperators {
       OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
 
-//  @LibraryOperator(libraries = {SNOWFLAKE})
-//  public static final SqlFunction SPLIT_TO_TABLE = new SplitToTableFunction();
-
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction SPLIT = new SqlFunction(
       "SPLIT",
@@ -1140,7 +1137,7 @@ public abstract class SqlLibraryOperators {
         "TO_VARCHAR",
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.VARCHAR_2000_NULLABLE, null,
-        OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING),
+        OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
         SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
