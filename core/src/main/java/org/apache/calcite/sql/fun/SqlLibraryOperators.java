@@ -840,7 +840,6 @@ public abstract class SqlLibraryOperators {
           OperandTypes.or(
               OperandTypes.STRING,
               OperandTypes.STRING_STRING),
-
           SqlFunctionCategory.TIMEDATE);
 
 
@@ -878,7 +877,6 @@ public abstract class SqlLibraryOperators {
           OperandTypes.or(OperandTypes.STRING_OPTIONAL_STRING,
               OperandTypes.TIMESTAMP),
           SqlFunctionCategory.TIMEDATE);
-
 
   /** The "TIMESTAMP_SECONDS(bigint)" function; returns a TIMESTAMP value
    * a given number of seconds after 1970-01-01 00:00:00. */
@@ -1672,6 +1670,19 @@ public abstract class SqlLibraryOperators {
               number -> number == 2),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction REGEXP_SIMILAR =
+      new SqlFunction("REGEXP_SIMILAR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+                  SqlTypeFamily.STRING),
+              // Third operand optional (operand index 0, 1, 2)
+              number -> number == 2),
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction NEXT_DAY =
       new SqlFunction(
@@ -1786,7 +1797,26 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction MEDIAN =
       new SqlMedianAggFunction(SqlKind.MEDIAN, ReturnTypes.ARG0_NULLABLE);
 
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction LOG =
+      new SqlFunction("LOG",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DOUBLE_NULLABLE, null,
+          OperandTypes.family(ImmutableList.of(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+              // Second operand is optional
+              number -> number == 1),
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction PARSE_JSON =
+      new SqlFunction("PARSE_JSON",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
   @LibraryOperator(libraries = {BIG_QUERY})
+
   public static final SqlFunction LENGTH =
       new SqlFunction("LENGTH",
           SqlKind.OTHER_FUNCTION,
