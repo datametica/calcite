@@ -525,6 +525,10 @@ public abstract class OperandTypes {
       family(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,
           SqlTypeFamily.INTEGER);
 
+  public static final SqlSingleOperandTypeChecker NUMERIC_INTEGER_INTEGER =
+      family(SqlTypeFamily.NUMERIC, SqlTypeFamily.INTEGER,
+          SqlTypeFamily.INTEGER);
+
   public static final SqlSingleOperandTypeChecker STRING_INTEGER_OPTIONAL_INTEGER =
       family(
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,

@@ -1037,12 +1037,12 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction SNOWFLAKE_TO_NUMBER =
       new SqlFunction(
-          "TO_NUMBER",
+          "SF_TO_NUMBER",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.DECIMAL_NULLABLE,
           null,
           OperandTypes.or(OperandTypes.NUMERIC_OR_STRING, OperandTypes.STRING_INTEGER_INTEGER,
-              OperandTypes.NUMERIC_NUMERIC),
+              OperandTypes.NUMERIC_INTEGER_INTEGER, OperandTypes.NUMERIC_NUMERIC),
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
