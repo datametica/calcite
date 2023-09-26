@@ -13174,4 +13174,56 @@ class RelToSqlConverterTest {
     return builder.call(SqlStdOperatorTable.DIVIDE_INTEGER, multiplicationRex,
         windowRexNodeOfCount);
   }
+
+  /*@Test public void testSqlPivotSqlNode() {
+    final RelBuilder builder = relBuilder();
+
+    RelBuilder.AggCall aggregateCall = builder.aggregateCall(
+        (SqlAggFunction) SqlStdOperatorTable.SUM,
+        builder.field("SAL")
+        );
+
+    final List<RelBuilder.AggCall> aggregateFuctionCalls = new ArrayList<>();
+    aggregateFuctionCalls.add(aggregateCall);
+
+    Iterable<Map.Entry<String, List<RexNode>>> inValues = extractAxisMapValues();
+
+    //final RexNode parseJsonNode = builder.call(SqlLibraryOperators.PARSE_JSON,
+        //builder.literal("NULL"));
+    *//*final RelNode root = builder
+        .scan("EMP")
+        .project(builder.field("EMPNO"), builder.field("DEPTNO"), builder.field("SAL"))
+        .aggregate(
+            builder.groupKey(builder.field(0),
+        builder.field(1)), builder.sum(builder.literal(2)))
+        .build();*//*
+    final RelNode root = builder.pivot(builder.groupKey(builder.field(0)),
+        aggregateFuctionCalls, builder.literal("SAL"), )
+            )
+        .build();
+
+    Aggregate aggregate = (Aggregate) root;
+    PivotRelTrait pivotRelTrait = new PivotRelTrait(true);
+    RelTraitSet pivotRelTraitSet = aggregate.getTraitSet().plus(pivotRelTrait);
+    RelNode pivotRelNodeWithRelTrait = aggregate.copy(pivotRelTraitSet, aggregate.getInput(),
+        aggregate.getGroupSet(), aggregate.groupSets, aggregate.getAggCallList());
+
+    final String expectedBigquery = "SELECT PARSE_JSON('NULL') AS null_value\n"
+        + "FROM scott.EMP";
+
+    assertThat(
+        toSql(pivotRelNodeWithRelTrait,
+    DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigquery));
+  }
+
+  private Iterable<Map.Entry<String, List<RexNode>>> extractAxisMapValues(RelBuilder builder) {
+    List<String> rColumnName = tResultColumnListList
+        .collect(it -> it.toString() + "_" + ((TResultColumn) it).aliasClause.toString())
+    List<RexNode> columnList = new ArrayList<>()
+    for (int i = 0; i < tResultColumnListList.size(); i++) {
+      columnList.add(builder.getRexBuilder().li)
+      )
+    }
+    return createAxisMap(columnList, rColumnName)
+  }*/
 }

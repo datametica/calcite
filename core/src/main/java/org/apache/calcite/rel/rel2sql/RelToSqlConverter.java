@@ -20,7 +20,10 @@ import org.apache.calcite.adapter.jdbc.JdbcTable;
 import org.apache.calcite.config.QueryStyle;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
+import org.apache.calcite.plan.PivotRelTrait;
+import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -73,6 +76,7 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlMatchRecognize;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlUnpivot;
@@ -107,6 +111,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -484,6 +489,12 @@ public class RelToSqlConverter extends SqlImplementor
   public Result visit(Aggregate e) {
     final Builder builder =
         visitAggregate(e, e.getGroupSet().toList(), Clause.GROUP_BY);
+    RelTrait relTrait = e.getTraitSet().getTrait(PivotRelTraitDef.instance);
+    if (relTrait != null && relTrait instanceof PivotRelTrait) {
+      if (((PivotRelTrait) relTrait).isPivotRel()) {
+        return buildSqlPivotNode(e, builder, builder.select.getSelectList());
+      }
+    }
     return builder.result();
   }
 
@@ -504,6 +515,104 @@ public class RelToSqlConverter extends SqlImplementor
     final List<SqlNode> groupByList =
         generateGroupList(builder, selectList, e, groupKeyList);
     return buildAggregate(e, builder, selectList, groupByList);
+  }
+
+  /**
+   *  Builds SqlPivotNode for Aggregate RelNode.
+   *
+   * @param e The aggregate node with pivot relTrait flag
+   * @param builder The SQL builder
+   * @param selectColumnList  selectNodeList from Project node
+   * @return  Result with sqlPivotNode wrap in it.
+   */
+  //create method for SqlPivot
+  public Result buildSqlPivotNode(Aggregate e, Builder builder, List<SqlNode> selectColumnList) {
+    //create query parameter
+    SqlNode query = ((SqlSelect) builder.select).getFrom();
+
+    //create aggList parameter
+    SqlNodeList aggList = getAggSqlNodes(e, selectColumnList);
+
+
+    //create axisList parameter
+    SqlNodeList axesNodeList = getAxisSqlNodes(e);
+
+    //create inValues List parameter
+    SqlNodeList inColumnList = getInValueNodes(e);
+
+    //create Pivot Node
+    SqlNode select = wrapSqlPivotInSqlSelectSqlNode(
+        builder, query, aggList, axesNodeList, inColumnList);
+    return result(select, ImmutableList.of(Clause.SELECT), e, null);
+  }
+
+  private SqlNode wrapSqlPivotInSqlSelectSqlNode(
+      Builder builder, SqlNode query, SqlNodeList aggList,
+      SqlNodeList axesNodeList, SqlNodeList inColumnList) {
+    SqlPivot sqlPivot = new SqlPivot(POS, query, axesNodeList, aggList, inColumnList);
+    SqlNode select = new SqlSelect(
+        SqlParserPos.ZERO, null, null, sqlPivot,
+        builder.select.getWhere(), null,
+        builder.select.getHaving(), null, builder.select.getOrderList(),
+        null, null, SqlNodeList.EMPTY
+    );
+    return select;
+  }
+
+  private SqlNodeList getInValueNodes(Aggregate e) {
+    SqlNodeList inColumnList = new SqlNodeList(POS);
+    for (AggregateCall aggCall : e.getAggCallList()) {
+      int fieldIndex = aggCall.filterArg;
+      if (fieldIndex < 0) {
+        continue;
+      }
+      String columnName1 = e.getRowType().getFieldList().get(fieldIndex).getKey();
+      if (columnName1.contains("_null")) {
+        columnName1 = columnName1.substring(0, columnName1.indexOf("_null"));
+      }
+      String[] columnNameAndAlias = columnName1.split("_");
+      SqlNode inListColumnNode;
+      if (columnNameAndAlias.length == 1) {
+        inListColumnNode = new SqlIdentifier(columnNameAndAlias[0], POS);
+      } else {
+        inListColumnNode = SqlStdOperatorTable.AS.createCall(
+            POS, new SqlIdentifier(
+                columnNameAndAlias[0], POS), new SqlIdentifier(columnNameAndAlias[1], POS));
+      }
+      inColumnList.add(inListColumnNode);
+    }
+    return inColumnList;
+  }
+
+  private SqlNodeList getAxisSqlNodes(Aggregate e) {
+    Set<SqlNode> aggArgList = new HashSet<>();
+    Set<String> columnName = new HashSet<>();
+    for (int i = 0; i < e.getAggCallList().size(); i++) {
+      columnName.add(
+          e.getRowType().getFieldList().get(
+              e.getAggCallList().get(i).getArgList().get(0)
+          ).getKey());
+    }
+    SqlNode tempNode = new SqlIdentifier(new ArrayList<>(columnName).get(0), POS);
+    SqlNode aggFunctionNode = e.getAggCallList().get(0).getAggregation().createCall(POS, tempNode);
+    aggArgList.add(aggFunctionNode);
+    SqlNodeList axesNodeList = new SqlNodeList(aggArgList, POS);
+    return axesNodeList;
+  }
+
+  private SqlNodeList getAggSqlNodes(Aggregate e, List<SqlNode> selectColumnList) {
+    final Set<SqlNode> selectList = new HashSet<>();
+    for (int i = 0; i < e.getAggCallList().size(); i++) {
+      int fieldIndex = e.getAggCallList().get(i).filterArg - (i + 1);
+      if (fieldIndex < 0) {
+        continue;
+      }
+      SqlNode aggCallSqlNode = selectColumnList.get(fieldIndex);
+      selectList.add(aggCallSqlNode);
+
+    }
+    SqlNodeList aggList = new SqlNodeList(selectList, POS);
+    return aggList;
   }
 
   /**
