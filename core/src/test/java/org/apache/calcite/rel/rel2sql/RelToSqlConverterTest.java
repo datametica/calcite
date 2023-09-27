@@ -13174,5 +13174,4 @@ class RelToSqlConverterTest {
     return builder.call(SqlStdOperatorTable.DIVIDE_INTEGER, multiplicationRex,
         windowRexNodeOfCount);
   }
-
 }
