@@ -903,6 +903,17 @@ public abstract class SqlLibraryOperators {
               OperandTypes.STRING_STRING),
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction TO_BOOLEAN =
+      new SqlFunction("TO_BOOLEAN",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN_NULLABLE,
+          null,
+          OperandTypes.or(
+              OperandTypes.STRING,
+              OperandTypes.NUMERIC),
+          SqlFunctionCategory.SYSTEM);
+
   /**Same as {@link #TO_DATE}, except ,if the conversion cannot be performed,
    * it returns a NULL value instead of raising an error.
    * Here second and third operands are optional
