@@ -2490,6 +2490,17 @@ class RelToSqlConverterTest {
     sql(query).withHive().ok(expected);
   }
 
+  @Test void testModFunctionWithNumericLiterals() {
+    final String query = "select mod(11.9, 3), MOD(2, 4),"
+        + "MOD(3, 4.5), MOD(\"product_id\", 4.5)"
+        + " from \"product\"";
+    final String expected = "SELECT MOD(CAST(11.9 AS NUMERIC), 3), "
+        + "MOD(2, 4), MOD(3, CAST(4.5 AS NUMERIC)), "
+        + "MOD(product_id, CAST(4.5 AS NUMERIC))\n"
+        + "FROM foodmart.product";
+    sql(query).withBigQuery().ok(expected);
+  }
+
   @Test void testUnionOperatorForBigQuery() {
     final String query = "select mod(11,3) from \"product\"\n"
         + "UNION select 1 from \"product\"";
@@ -8754,6 +8765,53 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
+  }
+
+  @Test public void testConvertTimezoneFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode convertTimezoneNode = builder.call(SqlLibraryOperators.CONVERT_TIMEZONE_SF,
+        builder.literal("America/Los_Angeles"), builder.literal("2008-08-21 07:23:54"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(convertTimezoneNode, "time"))
+        .build();
+    final String expectedSF =
+        "SELECT CONVERT_TIMEZONE_SF('America/Los_Angeles', '2008-08-21 07:23:54') AS \"time\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSF));
+  }
+
+  @Test public void testParseTimestampWithTimezoneFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode =
+        builder.call(SqlLibraryOperators.PARSE_TIMESTAMP_WITH_TIMEZONE,
+        builder.literal("%c%z"), builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+            builder.literal("%c%z"),
+            builder.cast(builder.literal("2008-08-21 07:23:54"), SqlTypeName.TIMESTAMP),
+            builder.literal("America/Los_Angeles")));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseTSNode, "timestamp"))
+        .build();
+    final String expectedBigQuery =
+        "SELECT PARSE_TIMESTAMP('%c%z', FORMAT_TIMESTAMP('%c%z', CAST('2008-08-21 07:23:54' AS "
+            + "DATETIME), 'America/Los_Angeles')) AS timestamp\n"
+            + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  @Test public void testTimeWithTimezoneFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatTimestampRexNode = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+        builder.literal("%c%z"), builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatTimestampRexNode, "FD2"))
+        .build();
+    final String expectedBigQuery = "SELECT FORMAT_TIMESTAMP('%c%z', CURRENT_DATETIME()) AS FD2\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
 
   @Test public void testParseTimestampFunctionFormat() {

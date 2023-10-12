@@ -75,6 +75,7 @@ import com.google.common.collect.ImmutableList;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -134,7 +135,9 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.QUARTER;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECOND;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECONDS_PRECISION;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SEC_FROM_MIDNIGHT;
+import static org.apache.calcite.sql.SqlDateTimeFormat.TIME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEOFDAY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEWITHTIMEZONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEZONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOUR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOURMIN;
@@ -172,6 +175,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EXTRACT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.FLOOR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IS_NULL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MINUS;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MOD;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MULTIPLY;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.PLUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.RAND;
@@ -303,6 +307,8 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(SEC_FROM_MIDNIGHT, "SEC_FROM_MIDNIGHT");
         put(QUARTER, "%Q");
         put(TIMEOFDAY, "%c");
+        put(TIMEWITHTIMEZONE, "%c%z");
+        put(TIME, "%c");
         put(WEEK_OF_YEAR, "%W");
         put(ABBREVIATED_MONTH_UPPERCASE, "%^b");
       }};
@@ -698,6 +704,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case EXTRACT:
       unparseExtractFunction(writer, call, leftPrec, rightPrec);
       break;
+    case MOD:
+      unparseModFunction(writer, call, leftPrec, rightPrec);
+      break;
     case GROUPING:
       unparseGroupingFunction(writer, call, leftPrec, rightPrec);
       break;
@@ -756,6 +765,40 @@ public class BigQuerySqlDialect extends SqlDialect {
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
+
+  private void unparseModFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    List<SqlNode> modifiedNodes = getModifiedModOperands(call.getOperandList());
+    SqlCall modFunctionCall = MOD.createCall(SqlParserPos.ZERO, modifiedNodes);
+    MOD.unparse(writer, modFunctionCall, leftPrec, rightPrec);
+  }
+
+  private List<SqlNode> getModifiedModOperands(List<SqlNode> operandList) {
+    List<SqlNode> modifiedOperandList = new ArrayList<>();
+    for (SqlNode node : operandList) {
+      boolean isOperandNumericLiteral = node instanceof SqlNumericLiteral;
+      if (isOperandNumericLiteral) {
+        castToDecimalIfNeeded(node, modifiedOperandList);
+      } else {
+        modifiedOperandList.add(node);
+      }
+    }
+    return modifiedOperandList;
+  }
+
+  private void castToDecimalIfNeeded(SqlNode node, List<SqlNode> modifiedOperandList) {
+    int precision = ((SqlNumericLiteral) node).getPrec();
+    int scale = ((SqlNumericLiteral) node).getScale();
+    if (scale > 0) {
+      SqlNode castType = getCastSpec(
+          new BasicSqlType(RelDataTypeSystem.DEFAULT,
+              SqlTypeName.DECIMAL, precision, scale));
+      SqlNode castedNode = CAST.createCall(SqlParserPos.ZERO, node, castType);
+      modifiedOperandList.add(castedNode);
+    } else {
+      modifiedOperandList.add(node);
+    }
+  }
+
   private void unparseOver(SqlWriter writer, SqlCall call, final int leftPrec,
       final int rightPrec) {
     if (isFirstOperandPercentileCont(call) && isLowerAndUpperBoundPresentInWindowDef(call)) {
@@ -1087,6 +1130,15 @@ public class BigQuerySqlDialect extends SqlDialect {
       SqlCall formatCall = PARSE_DATETIME.createCall(SqlParserPos.ZERO,
           createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
       super.unparseCall(writer, formatCall, leftPrec, rightPrec);
+      break;
+    case "PARSE_TIMESTAMP_WITH_TIMEZONE":
+      String dateFormt = call.operand(0) instanceof SqlCharStringLiteral
+          ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
+          .getValue()
+          : call.operand(0).toString();
+      SqlCall formtCall = PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
+          createDateTimeFormatSqlCharLiteral(dateFormt), call.operand(1));
+      super.unparseCall(writer, formtCall, leftPrec, rightPrec);
       break;
     case "FORMAT_TIME":
       unparseFormatCall(writer, call, leftPrec, rightPrec);
@@ -1540,8 +1592,14 @@ public class BigQuerySqlDialect extends SqlDialect {
         ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
         .getValue()
         : call.operand(0).toString();
-    SqlCall formatCall = call.getOperator().createCall(SqlParserPos.ZERO,
-        createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
+    SqlCall formatCall;
+    if (call.operandCount() == 3) {
+      formatCall = call.getOperator().createCall(SqlParserPos.ZERO,
+          createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1), call.operand(2));
+    } else {
+      formatCall = call.getOperator().createCall(SqlParserPos.ZERO,
+          createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
+    }
     super.unparseCall(writer, formatCall, leftPrec, rightPrec);
   }
 
