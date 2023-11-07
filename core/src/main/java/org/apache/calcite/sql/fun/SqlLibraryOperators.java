@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlOffsetItemOperator;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.type.InferTypes;
@@ -85,6 +86,21 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.DATE_NULLABLE,
           null,
           OperandTypes.CHARACTER_CHARACTER_DATETIME,
+          SqlFunctionCategory.TIMEDATE);
+
+  /**
+   * The "CONVERT_TIMEZONE(source_timezone, target_timezone, timestamp)" function;
+   * "CONVERT_TIMEZONE(target_timezone, timestamp)" function;
+   * converts the timezone of {@code timestamp} to {@code target_timezone}.
+   */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction CONVERT_TIMEZONE_SF =
+      new SqlFunction("CONVERT_TIMEZONE_SF",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_WITH_TIME_ZONE_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.STRING_DATETIME, OperandTypes.STRING_STRING,
+              OperandTypes.STRING_STRING_STRING, OperandTypes.STRING_STRING_TIMESTAMP),
           SqlFunctionCategory.TIMEDATE);
 
   /** Return type inference for {@code DECODE}. */
@@ -200,6 +216,14 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction SAFE_CAST =
       new SqlCastFunction("SAFE_CAST", SqlKind.SAFE_CAST);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction IS_REAL =
+      new SqlFunction("IS_REAL",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.ANY),
+          SqlFunctionCategory.NUMERIC);
+
   /** MySQL's "SUBSTR(string, position [, substringLength ])" function. */
   @LibraryOperator(libraries = {MYSQL})
   public static final SqlFunction SUBSTR_MYSQL =
@@ -243,6 +267,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.ARG0_NULLABLE_VARYING, null,
           OperandTypes.STRING_INTEGER_OPTIONAL_INTEGER,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {ORACLE, BIG_QUERY})
+  public static final SqlFunction USING = new SqlFunction("USING", SqlKind.USING,
+      ReturnTypes.LEAST_RESTRICTIVE.andThen(
+          SqlTypeTransforms.TO_NULLABLE), null,
+      OperandTypes.SAME_VARIADIC, SqlFunctionCategory.SYSTEM);
 
   /** The "GREATEST(value, value)" function. */
   @LibraryOperator(libraries = {ORACLE})
@@ -371,6 +401,40 @@ public abstract class SqlLibraryOperators {
           .create(SqlKind.COUNTIF, ReturnTypes.BIGINT, OperandTypes.BOOLEAN)
           .withDistinct(Optionality.FORBIDDEN);
 
+  /**Array subscript operator:
+   array_expression[array_subscript_specifier]
+
+   array_subscript_specifier:
+   position_keyword(index)
+
+   position_keyword:
+   { OFFSET | SAFE_OFFSET | ORDINAL | SAFE_ORDINAL }
+   Gets a value from an array at a specific position.*/
+
+  /** The "OFFSET(index)" array subscript operator used by BigQuery. The index
+   * starts at 0 and produces an error if the index is out of range. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlOperator OFFSET =
+      new SqlItemOperator("OFFSET", OperandTypes.ARRAY, 0, false);
+
+  /** The "ORDINAL(index)" array subscript operator used by BigQuery. The index
+   * starts at 1 and produces an error if the index is out of range. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlOperator ORDINAL =
+      new SqlItemOperator("ORDINAL", OperandTypes.ARRAY, 1, false);
+
+  /** The "SAFE_OFFSET(index)" array subscript operator used by BigQuery. The index
+   * starts at 0 and returns null if the index is out of range. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlOperator SAFE_OFFSET =
+      new SqlItemOperator("SAFE_OFFSET", OperandTypes.ARRAY, 0, true);
+
+  /** The "SAFE_ORDINAL(index)" array subscript operator used by BigQuery. The index
+   * starts at 1 and returns null if the index is out of range. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlOperator SAFE_ORDINAL =
+      new SqlItemOperator("SAFE_ORDINAL", OperandTypes.ARRAY, 1, true);
+
   /** The "ARRAY_AGG(value [ ORDER BY ...])" aggregate function,
    * in BIG_QUERY and PostgreSQL, gathers values into arrays. */
   @LibraryOperator(libraries = {POSTGRESQL, BIG_QUERY})
@@ -455,6 +519,11 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction CURRENT_TIMESTAMP_WITH_TIME_ZONE =
       new SqlCurrentTimestampFunction("CURRENT_TIMESTAMP_TZ",
           SqlTypeName.TIMESTAMP_WITH_TIME_ZONE);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction CURRENT_TIMESTAMP_WITH_LOCAL_TIME_ZONE =
+      new SqlCurrentTimestampFunction("CURRENT_TIMESTAMP_LTZ",
+          SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
 
   /**
    * The REGEXP_EXTRACT(source_string, regex_pattern) returns the first substring in source_string
@@ -718,6 +787,16 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.STRING);
+
+  /** The case-insensitive variant of the LIKE operator. */
+  @LibraryOperator(libraries = {POSTGRESQL, SNOWFLAKE})
+  public static final SqlSpecialOperator ILIKE =
+      new SqlLikeOperator("ILIKE", SqlKind.LIKE, false, false);
+
+  /** The case-insensitive variant of the NOT LIKE operator. */
+  @LibraryOperator(libraries = {POSTGRESQL, SNOWFLAKE})
+  public static final SqlSpecialOperator NOT_ILIKE =
+      new SqlLikeOperator("NOT ILIKE", SqlKind.LIKE, true, false);
 
   /** The "CONCAT(arg, ...)" function that concatenates strings.
    * For example, "CONCAT('a', 'bc', 'd')" returns "abcd". */
@@ -1115,6 +1194,15 @@ public abstract class SqlLibraryOperators {
         SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction PARSE_TIMESTAMP_WITH_TIMEZONE =
+      new SqlFunction("PARSE_TIMESTAMP_WITH_TIMEZONE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_WITH_TIME_ZONE_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING),
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction PARSE_DATETIME =
       new SqlFunction("PARSE_DATETIME",
           SqlKind.OTHER_FUNCTION,
@@ -1185,11 +1273,12 @@ public abstract class SqlLibraryOperators {
       OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
 
-  @LibraryOperator(libraries = {HIVE, SPARK})
+  @LibraryOperator(libraries = {HIVE, SPARK, BIG_QUERY})
   public static final SqlFunction SPLIT = new SqlFunction(
       "SPLIT",
       SqlKind.OTHER_FUNCTION,
-      ReturnTypes.MULTISET_NULLABLE,
+      ReturnTypes.ARG0
+          .andThen(SqlTypeTransforms.TO_ARRAY),
       null,
       OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
@@ -1549,6 +1638,40 @@ public abstract class SqlLibraryOperators {
           OperandTypes.INTEGER,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction HASH =
+      new SqlFunction(
+          "HASH",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DECIMAL,
+          null,
+          OperandTypes.ONE_OR_MORE,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SHA2 =
+      new SqlFunction(
+          "SHA2",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
+                  // Second operand optional (operand index 0, 1)
+              number -> number == 1),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SHA256 =
+      new SqlFunction("SHA256",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(SqlTypeName.VARCHAR)
+              .andThen(SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.or(OperandTypes.STRING_INTEGER,
+              OperandTypes.BINARY_INTEGER),
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction HASHROW =
       new SqlFunction(
@@ -1558,6 +1681,22 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.ONE_OR_MORE,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction HASH_AGG =
+      SqlBasicAggFunction
+          .create("HASH_AGG", SqlKind.HASH_AGG, ReturnTypes.BIGINT,
+              OperandTypes.VARIADIC)
+          .withFunctionType(SqlFunctionCategory.NUMERIC)
+          .withDistinct(Optionality.OPTIONAL);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlAggFunction BIT_XOR =
+      SqlBasicAggFunction
+          .create("BIT_XOR", SqlKind.BIT_XOR, ReturnTypes.BIGINT,
+              OperandTypes.INTEGER)
+          .withFunctionType(SqlFunctionCategory.NUMERIC)
+          .withDistinct(Optionality.OPTIONAL);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction FARM_FINGERPRINT =
@@ -1598,6 +1737,16 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.family(SqlTypeFamily.DATETIME,
               SqlTypeFamily.STRING), SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_DATE_TRUNC =
+      new SqlFunction(
+          "DATE_TRUNC",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG1_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.STRING,
+              SqlTypeFamily.DATETIME), SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {SPARK, BIG_QUERY})
   public static final SqlFunction DATE_TRUNC =
@@ -1736,6 +1885,17 @@ public abstract class SqlLibraryOperators {
           OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_LAST_DAY =
+      new SqlFunction(
+          "LAST_DAY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DATE_NULLABLE,
+          null,
+          OperandTypes.family(ImmutableList.of(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
+              number -> number == 2),
+          SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {TERADATA, SNOWFLAKE})
   public static final SqlFunction GETBIT =
       new SqlFunction("GETBIT",
@@ -1782,6 +1942,12 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.INTEGER),
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction TO_JSON_STRING =
+      new SqlFunction("TO_JSON_STRING", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
+
   /** The {@code PERCENTILE_CONT} function, BigQuery's
    * equivalent to {@link SqlStdOperatorTable#PERCENTILE_CONT},
    * but uses an {@code OVER} clause rather than {@code WITHIN GROUP}. */
@@ -1797,6 +1963,36 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction MEDIAN =
       new SqlMedianAggFunction(SqlKind.MEDIAN, ReturnTypes.ARG0_NULLABLE);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction REGEXP_COUNT =
+      new SqlFunction("REGEXP_COUNT", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null, OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction ARRAY_LENGTH =
+      new SqlFunction("ARRAY_LENGTH", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null, OperandTypes.ARRAY, SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction JSON_OBJECT =
+      new SqlFunction("JSON_OBJECT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000,
+          null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SPLIT_PART = new SqlFunction(
+      "SPLIT_PART",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.VARCHAR_2000_NULLABLE,
+      null,
+      OperandTypes.or(OperandTypes.STRING_STRING_INTEGER,
+          OperandTypes.NULL_STRING_INTEGER),
+      SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction LOG =
@@ -1825,4 +2021,16 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING,
           SqlFunctionCategory.SYSTEM);
 
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction QUANTILE =
+      new SqlQuantileFunction(SqlKind.QUANTILE, ReturnTypes.INTEGER);
+
+  @LibraryOperator(libraries = {SNOWFLAKE, TERADATA})
+  public static final SqlFunction ZEROIFNULL =
+      new SqlFunction("ZEROIFNULL",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0, null,
+          OperandTypes.family(SqlTypeFamily.NUMERIC),
+          SqlFunctionCategory.NUMERIC);
 }
