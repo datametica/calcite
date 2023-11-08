@@ -89,6 +89,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlTypeCoercionRule;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.util.IdPair;
@@ -102,6 +103,7 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.ImmutableNullableList;
 import org.apache.calcite.util.Litmus;
+import org.apache.calcite.util.Optionality;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
@@ -1919,7 +1921,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   }
 
   @Override public CalciteException handleUnresolvedFunction(SqlCall call,
-      SqlFunction unresolvedFunction, List<RelDataType> argTypes,
+      SqlOperator unresolvedFunction, List<RelDataType> argTypes,
       @Nullable List<String> argNames) {
     // For builtins, we can give a better error message
     final List<SqlOperator> overloads = new ArrayList<>();
@@ -1937,12 +1939,16 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       }
     }
 
-    AssignableOperandTypeChecker typeChecking =
-        new AssignableOperandTypeChecker(argTypes, argNames);
-    String signature =
-        typeChecking.getAllowedSignatures(
-            unresolvedFunction,
-            unresolvedFunction.getName());
+    final String signature;
+    if (unresolvedFunction instanceof SqlFunction) {
+      final SqlOperandTypeChecker typeChecking =
+          new AssignableOperandTypeChecker(argTypes, argNames);
+      signature =
+          typeChecking.getAllowedSignatures(unresolvedFunction,
+              unresolvedFunction.getName());
+    } else {
+      signature = unresolvedFunction.getName();
+    }
     throw newValidationError(call,
         RESOURCE.validatorUnknownFunction(signature));
   }
@@ -5904,6 +5910,31 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       break;
     default:
       throw new AssertionError(op);
+    }
+
+    if (op.isPercentile()) {
+      assert op.requiresGroupOrder() == Optionality.MANDATORY;
+      assert orderList != null;
+
+      // Validate that percentile function have a single ORDER BY expression
+      if (orderList.size() != 1) {
+        throw newValidationError(orderList,
+            RESOURCE.orderByRequiresOneKey(op.getName()));
+      }
+
+      // Validate that the ORDER BY field is of NUMERIC type
+      SqlNode node = orderList.get(0);
+      assert node != null;
+
+      final RelDataType type = deriveType(scope, node);
+      final @Nullable SqlTypeFamily family = type.getSqlTypeName().getFamily();
+      if (family == null
+          || family.allowableDifferenceTypes().isEmpty()) {
+        throw newValidationError(orderList,
+            RESOURCE.unsupportedTypeInOrderBy(
+                type.getSqlTypeName().getName(),
+                op.getName()));
+      }
     }
   }
 

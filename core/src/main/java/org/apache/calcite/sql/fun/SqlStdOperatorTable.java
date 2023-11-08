@@ -1405,22 +1405,24 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           true);
 
   public static final SqlSpecialOperator NOT_LIKE =
-      new SqlLikeOperator("NOT LIKE", SqlKind.LIKE, true);
+      new SqlLikeOperator("NOT LIKE", SqlKind.LIKE, true, true);
 
   public static final SqlSpecialOperator LIKE =
-      new SqlLikeOperator("LIKE", SqlKind.LIKE, false);
+      new SqlLikeOperator("LIKE", SqlKind.LIKE, false, true);
 
   public static final SqlSpecialOperator NOT_SIMILAR_TO =
-      new SqlLikeOperator("NOT SIMILAR TO", SqlKind.SIMILAR, true);
+      new SqlLikeOperator("NOT SIMILAR TO", SqlKind.SIMILAR, true, true);
 
   public static final SqlSpecialOperator SIMILAR_TO =
-      new SqlLikeOperator("SIMILAR TO", SqlKind.SIMILAR, false);
+      new SqlLikeOperator("SIMILAR TO", SqlKind.SIMILAR, false, true);
 
-  public static final SqlBinaryOperator POSIX_REGEX_CASE_SENSITIVE = new SqlPosixRegexOperator(
-      "POSIX REGEX CASE SENSITIVE", SqlKind.POSIX_REGEX_CASE_SENSITIVE, true, false);
+  public static final SqlBinaryOperator POSIX_REGEX_CASE_SENSITIVE =
+      new SqlPosixRegexOperator("POSIX REGEX CASE SENSITIVE",
+          SqlKind.POSIX_REGEX_CASE_SENSITIVE, true, false);
 
-  public static final SqlBinaryOperator POSIX_REGEX_CASE_INSENSITIVE = new SqlPosixRegexOperator(
-      "POSIX REGEX CASE INSENSITIVE", SqlKind.POSIX_REGEX_CASE_INSENSITIVE, false, false);
+  public static final SqlBinaryOperator POSIX_REGEX_CASE_INSENSITIVE =
+      new SqlPosixRegexOperator("POSIX REGEX CASE INSENSITIVE",
+          SqlKind.POSIX_REGEX_CASE_INSENSITIVE, false, false);
 
   public static final SqlBinaryOperator NEGATED_POSIX_REGEX_CASE_SENSITIVE =
       new SqlPosixRegexOperator("NEGATED POSIX REGEX CASE SENSITIVE",
@@ -2101,7 +2103,8 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
    *
    * <p>MAP is not standard SQL.</p>
    */
-  public static final SqlOperator ITEM = new SqlItemOperator();
+  public static final SqlOperator ITEM =
+      new SqlItemOperator("ITEM", OperandTypes.ARRAY_OR_MAP, 1, true);
 
   /**
    * The ARRAY Value Constructor. e.g. "<code>ARRAY[1, 2, 3]</code>".
@@ -2234,6 +2237,36 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           .create(SqlKind.COLLECT, ReturnTypes.TO_MULTISET, OperandTypes.ANY)
       .withFunctionType(SqlFunctionCategory.SYSTEM)
       .withGroupOrder(Optionality.OPTIONAL);
+
+  /**
+   * {@code PERCENTILE_CONT} inverse distribution aggregate function.
+   *
+   * <p>The argument must be a numeric literal in the range 0 to 1 inclusive
+   * (representing a percentage), and the return type is {@code DOUBLE}.
+   */
+  public static final SqlAggFunction PERCENTILE_CONT =
+      SqlBasicAggFunction
+          .create(SqlKind.PERCENTILE_CONT, ReturnTypes.DOUBLE,
+              OperandTypes.UNIT_INTERVAL_NUMERIC_LITERAL)
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withGroupOrder(Optionality.MANDATORY)
+          .withPercentile(true);
+
+  /**
+   * {@code PERCENTILE_DISC} inverse distribution aggregate function.
+   *
+   * <p>The argument must be a numeric literal in the range 0 to 1 inclusive
+   * (representing a percentage), and the return type is {@code DOUBLE}.
+   * (The return type should determined by the type of the {@code ORDER BY}
+   * expression, but this cannot be determined by the function itself.)
+   */
+  public static final SqlAggFunction PERCENTILE_DISC =
+      SqlBasicAggFunction
+          .create(SqlKind.PERCENTILE_DISC, ReturnTypes.DOUBLE,
+              OperandTypes.UNIT_INTERVAL_NUMERIC_LITERAL)
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withGroupOrder(Optionality.MANDATORY)
+          .withPercentile(true);
 
   /**
    * The LISTAGG operator. String aggregator function.
@@ -2626,6 +2659,24 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
       return GREATER_THAN_OR_EQUAL;
     default:
       return operator;
+    }
+  }
+
+  /** Returns the operator for {@code LIKE} with given case-sensitivity,
+   * optionally negated. */
+  public static SqlOperator like(boolean negated, boolean caseSensitive) {
+    if (negated) {
+      if (caseSensitive) {
+        return NOT_LIKE;
+      } else {
+        return SqlLibraryOperators.NOT_ILIKE;
+      }
+    } else {
+      if (caseSensitive) {
+        return LIKE;
+      } else {
+        return SqlLibraryOperators.ILIKE;
+      }
     }
   }
 

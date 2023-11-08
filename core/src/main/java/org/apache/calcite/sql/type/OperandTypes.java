@@ -265,6 +265,9 @@ public abstract class OperandTypes {
   public static final FamilyOperandTypeChecker STRING_STRING_STRING =
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.STRING);
 
+  public static final FamilyOperandTypeChecker STRING_STRING_BOOLEAN =
+      family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.BOOLEAN);
+
   public static final FamilyOperandTypeChecker STRING_STRING_OPTIONAL_STRING =
       family(ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.STRING),
           // Third operand optional (operand index 0, 1, 2)
@@ -293,6 +296,15 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker CHARACTER_CHARACTER_DATETIME =
       family(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.DATETIME);
 
+  public static final SqlSingleOperandTypeChecker STRING_DATETIME =
+      family(SqlTypeFamily.STRING, SqlTypeFamily.DATETIME);
+
+  public static final SqlSingleOperandTypeChecker STRING_STRING_DATETIME =
+      family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.DATETIME);
+
+  public static final SqlSingleOperandTypeChecker STRING_STRING_TIMESTAMP =
+      family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.TIMESTAMP);
+
   public static final SqlSingleOperandTypeChecker PERIOD =
       new PeriodOperandTypeChecker();
 
@@ -307,6 +319,11 @@ public abstract class OperandTypes {
 
   public static final SqlSingleOperandTypeChecker ARRAY =
       family(SqlTypeFamily.ARRAY);
+
+  public static final SqlSingleOperandTypeChecker ARRAY_OR_MAP =
+      or(family(SqlTypeFamily.ARRAY),
+          family(SqlTypeFamily.MAP),
+          family(SqlTypeFamily.ANY));
 
   /** Checks that returns whether a value is a multiset or an array.
    * Cf Java, where list and set are collections but a map is not. */
@@ -389,6 +406,49 @@ public abstract class OperandTypes {
       };
 
   /**
+   * Operand type-checking strategy type must be a numeric non-NULL
+   * literal in the range 0 and 1 inclusive.
+   */
+  public static final SqlSingleOperandTypeChecker UNIT_INTERVAL_NUMERIC_LITERAL =
+      new FamilyOperandTypeChecker(ImmutableList.of(SqlTypeFamily.NUMERIC),
+          i -> false) {
+        @Override public boolean checkSingleOperandType(
+            SqlCallBinding callBinding,
+            SqlNode node,
+            int iFormalOperand,
+            boolean throwOnFailure) {
+          if (!LITERAL.checkSingleOperandType(
+              callBinding,
+              node,
+              iFormalOperand,
+              throwOnFailure)) {
+            return false;
+          }
+
+          if (!super.checkSingleOperandType(
+              callBinding,
+              node,
+              iFormalOperand,
+              throwOnFailure)) {
+            return false;
+          }
+
+          final SqlLiteral arg = (SqlLiteral) node;
+          final BigDecimal value = arg.getValueAs(BigDecimal.class);
+          if (value.compareTo(BigDecimal.ZERO) < 0
+              || value.compareTo(BigDecimal.ONE) > 0) {
+            if (throwOnFailure) {
+              throw callBinding.newError(
+                  RESOURCE.argumentMustBeNumericLiteralInRange(
+                      callBinding.getOperator().getName(), 0, 1));
+            }
+            return false;
+          }
+          return true;
+        }
+      };
+
+  /**
    * Operand type-checking strategy where two operands must both be in the
    * same type family.
    */
@@ -462,12 +522,18 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker STRING_STRING_INTEGER =
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER);
 
+  public static final SqlSingleOperandTypeChecker NULL_STRING_INTEGER =
+      family(SqlTypeFamily.NULL, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER);
+
   public static final SqlSingleOperandTypeChecker STRING_STRING_INTEGER_INTEGER =
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
           SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
 
   public static final SqlSingleOperandTypeChecker STRING_INTEGER =
       family(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER);
+
+  public static final SqlSingleOperandTypeChecker BINARY_INTEGER =
+      family(SqlTypeFamily.BINARY, SqlTypeFamily.INTEGER);
 
   public static final SqlSingleOperandTypeChecker STRING_INTEGER_INTEGER =
       family(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,

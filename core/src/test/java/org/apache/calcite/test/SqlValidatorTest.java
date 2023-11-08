@@ -1005,6 +1005,19 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     expr("'a' similar to 'b' escape 'c'").ok();
   }
 
+  @Test void testIlike() {
+    final Sql s = sql("?")
+        .withOperatorTable(operatorTableFor(SqlLibrary.POSTGRESQL));
+    s.expr("'a' ilike 'b'").columnType("BOOLEAN NOT NULL");
+    s.expr("'a' ilike cast(null as varchar(99))").columnType("BOOLEAN");
+    s.expr("cast(null as varchar(99)) not ilike 'b'").columnType("BOOLEAN");
+    s.expr("'a' not ilike 'b' || 'c'").columnType("BOOLEAN NOT NULL");
+
+    // ILIKE is only available in the PostgreSQL function library
+    expr("^'a' ilike 'b'^")
+        .fails("No match found for function signature ILIKE");
+  }
+
   public void _testLikeAndSimilarFails() {
     expr("'a' like _UTF16'b'  escape 'c'")
         .fails("(?s).*Operands _ISO-8859-1.a. COLLATE ISO-8859-1.en_US.primary,"
@@ -7499,6 +7512,75 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         + "from emp\n"
         + "group by deptno")
         .fails("WITHIN GROUP must not contain aggregate expression");
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4644">[CALCITE-4644]
+   * Add PERCENTILE_CONT and PERCENTILE_DISC aggregate functions</a>. */
+  @Test void testPercentile() {
+    final String sql = "select\n"
+        + " percentile_cont(0.25) within group (order by sal) as c,\n"
+        + " percentile_disc(0.5) within group (order by sal desc) as d\n"
+        + "from emp\n"
+        + "group by deptno";
+    sql(sql)
+        .type("RecordType(DOUBLE NOT NULL C, DOUBLE NOT NULL D) NOT NULL");
+  }
+
+  /** Tests that {@code PERCENTILE_CONT} only allows numeric fields. */
+  @Test void testPercentileContMustOrderByNumeric() {
+    final String sql = "select\n"
+        + " percentile_cont(0.25) within group (^order by ename^)\n"
+        + "from emp";
+    sql(sql)
+        .fails("Invalid type 'VARCHAR' in ORDER BY clause of "
+            + "'PERCENTILE_CONT' function. Only NUMERIC types are supported");
+  }
+
+  /** Tests that {@code PERCENTILE_CONT} only allows one sort key. */
+  @Test void testPercentileContMultipleOrderByFields() {
+    final String sql = "select\n"
+        + " percentile_cont(0.25) within group (^order by deptno, empno^)\n"
+        + "from emp";
+    sql(sql)
+        .fails("'PERCENTILE_CONT' requires precisely one ORDER BY key");
+  }
+
+  @Test void testPercentileContFractionMustBeLiteral() {
+    final String sql = "select\n"
+        + " ^percentile_cont(deptno)^ within group (order by empno)\n"
+        + "from emp\n"
+        + "group by deptno";
+    sql(sql)
+        .fails("Argument to function 'PERCENTILE_CONT' must be a literal");
+  }
+
+  @Test void testPercentileContFractionOutOfRange() {
+    final String sql = "select\n"
+        + " ^percentile_cont(1.5)^ within group (order by deptno)\n"
+        + "from emp";
+    sql(sql)
+        .fails("Argument to function 'PERCENTILE_CONT' must be a numeric "
+            + "literal between 0 and 1");
+  }
+
+  /** Tests that {@code PERCENTILE_DISC} only allows numeric fields. */
+  @Test void testPercentileDiscMustOrderByNumeric() {
+    final String sql = "select\n"
+        + " percentile_disc(0.25) within group (^order by ename^)\n"
+        + "from emp";
+    sql(sql)
+        .fails("Invalid type 'VARCHAR' in ORDER BY clause of "
+            + "'PERCENTILE_DISC' function. Only NUMERIC types are supported");
+  }
+
+  /** Tests that {@code PERCENTILE_DISC} only allows one sort key. */
+  @Test void testPercentileDiscMultipleOrderByFields() {
+    final String sql = "select\n"
+        + " percentile_disc(0.25) within group (^order by deptno, empno^)\n"
+        + "from emp";
+    sql(sql)
+        .fails("'PERCENTILE_DISC' requires precisely one ORDER BY key");
   }
 
   @Test void testCorrelatingVariables() {

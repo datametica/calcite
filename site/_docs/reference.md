@@ -655,6 +655,7 @@ HOP,
 HOURS,
 **IDENTITY**,
 IGNORE,
+ILIKE,
 IMMEDIATE,
 IMMEDIATELY,
 IMPLEMENTATION,
@@ -1079,6 +1080,7 @@ VERSION,
 **VERSIONING**,
 VIEW,
 WEEK,
+WEEKS,
 **WHEN**,
 **WHENEVER**,
 **WHERE**,
@@ -1876,6 +1878,21 @@ Not implemented:
 * REGR_SLOPE(numeric1, numeric2)
 * REGR_SXY(numeric1, numeric2)
 
+#### Ordered-Set Aggregate Functions
+
+The syntax is as for *aggregateCall*, except that `WITHIN GROUP` is
+required.
+
+In the following:
+
+* *fraction* is a numeric literal between 0 and 1, inclusive, and
+  represents a percentage
+
+| Operator syntax                    | Description
+|:---------------------------------- |:-----------
+| PERCENTILE_CONT(fraction) WITHIN GROUP (ORDER BY orderItem) | Returns a percentile based on a continuous distribution of the column values, interpolating between adjacent input items if needed
+| PERCENTILE_DISC(fraction) WITHIN GROUP (ORDER BY orderItem [, orderItem ]*) | Returns a percentile based on a discrete distribution of the column values returning the first input value whose position in the ordering equals or exceeds the specified fraction
+
 ### Window functions
 
 Syntax:
@@ -2529,6 +2546,8 @@ semantics.
 | m | EXTRACTVALUE(xml, xpathExpr))                  | Returns the text of the first text node which is a child of the element or elements matched by the XPath expression.
 | o | GREATEST(expr [, expr ]*)                      | Returns the greatest of the expressions
 | b h s | IF(condition, value1, value2)              | Returns *value1* if *condition* is TRUE, *value2* otherwise
+| p | string1 ILIKE string2 [ ESCAPE string3 ]       | Whether *string1* matches pattern *string2*, ignoring case (similar to `LIKE`)
+| p | string1 NOT ILIKE string2 [ ESCAPE string3 ]   | Whether *string1* does not match pattern *string2*, ignoring case (similar to `NOT LIKE`)
 | m | JSON_TYPE(jsonValue)                           | Returns a string value indicating the type of *jsonValue*
 | m | JSON_DEPTH(jsonValue)                          | Returns an integer value indicating the depth of *jsonValue*
 | m | JSON_PRETTY(jsonValue)                         | Returns a pretty-printing of *jsonValue*
