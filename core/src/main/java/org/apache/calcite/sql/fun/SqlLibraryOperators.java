@@ -24,6 +24,7 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOffsetItemOperator;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlOperatorTable;
@@ -929,6 +930,17 @@ public abstract class SqlLibraryOperators {
               OperandTypes.STRING_STRING),
           SqlFunctionCategory.TIMEDATE);
 
+
+  /** Try_to_number function. */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction TRY_TO_NUMBER =
+      new SqlFunction("TRY_TO_NUMBER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.NUMERIC_OR_STRING,
+          SqlFunctionCategory.SYSTEM);
+
   /**Same as {@link #TO_DATE}, except ,if the conversion cannot be performed,
    * it returns a NULL value instead of raising an error.
    * Here second and third operands are optional
@@ -1110,6 +1122,26 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NULL)),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_TO_NUMBER =
+      new SqlFunction(
+          "SF_TO_NUMBER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DECIMAL_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC_OR_STRING, OperandTypes.STRING_INTEGER_INTEGER,
+              OperandTypes.NUMERIC_INTEGER_INTEGER, OperandTypes.NUMERIC_NUMERIC),
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ERROR =
+      new SqlFunction("ERROR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ANY,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction CONV =
           new SqlFunction(
@@ -1209,6 +1241,37 @@ public abstract class SqlLibraryOperators {
           // Second operand is optional
           number -> number == 1),
         SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction BQ_SPLIT =
+      new SqlFunction("SPLIT",
+              SqlKind.OTHER_FUNCTION,
+              ReturnTypes.ARG0
+                  .andThen(SqlLibraryOperators::deriveTypeSplit)
+                  .andThen(SqlTypeTransforms.TO_ARRAY)
+                  .andThen(SqlTypeTransforms.TO_NULLABLE),
+              null,
+              OperandTypes.or(OperandTypes.CHARACTER_CHARACTER,
+                  OperandTypes.CHARACTER,
+                  OperandTypes.BINARY_BINARY,
+                  OperandTypes.BINARY),
+              SqlFunctionCategory.STRING);
+
+  static RelDataType deriveTypeSplit(SqlOperatorBinding operatorBinding,
+      RelDataType type) {
+    SqlTypeName typeName = isBinary(type) ? SqlTypeName.VARBINARY : SqlTypeName.VARCHAR;
+    return operatorBinding.getTypeFactory().createSqlType(typeName);
+  }
+
+  public static boolean isBinary(RelDataType type) {
+    SqlTypeName typeName = type.getSqlTypeName();
+    if (typeName == null) {
+      return false;
+    }
+    return SqlTypeFamily.BINARY.contains(type);
+  }
+
+  public static final SqlOperator OFFSET_ITEM = new SqlOffsetItemOperator();
 
   @LibraryOperator(libraries = {STANDARD})
   public static final SqlFunction STRING_SPLIT = new SqlFunction(
@@ -1957,6 +2020,16 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_2000_NULLABLE, null,
           OperandTypes.STRING,
           SqlFunctionCategory.SYSTEM);
+  @LibraryOperator(libraries = {BIG_QUERY})
+
+  public static final SqlFunction LENGTH =
+      new SqlFunction("LENGTH",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
+
 
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction QUANTILE =

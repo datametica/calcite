@@ -137,6 +137,7 @@ import static org.apache.calcite.avatica.util.TimeUnit.SECOND;
 import static org.apache.calcite.avatica.util.TimeUnit.WEEK;
 import static org.apache.calcite.avatica.util.TimeUnit.YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.BITNOT;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.BQ_SPLIT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.CURRENT_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.CURRENT_TIMESTAMP_WITH_TIME_ZONE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_ADD;
@@ -145,6 +146,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYNUMBER_OF_CALEND
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DAYOCCURRENCE_OF_MONTH;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FALSE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.MONTHNUMBER_OF_YEAR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.OFFSET_ITEM;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.QUARTERNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SAFE_OFFSET;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRUE;
@@ -6347,6 +6349,20 @@ class RelToSqlConverterTest {
     sql(query)
         .withBigQuery()
         .ok(expected);
+  }
+
+  @Test public void testTryToNumber() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tryToNumberNode = builder.call(SqlLibraryOperators.TRY_TO_NUMBER,
+        builder.literal("name"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(tryToNumberNode)
+        .build();
+
+    final String expectedSql = "SELECT TRY_TO_NUMBER('name') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testTimestampFunctionRelToSql() {
@@ -13329,6 +13345,24 @@ class RelToSqlConverterTest {
             + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testBigQuerySplitOffset() {
+    final RelBuilder builder = relBuilder();
+    builder.push(builder.scan("EMP").build());
+
+    RexNode splitNode = builder.call(BQ_SPLIT, builder.literal("23.22"));
+    RexNode offsetNode = builder.call(OFFSET_ITEM, splitNode, builder.literal(0));
+    builder.build();
+    final RelNode root = builder
+        .scan("EMP")
+        .project(offsetNode)
+        .build();
+
+    final String expectedBiqQuery = "SELECT SPLIT('23.22')[OFFSET(0)] AS `$f0`\n"
+        + "FROM scott.EMP";
+
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
