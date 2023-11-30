@@ -1979,4 +1979,13 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.ARG0, null,
           OperandTypes.family(SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE,ORACLE})
+  public static final SqlFunction SYS_CONTEXT = new SqlFunction(
+      "SYS_CONTEXT",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.VARCHAR_2000_NULLABLE,
+      null,
+      OperandTypes.STRING_STRING,
+      SqlFunctionCategory.SYSTEM);
 }

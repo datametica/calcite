@@ -13634,4 +13634,19 @@ class RelToSqlConverterTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test public void testForSysContectFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode sysContex = builder.call(SqlLibraryOperators.SYS_CONTEXT,
+        builder.literal("USERENV"), builder.literal("HOST"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(sysContex, "value"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT SYS_CONTEXT('USERENV', 'HOST') AS value\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
 }
