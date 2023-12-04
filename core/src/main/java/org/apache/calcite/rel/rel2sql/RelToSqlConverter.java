@@ -1349,10 +1349,6 @@ public class RelToSqlConverter extends SqlImplementor
     String name = rowType.getFieldNames().get(selectList.size());
     String alias = SqlValidatorUtil.getAlias(node, -1);
     final String lowerName = name.toLowerCase(Locale.ROOT);
-    if(node == SqlIdentifier.STAR) {
-      name = "";
-    }
-
     if (lowerName.startsWith("expr$")) {
       // Put it in ordinalMap
       ordinalMap.put(lowerName, node);
