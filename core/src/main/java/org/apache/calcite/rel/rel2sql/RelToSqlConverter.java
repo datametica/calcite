@@ -48,19 +48,10 @@ import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.core.Window;
-import org.apache.calcite.rel.logical.LogicalJoin;
-import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.rel.logical.LogicalSort;
-import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.logical.*;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexLocalRef;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexProgram;
+import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
@@ -522,24 +513,33 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   /**
-   * If a given list of rexNodes has expanded asterik (*) in the columnList, this method would return
+   * If a given list of rexNodes has expanded asterik (*) in the columnList, this method would
+   * return
    * map holding begin and end index of such sublists
+   *
    * @param projects
    * @param input
    * @return
    */
-  private Map<Integer,Integer> getAstrikExpansionSublistIndices(List<RexNode> projects, RelNode input) {
-    Map<Integer,Integer> subListBeginEnd = new HashMap<>();
+  private Map<Integer, Integer> getAstrikExpansionSublistIndices(List<RexNode> projects,
+      RelNode input) {
+    Map<Integer, Integer> subListBeginEnd = new HashMap<>();
+    if (projects.size() <= input.getRowType().getFieldCount() ||
+        projects.stream().anyMatch(p -> RexOver.containsOver(p))) {
+      return subListBeginEnd;
+    }
     for (int start = 0; start < projects.size(); start++) {
-      for (int end = start + 1; end <= projects.size(); end++) {
-        List<RexNode> sublist = projects.subList(start, end);
+      for (int end = start + 1; end < projects.size(); end++) {
+        List<RexNode> sublist = projects.subList(start, end +1 );
         //if given sublist has ordinals same as the underlying input
         if (sublist.stream().allMatch(p -> p instanceof RexInputRef)
             && sublist.stream().map(p -> ((RexInputRef) p).getIndex())
             .collect(Collectors.toList()).equals(
-                IntStream.range(0, input.getRowType().getFieldCount() - 1).boxed().collect(Collectors.toList()))) {
+                IntStream.range(0, input.getRowType().getFieldCount()).boxed().
+                    collect(Collectors.toList()))) {
           subListBeginEnd.put(start, end);
           start = end;
+          break;
         }
       }
     }
