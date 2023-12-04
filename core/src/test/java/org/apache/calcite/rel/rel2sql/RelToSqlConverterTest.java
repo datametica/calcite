@@ -13634,4 +13634,25 @@ class RelToSqlConverterTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test
+  void testColumnListWithAstericProjection() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelNode rel = builder.project(builder.field(0), builder.field(0), builder.field(1),
+        builder.field(2), builder.field(3), builder.field(4), builder.field(5), builder.field(6),
+        builder.field(7)).build();
+    final String expectedBigQuery = "SELECT EMPNO, *\nFROM scott.EMP";
+    assertThat(toSql(rel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  @Test
+  void testColumnListWithAstericProjection1() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelNode rel = builder.project(builder.field(0), builder.field(0), builder.field(1),
+        builder.field(2), builder.field(3), builder.field(4), builder.field(5), builder.field(6),
+        builder.field(7), builder.field(2)).build();
+    final String expectedBigQuery = "SELECT EMPNO, *, JOB AS JOB0\nFROM scott.EMP";
+    assertThat(toSql(rel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
 }

@@ -121,6 +121,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.apache.calcite.rex.RexLiteral.stringValue;
 
@@ -458,26 +459,91 @@ public class RelToSqlConverter extends SqlImplementor
       parseCorrelTable(e, x);
       if ((!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
+        Map<Integer, Integer> astrikExpansionSubList =
+            getAstrikExpansionSublistIndices(e.getProjects(), e.getInput());
         final List<SqlNode> selectList = new ArrayList<>();
-        for (RexNode ref : e.getProjects()) {
-          SqlNode sqlExpr = builder.context.toSql(null, ref);
-          RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
+        if (!astrikExpansionSubList.isEmpty()) {
+          buildSelectListWithCollapsedAsterik(e, astrikExpansionSubList, selectList, builder);
+        } else {
+          for (RexNode ref : e.getProjects()) {
+            SqlNode sqlExpr = builder.context.toSql(null, ref);
+            RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
-          if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
-            sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
-          }
+            if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
+              sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
+            }
 
-          if (SqlUtil.isNullLiteral(sqlExpr, false)
-              && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
-            sqlExpr = castNullType(sqlExpr, targetField.getType());
+            if (SqlUtil.isNullLiteral(sqlExpr, false)
+                && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
+              sqlExpr = castNullType(sqlExpr, targetField.getType());
+            }
+            addSelect(selectList, sqlExpr, e.getRowType());
           }
-          addSelect(selectList, sqlExpr, e.getRowType());
         }
 
         builder.setSelect(new SqlNodeList(selectList, POS));
       }
       return builder.result();
     }
+  }
+
+  private void buildSelectListWithCollapsedAsterik(Project e,
+      Map<Integer, Integer> asterikSubListIndices, List<SqlNode> selectList, Builder builder) {
+    for (int i = 0; i < e.getProjects().size(); i++) {
+      SqlNode sqlExpr;
+      //if the current index is beginning of the asterik column-list, replace it with (*)
+      if (asterikSubListIndices.containsKey(i)) {
+        sqlExpr = SqlIdentifier.STAR;
+        i = asterikSubListIndices.get(i);
+      } else {
+        sqlExpr = builder.context.toSql(null, e.getProjects().get(i));
+      }
+      if (SqlUtil.isNullLiteral(sqlExpr, false)) {
+        final RelDataTypeField field =
+            e.getRowType().getFieldList().get(i);
+        sqlExpr = castNullType(sqlExpr, field.getType());
+      }
+
+      String name = e.getRowType().getFieldNames().get(i);
+      String alias = SqlValidatorUtil.getAlias(sqlExpr, -1);
+      final String lowerName = name.toLowerCase(Locale.ROOT);
+      if (sqlExpr == SqlIdentifier.STAR) {
+        name = "";
+      }
+
+      if (lowerName.startsWith("expr$")) {
+        // Put it in ordinalMap
+        ordinalMap.put(lowerName, sqlExpr);
+      } else if (alias == null || !alias.equals(name)) {
+        sqlExpr = as(sqlExpr, name);
+      }
+      selectList.add(sqlExpr);
+    }
+  }
+
+  /**
+   * If a given list of rexNodes has expanded asterik (*) in the columnList, this method would return
+   * map holding begin and end index of such sublists
+   * @param projects
+   * @param input
+   * @return
+   */
+  private Map<Integer,Integer> getAstrikExpansionSublistIndices(List<RexNode> projects, RelNode input) {
+    Map<Integer,Integer> subListBeginEnd = new HashMap<>();
+    for (int start = 0; start < projects.size(); start++) {
+      for (int end = start + 1; end <= projects.size(); end++) {
+        List<RexNode> sublist = projects.subList(start, end);
+        //if given sublist has ordinals same as the underlying input
+        if (sublist.stream().allMatch(p -> p instanceof RexInputRef)
+            && sublist.stream().map(p -> ((RexInputRef) p).getIndex())
+            .collect(Collectors.toList()).equals(
+                IntStream.range(0, input.getRowType().getFieldCount() - 1).boxed().collect(Collectors.toList()))) {
+          subListBeginEnd.put(start, end);
+          start = end;
+        }
+      }
+    }
+    return subListBeginEnd;
   }
 
   /**
@@ -1283,6 +1349,10 @@ public class RelToSqlConverter extends SqlImplementor
     String name = rowType.getFieldNames().get(selectList.size());
     String alias = SqlValidatorUtil.getAlias(node, -1);
     final String lowerName = name.toLowerCase(Locale.ROOT);
+    if(node == SqlIdentifier.STAR) {
+      name = "";
+    }
+
     if (lowerName.startsWith("expr$")) {
       // Put it in ordinalMap
       ordinalMap.put(lowerName, node);
