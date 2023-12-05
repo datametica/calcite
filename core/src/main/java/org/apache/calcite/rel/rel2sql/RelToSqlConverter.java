@@ -450,11 +450,11 @@ public class RelToSqlConverter extends SqlImplementor
       parseCorrelTable(e, x);
       if ((!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
-        Map<Integer, Integer> astrikExpansionSubList =
+        Map<Integer, Integer> starProjectionSublistIndices =
             getStarProjectionSublistIndices(e.getProjects(), e.getInput());
         final List<SqlNode> selectList = new ArrayList<>();
-        if (!astrikExpansionSubList.isEmpty()) {
-          buildOptimizedSelectList(e, astrikExpansionSubList, selectList, builder);
+        if (!starProjectionSublistIndices.isEmpty()) {
+          buildOptimizedSelectList(e, starProjectionSublistIndices, selectList, builder);
         } else {
           for (RexNode ref : e.getProjects()) {
             SqlNode sqlExpr = builder.context.toSql(null, ref);
