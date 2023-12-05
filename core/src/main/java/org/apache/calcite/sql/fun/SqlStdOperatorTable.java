@@ -2069,6 +2069,15 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlDatePartFunction SECOND =
       new SqlDatePartFunction("SECOND", TimeUnit.SECOND);
 
+  /**
+   * The SQL <code>MILLISECOND</code> operator. Returns the Millisecond
+   * from a DATETIME  E.g.<br>
+   * <code>MILLISECOND(timestamp '2008-9-23 01:23:45.123')</code> returns <code>
+   * 123</code>
+   */
+  public static final SqlDatePartFunction MILLISECOND =
+      new SqlDatePartFunction("MILLISECOND", TimeUnit.MILLISECOND);
+
   public static final SqlFunction LAST_DAY =
       new SqlFunction(
           "LAST_DAY",

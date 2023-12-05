@@ -13683,6 +13683,15 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQQuery));
   }
 
+  @Test public void testMillisecondFunction() {
+    final String query = "SELECT MILLISECOND(timestamp '2008-9-23 01:23:45.123')";
+    final String expectedSql = "SELECT EXTRACT(MILLISECOND FROM CAST('2008-09-23 01:23:45.123' AS DATETIME))";
+
+    sql(query)
+        .withBigQuery()
+        .ok(expectedSql);
+  }
+
   @Test public void testEditDistanceFunctionWithThreeArgs() {
     final RelBuilder builder = relBuilder();
     final RexNode editDistanceRex = builder.call(SqlLibraryOperators.EDIT_DISTANCE,
