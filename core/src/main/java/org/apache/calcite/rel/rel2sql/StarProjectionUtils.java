@@ -89,8 +89,9 @@ public class StarProjectionUtils {
    * i) projection list is less than the fieldCount of input rel
    * ii) project contains window function [Row_Number over- CALCITE-3876]
    * iii) if underlying input rel is instance of Filter or Aggregate
-   * iv) if  project contains case rexCall [to be analysed]
-   *
+   * iv) if  project contains case rexCall
+   * Scope -> ii ,iii and iv use cases needs to be analysed properly ,
+   *                  to see if we actually need to skip these scenarios straight away
    * @param projects - list of project rexNodes
    * @param input   - underlying input rel of projection
    * @return
