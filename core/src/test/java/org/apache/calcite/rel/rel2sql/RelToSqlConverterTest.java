@@ -6460,6 +6460,24 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testIsoWeekOfYearFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode isoWeekOfYearNode = builder.call(SqlLibraryOperators.ISO_WEEKOFYEAR,
+        builder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(isoWeekOfYearNode, "isoWeek"))
+        .build();
+    final String expectedSql = "SELECT ISOWEEK(CURRENT_TIMESTAMP)"
+        + " AS \"isoWeek\""
+        + "\nFROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT EXTRACT(ISOWEEK FROM CURRENT_DATETIME())"
+        + " AS isoWeek"
+        + "\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testRegexpInstr() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpInstrWithTwoArgs = builder.call(SqlLibraryOperators.REGEXP_INSTR,
