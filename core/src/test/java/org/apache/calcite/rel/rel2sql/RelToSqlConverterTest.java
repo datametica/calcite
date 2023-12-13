@@ -10910,6 +10910,21 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
   }
 
+  @Test public void testForStrPosFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode strPos = builder.call(SqlLibraryOperators.STRPOS,
+        builder.scan("EMP").field(5));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(strPos, "value"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT STRPOS(SAL) AS value\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testWhenTableNameAndColumnNameIsSame() {
     String query =
         "select \"test\" from \"foodmart\".\"test\"";

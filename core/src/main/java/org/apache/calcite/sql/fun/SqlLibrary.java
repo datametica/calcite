@@ -50,6 +50,9 @@ public enum SqlLibrary {
   /** A collection of operators that are in Google BigQuery but not in standard
    * SQL. */
   BIG_QUERY("b", "bigquery"),
+  /** A collection of operators that are in Google DB2 but not in standard
+   * SQL. */
+  DB2("d", "db2"),
   /** A collection of operators that are in Apache Hive but not in standard
    * SQL. */
   HIVE("h", "hive"),
