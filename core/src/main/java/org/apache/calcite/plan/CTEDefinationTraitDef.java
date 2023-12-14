@@ -18,9 +18,12 @@ package org.apache.calcite.plan;
 
 import org.apache.calcite.rel.RelNode;
 
+/**
+ * CTEDefinationTrait is used to identify if a given rel has a CTEDefinationTraitDef.
+ */
 public class CTEDefinationTraitDef extends RelTraitDef<CTEDefinationTrait> {
 
-  public static CTEDefinationTraitDef INSTANCE = new CTEDefinationTraitDef();
+  public static CTEDefinationTraitDef instance = new CTEDefinationTraitDef();
 
   @Override public Class<CTEDefinationTrait> getTraitClass() {
     return CTEDefinationTrait.class;
@@ -30,15 +33,19 @@ public class CTEDefinationTraitDef extends RelTraitDef<CTEDefinationTrait> {
     return CTEDefinationTrait.class.getSimpleName();
   }
 
-  @Override public RelNode convert(RelOptPlanner planner, RelNode rel, CTEDefinationTrait toTrait, boolean allowInfiniteCostConverters) {
-    throw new UnsupportedOperationException("Method implementation not supported for CTEDefinationTrait");
+  @Override public RelNode convert(RelOptPlanner planner, RelNode rel,
+      CTEDefinationTrait toTrait, boolean allowInfiniteCostConverters) {
+    throw new UnsupportedOperationException("Method implementation"
+        + " not supported for CTEDefinationTrait");
   }
 
-  @Override public boolean canConvert(RelOptPlanner planner, CTEDefinationTrait fromTrait, CTEDefinationTrait toTrait) {
+  @Override public boolean canConvert(RelOptPlanner planner, CTEDefinationTrait fromTrait,
+      CTEDefinationTrait toTrait) {
     return false;
   }
 
   @Override public CTEDefinationTrait getDefault() {
-    throw new UnsupportedOperationException("Default implementation not supported for CTEDefinationTrait");
+    throw new UnsupportedOperationException("Default implementation not "
+        + "supported for CTEDefinationTrait");
   }
 }

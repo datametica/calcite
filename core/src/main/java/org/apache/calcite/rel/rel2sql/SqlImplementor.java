@@ -18,7 +18,14 @@ package org.apache.calcite.rel.rel2sql;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
-import org.apache.calcite.plan.*;
+import org.apache.calcite.plan.CTEDefinationTrait;
+import org.apache.calcite.plan.CTEDefinationTraitDef;
+import org.apache.calcite.plan.CTEScopeTrait;
+import org.apache.calcite.plan.CTEScopeTraitDef;
+import org.apache.calcite.plan.DistinctTrait;
+import org.apache.calcite.plan.DistinctTraitDef;
+import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
@@ -57,7 +64,31 @@ import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexWindow;
 import org.apache.calcite.rex.RexWindowBound;
-import org.apache.calcite.sql.*;
+import org.apache.calcite.sql.JoinType;
+import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlAsOperator;
+import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlDynamicParam;
+import org.apache.calcite.sql.SqlFieldAccess;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlJoin;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlMatchRecognize;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOverOperator;
+import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSelectKeyword;
+import org.apache.calcite.sql.SqlSetOperator;
+import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.SqlWindow;
+import org.apache.calcite.sql.SqlWith;
+import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlCaseOperator;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
@@ -2604,12 +2635,13 @@ public abstract class SqlImplementor {
 
     public void setQualify(SqlNode node) {
       assert clauses.contains(Clause.QUALIFY);
-      if(select.getFrom() instanceof SqlWith){
-        if(((SqlWith) select.getFrom()).body instanceof SqlSelect){
+      if (select.getFrom() instanceof SqlWith) {
+        if (((SqlWith) select.getFrom()).body instanceof SqlSelect) {
           ((SqlSelect) ((SqlWith) select.getFrom()).body).setQualify(node);
         }
-      }else
+      } else {
         select.setQualify(node);
+      }
     }
 
     public void setOrderBy(SqlNodeList nodeList) {
@@ -2720,7 +2752,7 @@ public abstract class SqlImplementor {
   }
 
   private boolean isCTEScopeTrait(RelNode rel) {
-    RelTrait relTrait = rel.getTraitSet().getTrait(CTEScopeTraitDef.INSTANCE);
+    RelTrait relTrait = rel.getTraitSet().getTrait(CTEScopeTraitDef.instance);
     if (relTrait != null && relTrait instanceof CTEScopeTrait) {
       if (((CTEScopeTrait) relTrait).isCTEScope()) {
         return true;
@@ -2730,7 +2762,7 @@ public abstract class SqlImplementor {
   }
 
   private boolean isCTEDefinationTrait(RelNode rel) {
-    RelTrait relTrait = rel.getTraitSet().getTrait(CTEDefinationTraitDef.INSTANCE);
+    RelTrait relTrait = rel.getTraitSet().getTrait(CTEDefinationTraitDef.instance);
     if (relTrait != null && relTrait instanceof CTEDefinationTrait) {
       if (((CTEDefinationTrait) relTrait).isCTEDefination()) {
         return true;

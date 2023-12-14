@@ -17,7 +17,7 @@
 package org.apache.calcite.plan;
 
 /**
- * CTEDefinationTrait is used to identify if a given rel has a CTE Definition
+ * CTEDefinationTrait is used to identify if a given rel has a CTE Definition.
  */
 public class CTEDefinationTrait implements RelTrait {
 
@@ -38,7 +38,7 @@ public class CTEDefinationTrait implements RelTrait {
   }
 
   @Override public RelTraitDef<CTEDefinationTrait> getTraitDef() {
-    return CTEDefinationTraitDef.INSTANCE;
+    return CTEDefinationTraitDef.instance;
   }
 
   @Override public boolean satisfies(RelTrait trait) {

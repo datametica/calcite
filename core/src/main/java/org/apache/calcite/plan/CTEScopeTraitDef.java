@@ -18,11 +18,11 @@ package org.apache.calcite.plan;
 
 import org.apache.calcite.rel.RelNode;
 /**
- * CTEScopeTraitDef is used to identify if a given rel has a CTE scope
+ * CTEScopeTraitDef is used to identify if a given rel has a CTE scope.
  */
 public class CTEScopeTraitDef extends RelTraitDef<CTEScopeTrait> {
 
-  public static CTEScopeTraitDef INSTANCE = new CTEScopeTraitDef();
+  public static CTEScopeTraitDef instance = new CTEScopeTraitDef();
 
   @Override public Class<CTEScopeTrait> getTraitClass() {
     return CTEScopeTrait.class;
@@ -32,15 +32,19 @@ public class CTEScopeTraitDef extends RelTraitDef<CTEScopeTrait> {
     return CTEScopeTrait.class.getSimpleName();
   }
 
-  @Override public RelNode convert(RelOptPlanner planner, RelNode rel, CTEScopeTrait toTrait, boolean allowInfiniteCostConverters) {
-    throw new UnsupportedOperationException("Method implementation not supported for CTEScopeTrait");
+  @Override public RelNode convert(RelOptPlanner planner,
+      RelNode rel, CTEScopeTrait toTrait, boolean allowInfiniteCostConverters) {
+    throw new UnsupportedOperationException("Method "
+        + "implementation not supported for CTEScopeTrait");
   }
 
-  @Override public boolean canConvert(RelOptPlanner planner, CTEScopeTrait fromTrait, CTEScopeTrait toTrait) {
+  @Override public boolean canConvert(RelOptPlanner planner,
+      CTEScopeTrait fromTrait, CTEScopeTrait toTrait) {
     return false;
   }
 
   @Override public CTEScopeTrait getDefault() {
-    throw new UnsupportedOperationException("Default implementation not supported for CTEScopeTrait");
+    throw new UnsupportedOperationException("Default implementation"
+        + " not supported for CTEScopeTrait");
   }
 }

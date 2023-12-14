@@ -16,6 +16,9 @@
  */
 package org.apache.calcite.plan;
 
+/**
+ * CTEDefinationTrait is used to identify if a given rel has a CTEScopeTrait.
+ */
 public class CTEScopeTrait implements RelTrait {
 
   private final boolean isCTEScope;
@@ -29,7 +32,7 @@ public class CTEScopeTrait implements RelTrait {
   }
 
   @Override public RelTraitDef<CTEScopeTrait> getTraitDef() {
-    return CTEScopeTraitDef.INSTANCE;
+    return CTEScopeTraitDef.instance;
   }
 
   @Override public boolean satisfies(RelTrait trait) {
