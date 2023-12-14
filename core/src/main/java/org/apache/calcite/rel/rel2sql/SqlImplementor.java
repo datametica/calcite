@@ -632,15 +632,13 @@ public abstract class SqlImplementor {
   /** Wraps a node in a SELECT statement that has no clauses:
    *  "SELECT ... FROM (node)". */
   SqlSelect wrapSelect(SqlNode node) {
-    assert node instanceof SqlJoin
+    assert node instanceof SqlWith || (node instanceof SqlJoin
         || node instanceof SqlIdentifier
         || node instanceof SqlMatchRecognize
         || node instanceof SqlCall
-        || node instanceof SqlWith
             && (((SqlCall) node).getOperator() instanceof SqlSetOperator
                 || ((SqlCall) node).getOperator() == SqlStdOperatorTable.AS
-                || ((SqlCall) node).getOperator() == SqlStdOperatorTable.VALUES
-                || node instanceof SqlWith)
+                || ((SqlCall) node).getOperator() == SqlStdOperatorTable.VALUES))
         : node;
     if (requiresAlias(node)) {
       node = as(node, "t");
