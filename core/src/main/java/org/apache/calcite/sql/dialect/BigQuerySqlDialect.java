@@ -1721,7 +1721,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseRegexpReplace(SqlWriter writer, SqlCall call,
       int leftPrec, int rightPrec) {
-    int indexOfRegexOperand = 1;
+    int indexOfRegexOperand = 0;
     SqlWriter.Frame regexpReplaceFrame = writer.startFunCall("REGEXP_REPLACE");
     List<SqlNode> operandList = call.getOperandList();
     unparseRegexFunctionsOperands(writer, leftPrec, rightPrec, indexOfRegexOperand, operandList);
@@ -1744,6 +1744,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       if (operandList.indexOf(operand) == indexOfRegexOperand
           && operand instanceof SqlCharStringLiteral) {
         unparseRegexLiteral(writer, operand);
+        indexOfRegexOperand++;
       } else {
         operand.unparse(writer, leftPrec, rightPrec);
       }

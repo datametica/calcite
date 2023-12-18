@@ -12977,6 +12977,22 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testRegexReplace() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpReplaceRex = builder.call(SqlLibraryOperators.REGEXP_REPLACE,
+        builder.literal("Apache\\Calcite"), builder.literal("\\\\"), builder.literal("-"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpReplaceRex, "regexpReplace"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT REGEXP_REPLACE('Apache\\Calcite', '\\\\', '-') "
+        + "AS regexpReplace\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testStringLiteralsWithInvalidEscapeSequences() {
     final RelBuilder builder = relBuilder();
     final RexNode literal1 = builder.literal("Datam\\etica");
