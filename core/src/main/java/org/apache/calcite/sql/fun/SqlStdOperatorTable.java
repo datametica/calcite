@@ -1442,12 +1442,7 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
       new SqlJsonModifyFunction("JSON_INSERT");
 
   @Deprecated // to be removed before 2.0
-  public static final SqlFunction JSON_REPLACE =
-      new SqlJsonModifyFunction("JSON_REPLACE");
-
-  @Deprecated // to be removed before 2.0
-  public static final SqlFunction JSON_SET =
-      new SqlJsonModifyFunction("JSON_SET");
+  public static final SqlFunction JSON_STORAGE_SIZE = SqlLibraryOperators.JSON_STORAGE_SIZE;
 
   public static final SqlJsonArrayAggAggFunction JSON_ARRAYAGG =
       new SqlJsonArrayAggAggFunction(SqlKind.JSON_ARRAYAGG,
@@ -2148,7 +2143,15 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlDatePartFunction SECOND =
       new SqlDatePartFunction("SECOND", TimeUnit.SECOND);
 
-  /** The {@code LAST_DAY(date)} function. */
+  /**
+   * The SQL <code>MICROSECOND</code> operator. Returns the Microsecond
+   * from a DATETIME  E.g.<br>
+   * <code>MICROSECOND(timestamp '2008-9-23 01:23:45.1234')</code> returns <code>
+   * 123400</code>
+   */
+  public static final SqlDatePartFunction MICROSECOND =
+      new SqlDatePartFunction("MICROSECOND", TimeUnit.MICROSECOND);
+
   public static final SqlFunction LAST_DAY =
       SqlBasicFunction.create("LAST_DAY",
           ReturnTypes.DATE_NULLABLE,
