@@ -18,8 +18,9 @@ package org.apache.calcite.rel.rel2sql;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -27,10 +28,12 @@ import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,26 +46,28 @@ import java.util.stream.IntStream;
  *
  * <p>REL structure :
  * LogicalProject(EMPNO=[$0], EMPNO0=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4],
- *                                                  SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
- *      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+ * SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
+ * LogicalTableScan(table=[[CATALOG, SALES, EMP]])
  *
  *
  * <p>In a given project rel, identify the sublist from the projection list which has indices/field
  * ordinals in the same sequence as of input rel.
  * Once identified, replace this sublist back with SQlIdentifier.STAR to achieve below as sqlNode
- *  SqlNode : select empno, * from emp;
+ * SqlNode : select empno, * from emp;
  */
 public class StarProjectionUtils {
 
   SqlImplementor sqlImplementor;
+  protected static List<SqlNode> originalList = new ArrayList<>();
 
   StarProjectionUtils(SqlImplementor sqlImplementor) {
     this.sqlImplementor = sqlImplementor;
   }
 
   public static Map<Integer, Integer> identifyStarProjectionSublistIndices(List<RexNode> projects,
-      RelNode input) {
+      RelNode input, Project e) {
     Map<Integer, Integer> subListBeginEnd = new HashMap<>();
+    Map<Integer, Integer> emptyMap = new HashMap<>();
     if (canCombineProjects(projects, input)) {
       for (int start = 0; start < projects.size(); start++) {
         for (int end = start + 1; end < projects.size(); end++) {
@@ -80,7 +85,53 @@ public class StarProjectionUtils {
         }
       }
     }
-    return subListBeginEnd;
+    return isFieldNameSame(e, subListBeginEnd) ? subListBeginEnd : emptyMap;
+  }
+
+  private static boolean isFieldNameSame(Project e, Map<Integer, Integer> subListBeginEnd) {
+    List<String> projectedColumnsNames = e.getRowType().getFieldNames();
+    RelNode ProjectRelNode = e;
+    while (!ProjectRelNode.getInputs().isEmpty()) {
+      ProjectRelNode = ProjectRelNode.getInput(0);
+    }
+    //below while loop replacement is done using above while loop, "Need to confirm if there will
+    // be any further inputs after TableScan or Join"
+    /*
+     while (dummy.getInputs().size() > 0) {
+      boolean b = dummy.getInputs().size() > 0;
+      if (dummy instanceof TableScan || dummy instanceof Join) {
+        if (b) {
+          dummy = dummy.getInput(0);
+          break;
+        }
+      } else {
+        dummy = dummy.getInput(0);
+      }
+     */
+    //this modification is for ignoring integer at end of EMPNO0
+    //(It will fail where there will be same alias as column names, seen some scenario in Raven-etl)
+    List<String> actualColumnNames = ProjectRelNode.getRowType().getFieldNames();
+    return projectionContainsFieldNames(projectedColumnsNames, actualColumnNames, subListBeginEnd);
+  }
+
+  private static boolean projectionContainsFieldNames(List<String> projectedColumnsNames,
+      List<String> actualColumnNames, Map<Integer, Integer> subListBeginEnd) {
+    int startingIndex = 0;
+    int endingIndex = 0;
+    for (Map.Entry<Integer, Integer> entry : subListBeginEnd.entrySet()) {
+      startingIndex = entry.getKey();
+      endingIndex = entry.getValue();
+    }
+    return modifiedProjectedColumns(projectedColumnsNames).subList(startingIndex,
+        endingIndex + 1).equals(actualColumnNames);
+  }
+
+  private static List<String> modifiedProjectedColumns(List<String> projectedColumnsNames) {
+    List<String> modifiedProjectionColumn = null;
+    modifiedProjectionColumn = projectedColumnsNames.stream()
+        .map(s -> s.replaceAll("\\d*$", ""))
+        .collect(Collectors.toList());
+    return modifiedProjectionColumn;
   }
 
   /**
@@ -91,16 +142,18 @@ public class StarProjectionUtils {
    * iii) if underlying input rel is instance of Filter or Aggregate
    * iv) if  project contains case rexCall
    * Scope -> ii ,iii and iv use cases needs to be analysed properly ,
-   *                  to see if we actually need to skip these scenarios straight away
+   * to see if we actually need to skip these scenarios straight away
+   *
    * @param projects - list of project rexNodes
-   * @param input   - underlying input rel of projection
+   * @param input    - underlying input rel of projection
    * @return
    */
   private static boolean canCombineProjects(List<RexNode> projects, RelNode input) {
-    return !(projects.size() <= input.getRowType().getFieldCount()
-        || projects.stream().anyMatch(p -> RexOver.containsOver(p)
-        || (p instanceof RexCall && p.getKind() == SqlKind.CASE))
-        || input instanceof Filter || input instanceof Aggregate);
+    return (projects.stream().filter(p -> p instanceof RexInputRef).
+        collect(Collectors.toList()).size() >= input.getRowType().getFieldCount()) && !(
+        projects.stream().anyMatch(p -> RexOver.containsOver(p)
+            || (p instanceof RexCall && p.getKind() == SqlKind.CASE))
+            || input instanceof Aggregate);
   }
 
   public void buildOptimizedSelectList(Project projectRel,
@@ -135,5 +188,15 @@ public class StarProjectionUtils {
     }
 
     selectList.add(node);
+  }
+
+  protected static boolean isStarSpecialCase(int ordinal, SqlNodeList selectList,
+      List<SqlNode> originalList) {
+    return (ordinal > selectList.size() - 1)
+        || ((originalList.size() > selectList.size())
+        && selectList.stream().
+        anyMatch(
+            it -> it instanceof SqlIdentifier
+                && it.toString().equals("*")));
   }
 }

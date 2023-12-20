@@ -460,12 +460,20 @@ public class RelToSqlConverter extends SqlImplementor
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
         final List<SqlNode> selectList = new ArrayList<>();
         if (!StarProjectionUtils.identifyStarProjectionSublistIndices(
-            e.getProjects(), e.getInput()).isEmpty()) {
+            e.getProjects(), e.getInput(), e).isEmpty()) {
           Map<Integer, Integer> starProjectionSublistIndices = StarProjectionUtils.
-              identifyStarProjectionSublistIndices(e.getProjects(), e.getInput());
+              identifyStarProjectionSublistIndices(e.getProjects(), e.getInput(), e);
           StarProjectionUtils starProjectionUtils = new StarProjectionUtils(this);
           starProjectionUtils.buildOptimizedSelectList(e,
               starProjectionSublistIndices, selectList, builder);
+          List<SqlNode> originalList = StarProjectionUtils.originalList;
+          for (RexNode ref : e.getProjects()) {
+            SqlNode sqlExpr = builder.context.toSql(null, ref);
+            //ignored the code in between in the actual else clause, check impact and add
+            if (originalList.size() < e.getRowType().getFieldCount()) {
+              addSelect(originalList, sqlExpr, e.getRowType());
+            }
+          }
         } else {
           for (RexNode ref : e.getProjects()) {
             SqlNode sqlExpr = builder.context.toSql(null, ref);
@@ -735,7 +743,11 @@ public class RelToSqlConverter extends SqlImplementor
     if (builder.context.field(key).getKind() == SqlKind.LITERAL
         && dialect.getConformance().isGroupByOrdinal()) {
       if (builder.select.getSelectList() != null) {
-        Optional<SqlNode> aliasNode = getAliasSqlNode(builder.select.getSelectList().get(key));
+        SqlNodeList selectList = builder.select.getSelectList();
+        List<SqlNode> originalList = StarProjectionUtils.originalList;
+        final SqlNode selectItem = StarProjectionUtils.isStarSpecialCase(key, selectList,
+            originalList) ? originalList.get(key) : selectList.get(key);
+        Optional<SqlNode> aliasNode = getAliasSqlNode(selectItem);
         return !aliasNode.isPresent();
       }
       return true;
