@@ -2193,7 +2193,7 @@ public abstract class SqlImplementor {
 
       if (rel instanceof Project && rel.getInput(0) instanceof Aggregate) {
         if (isCTEScopeTrait(rel) || isCTEDefinationTrait(rel)) {
-          return true;
+          return false;
         }
         if (dialect.getConformance().isGroupByAlias()
             && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)
