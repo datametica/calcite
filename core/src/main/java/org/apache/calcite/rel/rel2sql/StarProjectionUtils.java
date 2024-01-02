@@ -17,10 +17,7 @@
 package org.apache.calcite.rel.rel2sql;
 
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -33,7 +30,6 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,7 +54,6 @@ import java.util.stream.IntStream;
 public class StarProjectionUtils {
 
   SqlImplementor sqlImplementor;
-  protected static List<SqlNode> originalList = new ArrayList<>();
 
   StarProjectionUtils(SqlImplementor sqlImplementor) {
     this.sqlImplementor = sqlImplementor;
@@ -90,27 +85,12 @@ public class StarProjectionUtils {
 
   private static boolean isFieldNameSame(Project e, Map<Integer, Integer> subListBeginEnd) {
     List<String> projectedColumnsNames = e.getRowType().getFieldNames();
-    RelNode ProjectRelNode = e;
-    while (!ProjectRelNode.getInputs().isEmpty()) {
-      ProjectRelNode = ProjectRelNode.getInput(0);
+    RelNode projectRelNode = e;
+    // This is to iterate till TableScan or Join rel is obtained
+    while (!projectRelNode.getInputs().isEmpty()) {
+      projectRelNode = projectRelNode.getInput(0);
     }
-    //below while loop replacement is done using above while loop, "Need to confirm if there will
-    // be any further inputs after TableScan or Join"
-    /*
-     while (dummy.getInputs().size() > 0) {
-      boolean b = dummy.getInputs().size() > 0;
-      if (dummy instanceof TableScan || dummy instanceof Join) {
-        if (b) {
-          dummy = dummy.getInput(0);
-          break;
-        }
-      } else {
-        dummy = dummy.getInput(0);
-      }
-     */
-    //this modification is for ignoring integer at end of EMPNO0
-    //(It will fail where there will be same alias as column names, seen some scenario in Raven-etl)
-    List<String> actualColumnNames = ProjectRelNode.getRowType().getFieldNames();
+    List<String> actualColumnNames = projectRelNode.getRowType().getFieldNames();
     return projectionContainsFieldNames(projectedColumnsNames, actualColumnNames, subListBeginEnd);
   }
 
@@ -133,7 +113,6 @@ public class StarProjectionUtils {
         .collect(Collectors.toList());
     return modifiedProjectionColumn;
   }
-
   /**
    * Below method evaluates whether the projections in the given project rel can be combined or not.
    * We avoid combining projections if
@@ -152,8 +131,7 @@ public class StarProjectionUtils {
     return (projects.stream().filter(p -> p instanceof RexInputRef).
         collect(Collectors.toList()).size() >= input.getRowType().getFieldCount()) && !(
         projects.stream().anyMatch(p -> RexOver.containsOver(p)
-            || (p instanceof RexCall && p.getKind() == SqlKind.CASE))
-            || input instanceof Aggregate);
+            || (p instanceof RexCall && p.getKind() == SqlKind.CASE)));
   }
 
   public void buildOptimizedSelectList(Project projectRel,
@@ -190,7 +168,7 @@ public class StarProjectionUtils {
     selectList.add(node);
   }
 
-  protected static boolean isStarSpecialCase(int ordinal, SqlNodeList selectList,
+  protected static boolean hasStarInProjection(int ordinal, SqlNodeList selectList,
       List<SqlNode> originalList) {
     return (ordinal > selectList.size() - 1)
         || ((originalList.size() > selectList.size())

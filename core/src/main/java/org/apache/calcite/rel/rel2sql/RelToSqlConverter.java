@@ -466,7 +466,7 @@ public class RelToSqlConverter extends SqlImplementor
           StarProjectionUtils starProjectionUtils = new StarProjectionUtils(this);
           starProjectionUtils.buildOptimizedSelectList(e,
               starProjectionSublistIndices, selectList, builder);
-          List<SqlNode> originalList = StarProjectionUtils.originalList;
+          originalList.clear();
           for (RexNode ref : e.getProjects()) {
             SqlNode sqlExpr = builder.context.toSql(null, ref);
             //ignored the code in between in the actual else clause, check impact and add
@@ -744,8 +744,7 @@ public class RelToSqlConverter extends SqlImplementor
         && dialect.getConformance().isGroupByOrdinal()) {
       if (builder.select.getSelectList() != null) {
         SqlNodeList selectList = builder.select.getSelectList();
-        List<SqlNode> originalList = StarProjectionUtils.originalList;
-        final SqlNode selectItem = StarProjectionUtils.isStarSpecialCase(key, selectList,
+        final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(key, selectList,
             originalList) ? originalList.get(key) : selectList.get(key);
         Optional<SqlNode> aliasNode = getAliasSqlNode(selectItem);
         return !aliasNode.isPresent();

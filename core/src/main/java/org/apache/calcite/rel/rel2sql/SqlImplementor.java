@@ -153,6 +153,7 @@ public abstract class SqlImplementor {
   protected final Set<String> aliasSet = new LinkedHashSet<>();
   protected final Map<String, SqlNode> ordinalMap = new HashMap<>();
 
+  protected final List<SqlNode> originalList = new ArrayList<>();
   protected final Map<CorrelationId, Context> correlTableMap = new HashMap<>();
   protected boolean isTableNameColumnNameIdentical = false;
 
@@ -1494,7 +1495,8 @@ public abstract class SqlImplementor {
       return SqlLiteral.createCharString((String) castNonNull(literal.getValue2()), POS);
     case NUMERIC:
     case EXACT_NUMERIC:
-      return dialect.getNumericLiteral(literal, POS);
+      return SqlLiteral.createExactNumeric(
+          castNonNull(literal.getValueAs(BigDecimal.class)).toPlainString(), POS);
     case APPROXIMATE_NUMERIC:
       return SqlLiteral.createApproxNumeric(
           castNonNull(literal.getValueAs(BigDecimal.class)).toPlainString(), POS);
@@ -1828,10 +1830,9 @@ public abstract class SqlImplementor {
             return SqlImplementor.this;
           }
 
-          @Override
-          public SqlNode field(int ordinal) {
-            List<SqlNode> originalList = StarProjectionUtils.originalList;
-            final SqlNode selectItem = StarProjectionUtils.isStarSpecialCase(ordinal, selectList,
+          @Override public SqlNode field(int ordinal) {
+            //List<SqlNode> originalList = StarProjectionUtils.originalList;
+            final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(ordinal, selectList,
                 originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
             switch (selectItem.getKind()) {
             case AS:
@@ -1852,8 +1853,8 @@ public abstract class SqlImplementor {
           }
 
           public SqlNode field(int ordinal, boolean useAlias) {
-            List<SqlNode> originalList = StarProjectionUtils.originalList;
-            final SqlNode selectItem = StarProjectionUtils.isStarSpecialCase(ordinal, selectList,
+            //List<SqlNode> originalList = StarProjectionUtils.originalList;
+            final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(ordinal, selectList,
                 originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
             switch (selectItem.getKind()) {
             case AS:
@@ -1937,8 +1938,9 @@ public abstract class SqlImplementor {
             aggregatesArgs.addAll(aggregateCall.getArgList());
           }
           for (int aggregatesArg : aggregatesArgs) {
-            List<SqlNode> originalList = StarProjectionUtils.originalList;
-            final SqlNode selectItem = StarProjectionUtils.isStarSpecialCase(aggregatesArg, selectList,
+            //List<SqlNode> originalList = StarProjectionUtils.originalList;
+            final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(aggregatesArg,
+                selectList,
                 originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
             if (selectItem instanceof SqlBasicCall) {
               final SqlBasicCall call =
@@ -2315,8 +2317,9 @@ public abstract class SqlImplementor {
             aggregatesArgs.addAll(aggregateCall.getArgList());
           }
           for (int aggregatesArg : aggregatesArgs) {
-            List<SqlNode> originalList = StarProjectionUtils.originalList;
-            final SqlNode selectItem = StarProjectionUtils.isStarSpecialCase(aggregatesArg, selectList,
+            //List<SqlNode> originalList = StarProjectionUtils.originalList;
+            final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(aggregatesArg,
+                selectList,
                 originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
             if (selectItem instanceof SqlBasicCall) {
               final SqlBasicCall call =
