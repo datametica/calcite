@@ -1831,7 +1831,6 @@ public abstract class SqlImplementor {
           }
 
           @Override public SqlNode field(int ordinal) {
-            //List<SqlNode> originalList = StarProjectionUtils.originalList;
             final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(ordinal, selectList,
                 originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
             switch (selectItem.getKind()) {
@@ -1853,7 +1852,6 @@ public abstract class SqlImplementor {
           }
 
           public SqlNode field(int ordinal, boolean useAlias) {
-            //List<SqlNode> originalList = StarProjectionUtils.originalList;
             final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(ordinal, selectList,
                 originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
             switch (selectItem.getKind()) {
@@ -1938,7 +1936,6 @@ public abstract class SqlImplementor {
             aggregatesArgs.addAll(aggregateCall.getArgList());
           }
           for (int aggregatesArg : aggregatesArgs) {
-            //List<SqlNode> originalList = StarProjectionUtils.originalList;
             final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(aggregatesArg,
                 selectList,
                 originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
@@ -2317,7 +2314,6 @@ public abstract class SqlImplementor {
             aggregatesArgs.addAll(aggregateCall.getArgList());
           }
           for (int aggregatesArg : aggregatesArgs) {
-            //List<SqlNode> originalList = StarProjectionUtils.originalList;
             final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(aggregatesArg,
                 selectList,
                 originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
