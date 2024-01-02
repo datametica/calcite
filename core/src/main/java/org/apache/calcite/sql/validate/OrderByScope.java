@@ -73,7 +73,7 @@ public class OrderByScope extends DelegatingScope {
   @Override public SqlQualified fullyQualify(SqlIdentifier identifier) {
     // If it's a simple identifier, look for an alias.
     if (identifier.isSimple()
-        && validator.config().sqlConformance().isSortByAlias()) {
+        && validator.config().conformance().isSortByAlias()) {
       final String name = identifier.names.get(0);
       final SqlValidatorNamespace selectNs =
           validator.getNamespaceOrThrow(select);
@@ -101,7 +101,7 @@ public class OrderByScope extends DelegatingScope {
   private int aliasCount(SqlNameMatcher nameMatcher, String name) {
     int n = 0;
     for (SqlNode s : getSelectList(select)) {
-      final String alias = SqlValidatorUtil.getAlias(s, -1);
+      final @Nullable String alias = SqlValidatorUtil.alias(s);
       if (alias != null && nameMatcher.matches(alias, name)) {
         n++;
       }

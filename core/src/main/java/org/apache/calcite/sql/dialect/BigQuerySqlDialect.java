@@ -1160,7 +1160,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperator().getName()) {
     case "CURRENT_TIMESTAMP":
-      if (((SqlBasicCall) call).getOperands().length > 0) {
+      if (((SqlBasicCall) call).getOperandList().size() > 0) {
         new CurrentTimestampHandler(this)
             .unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
       } else {
@@ -1503,7 +1503,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private SqlNode getPositiveOperand(SqlNode secondOperand) {
-    return (((SqlBasicCall) secondOperand).operands)[0];
+    return ((SqlBasicCall) secondOperand).getOperandList().get(0);
   }
 
   private String getShiftOperator(boolean isShiftLeft) {
@@ -2070,8 +2070,8 @@ public class BigQuerySqlDialect extends SqlDialect {
       SqlNode firstOperand = call.operand(1);
       if (firstOperand instanceof SqlBasicCall
           && ((SqlBasicCall) firstOperand).getOperator().kind == SqlKind.MINUS) {
-        SqlNode leftOperand = ((SqlBasicCall) firstOperand).getOperands()[0];
-        SqlNode rightOperand = ((SqlBasicCall) firstOperand).getOperands()[1];
+        SqlNode leftOperand = ((SqlBasicCall) firstOperand).getOperandList().get(0);
+        SqlNode rightOperand = ((SqlBasicCall) firstOperand).getOperandList().get(1);
         unparseExtractEpochOperands(writer, leftOperand, leftPrec, rightPrec);
         writer.print(" - ");
         unparseExtractEpochOperands(writer, rightOperand, leftPrec, rightPrec);
@@ -2096,7 +2096,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   private boolean isDateTimeCast(SqlNode operand) {
     boolean isCastCall = ((SqlBasicCall) operand).getOperator() == CAST;
     boolean isDateTimeCast = isCastCall
-        && ((SqlDataTypeSpec) ((SqlBasicCall) operand).operands[1])
+        && ((SqlDataTypeSpec) ((SqlBasicCall) operand).getOperandList().get(1))
             .getTypeName().toString().equals("TIMESTAMP");
     return isDateTimeCast;
   }
@@ -2112,7 +2112,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       if (((SqlBasicCall) operand).getOperator() == SqlStdOperatorTable.CURRENT_TIMESTAMP) {
         unparseCurrentTimestampCall(writer);
       } else if (isDateTimeCast(operand)) {
-        SqlNode node = ((SqlBasicCall) operand).operands[0];
+        SqlNode node = ((SqlBasicCall) operand).getOperandList().get(0);
         castNodeToTimestamp(writer, node, leftPrec, rightPrec);
       }
     } else {

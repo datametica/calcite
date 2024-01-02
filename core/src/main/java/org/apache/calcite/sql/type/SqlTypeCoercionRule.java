@@ -118,7 +118,6 @@ public class SqlTypeCoercionRule implements SqlTypeMappingRule {
 
     rule.add(SqlTypeName.CHAR);
     rule.add(SqlTypeName.VARCHAR);
-    rule.add(SqlTypeName.BOOLEAN);
     rule.add(SqlTypeName.TIMESTAMP);
     rule.add(SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
 

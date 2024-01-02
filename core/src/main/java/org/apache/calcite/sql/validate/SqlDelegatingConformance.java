@@ -23,7 +23,7 @@ import org.apache.calcite.sql.fun.SqlLibrary;
  * another object. You can create a sub-class that overrides particular
  * methods.
  */
-public class SqlDelegatingConformance extends SqlAbstractConformance {
+public class SqlDelegatingConformance implements SqlConformance {
   private final SqlConformance delegate;
 
   /** Creates a SqlDelegatingConformance. */
@@ -150,6 +150,11 @@ public class SqlDelegatingConformance extends SqlAbstractConformance {
   @Override public SqlLibrary semantics() {
     return delegate.semantics();
   }
+
+  @Override public boolean isElseCaseNeeded() {
+    return false;
+  }
+
   @Override public boolean allowIsTrue() {
     return delegate.allowIsTrue();
   }

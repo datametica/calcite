@@ -214,7 +214,7 @@ public class RexCall extends RexNode {
     case SEARCH:
       final Sarg sarg = ((RexLiteral) operands.get(1)).getValueAs(Sarg.class);
       return requireNonNull(sarg, "sarg").isAll()
-          && (sarg.containsNull || !operands.get(0).getType().isNullable());
+          && (sarg.nullAs.toBoolean() || !operands.get(0).getType().isNullable());
     default:
       return false;
     }
@@ -235,7 +235,7 @@ public class RexCall extends RexNode {
     case SEARCH:
       final Sarg sarg = ((RexLiteral) operands.get(1)).getValueAs(Sarg.class);
       return requireNonNull(sarg, "sarg").isNone()
-          && (!sarg.containsNull || !operands.get(0).getType().isNullable());
+          && (!sarg.nullAs.toBoolean() || !operands.get(0).getType().isNullable());
     default:
       return false;
     }

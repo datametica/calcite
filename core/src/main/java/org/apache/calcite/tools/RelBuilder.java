@@ -3543,7 +3543,7 @@ public class RelBuilder {
                       null, Collections.emptyList()))
               .collect(Collectors.toList()));
       return AggregateCall.create(aggFunction, distinct, approximate,
-          ignoreNulls, args, filterArg, collation, groupSet.cardinality(), r,
+          ignoreNulls, null, args, filterArg, null, collation, groupSet.cardinality(), r,
           null, alias);
     }
 

@@ -1111,7 +1111,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
       SqlSubstringFunction op,
       SqlCall call) {
     final SqlLibrary library =
-        cx.getValidator().config().sqlConformance().semantics();
+        cx.getValidator().config().conformance().semantics();
     final SqlBasicCall basicCall = (SqlBasicCall) call;
     switch (library) {
     case BIG_QUERY:
@@ -1128,7 +1128,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
 
   private RexNode toRex(SqlRexContext cx, SqlBasicCall call, SqlFunction f) {
     final SqlCall call2 =
-        new SqlBasicCall(f, call.operands, call.getParserPosition());
+        new SqlBasicCall(f, call.getOperandList(), call.getParserPosition());
     final SqlRexConvertlet convertlet = requireNonNull(get(call2));
     return convertlet.convertCall(cx, call2);
   }

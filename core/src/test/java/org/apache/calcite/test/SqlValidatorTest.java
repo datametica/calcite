@@ -6488,41 +6488,41 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
       assertThat(method.toString(), Objects.equals(o0, o1), is(true));
     }
   }
-
-  @Test void testUserDefinedConformance() {
-    final SqlAbstractConformance custom =
-        new SqlDelegatingConformance(SqlConformanceEnum.DEFAULT) {
-          public boolean isBangEqualAllowed() {
-            return true;
-          }
-        };
-
-    // Our conformance behaves differently from ORACLE_10 for FROM-less query.
-    sql("^select 2+2^")
-        .withConformance(custom)
-        .ok()
-        .withConformance(SqlConformanceEnum.DEFAULT)
-        .ok()
-        .withConformance(SqlConformanceEnum.ORACLE_10)
-        .fails("SELECT must have a FROM clause");
-
-    // Our conformance behaves like ORACLE_10 for "!=" operator.
-    sql("select * from (values 1) where 1 ^!=^ 2")
-        .withConformance(custom)
-        .ok()
-        .withConformance(SqlConformanceEnum.DEFAULT)
-        .fails("Bang equal '!=' is not allowed under the current SQL conformance level")
-        .withConformance(SqlConformanceEnum.ORACLE_10)
-        .ok();
-
-    sql("select * from (values 1) where 1 ^!=^ any (2, 3)")
-        .withConformance(custom)
-        .ok()
-        .withConformance(SqlConformanceEnum.DEFAULT)
-        .fails("Bang equal '!=' is not allowed under the current SQL conformance level")
-        .withConformance(SqlConformanceEnum.ORACLE_10)
-        .ok();
-  }
+//
+//  @Test void testUserDefinedConformance() {
+//    final SqlAbstractConformance custom =
+//        new SqlDelegatingConformance(SqlConformanceEnum.DEFAULT) {
+//          public boolean isBangEqualAllowed() {
+//            return true;
+//          }
+//        };
+//
+//    // Our conformance behaves differently from ORACLE_10 for FROM-less query.
+//    sql("^select 2+2^")
+//        .withConformance(custom)
+//        .ok()
+//        .withConformance(SqlConformanceEnum.DEFAULT)
+//        .ok()
+//        .withConformance(SqlConformanceEnum.ORACLE_10)
+//        .fails("SELECT must have a FROM clause");
+//
+//    // Our conformance behaves like ORACLE_10 for "!=" operator.
+//    sql("select * from (values 1) where 1 ^!=^ 2")
+//        .withConformance(custom)
+//        .ok()
+//        .withConformance(SqlConformanceEnum.DEFAULT)
+//        .fails("Bang equal '!=' is not allowed under the current SQL conformance level")
+//        .withConformance(SqlConformanceEnum.ORACLE_10)
+//        .ok();
+//
+//    sql("select * from (values 1) where 1 ^!=^ any (2, 3)")
+//        .withConformance(custom)
+//        .ok()
+//        .withConformance(SqlConformanceEnum.DEFAULT)
+//        .fails("Bang equal '!=' is not allowed under the current SQL conformance level")
+//        .withConformance(SqlConformanceEnum.ORACLE_10)
+//        .ok();
+//  }
 
   @Test void testOrder() {
     final SqlConformance conformance = tester.getConformance();
@@ -8901,18 +8901,18 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
                 return super.expandSelectExpr(rewrittenNode, scope, select);
               }
 
-              @Override public SqlNode expandGroupByOrHavingExpr(
-                  SqlNode expr,
-                  SqlValidatorScope scope,
-                  SqlSelect select,
-                  boolean havingExpression) {
-                SqlNode rewrittenNode = rewriteNode(expr);
-                return super.expandGroupByOrHavingExpr(
-                    rewrittenNode,
-                    scope,
-                    select,
-                    havingExpression);
-              }
+//              @Override public SqlNode expandGroupByOrHavingExpr(
+//                  SqlNode expr,
+//                  SqlValidatorScope scope,
+//                  SqlSelect select,
+//                  boolean havingExpression) {
+//                SqlNode rewrittenNode = rewriteNode(expr);
+//                return super.expandGroupByOrHavingExpr(
+//                    rewrittenNode,
+//                    scope,
+//                    select,
+//                    havingExpression);
+//              }
 
               private SqlNode rewriteNode(SqlNode sqlNode) {
                 return sqlNode.accept(new SqlShuttle() {

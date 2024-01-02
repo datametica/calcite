@@ -115,13 +115,11 @@ public class SelectScope extends ListScope {
    * @param windowParent Scope for window parent
    * @param select    Select clause
    */
-  SelectScope(
-      SqlValidatorScope parent,
-      @Nullable SqlValidatorScope windowParent,
+  SelectScope(SqlValidatorScope parent, SqlValidatorScope windowParent,
       SqlSelect select) {
     super(parent);
-    this.select = select;
-    this.windowParent = windowParent;
+    this.select = requireNonNull(select, "select");
+    this.windowParent = requireNonNull(windowParent, "windowParent");
   }
 
   //~ Methods ----------------------------------------------------------------

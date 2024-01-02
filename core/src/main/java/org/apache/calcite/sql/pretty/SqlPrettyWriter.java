@@ -256,6 +256,14 @@ public class SqlPrettyWriter implements SqlWriter {
           LoggerFactory.getLogger("org.apache.calcite.sql.pretty.SqlPrettyWriter"));
 
   /**
+   * Default SqlWriterConfig, reduce the overhead of "ImmutableBeans.create"
+   */
+
+//  private static final SqlWriterConfig CONFIG =
+//      SqlWriterConfig.of()
+//          .withDialect(CalciteSqlDialect.DEFAULT);
+
+  /**
    * Bean holding the default property values.
    */
   private static final Bean DEFAULT_BEAN =
@@ -391,8 +399,9 @@ public class SqlPrettyWriter implements SqlWriter {
 
   @Override public boolean inQuery() {
     return (frame == null)
+        || (frame.frameType == FrameTypeEnum.SELECT)
         || (frame.frameType == FrameTypeEnum.ORDER_BY)
-        || (frame.frameType == FrameTypeEnum.WITH)
+        || (frame.frameType == FrameTypeEnum.WITH_BODY)
         || (frame.frameType == FrameTypeEnum.SETOP);
   }
 
@@ -1386,7 +1395,7 @@ public class SqlPrettyWriter implements SqlWriter {
       for (Method method : o.getClass().getMethods()) {
         if (method.getName().startsWith("set")
             && (method.getReturnType() == Void.class)
-            && (method.getParameterTypes().length == 1)) {
+            && (method.getParameterCount() == 1)) {
           String attributeName =
               stripPrefix(
                   method.getName(),
@@ -1395,7 +1404,7 @@ public class SqlPrettyWriter implements SqlWriter {
         }
         if (method.getName().startsWith("get")
             && (method.getReturnType() != Void.class)
-            && (method.getParameterTypes().length == 0)) {
+            && (method.getParameterCount() == 0)) {
           String attributeName =
               stripPrefix(
                   method.getName(),
@@ -1404,7 +1413,7 @@ public class SqlPrettyWriter implements SqlWriter {
         }
         if (method.getName().startsWith("is")
             && (method.getReturnType() == Boolean.class)
-            && (method.getParameterTypes().length == 0)) {
+            && (method.getParameterCount() == 0)) {
           String attributeName =
               stripPrefix(
                   method.getName(),

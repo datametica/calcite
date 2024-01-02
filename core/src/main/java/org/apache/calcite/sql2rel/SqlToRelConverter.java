@@ -1700,7 +1700,7 @@ public class SqlToRelConverter {
       if (isRowConstructor(node)) {
         call = (SqlBasicCall) node;
         ImmutableList.Builder<RexLiteral> tuple = ImmutableList.builder();
-        for (Ord<@Nullable SqlNode> operand : Ord.zip(call.operands)) {
+        for (Ord<@Nullable SqlNode> operand : Ord.zip(call.getOperandList())) {
           RexLiteral rexLiteral =
               convertLiteralInValuesList(
                   operand.e,
@@ -2164,7 +2164,7 @@ public class SqlToRelConverter {
       return;
 
     case TABLESAMPLE:
-      operands = ((SqlBasicCall) from).getOperands();
+      operands = ((SqlBasicCall) from).getOperandList().toArray(new SqlNode[0]);
       SqlSampleSpec sampleSpec = SqlLiteral.sampleValue(
           requireNonNull(operands[1], () -> "operand[1] of " + from));
       if (sampleSpec instanceof SqlSampleSpec.SqlSubstitutionSampleSpec) {
@@ -2264,7 +2264,7 @@ public class SqlToRelConverter {
     RelNode child =
         (null != bb.root) ? bb.root : LogicalValues.createOneRow(cluster);
     RelNode uncollect;
-    if (validator().config().sqlConformance().allowAliasUnnestItems()) {
+    if (validator().config().conformance().allowAliasUnnestItems()) {
       uncollect = relBuilder
           .push(child)
           .project(exprs)
@@ -3895,7 +3895,7 @@ public class SqlToRelConverter {
     final RelDataType tableRowType = targetTable.getRowType();
     SqlNodeList targetColumnList = call.getTargetColumnList();
     if (targetColumnList == null) {
-      if (validator().config().sqlConformance().isInsertSubsetColumnsAllowed()) {
+      if (validator().config().conformance().isInsertSubsetColumnsAllowed()) {
         final RelDataType targetRowType =
             typeFactory.createStructType(
                 tableRowType.getFieldList()

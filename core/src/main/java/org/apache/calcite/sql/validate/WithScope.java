@@ -20,6 +20,8 @@ import org.apache.calcite.rel.type.StructKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWithItem;
 
+import com.google.common.collect.ImmutableList;
+
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
@@ -38,11 +40,14 @@ import java.util.List;
  */
 class WithScope extends ListScope {
   private final SqlWithItem withItem;
+  protected final @Nullable WithRecursiveScope recursiveScope;
 
   /** Creates a WithScope. */
-  WithScope(SqlValidatorScope parent, SqlWithItem withItem) {
+  WithScope(SqlValidatorScope parent, SqlWithItem withItem,
+      @Nullable WithRecursiveScope recursiveScope) {
     super(parent);
     this.withItem = withItem;
+    this.recursiveScope = recursiveScope;
   }
 
   @Override public SqlNode getNode() {
@@ -63,9 +68,10 @@ class WithScope extends ListScope {
       final SqlValidatorNamespace ns = validator.getNamespaceOrThrow(withItem);
       final Step path2 = path
           .plus(ns.getRowType(), 0, names.get(0), StructKind.FULLY_QUALIFIED);
-      resolved.found(ns, false, null, path2, null);
+      resolved.found(ns, false, this, path2, ImmutableList.of());
       return;
     }
     super.resolveTable(names, nameMatcher, path, resolved);
   }
+
 }

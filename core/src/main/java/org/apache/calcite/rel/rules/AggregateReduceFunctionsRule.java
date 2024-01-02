@@ -342,14 +342,16 @@ public class AggregateReduceFunctionsRule
       int filter) {
     final Aggregate.AggCallBinding binding =
         new Aggregate.AggCallBinding(typeFactory, aggFunction,
-            ImmutableList.of(operandType), oldAggRel.getGroupCount(),
-            filter >= 0);
+            ImmutableList.of(), ImmutableList.of(operandType),
+            oldAggRel.getGroupCount(), filter >= 0);
     return AggregateCall.create(aggFunction,
         oldCall.isDistinct(),
         oldCall.isApproximate(),
         oldCall.ignoreNulls(),
+        oldCall.rexList,
         ImmutableIntList.of(argOrdinal),
         filter,
+        oldCall.distinctKeys,
         oldCall.collation,
         aggFunction.inferReturnType(binding),
         null);
@@ -373,8 +375,10 @@ public class AggregateReduceFunctionsRule
             oldCall.isDistinct(),
             oldCall.isApproximate(),
             oldCall.ignoreNulls(),
+            oldCall.rexList,
             oldCall.getArgList(),
             oldCall.filterArg,
+            oldCall.distinctKeys,
             oldCall.collation,
             oldAggRel.getGroupCount(),
             oldAggRel.getInput(),
@@ -385,8 +389,10 @@ public class AggregateReduceFunctionsRule
             oldCall.isDistinct(),
             oldCall.isApproximate(),
             oldCall.ignoreNulls(),
+            oldCall.rexList,
             oldCall.getArgList(),
             oldCall.filterArg,
+            oldCall.distinctKeys,
             oldCall.collation,
             oldAggRel.getGroupCount(),
             oldAggRel.getInput(),
@@ -433,8 +439,8 @@ public class AggregateReduceFunctionsRule
 
     final AggregateCall sumZeroCall =
         AggregateCall.create(SqlStdOperatorTable.SUM0, oldCall.isDistinct(),
-            oldCall.isApproximate(), oldCall.ignoreNulls(),
-            oldCall.getArgList(), oldCall.filterArg,
+            oldCall.isApproximate(), oldCall.ignoreNulls(), oldCall.rexList,
+            oldCall.getArgList(), oldCall.filterArg, oldCall.distinctKeys,
             oldCall.collation, oldAggRel.getGroupCount(), oldAggRel.getInput(),
             null, oldCall.name);
     final AggregateCall countCall =
@@ -442,8 +448,10 @@ public class AggregateReduceFunctionsRule
             oldCall.isDistinct(),
             oldCall.isApproximate(),
             oldCall.ignoreNulls(),
+            oldCall.rexList,
             oldCall.getArgList(),
             oldCall.filterArg,
+            oldCall.distinctKeys,
             oldCall.collation,
             oldAggRel.getGroupCount(),
             oldAggRel,
@@ -531,8 +539,10 @@ public class AggregateReduceFunctionsRule
             oldCall.isDistinct(),
             oldCall.isApproximate(),
             oldCall.ignoreNulls(),
+            oldCall.rexList,
             ImmutableIntList.of(argOrdinal),
             oldCall.filterArg,
+            oldCall.distinctKeys,
             oldCall.collation,
             oldAggRel.getGroupCount(),
             oldAggRel.getInput(),
@@ -555,8 +565,10 @@ public class AggregateReduceFunctionsRule
             oldCall.isDistinct(),
             oldCall.isApproximate(),
             oldCall.ignoreNulls(),
+            oldCall.rexList,
             oldCall.getArgList(),
             oldCall.filterArg,
+            oldCall.distinctKeys,
             oldCall.collation,
             oldAggRel.getGroupCount(),
             oldAggRel,
@@ -570,8 +582,8 @@ public class AggregateReduceFunctionsRule
             aggCallMapping,
             ImmutableList.of(argOrdinalType));
 
-    final RexNode div = divide(biased, rexBuilder, sumArgSquared, sumSquaredArg,
-        countArg);
+    final RexNode div =
+        divide(biased, rexBuilder, sumArgSquared, sumSquaredArg, countArg);
 
     final RexNode result;
     if (sqrt) {
@@ -600,8 +612,10 @@ public class AggregateReduceFunctionsRule
             oldCall.isDistinct(),
             oldCall.isApproximate(),
             oldCall.ignoreNulls(),
+            oldCall.rexList,
             ImmutableIntList.of(argOrdinal),
             filterArg,
+            oldCall.distinctKeys,
             oldCall.collation,
             oldAggRel.getGroupCount(),
             oldAggRel.getInput(),
@@ -645,8 +659,10 @@ public class AggregateReduceFunctionsRule
             oldCall.isDistinct(),
             oldCall.isApproximate(),
             oldCall.ignoreNulls(),
+            oldCall.rexList,
             argOrdinals,
             filterArg,
+            oldCall.distinctKeys,
             oldCall.collation,
             oldAggRel.getGroupCount(),
             oldAggRel,

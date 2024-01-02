@@ -208,6 +208,7 @@ public class SqlLiteral extends SqlNode {
     case TIME:
       return value instanceof TimeString;
     case TIMESTAMP:
+    case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       return value instanceof TimestampString;
     case TIMESTAMP_WITH_TIME_ZONE:
       return value instanceof TimestampWithTimeZoneString;
@@ -887,10 +888,10 @@ public class SqlLiteral extends SqlNode {
 
   /** Creates a TIMESTAMP or TIMESTAMP WITH LOCAL TIME ZONE literal. */
   public static SqlTimestampLiteral createTimestamp(
-          SqlTypeName typeName,
-          TimestampString ts,
-          int precision,
-          SqlParserPos pos) {
+      SqlTypeName typeName,
+      TimestampString ts,
+      int precision,
+      SqlParserPos pos) {
     return new SqlTimestampLiteral(ts, precision, typeName, pos);
   }
 

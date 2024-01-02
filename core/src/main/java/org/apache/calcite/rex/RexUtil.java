@@ -620,14 +620,14 @@ public class RexUtil {
   public static <C extends Comparable<C>> RexNode sargRef(
       RexBuilder rexBuilder, RexNode ref, Sarg<C> sarg, RelDataType type) {
     if (sarg.isAll()) {
-      if (sarg.containsNull) {
+      if (sarg.nullAs.toBoolean()) {
         return rexBuilder.makeLiteral(true);
       } else {
         return rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, ref);
       }
     }
     final List<RexNode> orList = new ArrayList<>();
-    if (sarg.containsNull) {
+    if (sarg.nullAs.toBoolean()) {
       orList.add(rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, ref));
     }
     if (sarg.isPoints()) {

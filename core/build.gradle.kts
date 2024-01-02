@@ -39,6 +39,9 @@ val testMysql by configurations.creating(integrationTestConfig)
 dependencies {
     api(project(":linq4j"))
 
+    api("org.locationtech.jts:jts-core")
+    api("org.locationtech.jts.io:jts-io-common")
+    api("org.locationtech.proj4j:proj4j")
     api("com.fasterxml.jackson.core:jackson-annotations")
     api("org.apache.calcite.avatica:avatica-core")
     api("org.apiguardian:apiguardian-api")
@@ -56,12 +59,20 @@ dependencies {
     implementation("net.hydromatic:aggdesigner-algorithm")
     implementation("org.apache.commons:commons-dbcp2")
     implementation("org.apache.commons:commons-lang3")
+    implementation("org.apache.commons:commons-math3")
+    implementation("org.apache.commons:commons-text")
     implementation("org.checkerframework:checker")
     implementation("org.checkerframework:checker-qual")
     implementation("commons-io:commons-io")
     implementation("org.codehaus.janino:commons-compiler")
     implementation("org.codehaus.janino:janino")
     implementation("org.slf4j:slf4j-api")
+//    annotationProcessor("org.immutables:value")
+//    compileOnly("org.immutables:value-annotations")
+//    compileOnly("com.google.code.findbugs:jsr305")
+//    testAnnotationProcessor("org.immutables:value")
+//    testCompileOnly("org.immutables:value-annotations")
+//    testCompileOnly("com.google.code.findbugs:jsr305")
 
     testH2("com.h2database:h2")
     testMysql("mysql:mysql-connector-java")
@@ -69,6 +80,8 @@ dependencies {
     testPostgresql("org.postgresql:postgresql")
 
     testImplementation("net.hydromatic:foodmart-data-hsqldb")
+//    testImplementation("commons-lang:commons-lang")
+//    testImplementation("net.bytebuddy:byte-buddy")
     testImplementation("net.hydromatic:foodmart-queries")
     testImplementation("net.hydromatic:quidem")
     testImplementation("net.hydromatic:scott-data-hsqldb")
@@ -168,6 +181,11 @@ val javaCCMain by tasks.registering(org.apache.calcite.buildtools.javacc.JavaCCT
     packageName.set("org.apache.calcite.sql.parser.impl")
 }
 
+// tasks.compileKotlin {
+//    dependsOn(versionClass)
+//    dependsOn(javaCCMain)
+// }
+
 val fmppTest by tasks.registering(org.apache.calcite.buildtools.fmpp.FmppTask::class) {
     config.set(file("src/test/codegen/config.fmpp"))
     templates.set(file("src/main/codegen/templates"))
@@ -182,6 +200,22 @@ val javaCCTest by tasks.registering(org.apache.calcite.buildtools.javacc.JavaCCT
     packageName.set("org.apache.calcite.sql.parser.parserextensiontesting")
 }
 
+// tasks.compileTestKotlin {
+//    dependsOn(javaCCTest)
+// }
+//
+// tasks.withType<Checkstyle>().configureEach {
+//    mustRunAfter(versionClass)
+//    mustRunAfter(javaCCMain)
+//    mustRunAfter(javaCCTest)
+// }
+
+// tasks.withType<AutostyleTask>().configureEach {
+//    mustRunAfter(versionClass)
+//    mustRunAfter(javaCCMain)
+//    mustRunAfter(javaCCTest)
+// }
+
 ide {
     fun generatedSource(javacc: TaskProvider<org.apache.calcite.buildtools.javacc.JavaCCTask>, sourceSet: String) =
         generatedJavaSources(javacc.get(), javacc.get().output.get().asFile, sourceSets.named(sourceSet))
@@ -189,6 +223,52 @@ ide {
     generatedSource(javaCCMain, "main")
     generatedSource(javaCCTest, "test")
 }
+
+// fun JavaCompile.configureAnnotationSet(sourceSet: SourceSet) {
+//    source = sourceSet.java
+//    classpath = sourceSet.compileClasspath
+//    options.compilerArgs.add("-proc:only")
+//    org.gradle.api.plugins.internal.JvmPluginsHelper.configureAnnotationProcessorPath(sourceSet, sourceSet.java, options, project)
+//    destinationDirectory.set(temporaryDir)
+//
+//    // only if we aren't running java compilation, since doing twice fails (in some places)
+//    onlyIf { !project.gradle.taskGraph.hasTask(sourceSet.getCompileTaskName("java")) }
+// }
+//
+// val annotationProcessorMain by tasks.registering(JavaCompile::class) {
+//    configureAnnotationSet(sourceSets.main.get())
+// }
+//
+// val annotationProcessorTest by tasks.registering(JavaCompile::class) {
+//    val kotlinTestCompile = tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>()
+//        .getByName("compileTestKotlin")
+//
+//    dependsOn(javaCCTest, kotlinTestCompile)
+//
+//    configureAnnotationSet(sourceSets.test.get())
+//    classpath += files(kotlinTestCompile.destinationDirectory.get())
+//
+//    // only if we aren't running compileJavaTest, since doing twice fails.
+//    onlyIf { tasks.findByPath("compileTestJava")?.enabled != true }
+// }
+
+// ide {
+//    // generate annotation processed files on project import/sync.
+//    fun addSync(compile: TaskProvider<JavaCompile>) {
+//        project.rootProject.configure<org.gradle.plugins.ide.idea.model.IdeaModel> {
+//            project {
+//                settings {
+//                    taskTriggers {
+//                        afterSync(compile.get())
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//    addSync(annotationProcessorMain)
+//    addSync(annotationProcessorTest)
+// }
 
 val integTestAll by tasks.registering() {
     group = LifecycleBasePlugin.VERIFICATION_GROUP

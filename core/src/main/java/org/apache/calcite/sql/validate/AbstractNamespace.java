@@ -150,11 +150,6 @@ abstract class AbstractNamespace implements SqlValidatorNamespace {
         name);
   }
 
-  @Override public boolean fieldExists(String name) {
-    final RelDataType rowType = getRowType();
-    return validator.catalogReader.nameMatcher().field(rowType, name) != null;
-  }
-
   @Override public @Nullable RelDataTypeField field(String name) {
     final RelDataType rowType = getRowType();
     return validator.catalogReader.nameMatcher().field(rowType, name);
@@ -225,9 +220,7 @@ abstract class AbstractNamespace implements SqlValidatorNamespace {
     }
     return validator.getTypeFactory().builder()
         .add(
-                validator.deriveAlias(
-                    Objects.requireNonNull(unnest, "unnest"),
-                    0),
+            SqlValidatorUtil.alias(Objects.requireNonNull(unnest, "unnest"), 0),
             type)
         .build();
   }
