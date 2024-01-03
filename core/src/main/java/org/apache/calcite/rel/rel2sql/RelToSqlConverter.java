@@ -22,13 +22,10 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEDefinationTraitDef;
-import org.apache.calcite.plan.CTEScopeTrait;
-import org.apache.calcite.plan.CTEScopeTraitDef;
 import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
-import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -486,7 +483,11 @@ public class RelToSqlConverter extends SqlImplementor
       }
       result = builder.result();
     }
-    return updateResult(e, result);
+    if (CTERelToSqlUtil.isCteScopeTrait(e.getTraitSet())
+        || CTERelToSqlUtil.isCteDefinationTrait(e.getTraitSet())) {
+      return updateCTEResult(e, result);
+    }
+    return result;
   }
 
   /**
@@ -568,10 +569,14 @@ public class RelToSqlConverter extends SqlImplementor
       }
     }
     Result result = builder.result();
-    return updateResult(e, result);
+    if (CTERelToSqlUtil.isCteScopeTrait(e.getTraitSet())
+        || CTERelToSqlUtil.isCteDefinationTrait(e.getTraitSet())) {
+      return updateCTEResult(e, result);
+    }
+    return result;
   }
 
-  Result updateResult(Aggregate e, Result x) {
+  /*Result updateResult(Aggregate e, Result x) {
     // CTE Scope Trait
     if (isCteScopeTrait(e.getTraitSet())) {
       List<SqlNode> sqlWithItemNodes = fetchSqlWithItemNodes(x.getNode(), new ArrayList<>());
@@ -597,7 +602,7 @@ public class RelToSqlConverter extends SqlImplementor
       x = this.result(sqlWithItem, x.clauses, e, aliasesMap);
     }
     return x;
-  }
+  }*/
 
   private Builder visitAggregate(Aggregate e, List<Integer> groupKeyList,
       Clause... clauses) {
@@ -1002,7 +1007,11 @@ public class RelToSqlConverter extends SqlImplementor
                 Clause.GROUP_BY, Clause.OFFSET, Clause.FETCH);
         offsetFetch(e, builder);
         result = builder.result();
-        return updateResult(e, result);
+        if (CTERelToSqlUtil.isCteScopeTrait(e.getTraitSet())
+            || CTERelToSqlUtil.isCteDefinationTrait(e.getTraitSet())) {
+          return updateCTEResult(e, result);
+        }
+        return result;
       }
     }
     if (e.getInput() instanceof Project) {
@@ -1050,10 +1059,14 @@ public class RelToSqlConverter extends SqlImplementor
     }
     offsetFetch(e, builder);
     result = builder.result();
-    return updateResult(e, result);
+    if (CTERelToSqlUtil.isCteScopeTrait(e.getTraitSet())
+        || CTERelToSqlUtil.isCteDefinationTrait(e.getTraitSet())) {
+      return updateCTEResult(e, result);
+    }
+    return result;
   }
 
-  Result updateResult(Project e, Result result) {
+  /*Result updateResult(Project e, Result result) {
 
     // CTE Scope Trait
     if (isCteScopeTrait(e.getTraitSet())) {
@@ -1080,19 +1093,20 @@ public class RelToSqlConverter extends SqlImplementor
       result = this.result(sqlWithItem, result.clauses, e, aliasesMap);
     }
     return result;
-  }
+  }*/
 
-  Result updateResult(Sort e, Result result) {
+  Result updateCTEResult(RelNode e, Result result) {
 
     // CTE Scope Trait
-    if (isCteScopeTrait(e.getTraitSet())) {
-      List<SqlNode> sqlWithItemNodes = fetchSqlWithItemNodes(result.node, new ArrayList<>());
+    if (CTERelToSqlUtil.isCteScopeTrait(e.getTraitSet())) {
+      List<SqlNode> sqlWithItemNodes = CTERelToSqlUtil.fetchSqlWithItemNodes(result.node,
+          new ArrayList<>());
       SqlNodeList sqlNodeList = new SqlNodeList(sqlWithItemNodes, POS);
 
       SqlNode sqlWithNode = updateSqlWithNode(result);
       final SqlWith sqlWith = new SqlWith(POS, sqlNodeList, sqlWithNode);
       result = this.result(sqlWith, ImmutableList.of(), e, null);
-    } else if (isCteDefinationTrait(e.getTraitSet())) {
+    } else if (CTERelToSqlUtil.isCteDefinationTrait(e.getTraitSet())) {
       //CTE Definition Trait
       RelTrait relDefinationTrait = e.getTraitSet().getTrait(CTEDefinationTraitDef.instance);
       CTEDefinationTrait cteDefinationTrait = (CTEDefinationTrait) relDefinationTrait;
@@ -1418,136 +1432,14 @@ public class RelToSqlConverter extends SqlImplementor
     }
   }
 
-  private List<SqlNode> fetchSqlWithItemNodes(SqlNode sqlSelect, List<SqlNode> sqlNodes) {
-    SqlNode sqlNode = ((SqlSelect) sqlSelect).getFrom();
-    fetchSqlWithItems(sqlNode, sqlNodes);
-    return sqlNodes;
-  }
-
-  private void fetchSqlWithItems(SqlNode sqlNode, List<SqlNode> sqlNodes) {
-    if (sqlNode instanceof SqlSelect) {
-      fetchSqlWithItemNodes(sqlNode, sqlNodes);
-    } else if (sqlNode instanceof SqlBasicCall) {
-      fetchfromSqlBasicCall(sqlNode, sqlNodes);
-    } else if (sqlNode instanceof SqlJoin) {
-      SqlNode leftNode = ((SqlJoin) sqlNode).getLeft();
-      SqlNode rightNode = ((SqlJoin) sqlNode).getRight();
-
-      fetchSqlWithItems(leftNode, sqlNodes);
-      fetchSqlWithItems(rightNode, sqlNodes);
-    } else if (sqlNode instanceof SqlWithItem) {
-      fetchFromSqlWithItemNode(sqlNode, sqlNodes);
-    }
-  }
-
-  private void fetchfromSqlBasicCall(SqlNode sqlNode, List<SqlNode> sqlNodes) {
-    SqlNode sqlNodeOPerand = ((SqlBasicCall) sqlNode).operand(0);
-    if (sqlNodeOPerand instanceof SqlSelect) {
-      fetchSqlWithItemNodes(sqlNodeOPerand, sqlNodes);
-    } else if (sqlNodeOPerand instanceof SqlWithItem) {
-      fetchFromSqlWithItemNode(sqlNodeOPerand, sqlNodes);
-    }
-  }
-
-  private void fetchFromSqlWithItemNode(SqlNode sqlWithItem, List<SqlNode> sqlNodes) {
-    fetchSqlWithItems(((SqlWithItem) sqlWithItem).query, sqlNodes);
-    updateSqlNode(((SqlWithItem) sqlWithItem).query);
-    addSqlWithItemNode((SqlWithItem) sqlWithItem, sqlNodes);
-
-  }
-
-  private void addSqlWithItemNode(SqlWithItem sqlWithItem, List<SqlNode> sqlNodes) {
-    if (sqlNodes.isEmpty()) {
-      sqlNodes.add(sqlWithItem);
-    } else {
-      boolean status = false;
-      for (SqlNode sqlWithItemNode : sqlNodes) {
-        if (((SqlWithItem) sqlWithItemNode).name.toString()
-             .equalsIgnoreCase(sqlWithItem.name.toString())) {
-          status = true;
-          break;
-        }
-      }
-      if (!status) {
-        sqlNodes.add(sqlWithItem);
-      }
-
-    }
-  }
-
-  private SqlNode updateSqlWithNode(Result result) {
+  private SqlNode updateSqlWithNode(SqlImplementor.Result result) {
     SqlSelect sqlSelect = null;
     if (result.node instanceof SqlSelect) {
       sqlSelect = (SqlSelect) result.node;
     } else {
       sqlSelect = wrapSelect(result.node);
     }
-    updateSqlNode(sqlSelect);
+    CTERelToSqlUtil.updateSqlNode(sqlSelect);
     return sqlSelect;
-  }
-
-  private void updateSqlNode(SqlNode sqlNode) {
-    if (sqlNode != null) {
-      SqlSelect sqlSelect = (SqlSelect) sqlNode;
-      if (sqlSelect.getFrom() instanceof SqlJoin) {
-        SqlNode leftNode = ((SqlJoin) sqlSelect.getFrom()).getLeft();
-        SqlNode rightNode = ((SqlJoin) sqlSelect.getFrom()).getRight();
-
-        //Update Left Node
-        updateNode(leftNode, sqlSelect);
-        // Update Right Node
-        updateNode(rightNode, sqlSelect);
-
-        //if left and right is join again need recursive call
-      } else if (sqlSelect.getFrom() instanceof SqlBasicCall) {
-        updateNode(sqlSelect.getFrom(), sqlSelect);
-      } else if (sqlSelect.getFrom() instanceof SqlWithItem) {
-        sqlSelect.setFrom(((SqlWithItem) sqlSelect.getFrom()).name);
-      }
-    }
-  }
-
-  private void updateNode(SqlNode sqlNode, SqlSelect selectNode) {
-    if (sqlNode instanceof SqlBasicCall) {
-      if (((SqlBasicCall) sqlNode).operand(0) instanceof SqlSelect) {
-        updateSqlNode(((SqlBasicCall) sqlNode).operand(0));
-      } else if (((SqlBasicCall) sqlNode).operand(0) instanceof SqlWithItem) {
-        SqlIdentifier identifier = fetchCTEIdentifier(sqlNode, selectNode);
-        if (identifier != null) {
-          ((SqlBasicCall) sqlNode).setOperand(0, identifier);
-        }
-      }
-    }
-  }
-
-  private SqlIdentifier fetchCTEIdentifier(SqlNode sqlNode, SqlSelect selectNode) {
-    SqlIdentifier name = null;
-    if ("As".equalsIgnoreCase((((SqlBasicCall) sqlNode).getOperator()).getName())
-        && ((SqlBasicCall) sqlNode).operand(0) instanceof SqlWithItem) {
-      name = ((SqlWithItem) ((SqlBasicCall) sqlNode).operand(0)).name;
-    }
-    return name;
-  }
-
-  private boolean isCteScopeTrait(RelTraitSet relTraitSet) {
-    boolean isCteScopeTrait = false;
-    RelTrait relTrait = relTraitSet.getTrait(CTEScopeTraitDef.instance);
-    if (relTrait != null && relTrait instanceof CTEScopeTrait) {
-      if (((CTEScopeTrait) relTrait).isCTEScope()) {
-        isCteScopeTrait = true;
-      }
-    }
-    return isCteScopeTrait;
-  }
-
-  private boolean isCteDefinationTrait(RelTraitSet relTraitSet) {
-    boolean isCteDefinationTrait = false;
-    RelTrait relTrait = relTraitSet.getTrait(CTEDefinationTraitDef.instance);
-    if (relTrait != null && relTrait instanceof CTEDefinationTrait) {
-      if (((CTEDefinationTrait) relTrait).isCTEDefination()) {
-        isCteDefinationTrait = true;
-      }
-    }
-    return isCteDefinationTrait;
   }
 }
