@@ -576,34 +576,6 @@ public class RelToSqlConverter extends SqlImplementor
     return result;
   }
 
-  /*Result updateResult(Aggregate e, Result x) {
-    // CTE Scope Trait
-    if (isCteScopeTrait(e.getTraitSet())) {
-      List<SqlNode> sqlWithItemNodes = fetchSqlWithItemNodes(x.getNode(), new ArrayList<>());
-      SqlNodeList sqlNodeList = new SqlNodeList(sqlWithItemNodes, POS);
-
-      SqlNode sqlWithNode = updateSqlWithNode(x);
-      final SqlWith sqlWith = new SqlWith(POS, sqlNodeList, sqlWithNode);
-      x = this.result(sqlWith, ImmutableList.of(), e, null);
-    } else if (isCteDefinationTrait(e.getTraitSet())) {
-      //CTE Definition Trait
-      RelTrait relDefinationTrait = e.getTraitSet().getTrait(CTEDefinationTraitDef.instance);
-      CTEDefinationTrait cteDefinationTrait = (CTEDefinationTrait) relDefinationTrait;
-      SqlIdentifier withName = new SqlIdentifier(cteDefinationTrait.getCteName(), POS);
-
-      SqlNodeList columnList = identifierList(new ArrayList<>());
-      SqlWithItem sqlWithItem = new SqlWithItem(POS, withName, columnList, x.node);
-
-      Map<String, RelDataType> aliasesMap = new HashMap<>();
-      List<RelDataTypeField> fieldList = e.getRowType().getFieldList();
-      RelDataTypeField relDataTypeField = fieldList.get(0);
-      aliasesMap.put(relDataTypeField.getName(), e.getRowType());
-
-      x = this.result(sqlWithItem, x.clauses, e, aliasesMap);
-    }
-    return x;
-  }*/
-
   private Builder visitAggregate(Aggregate e, List<Integer> groupKeyList,
       Clause... clauses) {
     // "select a, b, sum(x) from ( ... ) group by a, b"
@@ -1065,35 +1037,6 @@ public class RelToSqlConverter extends SqlImplementor
     }
     return result;
   }
-
-  /*Result updateResult(Project e, Result result) {
-
-    // CTE Scope Trait
-    if (isCteScopeTrait(e.getTraitSet())) {
-      List<SqlNode> sqlWithItemNodes = fetchSqlWithItemNodes(result.node, new ArrayList<>());
-      SqlNodeList sqlNodeList = new SqlNodeList(sqlWithItemNodes, POS);
-
-      SqlNode sqlWithNode = updateSqlWithNode(result);
-      final SqlWith sqlWith = new SqlWith(POS, sqlNodeList, sqlWithNode);
-      result = this.result(sqlWith, ImmutableList.of(), e, null);
-    } else if (isCteDefinationTrait(e.getTraitSet())) {
-      //CTE Definition Trait
-      RelTrait relDefinationTrait = e.getTraitSet().getTrait(CTEDefinationTraitDef.instance);
-      CTEDefinationTrait cteDefinationTrait = (CTEDefinationTrait) relDefinationTrait;
-      SqlIdentifier withName = new SqlIdentifier(cteDefinationTrait.getCteName(), POS);
-
-      SqlNodeList columnList = identifierList(new ArrayList<>());
-      SqlWithItem sqlWithItem = new SqlWithItem(POS, withName, columnList, result.node);
-
-      Map<String, RelDataType> aliasesMap = new HashMap<>();
-      List<RelDataTypeField> fieldList = e.getRowType().getFieldList();
-      RelDataTypeField relDataTypeField = fieldList.get(0);
-      aliasesMap.put(relDataTypeField.getName(), e.getRowType());
-
-      result = this.result(sqlWithItem, result.clauses, e, aliasesMap);
-    }
-    return result;
-  }*/
 
   Result updateCTEResult(RelNode e, Result result) {
 
