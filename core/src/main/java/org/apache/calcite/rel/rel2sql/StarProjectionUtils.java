@@ -99,18 +99,15 @@ public class StarProjectionUtils {
   }
 
   /**
-   * It is to check if Projected Field Names are same as actual field names
-   * currently, if query contains aliases which is same as column name,
-   * we are optimising that scenario also to "*", because of wrong aliases
-   * getting generated as shown in below rel
-   * query -> SELECT full_name, * , management_role
-   *           FROM foodmart.employee
-   * Rel - LogicalProject(FULL_NAME=[$1], EMPLOYEE_ID=[$0], FULL_NAME2=[$1],
-   *      FIRST_NAME=[$2], LAST_NAME=[$3], POSITION_ID=[$4], POSITION_TITLE=[$5],
-   *      STORE_ID=[$6], DEPARTMENT_ID=[$7], BIRTH_DATE=[$8], HIRE_DATE=[$9],
-   *      END_DATE=[$10], SALARY=[$11], SUPERVISOR_ID=[$12], EDUCATION_LEVEL=[$13],
-   *      GENDER=[$14], MARITAL_STATUS=[$15], MANAGEMENT_ROLE=[$16], MANAGEMENT_ROLE18=[$16])
-   *     LogicalTableScan(table=[[defaultdatabase, FOODMART, EMPLOYEE]])
+   * This method evaluates whether the projected column names matches the actual column names in a table.
+   * Eg:
+   * query -> select warehouse_class_id as id, description as description
+   *           from warehouse_class
+   * Rel - LogicalProject(id=[$0], description=[$1])
+   *          JdbcTableScan(table=[[foodmart, warehouse_class]])
+   * Actual field names in warehouse_class table are WAREHOUSE_CLASS_ID, DESCRIPTION
+   * whereas projected field names are id, description.
+   * In this case, we will not replace the sublist with (*)
    * @param projectedColumnsNames contains projected column names
    * @param actualColumnNames contains actual column names in a table
    * @param subListBeginEnd map which contains starting and ending index of *
@@ -129,10 +126,10 @@ public class StarProjectionUtils {
   }
 
   /**
-   * if projectedColumnNames contains EMPNO1, EMP_Name2, POSITION1 as aliases
-   * we will convert it to List
+   * if projectedColumnNames contains EMPNO1, EMP_NAME2, POSITION1 as aliases
+   * we will trim the numeric suffix from the column names
    * @param projectedColumnsNames contains projected column names
-   * @return List<String> containing EMPNO, EMP_Name, POSITION
+   * @return List<String> containing EMPNO, EMP_NAME, POSITION
    */
   private static List<String> removeNumericSuffixFromColumns(List<String> projectedColumnsNames) {
      return projectedColumnsNames.stream()
@@ -141,9 +138,9 @@ public class StarProjectionUtils {
   }
   /**
    * Below method evaluates whether the projections in the given project rel can be combined or not.
-   * We avoid combining projections if
-   * i) projection list is less than the fieldCount of input rel
-   * ii) project contains window function [Row_Number over- CALCITE-3876]
+   * We combine projections if
+   * i) RexInputRef count in projection list is greater than or equal to the field count of input
+   * ii) project does not contain window function [Row_Number over- CALCITE-3876] or case statement
    * @param projects - list of project rexNodes
    * @param input    - underlying input rel of projection
    * @return boolean
@@ -198,7 +195,8 @@ public class StarProjectionUtils {
             it -> it instanceof SqlIdentifier
                 && it.toString().equals("*")));
   }
-  protected static boolean starOptimisationCase(SqlNodeList selectList){
+
+  protected static boolean containsStarInSelectList(SqlNodeList selectList){
     return selectList.stream().anyMatch(item -> item.toString().equals("*"));
   }
 }

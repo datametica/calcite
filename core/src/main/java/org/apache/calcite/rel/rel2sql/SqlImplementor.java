@@ -536,7 +536,7 @@ public abstract class SqlImplementor {
 
     case SELECT:
       final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
-      if (selectList == null || StarProjectionUtils.starOptimisationCase(selectList)) {
+      if (selectList == null || StarProjectionUtils.containsStarInSelectList(selectList)) {
         return rowType;
       }
       builder = rel.getCluster().getTypeFactory().builder();
