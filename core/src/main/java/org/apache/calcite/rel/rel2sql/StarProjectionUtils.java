@@ -69,10 +69,7 @@ public class StarProjectionUtils {
           List<RexNode> sublist = projects.subList(start, end + 1);
           //if given sublist has ordinals same as the underlying input
           if (sublist.stream().allMatch(p -> p instanceof RexInputRef)
-              && sublist.stream().map(p -> ((RexInputRef) p).getIndex())
-              .collect(Collectors.toList()).equals(
-                  IntStream.range(0, input.getRowType().getFieldCount()).boxed().
-                      collect(Collectors.toList()))) {
+              && isSubListOrdinalsSameAsInput(input, sublist)) {
             subListBeginEnd.put(start, end);
             start = end;
             break;
@@ -83,18 +80,43 @@ public class StarProjectionUtils {
     return isFieldNameSame(e, subListBeginEnd) ? subListBeginEnd : emptyMap;
   }
 
+  private static boolean isSubListOrdinalsSameAsInput(RelNode input, List<RexNode> sublist) {
+    return sublist.stream().map(p -> ((RexInputRef) p).getIndex())
+        .collect(Collectors.toList()).equals(
+            IntStream.range(0, input.getRowType().getFieldCount()).boxed().
+                collect(Collectors.toList()));
+  }
+
   private static boolean isFieldNameSame(Project e, Map<Integer, Integer> subListBeginEnd) {
-    List<String> projectedColumnsNames = e.getRowType().getFieldNames();
+    List<String> projectedColumnNames = e.getRowType().getFieldNames();
     RelNode projectRelNode = e;
     // This is to iterate till TableScan or Join rel is obtained
     while (!projectRelNode.getInputs().isEmpty()) {
       projectRelNode = projectRelNode.getInput(0);
     }
     List<String> actualColumnNames = projectRelNode.getRowType().getFieldNames();
-    return projectionContainsFieldNames(projectedColumnsNames, actualColumnNames, subListBeginEnd);
+    return projectedColumnNamesMatchesActualFieldNames(projectedColumnNames, actualColumnNames, subListBeginEnd);
   }
 
-  private static boolean projectionContainsFieldNames(List<String> projectedColumnsNames,
+  /**
+   * It is to check if Projected Field Names are same as actual field names
+   * currently, if query contains aliases which is same as column name,
+   * we are optimising that scenario also to "*", because of wrong aliases
+   * getting generated as shown in below rel
+   * query -> SELECT full_name, * , management_role
+   *           FROM foodmart.employee
+   * Rel - LogicalProject(FULL_NAME=[$1], EMPLOYEE_ID=[$0], FULL_NAME2=[$1],
+   *      FIRST_NAME=[$2], LAST_NAME=[$3], POSITION_ID=[$4], POSITION_TITLE=[$5],
+   *      STORE_ID=[$6], DEPARTMENT_ID=[$7], BIRTH_DATE=[$8], HIRE_DATE=[$9],
+   *      END_DATE=[$10], SALARY=[$11], SUPERVISOR_ID=[$12], EDUCATION_LEVEL=[$13],
+   *      GENDER=[$14], MARITAL_STATUS=[$15], MANAGEMENT_ROLE=[$16], MANAGEMENT_ROLE18=[$16])
+   *     LogicalTableScan(table=[[defaultdatabase, FOODMART, EMPLOYEE]])
+   * @param projectedColumnsNames contains projected column names
+   * @param actualColumnNames contains actual column names in a table
+   * @param subListBeginEnd map which contains starting and ending index of *
+   * @return boolean
+   */
+  private static boolean projectedColumnNamesMatchesActualFieldNames(List<String> projectedColumnsNames,
       List<String> actualColumnNames, Map<Integer, Integer> subListBeginEnd) {
     int startingIndex = 0;
     int endingIndex = 0;
@@ -102,30 +124,29 @@ public class StarProjectionUtils {
       startingIndex = entry.getKey();
       endingIndex = entry.getValue();
     }
-    return modifiedProjectedColumns(projectedColumnsNames).subList(startingIndex,
+    return removeNumericSuffixFromColumns(projectedColumnsNames).subList(startingIndex,
         endingIndex + 1).equals(actualColumnNames);
   }
 
-  private static List<String> modifiedProjectedColumns(List<String> projectedColumnsNames) {
-    List<String> modifiedProjectionColumn = null;
-    modifiedProjectionColumn = projectedColumnsNames.stream()
+  /**
+   * if projectedColumnNames contains EMPNO1, EMP_Name2, POSITION1 as aliases
+   * we will convert it to List
+   * @param projectedColumnsNames contains projected column names
+   * @return List<String> containing EMPNO, EMP_Name, POSITION
+   */
+  private static List<String> removeNumericSuffixFromColumns(List<String> projectedColumnsNames) {
+     return projectedColumnsNames.stream()
         .map(s -> s.replaceAll("\\d*$", ""))
         .collect(Collectors.toList());
-    return modifiedProjectionColumn;
   }
   /**
    * Below method evaluates whether the projections in the given project rel can be combined or not.
    * We avoid combining projections if
    * i) projection list is less than the fieldCount of input rel
    * ii) project contains window function [Row_Number over- CALCITE-3876]
-   * iii) if underlying input rel is instance of Filter or Aggregate
-   * iv) if  project contains case rexCall
-   * Scope -> ii ,iii and iv use cases needs to be analysed properly ,
-   * to see if we actually need to skip these scenarios straight away
-   *
    * @param projects - list of project rexNodes
    * @param input    - underlying input rel of projection
-   * @return
+   * @return boolean
    */
   private static boolean canCombineProjects(List<RexNode> projects, RelNode input) {
     return (projects.stream().filter(p -> p instanceof RexInputRef).
@@ -168,7 +189,7 @@ public class StarProjectionUtils {
     selectList.add(node);
   }
 
-  protected static boolean hasStarInProjection(int ordinal, SqlNodeList selectList,
+  protected static boolean hasOptimizedStarInProjection(int ordinal, SqlNodeList selectList,
       List<SqlNode> originalList) {
     return (ordinal > selectList.size() - 1)
         || ((originalList.size() > selectList.size())
@@ -176,5 +197,8 @@ public class StarProjectionUtils {
         anyMatch(
             it -> it instanceof SqlIdentifier
                 && it.toString().equals("*")));
+  }
+  protected static boolean starOptimisationCase(SqlNodeList selectList){
+    return selectList.stream().anyMatch(item -> item.toString().equals("*"));
   }
 }
