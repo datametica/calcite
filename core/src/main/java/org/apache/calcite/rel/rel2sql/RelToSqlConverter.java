@@ -464,19 +464,26 @@ public class RelToSqlConverter extends SqlImplementor
       if ((!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
         final List<SqlNode> selectList = new ArrayList<>();
-        for (RexNode ref : e.getProjects()) {
-          SqlNode sqlExpr = builder.context.toSql(null, ref);
-          RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
+        if (!StarProjectionUtils.identifyStarProjectionSublistIndices(
+            e.getProjects(), e.getInput(), e).isEmpty()) {
+          buildOptimizedSelectList(e, selectList, builder);
+          originalList.clear();
+          populateOriginalList(e, builder);
+        } else {
+          for (RexNode ref : e.getProjects()) {
+            SqlNode sqlExpr = builder.context.toSql(null, ref);
+            RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
-          if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
-            sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
-          }
+            if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
+              sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
+            }
 
-          if (SqlUtil.isNullLiteral(sqlExpr, false)
-              && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
-            sqlExpr = castNullType(sqlExpr, targetField.getType());
+            if (SqlUtil.isNullLiteral(sqlExpr, false)
+                && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
+              sqlExpr = castNullType(sqlExpr, targetField.getType());
+            }
+            addSelect(selectList, sqlExpr, e.getRowType());
           }
-          addSelect(selectList, sqlExpr, e.getRowType());
         }
 
         builder.setSelect(new SqlNodeList(selectList, POS));
@@ -488,6 +495,23 @@ public class RelToSqlConverter extends SqlImplementor
       return updateCTEResult(e, result);
     }
     return result;
+  }
+
+  private void buildOptimizedSelectList(Project e, List<SqlNode> selectList, Builder builder) {
+    Map<Integer, Integer> starProjectionSublistIndices = StarProjectionUtils.
+        identifyStarProjectionSublistIndices(e.getProjects(), e.getInput(), e);
+    StarProjectionUtils starProjectionUtils = new StarProjectionUtils(this);
+    starProjectionUtils.buildOptimizedSelectList(e,
+        starProjectionSublistIndices, selectList, builder);
+  }
+
+  private void populateOriginalList(Project e, Builder builder) {
+    for (RexNode ref : e.getProjects()) {
+      SqlNode sqlExpr = builder.context.toSql(null, ref);
+      if (originalList.size() < e.getRowType().getFieldCount()) {
+        addSelect(originalList, sqlExpr, e.getRowType());
+      }
+    }
   }
 
   /**
@@ -742,7 +766,10 @@ public class RelToSqlConverter extends SqlImplementor
     if (builder.context.field(key).getKind() == SqlKind.LITERAL
         && dialect.getConformance().isGroupByOrdinal()) {
       if (builder.select.getSelectList() != null) {
-        Optional<SqlNode> aliasNode = getAliasSqlNode(builder.select.getSelectList().get(key));
+        SqlNodeList selectList = builder.select.getSelectList();
+        final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(key, selectList,
+            originalList) ? originalList.get(key) : selectList.get(key);
+        Optional<SqlNode> aliasNode = getAliasSqlNode(selectItem);
         return !aliasNode.isPresent();
       }
       return true;

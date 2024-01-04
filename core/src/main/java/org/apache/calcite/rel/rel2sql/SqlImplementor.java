@@ -160,6 +160,7 @@ public abstract class SqlImplementor {
   protected final Set<String> aliasSet = new LinkedHashSet<>();
   protected final Map<String, SqlNode> ordinalMap = new HashMap<>();
 
+  protected final List<SqlNode> originalList = new ArrayList<>();
   protected final Map<CorrelationId, Context> correlTableMap = new HashMap<>();
   protected boolean isTableNameColumnNameIdentical = false;
 
@@ -535,7 +536,7 @@ public abstract class SqlImplementor {
 
     case SELECT:
       final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
-      if (selectList == null) {
+      if (selectList == null || StarProjectionUtils.containsStarInSelectList(selectList)) {
         return rowType;
       }
       builder = rel.getCluster().getTypeFactory().builder();
@@ -1836,7 +1837,8 @@ public abstract class SqlImplementor {
           }
 
           @Override public SqlNode field(int ordinal) {
-            final SqlNode selectItem = selectList.get(ordinal);
+            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(ordinal, selectList,
+                originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
             switch (selectItem.getKind()) {
             case AS:
               final SqlCall asCall = (SqlCall) selectItem;
@@ -1856,7 +1858,8 @@ public abstract class SqlImplementor {
           }
 
           public SqlNode field(int ordinal, boolean useAlias) {
-            final SqlNode selectItem = selectList.get(ordinal);
+            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(ordinal, selectList,
+                originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
             switch (selectItem.getKind()) {
             case AS:
               if (useAlias) {
@@ -1939,9 +1942,12 @@ public abstract class SqlImplementor {
             aggregatesArgs.addAll(aggregateCall.getArgList());
           }
           for (int aggregatesArg : aggregatesArgs) {
-            if (selectList.get(aggregatesArg) instanceof SqlBasicCall) {
+            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(aggregatesArg,
+                selectList,
+                originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
+            if (selectItem instanceof SqlBasicCall) {
               final SqlBasicCall call =
-                  (SqlBasicCall) selectList.get(aggregatesArg);
+                  (SqlBasicCall) selectItem;
               present = hasAnalyticalFunction(call);
               if (!present) {
                 present = hasAnalyticalFunctionInWhenClauseOfCase(call);
@@ -2317,9 +2323,12 @@ public abstract class SqlImplementor {
             aggregatesArgs.addAll(aggregateCall.getArgList());
           }
           for (int aggregatesArg : aggregatesArgs) {
-            if (selectList.get(aggregatesArg) instanceof SqlBasicCall) {
+            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(aggregatesArg,
+                selectList,
+                originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
+            if (selectItem instanceof SqlBasicCall) {
               final SqlBasicCall call =
-                  (SqlBasicCall) selectList.get(aggregatesArg);
+                  (SqlBasicCall) selectItem;
               for (SqlNode operand : call.getOperands()) {
                 if (operand instanceof SqlCall
                     && ((SqlCall) operand).getOperator() instanceof SqlAggFunction) {
