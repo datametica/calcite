@@ -466,19 +466,9 @@ public class RelToSqlConverter extends SqlImplementor
         final List<SqlNode> selectList = new ArrayList<>();
         if (!StarProjectionUtils.identifyStarProjectionSublistIndices(
             e.getProjects(), e.getInput(), e).isEmpty()) {
-          Map<Integer, Integer> starProjectionSublistIndices = StarProjectionUtils.
-              identifyStarProjectionSublistIndices(e.getProjects(), e.getInput(), e);
-          StarProjectionUtils starProjectionUtils = new StarProjectionUtils(this);
-          starProjectionUtils.buildOptimizedSelectList(e,
-              starProjectionSublistIndices, selectList, builder);
+          buildOptimizedSelectList(e, selectList, builder);
           originalList.clear();
-          for (RexNode ref : e.getProjects()) {
-            SqlNode sqlExpr = builder.context.toSql(null, ref);
-            //ignored the code in between in the actual else clause, check impact and add
-            if (originalList.size() < e.getRowType().getFieldCount()) {
-              addSelect(originalList, sqlExpr, e.getRowType());
-            }
-          }
+          populateOriginalList(e, builder);
         } else {
           for (RexNode ref : e.getProjects()) {
             SqlNode sqlExpr = builder.context.toSql(null, ref);
@@ -506,6 +496,24 @@ public class RelToSqlConverter extends SqlImplementor
     }
     return result;
   }
+
+  private void buildOptimizedSelectList(Project e, List<SqlNode> selectList, Builder builder) {
+    Map<Integer, Integer> starProjectionSublistIndices = StarProjectionUtils.
+        identifyStarProjectionSublistIndices(e.getProjects(), e.getInput(), e);
+    StarProjectionUtils starProjectionUtils = new StarProjectionUtils(this);
+    starProjectionUtils.buildOptimizedSelectList(e,
+        starProjectionSublistIndices, selectList, builder);
+  }
+
+  private void populateOriginalList(Project e, Builder builder) {
+    for (RexNode ref : e.getProjects()) {
+      SqlNode sqlExpr = builder.context.toSql(null, ref);
+      if (originalList.size() < e.getRowType().getFieldCount()) {
+        addSelect(originalList, sqlExpr, e.getRowType());
+      }
+    }
+  }
+
   /**
    * Create {@link SqlUnpivot} type of SqlNode.
    */
@@ -759,7 +767,7 @@ public class RelToSqlConverter extends SqlImplementor
         && dialect.getConformance().isGroupByOrdinal()) {
       if (builder.select.getSelectList() != null) {
         SqlNodeList selectList = builder.select.getSelectList();
-        final SqlNode selectItem = StarProjectionUtils.hasStarInProjection(key, selectList,
+        final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(key, selectList,
             originalList) ? originalList.get(key) : selectList.get(key);
         Optional<SqlNode> aliasNode = getAliasSqlNode(selectItem);
         return !aliasNode.isPresent();
