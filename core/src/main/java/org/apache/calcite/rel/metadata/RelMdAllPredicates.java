@@ -27,6 +27,7 @@ import org.apache.calcite.rel.core.Exchange;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Sample;
 import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableModify;
@@ -96,16 +97,12 @@ public class RelMdAllPredicates
   }
 
   public @Nullable RelOptPredicateList getAllPredicates(HepRelVertex rel, RelMetadataQuery mq) {
-    return mq.getAllPredicates(rel.getCurrentRel());
+    return mq.getAllPredicates(rel.stripped());
   }
 
   public @Nullable RelOptPredicateList getAllPredicates(RelSubset rel,
       RelMetadataQuery mq) {
-    RelNode bestOrOriginal = Util.first(rel.getBest(), rel.getOriginal());
-    if (bestOrOriginal == null) {
-      return null;
-    }
-    return mq.getAllPredicates(bestOrOriginal);
+    return mq.getAllPredicates(rel.stripped());
   }
 
   /**
@@ -347,6 +344,14 @@ public class RelMdAllPredicates
       }
     }
     return newPreds;
+  }
+
+  /**
+   * Extracts predicates for a Sample.
+   */
+  public @Nullable RelOptPredicateList getAllPredicates(Sample sample,
+      RelMetadataQuery mq) {
+    return mq.getAllPredicates(sample.getInput());
   }
 
   /**

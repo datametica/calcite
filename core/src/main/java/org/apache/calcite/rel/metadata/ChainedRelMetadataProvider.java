@@ -114,6 +114,16 @@ public class ChainedRelMetadataProvider implements RelMetadataProvider {
     return builder.build();
   }
 
+  @Override public List<MetadataHandler<?>> handlers(
+      Class<? extends MetadataHandler<?>> handlerClass) {
+    final ImmutableList.Builder<MetadataHandler<?>> builder =
+        ImmutableList.builder();
+    for (RelMetadataProvider provider : providers) {
+      builder.addAll(provider.handlers(handlerClass));
+    }
+    return builder.build();
+  }
+
   /** Creates a chain. */
   public static RelMetadataProvider of(List<RelMetadataProvider> list) {
     return new ChainedRelMetadataProvider(ImmutableList.copyOf(list));

@@ -407,6 +407,10 @@ public class RexLiteral extends RexNode {
     case TINYINT:
     case SMALLINT:
       return SqlTypeName.DECIMAL;
+    case REAL:
+    case FLOAT:
+    case DOUBLE:
+      return SqlTypeName.DOUBLE;
     case VARBINARY:
       return SqlTypeName.BINARY;
     case VARCHAR:

@@ -192,6 +192,11 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
     return provider.handlers(def);
   }
 
+  @Override public List<MetadataHandler<?>> handlers(
+      Class<? extends MetadataHandler<?>> handlerClass) {
+    return provider.handlers(handlerClass);
+  }
+
   private static <M extends Metadata> MetadataHandler<M> load3(
       MetadataDef<M> def, Multimap<Method, MetadataHandler<M>> map,
       ImmutableList<Class<? extends RelNode>> relClasses) {
