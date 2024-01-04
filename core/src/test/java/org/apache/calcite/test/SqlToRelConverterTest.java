@@ -4238,6 +4238,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).trim(true).ok();
   }
 
+  // Need to check whether translated Rel is correct or not
   @Test void testAliasUnnestArrayPlanWithCorrelateFilter() {
     final String sql = "select d.deptno, e, k.empno\n"
         + "from dept_nested_expanded as d CROSS JOIN\n"
