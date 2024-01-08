@@ -85,14 +85,12 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSampleSpec;
 import org.apache.calcite.sql.SqlSelect;
-import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlTableRef;
 import org.apache.calcite.sql.SqlUnpivot;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
-import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlSingleValueAggFunction;
@@ -100,7 +98,6 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
-import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
@@ -390,12 +387,96 @@ public class RelToSqlConverter extends SqlImplementor
       sqlCondition = SqlStdOperatorTable.NOT.createCall(POS, sqlCondition);
     }
     if (sqlSelect.getWhere() != null) {
-      sqlCondition = SqlStdOperatorTable.AND.createCall(POS,
-          sqlSelect.getWhere(),
-          sqlCondition);
+      sqlCondition =
+          SqlStdOperatorTable.AND.createCall(POS, sqlSelect.getWhere(),
+              sqlCondition);
     }
     sqlSelect.setWhere(sqlCondition);
     return result(sqlSelect, leftResult, rightResult);
+  }
+
+  /** Returns whether this join should be unparsed as a {@link JoinType#COMMA}.
+   *
+   * <p>Comma-join is one possible syntax for {@code CROSS JOIN ... ON TRUE},
+   * supported on most but not all databases
+   * (see {@link SqlDialect#emulateJoinTypeForCrossJoin()}).
+   *
+   * <p>For example, the following queries are equivalent:
+   *
+   * <blockquote><pre>{@code
+   * // Comma join
+   * SELECT *
+   * FROM Emp, Dept
+   *
+   * // Cross join
+   * SELECT *
+   * FROM Emp CROSS JOIN Dept
+   *
+   * // Inner join
+   * SELECT *
+   * FROM Emp INNER JOIN Dept ON TRUE
+   * }</pre></blockquote>
+   *
+   * <p>Examples:
+   * <ul>
+   *   <li>{@code FROM (x CROSS JOIN y ON TRUE) CROSS JOIN z ON TRUE}
+   *   is a comma join, because all joins are comma joins;
+   *   <li>{@code FROM (x CROSS JOIN y ON TRUE) CROSS JOIN z ON TRUE}
+   *   would not be a comma join when run on Apache Spark, because Spark does
+   *   not support comma join;
+   *   <li>{@code FROM (x CROSS JOIN y ON TRUE) LEFT JOIN z ON TRUE}
+   *   is not comma join because one of the joins is not INNER;
+   *   <li>{@code FROM (x CROSS JOIN y ON c) CROSS JOIN z ON TRUE}
+   *   is not a comma join because one of the joins is ON TRUE.
+   * </ul>
+   */
+  private boolean isCommaJoin(Join join) {
+    if (!join.getCondition().isAlwaysTrue()) {
+      return false;
+    }
+    if (dialect.emulateJoinTypeForCrossJoin() != JoinType.COMMA) {
+      return false;
+    }
+
+    // Find the topmost enclosing Join. For example, if the tree is
+    //   Join((Join(a, b), Join(c, Join(d, e)))
+    // we get the same topJoin for a, b, c, d and e. Join. Stack is never empty,
+    // and frame.r on the first iteration is always "join".
+    assert !stack.isEmpty();
+    assert stack.element().r == join;
+    Join j = null;
+    for (Frame frame : stack) {
+      j = (Join) frame.r;
+      if (!(frame.parent instanceof Join)) {
+        break;
+      }
+    }
+    final Join topJoin = requireNonNull(j, "top join");
+
+    // Flatten the join tree, using a breadth-first algorithm.
+    // After flattening, the list contains all of the joins that will make up
+    // the FROM clause.
+    final List<Join> flatJoins = new ArrayList<>();
+    flatJoins.add(topJoin);
+    for (int i = 0; i < flatJoins.size();) {
+      final Join j2 = flatJoins.get(i++);
+      if (j2.getLeft() instanceof Join) {
+        flatJoins.add((Join) j2.getLeft());
+      }
+      if (j2.getRight() instanceof Join) {
+        flatJoins.add((Join) j2.getRight());
+      }
+    }
+
+    // If all joins are cross-joins (INNER JOIN ON TRUE), we can use
+    // we can use comma syntax "FROM a, b, c, d, e".
+    for (Join j2 : flatJoins) {
+      if (j2.getJoinType() != JoinRelType.INNER
+          || !j2.getCondition().isAlwaysTrue()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static boolean isCrossJoin(final Join e) {
@@ -404,7 +485,9 @@ public class RelToSqlConverter extends SqlImplementor
 
   /** Visits a Correlate; called by {@link #dispatch} via reflection. */
   public Result visit(Correlate e) {
-    Result leftResult = visitInput(e, 0);
+    final Result leftResult =
+        visitInput(e, 0)
+            .resetAlias(e.getCorrelVariable(), e.getRowType());
     parseCorrelTable(e, leftResult);
     final Result rightResult = visitInput(e, 1);
     SqlNode rightLateralAs = rightResult.asFrom();
@@ -496,8 +579,14 @@ public class RelToSqlConverter extends SqlImplementor
 
   /** Visits a Project; called by {@link #dispatch} via reflection. */
   public Result visit(Project e) {
+    // If the input is a Sort, wrap SELECT is not required.
     UnpivotRelToSqlUtil unpivotRelToSqlUtil = new UnpivotRelToSqlUtil();
-    final Result x = visitInput(e, 0, Clause.SELECT);
+    final Result x;
+    if (e.getInput() instanceof Sort) {
+      x = visitInput(e, 0);
+    } else {
+      x = visitInput(e, 0, Clause.SELECT);
+    }
     final Builder builder = x.builder(e);
     Result result = null;
     if (dialect.supportsUnpivot()
@@ -564,13 +653,13 @@ public class RelToSqlConverter extends SqlImplementor
     return new SqlUnpivot(POS, query, true, measureList, axisList, aliasedInSqlNodeList);
   }
 
-    /** Wraps a NULL literal in a CAST operator to a target type.
-     *
-     * @param nullLiteral NULL literal
-     * @param type Target type
-     *
-     * @return null literal wrapped in CAST call
-     */
+  /** Wraps a NULL literal in a CAST operator to a target type.
+   *
+   * @param nullLiteral NULL literal
+   * @param type Target type
+   *
+   * @return null literal wrapped in CAST call
+   */
   private SqlNode castNullType(SqlNode nullLiteral, RelDataType type) {
     final SqlNode typeNode = dialect.getCastSpec(type);
     if (typeNode == null) {
@@ -1452,9 +1541,12 @@ public class RelToSqlConverter extends SqlImplementor
     if (x.node instanceof SqlSelect) {
       operand = ((SqlSelect) x.node).getSelectList().get(0);
     }
-    final SqlNode unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, operand);
-    final List<SqlNode> operands = createAsFullOperands(e.getRowType(), unnestNode,
-        requireNonNull(x.neededAlias, () -> "x.neededAlias is null, node is " + x.node));
+    final SqlNode unnestNode =
+        SqlStdOperatorTable.UNNEST.createCall(POS, operand);
+    final List<SqlNode> operands =
+        createAsFullOperands(e.getRowType(), unnestNode,
+            requireNonNull(x.neededAlias,
+                () -> "x.neededAlias is null, node is " + x.node));
     final SqlNode asNode = SqlStdOperatorTable.AS.createCall(POS, operands);
     return result(asNode, ImmutableList.of(Clause.FROM), e, null);
   }
@@ -1473,15 +1565,13 @@ public class RelToSqlConverter extends SqlImplementor
     final Context context = tableFunctionScanContext(inputSqlNodes);
     SqlNode callNode = context.toSql(null, e.getCall());
     // Convert to table function call, "TABLE($function_name(xxx))"
-    SqlSpecialOperator collectionTable = new SqlCollectionTableOperator("TABLE",
-        SqlModality.RELATION, e.getRowType().getFieldNames().get(0));
-    SqlNode tableCall = new SqlBasicCall(
-        collectionTable,
-        new SqlNode[]{callNode},
-        SqlParserPos.ZERO);
-    SqlNode select = new SqlSelect(
-        SqlParserPos.ZERO, null, null, tableCall,
-        null, null, null, null, null, null, null, SqlNodeList.EMPTY);
+    SqlNode tableCall =
+        new SqlBasicCall(SqlStdOperatorTable.COLLECTION_TABLE,
+            new SqlNode[]{callNode}, SqlParserPos.ZERO);
+    SqlNode select =
+        new SqlSelect(SqlParserPos.ZERO, null, SqlNodeList.SINGLETON_STAR,
+            tableCall, null, null, null, null, null, null, null, null,
+            SqlNodeList.EMPTY);
     Map<String, RelDataType> aliasesMap = new HashMap<>();
     RelDataTypeField relDataTypeField = fieldList.get(0);
     aliasesMap.put(relDataTypeField.getName(), e.getRowType());
