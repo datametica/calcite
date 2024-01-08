@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rel.rel2sql;
 
+import org.apache.calcite.config.CalciteSystemProperty;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.CTEDefinationTrait;
@@ -50,8 +51,55 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
-import org.apache.calcite.rex.*;
-import org.apache.calcite.sql.*;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexCorrelVariable;
+import org.apache.calcite.rex.RexDynamicParam;
+import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexFieldCollation;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLambda;
+import org.apache.calcite.rex.RexLambdaRef;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexLocalRef;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexOver;
+import org.apache.calcite.rex.RexPatternFieldRef;
+import org.apache.calcite.rex.RexProgram;
+import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexSubQuery;
+import org.apache.calcite.rex.RexUnknownAs;
+import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.rex.RexWindow;
+import org.apache.calcite.rex.RexWindowBound;
+import org.apache.calcite.sql.JoinType;
+import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlAsOperator;
+import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlDynamicParam;
+import org.apache.calcite.sql.SqlFieldAccess;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlJoin;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLambda;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlMatchRecognize;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlNumericLiteral;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOverOperator;
+import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSelectKeyword;
+import org.apache.calcite.sql.SqlSetOperator;
+import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.SqlTableRef;
+import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.SqlWindow;
+import org.apache.calcite.sql.SqlWith;
+import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlCaseOperator;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
@@ -64,6 +112,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.RangeSets;
 import org.apache.calcite.util.Sarg;
@@ -624,7 +673,7 @@ public abstract class SqlImplementor {
   }
 
   /** Wraps a node in a SELECT statement that has no clauses:
-   *  "SELECT ... FROM (node)". */
+   * "SELECT ... FROM (node)". */
   SqlSelect wrapSelect(SqlNode node) {
     // Additional condition than apache calcite
     assert node instanceof SqlWith || node instanceof SqlWithItem || (node instanceof SqlJoin
@@ -640,6 +689,9 @@ public abstract class SqlImplementor {
     if (requiresAlias(node)) {
       node = as(node, "t");
     }
+//    Apache calcite having following implementation.
+//    return new SqlSelect(POS, SqlNodeList.EMPTY, SqlNodeList.SINGLETON_STAR,
+//        node, null, null, null, SqlNodeList.EMPTY, null, null, null, null, null);
     return new SqlSelect(POS, SqlNodeList.EMPTY, null, node, null, null, null,
         SqlNodeList.EMPTY, null, null, null, null);
   }
@@ -947,9 +999,9 @@ public abstract class SqlImplementor {
       case SAFE_CAST:
         // CURSOR is used inside CAST, like 'CAST ($0): CURSOR NOT NULL',
         // convert it to sql call of {@link SqlStdOperatorTable#CURSOR}.
-        RelDataType dataType = rex.getType();
+        final RelDataType dataType = call.getType();
         if (dataType.getSqlTypeName() == SqlTypeName.CURSOR) {
-          RexNode operand0 = ((RexCall) rex).operands.get(0);
+          final RexNode operand0 = call.operands.get(0);
           assert operand0 instanceof RexInputRef;
           int ordinal = ((RexInputRef) operand0).getIndex();
           SqlNode fieldOperand = field(ordinal);
@@ -1546,8 +1598,20 @@ public abstract class SqlImplementor {
             () -> "literal " + literal
                 + " has null SqlTypeFamily, and is SqlTypeName is " + typeName);
     switch (family) {
-    case CHARACTER:
+    case CHARACTER: {
+      final NlsString value = literal.getValueAs(NlsString.class);
+      if (value != null) {
+        final String defaultCharset = CalciteSystemProperty.DEFAULT_CHARSET.value();
+        final String charsetName = value.getCharsetName();
+        if (!defaultCharset.equals(charsetName)) {
+          // Set the charset only if it is not the same as the default charset
+          return SqlLiteral.createCharString(
+              castNonNull(value).getValue(), charsetName, POS);
+        }
+      }
+      // Create a string without specifying a charset
       return SqlLiteral.createCharString((String) castNonNull(literal.getValue2()), POS);
+    }
     case NUMERIC:
     case EXACT_NUMERIC:
       return dialect.getNumericLiteral(literal, POS);
@@ -1747,7 +1811,7 @@ public abstract class SqlImplementor {
       }
     }
 
-    protected RexCall reverseCall(RexCall call) {
+    @Override protected RexCall reverseCall(RexCall call) {
       switch (call.getKind()) {
       case EQUALS:
       case IS_DISTINCT_FROM:
@@ -2270,7 +2334,7 @@ public abstract class SqlImplementor {
 
       if (rel instanceof Aggregate
           && !dialect.supportsNestedAggregations()
-          && hasNested((Aggregate) rel, SqlImplementor::isAggregate) ) {
+          && hasNested((Aggregate) rel, SqlImplementor::isAggregate)) {
         return true;
       }
 
@@ -2622,8 +2686,8 @@ public abstract class SqlImplementor {
               final SqlIdentifier identifier = call.operand(1);
               // apache calcite having different implementation
               // If (SqlUtil.isGeneratedAlias(identifier.getSimple())) {
-                if (identifier.getSimple().toLowerCase(Locale.ROOT)
-                  .startsWith("expr$")) {
+              if (identifier.getSimple().toLowerCase(Locale.ROOT)
+                    .startsWith("expr$")) {
                 nodeList.set(i, call.operand(0));
               }
             }
