@@ -26,6 +26,8 @@ import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.DistinctTraitDef;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.plan.hep.HepPlanner;
+import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
@@ -43,6 +45,7 @@ import org.apache.calcite.rel.logical.LogicalIntersect;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.rules.AggregateProjectConstantToDummyJoinRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -164,8 +167,25 @@ public abstract class SqlImplementor {
   }
 
   /** Visits a relational expression that has no parent. */
-  public final Result visitRoot(RelNode e) {
-    return visitInput(holder(e), 0);
+  public final Result visitRoot(RelNode r) {
+    RelNode best;
+    if (!this.dialect.supportsGroupByLiteral()) {
+      HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
+      hepProgramBuilder.addRuleInstance(
+          AggregateProjectConstantToDummyJoinRule.Config.DEFAULT.toRule());
+      HepPlanner hepPlanner = new HepPlanner(hepProgramBuilder.build());
+
+      hepPlanner.setRoot(r);
+      best = hepPlanner.findBestExp();
+    } else {
+      best = r;
+    }
+    try {
+      return visitInput(holder(best), 0);
+    } catch (Error | RuntimeException e) {
+      throw Util.throwAsRuntime("Error while converting RelNode to SqlNode:\n"
+          + RelOptUtil.toString(r), e);
+    }
   }
 
   /** Creates a relational expression that has {@code r} as its input. */
@@ -220,7 +240,7 @@ public abstract class SqlImplementor {
   public void addSelect(List<SqlNode> selectList, SqlNode node,
       RelDataType rowType) {
     String name = rowType.getFieldNames().get(selectList.size());
-    String alias = SqlValidatorUtil.getAlias(node, -1);
+    @Nullable String alias = SqlValidatorUtil.alias(node);
     if (alias == null || !alias.equals(name)) {
       node = as(node, name);
     }
@@ -449,7 +469,7 @@ public abstract class SqlImplementor {
         || aliases instanceof LinkedHashMap
         || aliases instanceof ImmutableMap
         : "must use a Map implementation that preserves order";
-    final String alias2 = SqlValidatorUtil.getAlias(node, -1);
+    final @Nullable String alias2 = SqlValidatorUtil.alias(node);
     final String alias3 = alias2 != null ? alias2 : "t";
     final String alias4 =
         SqlValidatorUtil.uniquify(
@@ -457,6 +477,7 @@ public abstract class SqlImplementor {
     String tableName = getTableName(alias4, rel);
     final RelDataType rowType = adjustedRowType(rel, node);
     isTableNameColumnNameIdentical = isTableNameColumnNameIdentical(rowType, tableName);
+    // Additional condition than apache calcite
     if (aliases != null
         && !aliases.isEmpty()
         && (!dialect.hasImplicitTableAlias()
@@ -465,6 +486,7 @@ public abstract class SqlImplementor {
       return result(node, clauses, alias4, rowType, aliases);
     }
     final String alias5;
+    // Additional condition than apache calcite
     if (alias2 == null
         || !alias2.equals(alias4)
         || !dialect.hasImplicitTableAlias()
@@ -507,7 +529,8 @@ public abstract class SqlImplementor {
 
     case SELECT:
       final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
-      if (selectList == null) {
+      // Additional condition than apache calcite
+      if (selectList == null || selectList.equals(SqlNodeList.SINGLETON_STAR)) {
         return rowType;
       }
       builder = rel.getCluster().getTypeFactory().builder();
@@ -515,7 +538,7 @@ public abstract class SqlImplementor {
           rowType.getFieldList(),
           (selectItem, field) ->
               builder.add(
-                  Util.first(SqlValidatorUtil.getAlias(selectItem, -1),
+                  Util.first(SqlValidatorUtil.alias(selectItem),
                       field.getName()),
                   field.getType()));
       return builder.build();
@@ -561,8 +584,7 @@ public abstract class SqlImplementor {
       collectAliases(builder, join.getLeft(),  aliases);
       collectAliases(builder, join.getRight(), aliases);
     } else {
-      final String alias = SqlValidatorUtil.getAlias(node, -1);
-      assert alias != null;
+      final String alias = requireNonNull(SqlValidatorUtil.alias(node), "alias");
       builder.put(alias, aliases.next());
     }
   }
@@ -604,13 +626,16 @@ public abstract class SqlImplementor {
   /** Wraps a node in a SELECT statement that has no clauses:
    *  "SELECT ... FROM (node)". */
   SqlSelect wrapSelect(SqlNode node) {
+    // Additional condition than apache calcite
     assert node instanceof SqlWith || node instanceof SqlWithItem || (node instanceof SqlJoin
         || node instanceof SqlIdentifier
         || node instanceof SqlMatchRecognize
+        || node instanceof SqlTableRef
         || node instanceof SqlCall
             && (((SqlCall) node).getOperator() instanceof SqlSetOperator
                 || ((SqlCall) node).getOperator() == SqlStdOperatorTable.AS
-                || ((SqlCall) node).getOperator() == SqlStdOperatorTable.VALUES))
+                || ((SqlCall) node).getOperator() == SqlStdOperatorTable.VALUES
+                || ((SqlCall) node).getOperator() == SqlStdOperatorTable.TABLESAMPLE))
         : node;
     if (requiresAlias(node)) {
       node = as(node, "t");
@@ -1139,8 +1164,7 @@ public abstract class SqlImplementor {
         // Rewrite "SUM0(x) OVER w" to "COALESCE(SUM(x) OVER w, 0)"
         final SqlCall node =
             createOverCall(SqlStdOperatorTable.SUM, operands, window, isDistinct);
-        return SqlStdOperatorTable.COALESCE.createCall(POS, node,
-            SqlLiteral.createExactNumeric("0", POS));
+        return SqlStdOperatorTable.COALESCE.createCall(POS, node, ZERO);
       }
       SqlCall aggFunctionCall;
       if (isDistinct) {
@@ -1290,8 +1314,7 @@ public abstract class SqlImplementor {
       if (op instanceof SqlSumEmptyIsZeroAggFunction) {
         final SqlNode node = toSql(SqlStdOperatorTable.SUM, distinct,
             operandList, filterArg, collation);
-        return SqlStdOperatorTable.COALESCE.createCall(POS, node,
-            SqlLiteral.createExactNumeric("0", POS));
+        return SqlStdOperatorTable.COALESCE.createCall(POS, node, ZERO);
       }
 
       // Handle filter on dialects that do support FILTER by generating CASE.
