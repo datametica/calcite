@@ -485,9 +485,9 @@ public class RelToSqlConverter extends SqlImplementor
 
   /** Visits a Correlate; called by {@link #dispatch} via reflection. */
   public Result visit(Correlate e) {
-    final Result leftResult =
-        visitInput(e, 0)
-            .resetAlias(e.getCorrelVariable(), e.getRowType());
+    final Result leftResult = visitInput(e, 0);
+//        visitInput(e, 0)
+//            .resetAlias(e.getCorrelVariable(), e.getRowType());
     parseCorrelTable(e, leftResult);
     final Result rightResult = visitInput(e, 1);
     SqlNode rightLateralAs = rightResult.asFrom();
