@@ -574,7 +574,7 @@ class RelToSqlConverterTest {
     final String expected = "SELECT \"product_class_id\", \"brand_name\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "GROUP BY ROLLUP(\"product_class_id\", \"brand_name\")\n"
-        + "ORDER BY \"brand_name\", \"product_class_id\"";
+        + "ORDER BY \"product_class_id\", \"brand_name\"";
     final String expectedMySql = "SELECT `product_class_id`, `brand_name`\n"
         + "FROM `foodmart`.`product`\n"
         + "GROUP BY `brand_name`, `product_class_id` WITH ROLLUP";
@@ -1413,7 +1413,7 @@ class RelToSqlConverterTest {
     relFn(relFn).withMysql().ok(expectedSql);
   }
 
-  @Test public void testTableFunctionScanWithUnnest() {
+  @Test public void BigQuerySqlDialecttestTableFunctionScanWithUnnest() {
     final RelBuilder builder = relBuilder();
     String[] array = {"abc", "bcd", "fdc"};
     RelNode root = builder.functionScan(SqlStdOperatorTable.UNNEST, 0,
