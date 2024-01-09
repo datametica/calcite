@@ -80,7 +80,6 @@ import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlDynamicParam;
-import org.apache.calcite.sql.SqlFieldAccess;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlKind;
@@ -798,33 +797,32 @@ public abstract class SqlImplementor {
           accesses.offerLast((RexFieldAccess) referencedExpr);
           referencedExpr = ((RexFieldAccess) referencedExpr).getReferenceExpr();
         }
-        SqlFieldAccess sqlFieldAccess = new SqlFieldAccess(POS);
+        SqlIdentifier sqlIdentifier;
         switch (referencedExpr.getKind()) {
         case CORREL_VARIABLE:
           final RexCorrelVariable variable = (RexCorrelVariable) referencedExpr;
           final Context correlAliasContext = getAliasContext(variable);
           final RexFieldAccess lastAccess = accesses.pollLast();
           assert lastAccess != null;
-          SqlNode node = correlAliasContext.field(lastAccess.getField().getIndex());
-          if (!isNodeMatching(node, lastAccess)) {
-            SqlNode newNode = getSqlNodeByName(correlAliasContext, lastAccess);
-            node = newNode != null ? newNode : node;
-          }
-          sqlFieldAccess.add(node);
+          sqlIdentifier = (SqlIdentifier) correlAliasContext
+              .field(lastAccess.getField().getIndex());
           break;
         case ROW:
+        case ITEM:
           final SqlNode expr = toSql(program, referencedExpr);
-          sqlFieldAccess.add(expr);
+          sqlIdentifier = new SqlIdentifier(expr.toString(), POS);
           break;
         default:
-          sqlFieldAccess.add(toSql(program, referencedExpr));
+          sqlIdentifier = (SqlIdentifier) toSql(program, referencedExpr);
         }
 
+        int nameIndex = sqlIdentifier.names.size();
         RexFieldAccess access;
         while ((access = accesses.pollLast()) != null) {
-          sqlFieldAccess.add(new SqlIdentifier(access.getField().getName(), POS));
+          sqlIdentifier = sqlIdentifier.add(nameIndex++, access.getField().getName(), POS);
         }
-        return sqlFieldAccess;
+        return sqlIdentifier;
+
       case PATTERN_INPUT_REF:
         final RexPatternFieldRef ref = (RexPatternFieldRef) rex;
         String pv = ref.getAlpha();
@@ -1009,8 +1007,13 @@ public abstract class SqlImplementor {
           SqlNode fieldOperand = field(ordinal);
           return SqlStdOperatorTable.CURSOR.createCall(SqlParserPos.ZERO, fieldOperand);
         }
-        assert nodeList.size() == 1;
-        if (ignoreCast) {
+        // Ideally the UNKNOWN type would never exist in a fully-formed, validated rel node, but
+        // it can be useful in certain situations where determining the type of an expression is
+        // infeasible, such as inserting arbitrary user-provided SQL snippets into an otherwise
+        // manually-constructed (as opposed to parsed) rel node.
+        // In such a context, assume that casting anything to UNKNOWN is a no-op.
+        if (ignoreCast || call.getType().getSqlTypeName() == SqlTypeName.UNKNOWN) {
+          assert nodeList.size() == 1;
           return nodeList.get(0);
         } else {
           RelDataType castFrom = call.operands.get(0).getType();

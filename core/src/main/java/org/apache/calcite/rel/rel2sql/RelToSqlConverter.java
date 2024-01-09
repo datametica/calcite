@@ -486,8 +486,6 @@ public class RelToSqlConverter extends SqlImplementor
   /** Visits a Correlate; called by {@link #dispatch} via reflection. */
   public Result visit(Correlate e) {
     final Result leftResult = visitInput(e, 0);
-//        visitInput(e, 0)
-//            .resetAlias(e.getCorrelVariable(), e.getRowType());
     parseCorrelTable(e, leftResult);
     final Result rightResult = visitInput(e, 1);
     SqlNode rightLateralAs = rightResult.asFrom();
@@ -522,6 +520,7 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   /** Visits a Filter; called by {@link #dispatch} via reflection. */
+  // Additional logic in dm-calcite
   public Result visit(Filter e) {
     RelToSqlUtils relToSqlUtils = new RelToSqlUtils();
     final RelNode input = e.getInput();
@@ -578,6 +577,7 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   /** Visits a Project; called by {@link #dispatch} via reflection. */
+  // Additional logic in dm-calcite
   public Result visit(Project e) {
     // If the input is a Sort, wrap SELECT is not required.
     UnpivotRelToSqlUtil unpivotRelToSqlUtil = new UnpivotRelToSqlUtil();
@@ -598,6 +598,7 @@ public class RelToSqlConverter extends SqlImplementor
       result = result(select, ImmutableList.of(Clause.SELECT), e, null);
     } else {
       parseCorrelTable(e, x);
+      // Additional condition than apache calcite
       if ((!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
         final List<SqlNode> selectList = new ArrayList<>();
@@ -693,6 +694,7 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   /** Visits an Aggregate; called by {@link #dispatch} via reflection. */
+  // Additional logic in dm-calcite
   public Result visit(Aggregate e) {
     final Builder builder =
         visitAggregate(e, e.getGroupSet().toList(), Clause.GROUP_BY);
@@ -772,8 +774,24 @@ public class RelToSqlConverter extends SqlImplementor
     }
     if (!groupByList.isEmpty() || e.getAggCallList().isEmpty()) {
       // Some databases don't support "GROUP BY ()". We can omit it as long
-      // as there is at least one aggregate function.
+      // as there is at least one aggregate function. (We have to take care
+      // if we later prune away that last aggregate function.)
       builder.setGroupBy(new SqlNodeList(groupByList, POS));
+    }
+
+    if (builder.clauses.contains(Clause.HAVING) && !e.getGroupSet()
+        .equals(ImmutableBitSet.union(e.getGroupSets()))) {
+      // groupSet contains at least one column that is not in any groupSets.
+      // To make such columns must appear in the output (their value will
+      // always be NULL), we generate an extra grouping set, then filter
+      // it out using a "HAVING GROUPING(groupSets) <> 0".
+      // We want to generate the
+      final SqlNodeList groupingList = new SqlNodeList(POS);
+      e.getGroupSet().forEachInt(g ->
+          groupingList.add(builder.context.field(g)));
+      builder.setHaving(
+          SqlStdOperatorTable.NOT_EQUALS.createCall(POS,
+              SqlStdOperatorTable.GROUPING.createCall(groupingList), ZERO));
     }
     return builder;
   }
@@ -833,8 +851,13 @@ public class RelToSqlConverter extends SqlImplementor
       // a singleton CUBE and ROLLUP are the same but we prefer ROLLUP;
       // fall through
     case ROLLUP:
+      final List<Integer> rollupBits = Aggregate.Group.getRollup(aggregate.groupSets);
+      final List<SqlNode> rollupKeys = rollupBits
+          .stream()
+          .map(bit -> builder.context.field(bit))
+          .collect(Collectors.toList());
       return ImmutableList.of(
-          SqlStdOperatorTable.ROLLUP.createCall(SqlParserPos.ZERO, groupKeys));
+          SqlStdOperatorTable.ROLLUP.createCall(SqlParserPos.ZERO, rollupKeys));
     default:
     case OTHER:
       // Make sure that the group sets contains all bits.
@@ -1215,6 +1238,7 @@ public class RelToSqlConverter extends SqlImplementor
     final Result x =
         visitInput(e, 0, Clause.ORDER_BY, Clause.OFFSET, Clause.FETCH);
     final Builder builder = x.builder(e);
+    // Additional condition than apache calcite
     if (stack.size() != 1 && builder.select.getSelectList() == null
         && builder.select.getSelectList().equals(SqlNodeList.SINGLETON_STAR)) {
       // Generates explicit column names instead of start(*) for
@@ -1613,7 +1637,7 @@ public class RelToSqlConverter extends SqlImplementor
     selectList.add(node);
   }
 
-  protected void parseCorrelTable(RelNode relNode, Result x) {
+  private void parseCorrelTable(RelNode relNode, Result x) {
     for (CorrelationId id : relNode.getVariablesSet()) {
       correlTableMap.put(id, x.qualifiedContext());
     }
