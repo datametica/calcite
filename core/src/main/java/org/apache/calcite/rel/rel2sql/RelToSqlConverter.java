@@ -85,12 +85,14 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSampleSpec;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlTableRef;
 import org.apache.calcite.sql.SqlUnpivot;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
+import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlSingleValueAggFunction;
@@ -98,6 +100,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
+import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
@@ -1590,8 +1593,10 @@ public class RelToSqlConverter extends SqlImplementor
     final Context context = tableFunctionScanContext(inputSqlNodes);
     SqlNode callNode = context.toSql(null, e.getCall());
     // Convert to table function call, "TABLE($function_name(xxx))"
+    SqlSpecialOperator collectionTable = new SqlCollectionTableOperator("TABLE",
+            SqlModality.RELATION, e.getRowType().getFieldNames().get(0));
     SqlNode tableCall =
-        new SqlBasicCall(SqlStdOperatorTable.COLLECTION_TABLE,
+        new SqlBasicCall(collectionTable,
             new SqlNode[]{callNode}, SqlParserPos.ZERO);
     SqlNode select =
         new SqlSelect(SqlParserPos.ZERO, null, SqlNodeList.SINGLETON_STAR,
