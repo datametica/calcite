@@ -1413,7 +1413,7 @@ class RelToSqlConverterTest {
     relFn(relFn).withMysql().ok(expectedSql);
   }
 
-  @Test public void BigQuerySqlDialecttestTableFunctionScanWithUnnest() {
+  @Test public void testBigQuerySqlDialecttestTableFunctionScanWithUnnest() {
     final RelBuilder builder = relBuilder();
     String[] array = {"abc", "bcd", "fdc"};
     RelNode root = builder.functionScan(SqlStdOperatorTable.UNNEST, 0,

@@ -1327,7 +1327,7 @@ public abstract class SqlImplementor {
         final boolean first =
             field.nullDirection == RelFieldCollation.NullDirection.FIRST;
         SqlNode nullDirectionNode =
-            dialect.emulateNullDirection(field(field.getFieldIndex()),
+            dialect.emulateNullDirection(orderField(field),
                 first, field.direction.isDescending());
         if (nullDirectionNode != null) {
           orderByList.add(nullDirectionNode);
@@ -1459,7 +1459,7 @@ public abstract class SqlImplementor {
 
     /** Converts a collation to an ORDER BY item. */
     public SqlNode toSql(RelFieldCollation collation) {
-      SqlNode node = orderField(collation.getFieldIndex());
+      SqlNode node = orderField(collation);
       switch (collation.getDirection()) {
       case DESCENDING:
       case STRICTLY_DESCENDING:
