@@ -110,6 +110,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -1995,8 +1996,9 @@ public abstract class SqlImplementor {
       // Additional condition than apache calcite
       if (selectList != null && !selectList.equals(SqlNodeList.SINGLETON_STAR)) {
         // Additional condition than apache calcite
-        final boolean aliasRef = expectedClauses.contains(Clause.HAVING)
-            && dialect.getConformance().isHavingAlias() || keepColumnAlias;
+//        final boolean aliasRef = expectedClauses.contains(Clause.HAVING)
+//            && dialect.getConformance().isHavingAlias() || keepColumnAlias;
+        final boolean aliasRef = isAliasRefNeeded(keepColumnAlias, rel);
         newContext = new Context(dialect, selectList.size()) {
           @Override public SqlImplementor implementor() {
             return SqlImplementor.this;
@@ -2096,6 +2098,18 @@ public abstract class SqlImplementor {
       }
       return new Builder(rel, clauseList, select, newContext, isAnon(),
           needNew && !aliases.containsKey(neededAlias) ? newAliases : aliases);
+    }
+
+    private boolean isAliasRefNeeded(boolean keepColumnAlias, RelNode rel) {
+      if ((expectedClauses.contains(Clause.HAVING)
+          && dialect.getConformance().isHavingAlias()) || keepColumnAlias) {
+        return true;
+      }
+      if (expectedClauses.contains(Clause.QUALIFY)
+          && rel.getInput(0) instanceof Aggregate) {
+        return true;
+      }
+      return false;
     }
 
     private boolean hasAnalyticalFunctionInAggregate(Aggregate rel) {
@@ -2319,8 +2333,7 @@ public abstract class SqlImplementor {
       // has any projection with Analytical function used then new SELECT wrap is not required.
       if (dialect.supportsQualifyClause() && rel instanceof Filter
           && rel.getInput(0) instanceof Project
-          && relToSqlUtils.isAnalyticalFunctionPresentInProjection((Project) rel.getInput(0))
-          && !relToSqlUtils.hasAnalyticalFunctionInFilter((Filter) rel)) {
+          && relToSqlUtils.isAnalyticalFunctionPresentInProjection((Project) rel.getInput(0))) {
         if (maxClause == Clause.SELECT) {
           return false;
         }
@@ -2463,6 +2476,18 @@ public abstract class SqlImplementor {
           // Avoid losing the distinct attribute of inner aggregate.
           return !hasNestedAgg || Aggregate.isNotGrandTotal(agg);
         }
+        if (relInput instanceof LogicalProject
+            && relInput.getInput(0) instanceof LogicalProject
+            && clauses.contains(Clause.QUALIFY)) {
+          return true;
+        }
+      }
+
+      if (rel instanceof LogicalProject
+          && relInput instanceof LogicalFilter
+          && clauses.contains(Clause.QUALIFY)
+          && hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection((Project) rel)) {
+        return true;
       }
 
       if (rel instanceof Project
@@ -2588,22 +2613,24 @@ public abstract class SqlImplementor {
     boolean hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection(Project rel) {
       final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
       final SqlNodeList grpList = ((SqlSelect) node).getGroup();
-      if (selectList != null && grpList != null) {
-        for (SqlNode grpNode : grpList) {
-          if (grpNode instanceof SqlIdentifier) {
-            String grpCall = ((SqlIdentifier) grpNode).names.get(0);
-            for (SqlNode selectNode : selectList.getList()) {
-              if (selectNode instanceof SqlBasicCall) {
-                if (grpCallIsAlias(grpCall, (SqlBasicCall) selectNode)
-                    && !grpCallPresentInFinalProjection(grpCall, rel)) {
-                  return true;
-                }
-              }
-            }
+      return isGrpCallNotUsedInFinalProjection(grpList, selectList, rel);
+    }
+
+    boolean hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection(Project project) {
+      SqlSelect sqlSelect = (SqlSelect) node;
+      SqlNodeList selectList = sqlSelect.getSelectList();
+      List<SqlNode> qualifyColumnList = new ArrayList<>();
+      try {
+        sqlSelect.getQualify().accept(new SqlBasicVisitor<SqlNode>() {
+          @Override public SqlNode visit(SqlIdentifier id) {
+            qualifyColumnList.add(id);
+            return id;
           }
-        }
+        });
+        return isGrpCallNotUsedInFinalProjection(qualifyColumnList, selectList, project);
+      } catch (Exception e) {
+        return false;
       }
-      return false;
     }
 
     boolean grpCallIsAlias(String grpCall, SqlBasicCall selectCall) {
@@ -2616,6 +2643,26 @@ public abstract class SqlImplementor {
       for (String finalProj : projFieldList) {
         if (grpCall.equals(finalProj)) {
           return true;
+        }
+      }
+      return false;
+    }
+
+    private boolean isGrpCallNotUsedInFinalProjection(List<SqlNode> columnList,
+        SqlNodeList selectList, Project project) {
+      if (selectList != null && columnList != null) {
+        for (SqlNode grpNode : columnList) {
+          if (grpNode instanceof SqlIdentifier) {
+            String grpCall = ((SqlIdentifier) grpNode).names.get(0);
+            for (SqlNode selectNode : selectList.getList()) {
+              if (selectNode instanceof SqlBasicCall) {
+                if (grpCallIsAlias(grpCall, (SqlBasicCall) selectNode)
+                    && !grpCallPresentInFinalProjection(grpCall, project)) {
+                  return true;
+                }
+              }
+            }
+          }
         }
       }
       return false;
