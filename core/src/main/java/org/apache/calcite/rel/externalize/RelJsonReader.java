@@ -345,9 +345,12 @@ public class RelJsonReader {
         relJson.toType(cluster.getTypeFactory(), jsonAggType);
     final String name = (String) jsonAggCall.get("name");
     return AggregateCall.create(aggregation, distinct, false, false,
-        ImmutableList.of(), operands,
+        ImmutableList.of(),
+        operands,
         filterOperand == null ? -1 : filterOperand,
-        null, RelCollations.EMPTY, type, name);
+        null,
+        RelCollations.EMPTY,
+        type, name);
   }
 
   private RelNode lookupInput(String jsonInput) {
