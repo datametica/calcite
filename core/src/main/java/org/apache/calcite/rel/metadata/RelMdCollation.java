@@ -50,7 +50,6 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
-import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
@@ -83,7 +82,7 @@ public class RelMdCollation
     implements MetadataHandler<BuiltInMetadata.Collation> {
   public static final RelMetadataProvider SOURCE =
       ReflectiveRelMetadataProvider.reflectiveSource(
-          BuiltInMethod.COLLATIONS.method, new RelMdCollation());
+          new RelMdCollation(), BuiltInMetadata.Collation.Handler.class);
 
   //~ Constructors -----------------------------------------------------------
 
@@ -149,6 +148,11 @@ public class RelMdCollation
 
   public @Nullable ImmutableList<RelCollation> collations(TableScan scan,
       RelMetadataQuery mq) {
+    final BuiltInMetadata.Collation.Handler handler =
+        scan.getTable().unwrap(BuiltInMetadata.Collation.Handler.class);
+    if (handler != null) {
+      return handler.collations(scan, mq);
+    }
     return copyOf(table(scan.getTable()));
   }
 
@@ -218,7 +222,7 @@ public class RelMdCollation
 
   public @Nullable ImmutableList<RelCollation> collations(HepRelVertex rel,
       RelMetadataQuery mq) {
-    return mq.collations(rel.getCurrentRel());
+    return mq.collations(rel.stripped());
   }
 
   public @Nullable ImmutableList<RelCollation> collations(RelSubset rel,

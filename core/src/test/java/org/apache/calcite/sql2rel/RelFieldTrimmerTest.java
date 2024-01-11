@@ -49,7 +49,6 @@ import java.util.List;
 import static org.apache.calcite.test.Matchers.hasTree;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Test for {@link RelFieldTrimmer}. */
@@ -413,11 +412,10 @@ class RelFieldTrimmerTest {
         HintStrategyTable.builder().hintStrategy("resource", HintPredicates.CALC).build());
     final RelNode original =
         builder.scan("EMP")
-            .project(
-                builder.field("EMPNO"),
+            .project(builder.field("EMPNO"),
                 builder.field("ENAME"),
-                builder.field("DEPTNO")
-            ).hints(calcHint)
+                builder.field("DEPTNO"))
+            .hints(calcHint)
             .sort(builder.field("EMPNO"))
             .project(builder.field("EMPNO"))
             .build();
@@ -446,11 +444,44 @@ class RelFieldTrimmerTest {
 
     assertTrue(relNode.getInput(0).getInput(0) instanceof Calc);
     final Calc originalCalc = (Calc) relNode.getInput(0).getInput(0);
-    assertFalse(originalCalc.getHints().contains(calcHint));
+    assertTrue(originalCalc.getHints().contains(calcHint));
 
     assertTrue(trimmed.getInput(0).getInput(0) instanceof Calc);
     final Calc calc = (Calc) trimmed.getInput(0).getInput(0);
-    assertFalse(calc.getHints().contains(calcHint));
+    assertTrue(calc.getHints().contains(calcHint));
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4783">[CALCITE-4783]
+   * RelFieldTrimmer incorrectly drops filter condition</a>. */
+  @Test void testCalcFieldTrimmer3() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    final RelNode root =
+        builder.scan("EMP")
+            .project(
+                builder.field("ENAME"),
+                builder.field("DEPTNO"))
+            .exchange(RelDistributions.SINGLETON)
+            .filter(builder.equals(builder.field("ENAME"), builder.literal("bob")))
+            .aggregate(builder.groupKey(), builder.countStar(null))
+            .build();
+
+    final HepProgram hepProgram = new HepProgramBuilder()
+        .addRuleInstance(CoreRules.FILTER_TO_CALC).build();
+
+    final HepPlanner hepPlanner = new HepPlanner(hepProgram);
+    hepPlanner.setRoot(root);
+    final RelNode relNode = hepPlanner.findBestExp();
+    final RelFieldTrimmer fieldTrimmer = new RelFieldTrimmer(null, builder);
+    final RelNode trimmed = fieldTrimmer.trim(relNode);
+
+    final String expected = ""
+        + "LogicalAggregate(group=[{}], agg#0=[COUNT()])\n"
+        + "  LogicalCalc(expr#0=[{inputs}], expr#1=['bob'], expr#2=[=($t0, $t1)], $condition=[$t2])\n"
+        + "    LogicalExchange(distribution=[single])\n"
+        + "      LogicalProject(ENAME=[$1])\n"
+        + "        LogicalTableScan(table=[[scott, EMP]])\n";
+    assertThat(trimmed, hasTree(expected));
   }
 
 }
