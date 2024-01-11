@@ -35,9 +35,9 @@ public class SqlBasicCall extends SqlCall {
   private final @Nullable SqlLiteral functionQuantifier;
 
   public SqlBasicCall(
-          SqlOperator operator,
-          @Nullable SqlNode[] operands,
-          SqlParserPos pos) {
+      SqlOperator operator,
+      @Nullable SqlNode[] operands,
+      SqlParserPos pos) {
     this(operator, ImmutableNullableList.copyOf(operands), pos, null);
   }
 
@@ -46,19 +46,19 @@ public class SqlBasicCall extends SqlCall {
    * <p>It is not expanded; call {@link #withExpanded withExpanded(true)}
    * to expand. */
   public SqlBasicCall(
-          SqlOperator operator,
-          List<? extends @Nullable SqlNode> operandList,
-          SqlParserPos pos) {
+      SqlOperator operator,
+      List<? extends @Nullable SqlNode> operandList,
+      SqlParserPos pos) {
     this(operator, operandList, pos, null);
   }
 
   public SqlBasicCall(
-          SqlOperator operator,
-          @Nullable SqlNode[] operands,
-          SqlParserPos pos,
-          @Nullable SqlLiteral functionQualifier) {
+      SqlOperator operator,
+      @Nullable SqlNode[] operands,
+      SqlParserPos pos,
+      @Nullable SqlLiteral functionQualifier) {
     this(operator, ImmutableNullableList.copyOf(operands), pos,
-            functionQualifier);
+        functionQualifier);
   }
 
   /** Creates a SqlBasicCall with an optional function qualifier.
@@ -66,10 +66,10 @@ public class SqlBasicCall extends SqlCall {
    * <p>It is not expanded; call {@link #withExpanded withExpanded(true)}
    * to expand. */
   public SqlBasicCall(
-          SqlOperator operator,
-          List<? extends @Nullable SqlNode> operandList,
-          SqlParserPos pos,
-          @Nullable SqlLiteral functionQualifier) {
+      SqlOperator operator,
+      List<? extends @Nullable SqlNode> operandList,
+      SqlParserPos pos,
+      @Nullable SqlLiteral functionQualifier) {
     super(pos);
     this.operator = Objects.requireNonNull(operator, "operator");
     this.operandList = ImmutableNullableList.copyOf(operandList);
@@ -85,8 +85,8 @@ public class SqlBasicCall extends SqlCall {
    * @see #isExpanded() */
   public SqlCall withExpanded(boolean expanded) {
     return !expanded
-            ? this
-            : new ExpandedBasicCall(operator, operandList, pos,
+        ? this
+        : new ExpandedBasicCall(operator, operandList, pos,
             functionQuantifier);
   }
 
@@ -146,8 +146,8 @@ public class SqlBasicCall extends SqlCall {
    * for which {@link #isExpanded()} returns true. */
   private static class ExpandedBasicCall extends SqlBasicCall {
     ExpandedBasicCall(SqlOperator operator,
-                      List<? extends @Nullable SqlNode> operandList, SqlParserPos pos,
-                      @Nullable SqlLiteral functionQualifier) {
+        List<? extends @Nullable SqlNode> operandList, SqlParserPos pos,
+        @Nullable SqlLiteral functionQualifier) {
       super(operator, operandList, pos, functionQualifier);
     }
 
@@ -157,8 +157,8 @@ public class SqlBasicCall extends SqlCall {
 
     @Override public SqlCall withExpanded(boolean expanded) {
       return expanded
-              ? this
-              : new SqlBasicCall(getOperator(), getOperandList(), pos,
+          ? this
+          : new SqlBasicCall(getOperator(), getOperandList(), pos,
               getFunctionQuantifier());
     }
   }
