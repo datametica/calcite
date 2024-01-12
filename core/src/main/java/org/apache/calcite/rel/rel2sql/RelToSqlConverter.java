@@ -494,7 +494,7 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNode rightLateralAs = rightResult.asFrom();
     SqlNode rightNode = rightResult.node;
     if (rightNode.getKind() == SqlKind.AS) {
-      rightNode = ((SqlBasicCall) rightNode).getOperands()[0];
+      rightNode = ((SqlBasicCall) rightNode).getOperandList().get(0);
     }
 
     //Following validation checks if the right evaluated node is UNNEST or not, because
