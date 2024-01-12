@@ -144,6 +144,19 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
           }
         });
 
+    // DATE(string) is equivalent to CAST(string AS DATE),
+    // but other DATE variants are treated as regular functions.
+    registerOp(SqlLibraryOperators.DATE,
+        (cx, call) -> {
+          final RexCall e =
+              (RexCall) StandardConvertletTable.this.convertCall(cx, call);
+          if (e.getOperands().size() == 1
+              && SqlTypeUtil.isString(e.getOperands().get(0).getType())) {
+            return cx.getRexBuilder().makeCast(e.type, e.getOperands().get(0));
+          }
+          return e;
+        });
+
     registerOp(SqlLibraryOperators.LTRIM,
         new TrimConvertlet(SqlTrimFunction.Flag.LEADING));
     registerOp(SqlLibraryOperators.RTRIM,
@@ -291,7 +304,8 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     }
   }
 
-  /** Converts a call to the NVL function. */
+  /** Converts a call to the {@code NVL} function (and also its synonym,
+   * {@code IFNULL}). */
   private static RexNode convertNvl(SqlRexContext cx, SqlCall call) {
     final RexBuilder rexBuilder = cx.getRexBuilder();
     final RexNode operand0 =
@@ -305,8 +319,14 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
         ImmutableList.of(
             rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL,
                 operand0),
-            rexBuilder.makeCast(type, operand0),
-            rexBuilder.makeCast(type, operand1)));
+            rexBuilder.makeCast(
+                cx.getTypeFactory()
+                    .createTypeWithNullability(type, operand0.getType().isNullable()),
+                operand0),
+            rexBuilder.makeCast(
+                cx.getTypeFactory()
+                    .createTypeWithNullability(type, operand1.getType().isNullable()),
+                operand1)));
   }
 
   /** Converts a call to the DECODE function. */
@@ -1814,6 +1834,9 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     @Override public RexNode convertCall(SqlRexContext cx, SqlCall call) {
       // TIMESTAMPADD(unit, count, timestamp)
       //  => timestamp + count * INTERVAL '1' UNIT
+      // TIMESTAMP_ADD(timestamp, interval)
+      //  => timestamp + interval
+      // "timestamp" may be of type TIMESTAMP or TIMESTAMP WITH LOCAL TIME ZONE.
       final RexBuilder rexBuilder = cx.getRexBuilder();
       final SqlLiteral unitLiteral = call.operand(0);
       final TimeUnit unit = unitLiteral.getValueAs(TimeUnit.class);
