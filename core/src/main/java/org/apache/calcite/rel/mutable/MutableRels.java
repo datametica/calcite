@@ -251,7 +251,7 @@ public abstract class MutableRels {
     case COLLECT: {
       final MutableCollect collect = (MutableCollect) node;
       final RelNode child = fromMutable(collect.getInput(), relBuilder);
-      return new Collect(collect.cluster, child.getTraitSet(), child, collect.fieldName);
+      return Collect.create(child, collect.rowType);
     }
     case UNCOLLECT: {
       final MutableUncollect uncollect = (MutableUncollect) node;

@@ -22,10 +22,11 @@ import org.apache.calcite.plan.RelOptPredicateList;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RexImplicationChecker;
 import org.apache.calcite.plan.Strong;
-import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Exchange;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Intersect;
@@ -33,6 +34,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Sample;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
@@ -49,11 +51,10 @@ import org.apache.calcite.rex.RexUnknownAs;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.BitSets;
 import org.apache.calcite.util.Bug;
-import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mapping;
@@ -130,7 +131,7 @@ import static java.util.Objects.requireNonNull;
 public class RelMdPredicates
     implements MetadataHandler<BuiltInMetadata.Predicates> {
   public static final RelMetadataProvider SOURCE = ReflectiveRelMetadataProvider
-      .reflectiveSource(BuiltInMethod.PREDICATES.method, new RelMdPredicates());
+      .reflectiveSource(new RelMdPredicates(), BuiltInMetadata.Predicates.Handler.class);
 
   private static final List<RexNode> EMPTY_LIST = ImmutableList.of();
 
@@ -148,16 +149,16 @@ public class RelMdPredicates
     return RelOptPredicateList.EMPTY;
   }
 
-  public RelOptPredicateList getPredicates(HepRelVertex rel,
-      RelMetadataQuery mq) {
-    return mq.getPulledUpPredicates(rel.getCurrentRel());
-  }
-
   /**
    * Infers predicates for a table scan.
    */
-  public RelOptPredicateList getPredicates(TableScan table,
+  public RelOptPredicateList getPredicates(TableScan scan,
       RelMetadataQuery mq) {
+    final BuiltInMetadata.Predicates.Handler handler =
+        scan.getTable().unwrap(BuiltInMetadata.Predicates.Handler.class);
+    if (handler != null) {
+      return handler.getPredicates(scan, mq);
+    }
     return RelOptPredicateList.EMPTY;
   }
 
@@ -198,19 +199,11 @@ public class RelMdPredicates
         int sIdx = ((RexInputRef) expr.e).getIndex();
         m.set(sIdx, expr.i);
         columnsMappedBuilder.set(sIdx);
-      // Project can also generate constants. We need to include them.
-      } else if (RexLiteral.isNullLiteral(expr.e)) {
-        projectPullUpPredicates.add(
-            rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL,
-                rexBuilder.makeInputRef(project, expr.i)));
       } else if (RexUtil.isConstant(expr.e)) {
-        final List<RexNode> args =
-            ImmutableList.of(rexBuilder.makeInputRef(project, expr.i), expr.e);
-        final SqlOperator op = args.get(0).getType().isNullable()
-            || args.get(1).getType().isNullable()
-            ? SqlStdOperatorTable.IS_NOT_DISTINCT_FROM
-            : SqlStdOperatorTable.EQUALS;
-        projectPullUpPredicates.add(rexBuilder.makeCall(op, args));
+        // Project can also generate constants (including NULL). We need to
+        // include them.
+        projectPullUpPredicates.add(
+            eqConstant(project, rexBuilder, expr.i, expr.e));
       }
     }
 
@@ -225,6 +218,23 @@ public class RelMdPredicates
       }
     }
     return RelOptPredicateList.of(rexBuilder, projectPullUpPredicates);
+  }
+
+  /** Returns a predicate that field {@code i} of relational expression
+   * {@code r} is equal to a constant expression (using
+   * {@code IS NOT DISTINCT FROM} if the expression is nullable, or
+   * {@code IS NULL} if it is literal null. */
+  private static RexNode eqConstant(RelNode r, RexBuilder rexBuilder, int i,
+      RexNode e) {
+    final RexInputRef ref = rexBuilder.makeInputRef(r, i);
+    if (RexLiteral.isNullLiteral(e)) {
+      return rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, ref);
+    } else if (ref.getType().isNullable() || e.getType().isNullable()) {
+      return rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, ref,
+          e);
+    } else {
+      return rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, ref, e);
+    }
   }
 
   /** Converts a predicate on a particular set of columns into a predicate on
@@ -279,6 +289,13 @@ public class RelMdPredicates
   }
 
   /**
+   * Infers predicates for a correlate node.
+   */
+  public RelOptPredicateList getPredicates(Correlate correlate, RelMetadataQuery mq) {
+    return mq.getPulledUpPredicates(correlate.getLeft());
+  }
+
+  /**
    * Add the Filter condition to the pulledPredicates list from the input.
    */
   public RelOptPredicateList getPredicates(Filter filter, RelMetadataQuery mq) {
@@ -286,11 +303,18 @@ public class RelMdPredicates
     final RexBuilder rexBuilder = filter.getCluster().getRexBuilder();
     final RelOptPredicateList inputInfo = mq.getPulledUpPredicates(input);
 
+    // Simplify condition using RexSimplify.
+    final RexNode condition = filter.getCondition();
+    final RexExecutor executor =
+        Util.first(filter.getCluster().getPlanner().getExecutor(), RexUtil.EXECUTOR);
+    final RexSimplify simplify = new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, executor);
+    final RexNode simplifiedCondition = simplify.simplify(condition);
+
     return Util.first(inputInfo, RelOptPredicateList.EMPTY)
         .union(rexBuilder,
             RelOptPredicateList.of(rexBuilder,
                 RexUtil.retainDeterministic(
-                    RelOptUtil.conjunctions(filter.getCondition()))));
+                    RelOptUtil.conjunctions(simplifiedCondition))));
   }
 
   /**
@@ -359,6 +383,18 @@ public class RelMdPredicates
         r = r.accept(new RexPermuteInputsShuttle(m, input));
         aggPullUpPredicates.add(r);
       }
+    }
+
+    i = agg.getGroupCount();
+    for (AggregateCall aggregateCall : agg.getAggCallList()) {
+      if (aggregateCall.getAggregation() == SqlInternalOperators.LITERAL_AGG) {
+        // The query
+        //   SELECT x, LITERAL_AGG[42]() AS y FROM t GROUP BY x
+        // has predicate "y = 42"
+        aggPullUpPredicates.add(
+            eqConstant(agg, rexBuilder, i, aggregateCall.rexList.get(0)));
+      }
+      ++i;
     }
     return RelOptPredicateList.of(rexBuilder, aggPullUpPredicates);
   }
@@ -440,7 +476,7 @@ public class RelMdPredicates
         continue;
       }
 
-      for (RexNode pred: info.pulledUpPredicates) {
+      for (RexNode pred : info.pulledUpPredicates) {
         if (finalPredicates.stream().anyMatch(
             finalPred -> rexImplicationChecker.implies(finalPred, pred))) {
           // There's already a stricter predicate in finalPredicates,
@@ -465,6 +501,13 @@ public class RelMdPredicates
     return mq.getPulledUpPredicates(minus.getInput(0));
   }
 
+  /**
+   * Infers predicates for a Sample.
+   */
+  public RelOptPredicateList getPredicates(Sample sample, RelMetadataQuery mq) {
+    RelNode input = sample.getInput();
+    return mq.getPulledUpPredicates(input);
+  }
 
   /**
    * Infers predicates for a Sort.
@@ -861,8 +904,11 @@ public class RelMdPredicates
         for (int j = 0, i = fields.nextSetBit(0); i >= 0; i = fields
             .nextSetBit(i + 1), j++) {
           columns[j] = i;
-          columnSets[j] = requireNonNull(equivalence.get(i),
-              "equivalence.get(i) is null for " + i + ", " + equivalence);
+          int fieldIndex = i;
+          columnSets[j] =
+              requireNonNull(equivalence.get(i),
+                  () -> "equivalence.get(i) is null for " + fieldIndex
+                      + ", " + equivalence);
           iterationIdx[j] = 0;
         }
         firstCall = true;

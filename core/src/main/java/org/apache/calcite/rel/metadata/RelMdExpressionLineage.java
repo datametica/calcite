@@ -17,7 +17,6 @@
 package org.apache.calcite.rel.metadata;
 
 import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
@@ -27,6 +26,8 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Sample;
+import org.apache.calcite.rel.core.Snapshot;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
@@ -41,7 +42,6 @@ import org.apache.calcite.rex.RexTableInputRef;
 import org.apache.calcite.rex.RexTableInputRef.RelTableRef;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
-import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
@@ -85,7 +85,7 @@ public class RelMdExpressionLineage
     implements MetadataHandler<BuiltInMetadata.ExpressionLineage> {
   public static final RelMetadataProvider SOURCE =
       ReflectiveRelMetadataProvider.reflectiveSource(
-          BuiltInMethod.EXPRESSION_LINEAGE.method, new RelMdExpressionLineage());
+          new RelMdExpressionLineage(), BuiltInMetadata.ExpressionLineage.Handler.class);
 
   //~ Constructors -----------------------------------------------------------
 
@@ -101,11 +101,6 @@ public class RelMdExpressionLineage
   public @Nullable Set<RexNode> getExpressionLineage(RelNode rel,
       RelMetadataQuery mq, RexNode outputExpression) {
     return null;
-  }
-
-  public @Nullable Set<RexNode> getExpressionLineage(HepRelVertex rel, RelMetadataQuery mq,
-      RexNode outputExpression) {
-    return mq.getExpressionLineage(rel.getCurrentRel(), outputExpression);
   }
 
   public @Nullable Set<RexNode> getExpressionLineage(RelSubset rel,
@@ -126,6 +121,12 @@ public class RelMdExpressionLineage
    */
   public @Nullable Set<RexNode> getExpressionLineage(TableScan rel,
       RelMetadataQuery mq, RexNode outputExpression) {
+    final BuiltInMetadata.ExpressionLineage.Handler handler =
+        rel.getTable().unwrap(BuiltInMetadata.ExpressionLineage.Handler.class);
+    if (handler != null) {
+      return handler.getExpressionLineage(rel, mq, outputExpression);
+    }
+
     final RexBuilder rexBuilder = rel.getCluster().getRexBuilder();
 
     // Extract input fields referenced by expression
@@ -395,6 +396,27 @@ public class RelMdExpressionLineage
   }
 
   /**
+   * Expression lineage from Sample.
+   */
+  public @Nullable Set<RexNode> getExpressionLineage(Sample rel,
+      RelMetadataQuery mq, RexNode outputExpression) {
+    return mq.getExpressionLineage(rel.getInput(), outputExpression);
+  }
+
+  /**
+   * Expression lineage from Snapshot.
+   *
+   * @param rel Snapshot relational expression
+   * @param mq metadata query
+   * @param outputExpression expression which needs to be inferred
+   * @return the inferred lineage, possibly null.
+   */
+  public @Nullable Set<RexNode> getExpressionLineage(Snapshot rel,
+      RelMetadataQuery mq, RexNode outputExpression) {
+    return mq.getExpressionLineage(rel.getInput(), outputExpression);
+  }
+
+  /**
    * Expression lineage from Sort.
    */
   public @Nullable Set<RexNode> getExpressionLineage(Sort rel, RelMetadataQuery mq,
@@ -503,9 +525,8 @@ public class RelMdExpressionLineage
       Map<RexInputRef, RexNode> singleMapping, Set<RexNode> result) {
     if (mapping.isEmpty()) {
       final RexReplacer replacer = new RexReplacer(singleMapping);
-      final List<RexNode> updatedPreds = new ArrayList<>(
-          RelOptUtil.conjunctions(
-              rexBuilder.copy(expr)));
+      final List<RexNode> updatedPreds = new ArrayList<>(1);
+      updatedPreds.add(rexBuilder.copy(expr));
       replacer.mutate(updatedPreds);
       result.addAll(updatedPreds);
     } else {

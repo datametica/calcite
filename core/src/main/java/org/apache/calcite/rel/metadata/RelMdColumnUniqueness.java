@@ -17,7 +17,6 @@
 package org.apache.calcite.rel.metadata;
 
 import org.apache.calcite.plan.RelOptPredicateList;
-import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.SingleRel;
@@ -46,7 +45,6 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
@@ -68,7 +66,7 @@ public class RelMdColumnUniqueness
     implements MetadataHandler<BuiltInMetadata.ColumnUniqueness> {
   public static final RelMetadataProvider SOURCE =
       ReflectiveRelMetadataProvider.reflectiveSource(
-          BuiltInMethod.COLUMN_UNIQUENESS.method, new RelMdColumnUniqueness());
+          new RelMdColumnUniqueness(), BuiltInMetadata.ColumnUniqueness.Handler.class);
 
   //~ Constructors -----------------------------------------------------------
 
@@ -80,9 +78,14 @@ public class RelMdColumnUniqueness
     return BuiltInMetadata.ColumnUniqueness.DEF;
   }
 
-  public Boolean areColumnsUnique(TableScan rel, RelMetadataQuery mq,
+  public Boolean areColumnsUnique(TableScan scan, RelMetadataQuery mq,
       ImmutableBitSet columns, boolean ignoreNulls) {
-    return rel.getTable().isKey(columns);
+    final BuiltInMetadata.ColumnUniqueness.Handler handler =
+        scan.getTable().unwrap(BuiltInMetadata.ColumnUniqueness.Handler.class);
+    if (handler != null) {
+      return handler.areColumnsUnique(scan, mq, columns, ignoreNulls);
+    }
+    return scan.getTable().isKey(columns);
   }
 
   public @Nullable Boolean areColumnsUnique(Filter rel, RelMetadataQuery mq,
@@ -353,8 +356,24 @@ public class RelMdColumnUniqueness
     if (Aggregate.isSimple(rel) || ignoreNulls) {
       columns = decorateWithConstantColumnsFromPredicates(columns, rel, mq);
       // group by keys form a unique key
-      ImmutableBitSet groupKey = ImmutableBitSet.range(rel.getGroupCount());
-      return columns.contains(groupKey);
+      final ImmutableBitSet groupKey = ImmutableBitSet.range(rel.getGroupCount());
+      final boolean contained = columns.contains(groupKey);
+      if (contained) {
+        return true;
+      } else if (!Aggregate.isSimple(rel)) {
+        return false;
+      }
+
+      final ImmutableBitSet commonKeys = columns.intersect(groupKey);
+      if (commonKeys.isEmpty()) {
+        return false;
+      }
+      final ImmutableBitSet.Builder targetColumns = ImmutableBitSet.builder();
+      for (int key : commonKeys) {
+        targetColumns.set(rel.getGroupSet().nth(key));
+      }
+
+      return mq.areColumnsUnique(rel.getInput(), targetColumns.build(), ignoreNulls);
     }
     return null;
   }
@@ -385,12 +404,6 @@ public class RelMdColumnUniqueness
       ImmutableBitSet columns, boolean ignoreNulls) {
     columns = decorateWithConstantColumnsFromPredicates(columns, rel, mq);
     return mq.areColumnsUnique(rel.getInput(), columns, ignoreNulls);
-  }
-
-  public @Nullable Boolean areColumnsUnique(HepRelVertex rel, RelMetadataQuery mq,
-      ImmutableBitSet columns, boolean ignoreNulls) {
-    columns = decorateWithConstantColumnsFromPredicates(columns, rel, mq);
-    return mq.areColumnsUnique(rel.getCurrentRel(), columns, ignoreNulls);
   }
 
   public @Nullable Boolean areColumnsUnique(RelSubset rel, RelMetadataQuery mq,

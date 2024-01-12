@@ -23,6 +23,7 @@ import com.google.common.collect.Multimap;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * RelMetadataProvider defines an interface for obtaining metadata about
@@ -70,4 +71,24 @@ public interface RelMetadataProvider {
 
   <M extends Metadata> Multimap<Method, MetadataHandler<M>> handlers(
       MetadataDef<M> def);
+
+  /**
+   * Retrieves a list of {@link MetadataHandler} for implements a particular
+   * {@link MetadataHandler}.class.  The resolution order is specificity of the
+   * relNode class, with preference given to handlers that occur earlier in the
+   * list.
+   *
+   * <p>For instance, given a return list of {A, B, C} where A implements
+   * RelNode and Scan, B implements Scan, and C implements LogicalScan and
+   * Filter.
+   *
+   * <p>Scan dispatches to a.method(Scan);
+   * LogicalFilter dispatches to c.method(Filter);
+   * LogicalScan dispatches to c.method(LogicalScan);
+   * Aggregate dispatches to a.method(RelNode).
+   *
+   * <p>The behavior is undefined if the class hierarchy for dispatching is not
+   * a tree.
+   */
+  List<MetadataHandler<?>> handlers(Class<? extends MetadataHandler<?>> handlerClass);
 }

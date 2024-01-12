@@ -579,10 +579,10 @@ class RelToSqlConverterTest {
         + "ORDER BY \"brand_name\", \"product_class_id\"";
     final String expectedMySql = "SELECT `product_class_id`, `brand_name`\n"
         + "FROM `foodmart`.`product`\n"
-        + "GROUP BY `brand_name`, `product_class_id` WITH ROLLUP";
+        + "GROUP BY `product_class_id`, `brand_name` WITH ROLLUP";
     final String expectedHive = "SELECT product_class_id, brand_name\n"
         + "FROM foodmart.product\n"
-        + "GROUP BY brand_name, product_class_id WITH ROLLUP";
+        + "GROUP BY product_class_id, brand_name WITH ROLLUP";
     sql(query)
         .ok(expected)
         .withMysql()
@@ -1415,7 +1415,7 @@ class RelToSqlConverterTest {
     relFn(relFn).withMysql().ok(expectedSql);
   }
 
-  @Test public void testTableFunctionScanWithUnnest() {
+  @Test public void testBigQuerySqlDialecttestTableFunctionScanWithUnnest() {
     final RelBuilder builder = relBuilder();
     String[] array = {"abc", "bcd", "fdc"};
     RelNode root = builder.functionScan(SqlStdOperatorTable.UNNEST, 0,
@@ -11485,7 +11485,7 @@ class RelToSqlConverterTest {
         .build();
     final String expectedSparkQuery = "SELECT HIREDATE\n"
         + "FROM scott.EMP\n"
-        + "QUALIFY (MAX(EMPNO) OVER (ORDER BY HIREDATE IS NULL, HIREDATE ROWS BETWEEN UNBOUNDED "
+        + "QUALIFY (MAX(EMPNO) OVER (ORDER BY HIREDATE IS NULL, HIREDATE RANGE BETWEEN UNBOUNDED "
         + "PRECEDING AND UNBOUNDED FOLLOWING)) = 1";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSparkQuery));
   }
