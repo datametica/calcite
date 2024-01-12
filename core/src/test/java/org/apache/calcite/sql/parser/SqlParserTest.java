@@ -2196,11 +2196,11 @@ public class SqlParserTest {
         + "union\n"
         + "select * from emp2\n";
     final String expected = "WITH `EMP2` AS (SELECT *\n"
-        + "FROM `EMP`) (SELECT *\n"
+        + "FROM `EMP`) SELECT *\n"
         + "FROM `EMP2`\n"
         + "UNION\n"
         + "SELECT *\n"
-        + "FROM `EMP2`)";
+        + "FROM `EMP2`";
     sql(sql).ok(expected);
   }
 
