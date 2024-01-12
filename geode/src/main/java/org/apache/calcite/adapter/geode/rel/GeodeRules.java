@@ -152,11 +152,11 @@ public class GeodeRules {
       final RelTraitSet traitSet =
           project.getTraitSet().replace(getOutConvention());
       return new GeodeProject(
-        project.getCluster(),
-        traitSet,
-        convert(project.getInput(), getOutConvention()),
-        project.getProjects(),
-        project.getRowType());
+          project.getCluster(),
+          traitSet,
+          convert(project.getInput(), getOutConvention()),
+          project.getProjects(),
+          project.getRowType());
     }
   }
 
@@ -180,12 +180,12 @@ public class GeodeRules {
       final RelTraitSet traitSet =
           aggregate.getTraitSet().replace(getOutConvention());
       return new GeodeAggregate(
-        aggregate.getCluster(),
-        traitSet,
-        convert(aggregate.getInput(), traitSet.simplify()),
-        aggregate.getGroupSet(),
-        aggregate.getGroupSets(),
-        aggregate.getAggCallList());
+          aggregate.getCluster(),
+          traitSet,
+          convert(aggregate.getInput(), traitSet.simplify()),
+          aggregate.getGroupSet(),
+          aggregate.getGroupSets(),
+          aggregate.getAggCallList());
     }
   }
 
@@ -200,7 +200,7 @@ public class GeodeRules {
         Config.EMPTY
             .withOperandSupplier(b ->
                 b.operand(Sort.class)
-        // OQL doesn't support offsets (e.g. LIMIT 10 OFFSET 500)
+                    // OQL doesn't support offsets (e.g. LIMIT 10 OFFSET 500)
                     .predicate(sort -> sort.offset == null)
                     .anyInputs())
             .as(Config.class)
@@ -357,13 +357,6 @@ public class GeodeRules {
         return (leftName != null) && (rightName != null);
       } else if (left.isA(SqlKind.ITEM) && right.isA(SqlKind.LITERAL)) {
         return true;
-      } else if ((left.isA(SqlKind.OTHER_FUNCTION))
-          && right.isA(SqlKind.LITERAL)) {
-        if (((RexCall) left).getOperator() != SqlStdOperatorTable.ITEM) {
-          return false;
-        }
-        // Should be ITEM
-        return true;
       }
 
       return false;
@@ -380,10 +373,10 @@ public class GeodeRules {
     private static RelNode convert(LogicalFilter filter) {
       final RelTraitSet traitSet = filter.getTraitSet().replace(GeodeRel.CONVENTION);
       return new GeodeFilter(
-        filter.getCluster(),
-        traitSet,
-        convert(filter.getInput(), GeodeRel.CONVENTION),
-        filter.getCondition());
+          filter.getCluster(),
+          traitSet,
+          convert(filter.getInput(), GeodeRel.CONVENTION),
+          filter.getCondition());
     }
 
     /** Rule configuration. */

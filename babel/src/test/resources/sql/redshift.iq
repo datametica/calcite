@@ -1766,7 +1766,7 @@ SELECT "LENGTH"('ily')
 
 -- returns 8 (cf OCTET_LENGTH)
 select length('français');
-SELECT "LENGTH"('fran\u00e7ais')
+SELECT "LENGTH"(u&'fran\00e7ais')
 !explain-validated-on calcite
 
 # LOWER
@@ -1805,7 +1805,7 @@ f7415e33f972c03abd4f3fed36748f7a
 # OCTET_LENGTH
 -- returns 9 (cf LENGTH)
 select octet_length('français');
-SELECT OCTET_LENGTH(CAST('fran\u00e7ais' AS VARBINARY))
+SELECT OCTET_LENGTH(CAST(u&'fran\00e7ais' AS VARBINARY))
 !explain-validated-on calcite
 
 # POSITION is a synonym for STRPOS
@@ -1846,6 +1846,12 @@ SELECT "REGEXP_INSTR"('The Home Depot Center', '[cC]ent(er|re)$')
 # REGEXP_REPLACE ( source_string, pattern [, replace_string [ , position ] ] )
 select regexp_replace('DonecFri@semperpretiumneque.com', '@.*\\.(org|gov|com)$');
 SELECT "REGEXP_REPLACE"('DonecFri@semperpretiumneque.com', '@.*\\.(org|gov|com)$')
+!explain-validated-on calcite
+
+# REGEXP_SUBSTR ( source_string, pattern [, position [, occurrence
+# [, parameters ] ] ] )
+select regexp_substr('Suspendisse.tristique@nonnisiAenean.edu','@[^.]*');
+SELECT "REGEXP_SUBSTR"('Suspendisse.tristique@nonnisiAenean.edu', '@[^.]*')
 !explain-validated-on calcite
 
 # REPEAT
@@ -2036,6 +2042,12 @@ SELECT "TO_CHAR"(-125.8, '999D99S')
 -- returns '2001-10-02'
 select to_date ('02 Oct 2001', 'DD Mon YYYY');
 SELECT "TO_DATE"('02 Oct 2001', 'DD Mon YYYY')
+!explain-validated-on calcite
+
+# TO_NUMBER
+-- returns -12454.8
+select to_number('12,454.8-', '99G999D9S');
+SELECT "TO_NUMBER"('12,454.8-', '99G999D9S')
 !explain-validated-on calcite
 
 # 12 System Administration Functions

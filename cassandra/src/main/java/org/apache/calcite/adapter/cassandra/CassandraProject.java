@@ -28,7 +28,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.Pair;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -43,7 +42,7 @@ import java.util.Map;
 public class CassandraProject extends Project implements CassandraRel {
   public CassandraProject(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode input, List<? extends RexNode> projects, RelDataType rowType) {
-    super(cluster, traitSet, ImmutableList.of(), input, projects, rowType, ImmutableSet.of());
+    super(cluster, traitSet, ImmutableList.of(), input, projects, rowType);
     assert getConvention() == CassandraRel.CONVENTION;
     assert getConvention() == input.getConvention();
   }

@@ -24,7 +24,6 @@ import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Region;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
@@ -86,7 +85,6 @@ class GeodeBookstoreTest extends AbstractGeodeTest {
         .queryContains(GeodeAssertions.query(expectedQuery));
   }
 
-  @Disabled
   @Test void testWhereWithAnd() {
     calciteAssert()
         .query("select * from geode.BookMaster WHERE itemNumber > 122 "

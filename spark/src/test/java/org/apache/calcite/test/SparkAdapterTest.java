@@ -467,7 +467,7 @@ class SparkAdapterTest {
   }
 
   // Tests involving "complex" filters in WHERE clause
-  @Disabled
+
   @Test void testFilterBetween() {
     final String sql = "select *\n"
         + "from " + VALUES4 + "\n"
@@ -484,7 +484,6 @@ class SparkAdapterTest {
         .explainContains(plan);
   }
 
-  @Disabled
   @Test void testFilterIsIn() {
     final String sql = "select *\n"
         + "from " + VALUES4 + "\n"
@@ -533,7 +532,6 @@ class SparkAdapterTest {
         .explainContains(plan);
   }
 
-  @Disabled
   @Test void testFilterOr() {
     final String sql = "select *\n"
         + "from " + VALUES2 + "\n"
