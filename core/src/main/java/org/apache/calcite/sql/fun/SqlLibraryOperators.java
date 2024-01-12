@@ -930,6 +930,21 @@ public abstract class SqlLibraryOperators {
     return SqlTypeUtil.createArrayType(opBinding.getTypeFactory(), type, arrayType.isNullable());
   }
 
+  /** The "ARRAY_APPEND(array, element)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_APPEND =
+      SqlBasicFunction.create(SqlKind.ARRAY_APPEND,
+          SqlLibraryOperators::arrayAppendPrependReturnType,
+          OperandTypes.ARRAY_ELEMENT);
+
+  /** The "EXISTS(array, lambda)" function (Spark); returns whether a predicate holds
+   * for one or more elements in the array. */
+//  @LibraryOperator(libraries = {SPARK})
+//  public static final SqlFunction EXISTS =
+//      SqlBasicFunction.create("EXISTS",
+//          ReturnTypes.BOOLEAN_NULLABLE,
+//          OperandTypes.EXISTS);
+
   @SuppressWarnings("argument.type.incompatible")
   private static RelDataType arrayCompactReturnType(SqlOperatorBinding opBinding) {
     final RelDataType arrayType = opBinding.collectOperandTypes().get(0);
@@ -948,39 +963,39 @@ public abstract class SqlLibraryOperators {
   /** The "ARRAY_COMPACT(array)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_COMPACT =
-          SqlBasicFunction.create(SqlKind.ARRAY_COMPACT,
-                  SqlLibraryOperators::arrayCompactReturnType,
-                  OperandTypes.ARRAY);
+      SqlBasicFunction.create(SqlKind.ARRAY_COMPACT,
+          SqlLibraryOperators::arrayCompactReturnType,
+          OperandTypes.ARRAY);
 
   /** The "ARRAY_CONCAT(array [, array]*)" function. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction ARRAY_CONCAT =
-          SqlBasicFunction.create(SqlKind.ARRAY_CONCAT,
-                  ReturnTypes.LEAST_RESTRICTIVE,
-                  OperandTypes.AT_LEAST_ONE_SAME_VARIADIC);
+      SqlBasicFunction.create(SqlKind.ARRAY_CONCAT,
+          ReturnTypes.LEAST_RESTRICTIVE,
+          OperandTypes.AT_LEAST_ONE_SAME_VARIADIC);
 
   /** The "ARRAY_CONTAINS(array, element)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_CONTAINS =
-          SqlBasicFunction.create(SqlKind.ARRAY_CONTAINS,
-                  ReturnTypes.BOOLEAN_NULLABLE,
-                  OperandTypes.ARRAY_ELEMENT);
+      SqlBasicFunction.create(SqlKind.ARRAY_CONTAINS,
+          ReturnTypes.BOOLEAN_NULLABLE,
+          OperandTypes.ARRAY_ELEMENT);
 
   /** The "ARRAY_DISTINCT(array)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_DISTINCT =
-          SqlBasicFunction.create(SqlKind.ARRAY_DISTINCT,
-                  ReturnTypes.ARG0_NULLABLE,
-                  OperandTypes.ARRAY);
+      SqlBasicFunction.create(SqlKind.ARRAY_DISTINCT,
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.ARRAY);
 
   /** The "ARRAY_EXCEPT(array1, array2)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_EXCEPT =
-          SqlBasicFunction.create(SqlKind.ARRAY_EXCEPT,
-                  ReturnTypes.LEAST_RESTRICTIVE,
-                  OperandTypes.and(
-                          OperandTypes.SAME_SAME,
-                          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY)));
+      SqlBasicFunction.create(SqlKind.ARRAY_EXCEPT,
+          ReturnTypes.LEAST_RESTRICTIVE,
+          OperandTypes.and(
+              OperandTypes.SAME_SAME,
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY)));
 
   @SuppressWarnings("argument.type.incompatible")
   private static RelDataType arrayInsertReturnType(SqlOperatorBinding opBinding) {
@@ -1001,83 +1016,83 @@ public abstract class SqlLibraryOperators {
   /** The "ARRAY_INSERT(array, pos, val)" function (Spark). */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_INSERT =
-          SqlBasicFunction.create(SqlKind.ARRAY_INSERT,
-                  SqlLibraryOperators::arrayInsertReturnType,
-                  OperandTypes.ARRAY_INSERT);
+      SqlBasicFunction.create(SqlKind.ARRAY_INSERT,
+          SqlLibraryOperators::arrayInsertReturnType,
+          OperandTypes.ARRAY_INSERT);
 
   /** The "ARRAY_INTERSECT(array1, array2)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_INTERSECT =
-          SqlBasicFunction.create(SqlKind.ARRAY_INTERSECT,
-                  ReturnTypes.LEAST_RESTRICTIVE,
-                  OperandTypes.and(
-                          OperandTypes.SAME_SAME,
-                          OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY)));
+      SqlBasicFunction.create(SqlKind.ARRAY_INTERSECT,
+          ReturnTypes.LEAST_RESTRICTIVE,
+          OperandTypes.and(
+              OperandTypes.SAME_SAME,
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY)));
 
   /** The "ARRAY_JOIN(array, delimiter [, nullText ])" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_JOIN =
-          SqlBasicFunction.create(SqlKind.ARRAY_JOIN,
-                  ReturnTypes.VARCHAR_NULLABLE,
-                  OperandTypes.STRING_ARRAY_CHARACTER_OPTIONAL_CHARACTER);
+      SqlBasicFunction.create(SqlKind.ARRAY_JOIN,
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING_ARRAY_CHARACTER_OPTIONAL_CHARACTER);
 
   /** The "ARRAY_LENGTH(array)" function. */
   @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE})
   public static final SqlFunction ARRAY_LENGTH =
-          SqlBasicFunction.create(SqlKind.ARRAY_LENGTH,
-                  ReturnTypes.INTEGER_NULLABLE,
-                  OperandTypes.ARRAY);
+      SqlBasicFunction.create(SqlKind.ARRAY_LENGTH,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY);
 
   /** The "ARRAY_MAX(array)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_MAX =
-          SqlBasicFunction.create(SqlKind.ARRAY_MAX,
-                  ReturnTypes.TO_COLLECTION_ELEMENT_FORCE_NULLABLE,
-                  OperandTypes.ARRAY);
+      SqlBasicFunction.create(SqlKind.ARRAY_MAX,
+          ReturnTypes.TO_COLLECTION_ELEMENT_FORCE_NULLABLE,
+          OperandTypes.ARRAY);
 
   /** The "ARRAY_MAX(array)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_MIN =
-          SqlBasicFunction.create(SqlKind.ARRAY_MIN,
-                  ReturnTypes.TO_COLLECTION_ELEMENT_FORCE_NULLABLE,
-                  OperandTypes.ARRAY);
+      SqlBasicFunction.create(SqlKind.ARRAY_MIN,
+          ReturnTypes.TO_COLLECTION_ELEMENT_FORCE_NULLABLE,
+          OperandTypes.ARRAY);
 
   /** The "ARRAY_POSITION(array, element)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_POSITION =
-          SqlBasicFunction.create(SqlKind.ARRAY_POSITION,
-                  ReturnTypes.BIGINT_NULLABLE,
-                  OperandTypes.ARRAY_ELEMENT);
+      SqlBasicFunction.create(SqlKind.ARRAY_POSITION,
+          ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.ARRAY_ELEMENT);
 
   /** The "ARRAY_PREPEND(array, element)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_PREPEND =
-          SqlBasicFunction.create(SqlKind.ARRAY_PREPEND,
-                  SqlLibraryOperators::arrayAppendPrependReturnType,
-                  OperandTypes.ARRAY_ELEMENT);
+      SqlBasicFunction.create(SqlKind.ARRAY_PREPEND,
+          SqlLibraryOperators::arrayAppendPrependReturnType,
+          OperandTypes.ARRAY_ELEMENT);
 
   /** The "ARRAY_REMOVE(array, element)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_REMOVE =
-          SqlBasicFunction.create(SqlKind.ARRAY_REMOVE,
-                  ReturnTypes.ARG0_NULLABLE,
-                  OperandTypes.ARRAY_ELEMENT);
+      SqlBasicFunction.create(SqlKind.ARRAY_REMOVE,
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.ARRAY_ELEMENT);
 
   /** The "ARRAY_REPEAT(element, count)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_REPEAT =
-          SqlBasicFunction.create(SqlKind.ARRAY_REPEAT,
-                  ReturnTypes.TO_ARRAY,
-                  OperandTypes.sequence(
-                          "ARRAY_REPEAT(ANY, INTEGER)",
-                          OperandTypes.ANY, OperandTypes.typeName(SqlTypeName.INTEGER)));
+      SqlBasicFunction.create(SqlKind.ARRAY_REPEAT,
+          ReturnTypes.TO_ARRAY,
+          OperandTypes.sequence(
+              "ARRAY_REPEAT(ANY, INTEGER)",
+              OperandTypes.ANY, OperandTypes.typeName(SqlTypeName.INTEGER)));
 
   /** The "ARRAY_REVERSE(array)" function. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction ARRAY_REVERSE =
-          SqlBasicFunction.create(SqlKind.ARRAY_REVERSE,
-                  ReturnTypes.ARG0_NULLABLE,
-                  OperandTypes.ARRAY);
+      SqlBasicFunction.create(SqlKind.ARRAY_REVERSE,
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.ARRAY);
 
   /** The "ARRAY_SIZE(array)" function. */
   @LibraryOperator(libraries = {SPARK})
@@ -1137,7 +1152,12 @@ public abstract class SqlLibraryOperators {
               .andThen(SqlTypeTransforms.TO_NULLABLE),
           OperandTypes.SAME_VARIADIC);
 
-
+  /** The "SORT_ARRAY(array)" function (Spark). */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction SORT_ARRAY =
+      SqlBasicFunction.create(SqlKind.SORT_ARRAY,
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.ARRAY.or(OperandTypes.ARRAY_BOOLEAN_LITERAL));
 
   private static RelDataType deriveTypeMapConcat(SqlOperatorBinding opBinding) {
     if (opBinding.getOperandCount() == 0) {
@@ -1428,6 +1448,51 @@ public abstract class SqlLibraryOperators {
       SqlBasicFunction.create("UNIX_MICROS",
           ReturnTypes.BIGINT_NULLABLE, OperandTypes.TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
+
+  /** The "SAFE_ADD(numeric1, numeric2)" function; equivalent to the {@code +} operator but
+   * returns null if overflow occurs. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_ADD =
+      SqlBasicFunction.create("SAFE_ADD",
+          ReturnTypes.SUM_FORCE_NULLABLE,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "SAFE_DIVIDE(numeric1, numeric2)" function; equivalent to the {@code /} operator but
+   * returns null if an error occurs, such as overflow or division by zero. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_DIVIDE =
+      SqlBasicFunction.create("SAFE_DIVIDE",
+          ReturnTypes.DOUBLE_IF_INTEGERS.orElse(ReturnTypes.QUOTIENT_FORCE_NULLABLE),
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "SAFE_MULTIPLY(numeric1, numeric2)" function; equivalent to the {@code *} operator but
+   * returns null if overflow occurs. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_MULTIPLY =
+      SqlBasicFunction.create("SAFE_MULTIPLY",
+          ReturnTypes.PRODUCT_FORCE_NULLABLE,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "SAFE_NEGATE(numeric)" function; negates {@code numeric} and returns null if overflow
+   * occurs. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_NEGATE =
+      SqlBasicFunction.create("SAFE_NEGATE",
+          ReturnTypes.ARG0_FORCE_NULLABLE,
+          OperandTypes.NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "SAFE_SUBTRACT(numeric1, numeric2)" function; equivalent to the {@code -} operator but
+   * returns null if overflow occurs. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_SUBTRACT =
+      SqlBasicFunction.create("SAFE_SUBTRACT",
+          ReturnTypes.SUM_FORCE_NULLABLE,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction CHR =
