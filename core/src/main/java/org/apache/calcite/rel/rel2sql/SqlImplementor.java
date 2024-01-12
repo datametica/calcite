@@ -2207,7 +2207,6 @@ public abstract class SqlImplementor {
             || CTERelToSqlUtil.isCteDefinationTrait(rel.getTraitSet())) {
           return false;
         }
-
         if (CTERelToSqlUtil.isCteScopeTrait(rel.getInput(0).getTraitSet())
             || CTERelToSqlUtil.isCteDefinationTrait(rel.getInput(0).getTraitSet())) {
           return false;
