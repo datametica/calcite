@@ -76,18 +76,16 @@ public abstract class SqlLibraryOperators {
   private SqlLibraryOperators() {
   }
 
-  /**
-   * The "AGGREGATE(m)" aggregate function;
+  /** The "AGGREGATE(m)" aggregate function;
    * aggregates a measure column according to the measure's rollup strategy.
    * This is a Calcite-specific extension.
    *
    * <p>This operator is for SQL (and AST); for internal use (RexNode and
-   * Aggregate) use {@code AGG_M2M}.
-   */
+   * Aggregate) use {@code AGG_M2M}. */
   @LibraryOperator(libraries = {CALCITE})
   public static final SqlFunction AGGREGATE =
-          SqlBasicAggFunction.create("AGGREGATE", SqlKind.AGGREGATE_FN,
-                  ReturnTypes.ARG0, OperandTypes.MEASURE);
+      SqlBasicAggFunction.create("AGGREGATE", SqlKind.AGGREGATE_FN,
+          ReturnTypes.ARG0, OperandTypes.MEASURE);
 
   /** The "CONVERT_TIMEZONE(tz1, tz2, datetime)" function;
    * converts the timezone of {@code datetime} from {@code tz1} to {@code tz2}.
@@ -223,7 +221,7 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction STARTSWITH = STARTS_WITH.withName("STARTSWITH");
 
-  /** BIG_QUERY's "SUBSTR(string, position [, substringLength ])" function. */
+  /** BigQuery's "SUBSTR(string, position [, substringLength ])" function. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction SUBSTR_BIG_QUERY =
       new SqlFunction("SUBSTR", SqlKind.SUBSTR_BIG_QUERY,
@@ -351,6 +349,15 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {MYSQL})
   public static final SqlFunction JSON_STORAGE_SIZE = new SqlJsonStorageSizeFunction();
 
+  @LibraryOperator(libraries = {MYSQL})
+  public static final SqlFunction JSON_INSERT = new SqlJsonModifyFunction("JSON_INSERT");
+
+  @LibraryOperator(libraries = {MYSQL})
+  public static final SqlFunction JSON_REPLACE = new SqlJsonModifyFunction("JSON_REPLACE");
+
+  @LibraryOperator(libraries = {MYSQL})
+  public static final SqlFunction JSON_SET = new SqlJsonModifyFunction("JSON_SET");
+
   @LibraryOperator(libraries = {MYSQL, ORACLE})
   public static final SqlFunction REGEXP_REPLACE = new SqlRegexpReplaceFunction();
 
@@ -400,19 +407,19 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction BOOL_OR =
       new SqlMinMaxAggFunction("BOOL_OR", SqlKind.MAX, OperandTypes.BOOLEAN);
 
-  /** The "LOGICAL_AND(condition)" aggregate function, BIG_QUERY's
+  /** The "LOGICAL_AND(condition)" aggregate function, BigQuery's
    * equivalent to {@link SqlStdOperatorTable#EVERY}. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlAggFunction LOGICAL_AND =
       new SqlMinMaxAggFunction("LOGICAL_AND", SqlKind.MIN, OperandTypes.BOOLEAN);
 
-  /** The "LOGICAL_OR(condition)" aggregate function, BIG_QUERY's
+  /** The "LOGICAL_OR(condition)" aggregate function, BigQuery's
    * equivalent to {@link SqlStdOperatorTable#SOME}. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlAggFunction LOGICAL_OR =
       new SqlMinMaxAggFunction("LOGICAL_OR", SqlKind.MAX, OperandTypes.BOOLEAN);
 
-  /** The "COUNTIF(condition) [OVER (...)]" function, in BIG_QUERY,
+  /** The "COUNTIF(condition) [OVER (...)]" function, in BigQuery,
    * returns the count of TRUE values for expression.
    *
    * <p>{@code COUNTIF(b)} is equivalent to
@@ -458,7 +465,7 @@ public abstract class SqlLibraryOperators {
       new SqlItemOperator("SAFE_ORDINAL", OperandTypes.ARRAY, 1, true);
 
   /** The "ARRAY_AGG(value [ ORDER BY ...])" aggregate function,
-   * in BIG_QUERY and PostgreSQL, gathers values into arrays. */
+   * in BigQuery and PostgreSQL, gathers values into arrays. */
   @LibraryOperator(libraries = {POSTGRESQL, BIG_QUERY})
   public static final SqlAggFunction ARRAY_AGG =
       SqlBasicAggFunction
@@ -470,7 +477,7 @@ public abstract class SqlLibraryOperators {
           .withAllowsNullTreatment(true);
 
   /** The "ARRAY_CONCAT_AGG(value [ ORDER BY ...])" aggregate function,
-   * in BIG_QUERY and PostgreSQL, concatenates array values into arrays. */
+   * in BigQuery and PostgreSQL, concatenates array values into arrays. */
   @LibraryOperator(libraries = {POSTGRESQL, BIG_QUERY})
   public static final SqlAggFunction ARRAY_CONCAT_AGG =
       SqlBasicAggFunction
@@ -480,7 +487,7 @@ public abstract class SqlLibraryOperators {
           .withSyntax(SqlSyntax.ORDERED_FUNCTION);
 
   /** The "STRING_AGG(value [, separator ] [ ORDER BY ...])" aggregate function,
-   * BIG_QUERY and PostgreSQL's equivalent of
+   * BigQuery and PostgreSQL's equivalent of
    * {@link SqlStdOperatorTable#LISTAGG}.
    *
    * <p>{@code STRING_AGG(v, sep ORDER BY x, y)} is implemented by
@@ -489,7 +496,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction STRING_AGG =
       SqlBasicAggFunction
           .create(SqlKind.STRING_AGG, ReturnTypes.ARG0_NULLABLE,
-              OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING))
+              OperandTypes.STRING.or(OperandTypes.STRING_STRING))
           .withFunctionType(SqlFunctionCategory.SYSTEM)
           .withSyntax(SqlSyntax.ORDERED_FUNCTION);
 
@@ -539,16 +546,16 @@ public abstract class SqlLibraryOperators {
    * a given number of seconds after 1970-01-01. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction DATE_FROM_UNIX_DATE =
-      new SqlFunction("DATE_FROM_UNIX_DATE", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DATE_NULLABLE, null, OperandTypes.INTEGER,
+      SqlBasicFunction.create("DATE_FROM_UNIX_DATE",
+          ReturnTypes.DATE_NULLABLE, OperandTypes.INTEGER,
           SqlFunctionCategory.TIMEDATE);
 
   /** The "UNIX_DATE(date)" function; returns the number of days since
    * 1970-01-01. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction UNIX_DATE =
-      new SqlFunction("UNIX_DATE", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER_NULLABLE, null, OperandTypes.DATE,
+      SqlBasicFunction.create("UNIX_DATE",
+          ReturnTypes.INTEGER_NULLABLE, OperandTypes.DATE,
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
@@ -857,7 +864,10 @@ public abstract class SqlLibraryOperators {
       new SqlLikeOperator("NOT RLIKE", SqlKind.RLIKE, true, true);
 
   /** The "CONCAT(arg, ...)" function that concatenates strings.
-   * For example, "CONCAT('a', 'bc', 'd')" returns "abcd". */
+   * For example, "CONCAT('a', 'bc', 'd')" returns "abcd".
+   *
+   * <p>It accepts at least 1 argument and returns null if any of
+   * the arguments is null. */
   @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
   public static final SqlFunction CONCAT_FUNCTION =
       new SqlFunction("CONCAT",
@@ -881,6 +891,12 @@ public abstract class SqlLibraryOperators {
 
   /** The "CONCAT(arg0, arg1)" function that concatenates strings.
    * For example, "CONCAT('a', 'bc')" returns "abc".
+   *
+   * <p>If one of the arguments is null, it will be treated as empty string.
+   * "CONCAT('a', null)" returns "a".
+   *
+   * <p>Returns null only when both arguments are null.
+   * "CONCAT(null, null)" returns null.
    *
    * <p>It is assigned {@link SqlKind#CONCAT2} to make it not equal to
    * {@link #CONCAT_FUNCTION}. */
@@ -1046,24 +1062,23 @@ public abstract class SqlLibraryOperators {
    * since 1970-01-01 00:00:00. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction UNIX_SECONDS =
-      new SqlFunction("UNIX_SECONDS", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.BIGINT_NULLABLE, null, OperandTypes.TIMESTAMP,
-          SqlFunctionCategory.TIMEDATE);
+      SqlBasicFunction.create("UNIX_SECONDS", ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.TIMESTAMP, SqlFunctionCategory.TIMEDATE);
 
   /** The "UNIX_MILLIS(bigint)" function; returns the number of milliseconds
    * since 1970-01-01 00:00:00. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction UNIX_MILLIS =
-      new SqlFunction("UNIX_MILLIS", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.BIGINT_NULLABLE, null, OperandTypes.TIMESTAMP,
+      SqlBasicFunction.create("UNIX_MILLIS",
+          ReturnTypes.BIGINT_NULLABLE, OperandTypes.TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
 
   /** The "UNIX_MICROS(bigint)" function; returns the number of microseconds
    * since 1970-01-01 00:00:00. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction UNIX_MICROS =
-      new SqlFunction("UNIX_MICROS", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.BIGINT_NULLABLE, null, OperandTypes.TIMESTAMP,
+      SqlBasicFunction.create("UNIX_MICROS",
+          ReturnTypes.BIGINT_NULLABLE, OperandTypes.TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {ORACLE})
@@ -1102,15 +1117,22 @@ public abstract class SqlLibraryOperators {
           OperandTypes.NUMERIC,
           SqlFunctionCategory.NUMERIC);
 
-  @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
+  /** The {@code FACTORIAL(integer)} function.
+   * Returns the factorial of integer, the range of integer is [0, 20].
+   * Otherwise, returns NULL. */
+  @LibraryOperator(libraries = {HIVE, SPARK})
+  public static final SqlFunction FACTORIAL =
+      SqlBasicFunction.create("FACTORIAL",
+          ReturnTypes.BIGINT_FORCE_NULLABLE,
+          OperandTypes.INTEGER,
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {BIG_QUERY, MYSQL, POSTGRESQL})
   public static final SqlFunction MD5 =
-      new SqlFunction("MD5",
-        SqlKind.OTHER_FUNCTION,
-        ReturnTypes.explicit(SqlTypeName.VARCHAR)
-          .andThen(SqlTypeTransforms.TO_NULLABLE),
-        null,
-        OperandTypes.or(OperandTypes.STRING, OperandTypes.BINARY),
-        SqlFunctionCategory.STRING);
+      SqlBasicFunction.create("MD5",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING.or(OperandTypes.BINARY),
+          SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction TO_HEX =
