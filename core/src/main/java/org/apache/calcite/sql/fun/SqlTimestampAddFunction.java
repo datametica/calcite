@@ -82,7 +82,7 @@ public class SqlTimestampAddFunction extends SqlFunction {
               opBinding.getOperandLiteralValue(0, TimeUnit.class),
               opBinding.getOperandType(2));
 
-   // to be removed before 2.0
+  @Deprecated // to be removed before 2.0
   public static RelDataType deduceType(RelDataTypeFactory typeFactory,
       @Nullable TimeUnit timeUnit, RelDataType operandType1,
       RelDataType operandType2) {
@@ -96,25 +96,23 @@ public class SqlTimestampAddFunction extends SqlFunction {
     final TimeUnit timeUnit2 = first(timeUnit, TimeUnit.EPOCH);
     SqlTypeName typeName = datetimeType.getSqlTypeName();
     switch (timeUnit2) {
+    case MICROSECOND:
+    case MILLISECOND:
+    case NANOSECOND:
+      return typeFactory.createSqlType(typeName,
+          Math.max(FRAC_SECOND_PRECISION_MAP.getOrDefault(timeUnit2, 0),
+              datetimeType.getPrecision()));
     case HOUR:
     case MINUTE:
     case SECOND:
-    case MILLISECOND:
-    case NANOSECOND:
-    case MICROSECOND:
-      switch (timeUnit) {
-      case MILLISECOND:
-        return typeFactory.createSqlType(SqlTypeName.TIMESTAMP,
-                MILLISECOND_PRECISION);
-      case MICROSECOND:
-        return typeFactory.createSqlType(SqlTypeName.TIMESTAMP,
-                MICROSECOND_PRECISION);
-      default:
-        if (typeName == SqlTypeName.TIME) {
-          return typeFactory.createSqlType(SqlTypeName.TIME);
-        } else {
-          return typeFactory.createSqlType(SqlTypeName.TIMESTAMP);
-        }
+      if (datetimeType.getFamily() == SqlTypeFamily.TIME) {
+        return datetimeType;
+      } else if (datetimeType.getFamily() == SqlTypeFamily.TIMESTAMP) {
+        return
+            typeFactory.createSqlType(typeName,
+                datetimeType.getPrecision());
+      } else {
+        return typeFactory.createSqlType(SqlTypeName.TIMESTAMP);
       }
     default:
       return datetimeType;
