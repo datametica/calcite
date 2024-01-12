@@ -208,6 +208,7 @@ public class SqlLiteral extends SqlNode {
     case TIME:
       return value instanceof TimeString;
     case TIMESTAMP:
+    case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       return value instanceof TimestampString;
     case TIMESTAMP_WITH_TIME_ZONE:
       return value instanceof TimestampWithTimeZoneString;

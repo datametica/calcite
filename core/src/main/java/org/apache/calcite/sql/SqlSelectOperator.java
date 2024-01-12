@@ -30,10 +30,12 @@ import java.util.function.Consumer;
 
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * An operator describing a query. (Not a query itself.)
  *
- * <p>Operands are:</p>
+ * <p>Operands are:
  *
  * <ul>
  * <li>0: distinct ({@link SqlLiteral})</li>
@@ -69,7 +71,7 @@ public class SqlSelectOperator extends SqlOperator {
     assert functionQualifier == null;
     return new SqlSelect(pos,
         (SqlNodeList) operands[0],
-        (SqlNodeList) operands[1],
+        requireNonNull((SqlNodeList) operands[1], "selectList"),
         operands[2],
         operands[3],
         (SqlNodeList) operands[4],
@@ -180,8 +182,8 @@ public class SqlSelectOperator extends SqlOperator {
           writer.startList(SqlWriter.FrameTypeEnum.FROM_LIST);
       select.from.unparse(
           writer,
-          SqlJoin.OPERATOR.getLeftPrec() - 1,
-          SqlJoin.OPERATOR.getRightPrec() - 1);
+          SqlJoin.COMMA_OPERATOR.getLeftPrec() - 1,
+          SqlJoin.COMMA_OPERATOR.getRightPrec() - 1);
       writer.endList(fromFrame);
     }
 

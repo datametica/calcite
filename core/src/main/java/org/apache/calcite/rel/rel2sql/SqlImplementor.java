@@ -2183,7 +2183,7 @@ public abstract class SqlImplementor {
       for (SqlNode node : sqlNodes) {
         if (node instanceof SqlBasicCall && ((SqlBasicCall) node).getOperator()
             == SqlStdOperatorTable.AS) {
-          aliases.add(((SqlBasicCall) node).getOperands()[1].toString());
+          aliases.add(((SqlBasicCall) node).getOperandList().get(1).toString());
         }
       }
       return aliases;
@@ -2214,7 +2214,7 @@ public abstract class SqlImplementor {
     }
 
     private boolean hasAnalyticalFunction(SqlBasicCall call) {
-      for (SqlNode operand : call.getOperands()) {
+      for (SqlNode operand : call.getOperandList()) {
         if (operand instanceof SqlCall) {
           if (((SqlCall) operand).getOperator() instanceof SqlOverOperator) {
             return true;
@@ -2602,7 +2602,8 @@ public abstract class SqlImplementor {
 
     private void stripHavingClauseIfAggregateFromProjection() {
       final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
-      final SqlNode havingSelectList = ((SqlBasicCall) ((SqlSelect) node).getHaving()).operands[0];
+      final SqlNode havingSelectList = ((SqlBasicCall) ((SqlSelect) node).getHaving())
+              .getOperandList().get(0);
       if (selectList != null && havingSelectList != null
           && havingSelectList instanceof SqlCall
           && ((SqlCall) havingSelectList).getOperator().isAggregator()) {

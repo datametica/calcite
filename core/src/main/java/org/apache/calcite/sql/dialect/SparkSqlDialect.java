@@ -674,7 +674,7 @@ public class SparkSqlDialect extends SqlDialect {
       writer.endFunCall(dateFormatFrame);
       break;
     case "CURRENT_TIMESTAMP":
-      if (((SqlBasicCall) call).getOperands().length > 0) {
+      if (((SqlBasicCall) call).operandCount() > 0) {
         new CurrentTimestampHandler(this)
             .unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
       } else {

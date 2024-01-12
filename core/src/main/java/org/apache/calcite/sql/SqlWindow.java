@@ -725,7 +725,8 @@ public class SqlWindow extends SqlCall {
         if (allowableBoundTypeFamilies.isEmpty()) {
           throw validator.newValidationError(boundVal,
               RESOURCE.orderByDataTypeProhibitsRange());
-        } else if (!allowableBoundTypeFamilies.contains(boundTypeFamily)) {
+        }
+        if (!allowableBoundTypeFamilies.contains(boundTypeFamily)) {
           throw validator.newValidationError(boundVal,
               RESOURCE.orderByRangeMismatch());
         }

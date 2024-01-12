@@ -1174,6 +1174,15 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.BIGINT_NULLABLE, null, OperandTypes.TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
 
+  /** The "CHAR(n)" function; returns the character whose ASCII code is
+   * {@code n} % 256, or null if {@code n} &lt; 0. */
+  @LibraryOperator(libraries = {MYSQL, SPARK})
+  public static final SqlFunction CHAR =
+      SqlBasicFunction.create("CHAR",
+          ReturnTypes.CHAR_FORCE_NULLABLE,
+          OperandTypes.INTEGER,
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction CHR =
       new SqlFunction("CHR",

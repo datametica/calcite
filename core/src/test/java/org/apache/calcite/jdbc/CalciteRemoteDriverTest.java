@@ -226,7 +226,7 @@ class CalciteRemoteDriverTest {
         break;
       case GET_SYSTEM_FUNCTIONS:
         assertThat(connection.getMetaData().getSystemFunctions(),
-            CoreMatchers.notNullValue());
+            notNullValue());
         break;
       case GET_TIME_DATE_FUNCTIONS:
         assertThat(connection.getMetaData().getTimeDateFunctions(),

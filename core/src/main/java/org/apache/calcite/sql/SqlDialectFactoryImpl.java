@@ -25,7 +25,9 @@ import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.dialect.ClickHouseSqlDialect;
 import org.apache.calcite.sql.dialect.Db2SqlDialect;
 import org.apache.calcite.sql.dialect.DerbySqlDialect;
+import org.apache.calcite.sql.dialect.ExasolSqlDialect;
 import org.apache.calcite.sql.dialect.FirebirdSqlDialect;
+import org.apache.calcite.sql.dialect.FireboltSqlDialect;
 import org.apache.calcite.sql.dialect.H2SqlDialect;
 import org.apache.calcite.sql.dialect.HiveSqlDialect;
 import org.apache.calcite.sql.dialect.HsqldbSqlDialect;
@@ -67,35 +69,18 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       JethroDataSqlDialect.createCache();
 
   @Override public SqlDialect create(DatabaseMetaData databaseMetaData) {
-    String databaseProductName;
-    int databaseMajorVersion;
-    int databaseMinorVersion;
-    String databaseVersion;
+    SqlDialect.Context c = SqlDialects.createContext(databaseMetaData);
+
+    String databaseProductName = c.databaseProductName();
     try {
-      databaseProductName = databaseMetaData.getDatabaseProductName();
-      databaseMajorVersion = databaseMetaData.getDatabaseMajorVersion();
-      databaseMinorVersion = databaseMetaData.getDatabaseMinorVersion();
-      databaseVersion = databaseMetaData.getDatabaseProductVersion();
+      if (databaseProductName == null) {
+        databaseProductName = databaseMetaData.getDatabaseProductName();
+      }
     } catch (SQLException e) {
       throw new RuntimeException("while detecting database product", e);
     }
     final String upperProductName =
         databaseProductName.toUpperCase(Locale.ROOT).trim();
-    final String quoteString = getIdentifierQuoteString(databaseMetaData);
-    final NullCollation nullCollation = getNullCollation(databaseMetaData);
-    final Casing unquotedCasing = getCasing(databaseMetaData, false);
-    final Casing quotedCasing = getCasing(databaseMetaData, true);
-    final boolean caseSensitive = isCaseSensitive(databaseMetaData);
-    final SqlDialect.Context c = SqlDialect.EMPTY_CONTEXT
-        .withDatabaseProductName(databaseProductName)
-        .withDatabaseMajorVersion(databaseMajorVersion)
-        .withDatabaseMinorVersion(databaseMinorVersion)
-        .withDatabaseVersion(databaseVersion)
-        .withIdentifierQuoteString(quoteString)
-        .withUnquotedCasing(unquotedCasing)
-        .withQuotedCasing(quotedCasing)
-        .withCaseSensitive(caseSensitive)
-        .withNullCollation(nullCollation);
     switch (upperProductName) {
     case "ACCESS":
       return new AccessSqlDialect(c);
@@ -105,6 +90,10 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return new ClickHouseSqlDialect(c);
     case "DBMS:CLOUDSCAPE":
       return new DerbySqlDialect(c);
+    case "EXASOL":
+      return new ExasolSqlDialect(c);
+    case "FIREBOLT":
+      return new FireboltSqlDialect(c);
     case "HIVE":
       return new HiveSqlDialect(c);
     case "INGRES":
@@ -120,13 +109,17 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return new OracleSqlDialect(c);
     case "PHOENIX":
       return new PhoenixSqlDialect(c);
+    case "PRESTO":
+    case "AWS.ATHENA":
+      return new PrestoSqlDialect(c);
     case "MYSQL (INFOBRIGHT)":
       return new InfobrightSqlDialect(c);
     case "MYSQL":
       return new MysqlSqlDialect(
           c.withDataTypeSystem(MysqlSqlDialect.MYSQL_TYPE_SYSTEM));
     case "REDSHIFT":
-      return new RedshiftSqlDialect(c);
+      return new RedshiftSqlDialect(
+          c.withDataTypeSystem(RedshiftSqlDialect.TYPE_SYSTEM));
     case "SNOWFLAKE":
       return new SnowflakeSqlDialect(c);
     case "SPARK":
@@ -135,17 +128,22 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       break;
     }
     // Now the fuzzy matches.
-    if (databaseProductName.startsWith("DB2")) {
+    if (upperProductName.startsWith("DB2")) {
       return new Db2SqlDialect(c);
     } else if (upperProductName.contains("FIREBIRD")) {
       return new FirebirdSqlDialect(c);
-    } else if (databaseProductName.startsWith("Informix")) {
+    } else if (upperProductName.contains("FIREBOLT")) {
+      return new FireboltSqlDialect(c);
+    } else if (upperProductName.contains("GOOGLE BIGQUERY")
+        || upperProductName.contains("GOOGLE BIG QUERY")) {
+      return new BigQuerySqlDialect(c);
+    } else if (upperProductName.startsWith("INFORMIX")) {
       return new InformixSqlDialect(c);
     } else if (upperProductName.contains("NETEZZA")) {
       return new NetezzaSqlDialect(c);
     } else if (upperProductName.contains("PARACCEL")) {
       return new ParaccelSqlDialect(c);
-    } else if (databaseProductName.startsWith("HP Neoview")) {
+    } else if (upperProductName.startsWith("HP NEOVIEW")) {
       return new NeoviewSqlDialect(c);
     } else if (upperProductName.contains("POSTGRE")) {
       return new PostgresqlSqlDialect(
@@ -253,8 +251,12 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return Db2SqlDialect.DEFAULT;
     case DERBY:
       return DerbySqlDialect.DEFAULT;
+    case EXASOL:
+      return ExasolSqlDialect.DEFAULT;
     case FIREBIRD:
       return FirebirdSqlDialect.DEFAULT;
+    case FIREBOLT:
+      return FireboltSqlDialect.DEFAULT;
     case H2:
       return H2SqlDialect.DEFAULT;
     case HIVE:
@@ -295,14 +297,14 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return RedshiftSqlDialect.DEFAULT;
     case SNOWFLAKE:
       return SnowflakeSqlDialect.DEFAULT;
+    case SPARK:
+      return SparkSqlDialect.DEFAULT;
     case SYBASE:
       return SybaseSqlDialect.DEFAULT;
     case TERADATA:
       return TeradataSqlDialect.DEFAULT;
     case VERTICA:
       return VerticaSqlDialect.DEFAULT;
-    case SPARK:
-      return SparkSqlDialect.DEFAULT;
     case SQLSTREAM:
     case UNKNOWN:
     default:

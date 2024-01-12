@@ -19,8 +19,15 @@ package org.apache.calcite.sql;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.model.ModelHandler;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.runtime.AccumOperation;
+import org.apache.calcite.runtime.CollectOperation;
+import org.apache.calcite.runtime.SpatialTypeFunctions;
+import org.apache.calcite.runtime.UnionOperation;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.impl.AggregateFunctionImpl;
+import org.apache.calcite.sql.fun.SqlSpatialTypeFunctions;
 import org.apache.calcite.sql.util.SqlOperatorTables;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 
@@ -29,9 +36,10 @@ import com.google.common.collect.ImmutableList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
- * Implementation of {@link SqlSpatialTypeOperatorTable} containing
+ * Implementation of {@link org.apache.calcite.sql.SqlSpatialTypeOperatorTable} containing
  * the spatial operators and functions.
  */
 public class SqlSpatialTypeOperatorTable implements SqlOperatorTable {
@@ -42,6 +50,26 @@ public class SqlSpatialTypeOperatorTable implements SqlOperatorTable {
     // Create a root schema to hold the spatial functions.
     CalciteSchema rootSchema = CalciteSchema.createRootSchema(false, false);
     SchemaPlus schema = rootSchema.plus();
+
+    // Register the spatial functions.
+    ModelHandler.addFunctions(schema, null, ImmutableList.of(),
+        SpatialTypeFunctions.class.getName(), "*", true);
+
+    // Register the sql spatial functions.
+    ModelHandler.addFunctions(schema, null, ImmutableList.of(),
+        SqlSpatialTypeFunctions.class.getName(), "*", true);
+
+    // Register the spatial aggregate functions.
+    schema.add(
+        "ST_UNION", Objects.requireNonNull(
+        AggregateFunctionImpl.create(UnionOperation.class)));
+    schema.add(
+        "ST_ACCUM", Objects.requireNonNull(
+        AggregateFunctionImpl.create(AccumOperation.class)));
+    schema.add(
+        "ST_COLLECT", Objects.requireNonNull(
+        AggregateFunctionImpl.create(CollectOperation.class)));
+
     // Create a catalog reader to retrieve the operators.
     CalciteCatalogReader catalogReader =
         new CalciteCatalogReader(rootSchema,

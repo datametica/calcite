@@ -18,7 +18,6 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.ImmutableNullableList;
 import org.apache.calcite.util.Litmus;
@@ -150,7 +149,7 @@ public class SqlUpdate extends SqlCall {
   /**
    * Gets the source SELECT expression for the data to be updated. Returns
    * null before the statement has been expanded by
-   * {@link SqlValidatorImpl#performUnconditionalRewrites(SqlNode, boolean)}.
+   * {link SqlValidator #ImplperformUnconditionalRewrites(SqlNode, boolean)}.
    *
    * @return the source SELECT for the data to be updated
    */
@@ -195,8 +194,8 @@ public class SqlUpdate extends SqlCall {
 
   private Optional<SqlJoin> getJoinFromSourceSelect() {
     if (sourceSelect.from.getKind() == SqlKind.AS
-        && ((SqlBasicCall) sourceSelect.from).operands[0] instanceof SqlJoin) {
-      return Optional.of((SqlJoin) ((SqlBasicCall) sourceSelect.from).operands[0]);
+        && ((SqlBasicCall) sourceSelect.from).getOperandList().get(0) instanceof SqlJoin) {
+      return Optional.of((SqlJoin) ((SqlBasicCall) sourceSelect.from).getOperandList().get(0));
     }
     return sourceSelect.from instanceof SqlJoin
         ? Optional.of((SqlJoin) sourceSelect.from) : Optional.empty();
@@ -212,10 +211,10 @@ public class SqlUpdate extends SqlCall {
     if (node.equalsDeep(targetTable, Litmus.IGNORE)) {
       return true;
     } else if (node.getKind() == SqlKind.AS) {
-      return ((SqlBasicCall) node).operands[0].equalsDeep(targetTable, Litmus.IGNORE);
+      return ((SqlBasicCall) node).getOperandList().get(0).equalsDeep(targetTable, Litmus.IGNORE);
     }
     return targetTable instanceof SqlBasicCall && targetTable.getKind() == SqlKind.AS
-        && ((SqlBasicCall) targetTable).operands[0].equalsDeep(node, Litmus.IGNORE);
+        && ((SqlBasicCall) targetTable).getOperandList().get(0).equalsDeep(node, Litmus.IGNORE);
   }
 
   private void unparseTargetAlias(SqlWriter writer, int operatorLeftPrec, int operatorRightPrec) {
@@ -267,7 +266,8 @@ public class SqlUpdate extends SqlCall {
   private Optional<SqlIdentifier> getAliasForFromClause() {
     if (sourceSelect != null && sourceSelect.from != null) {
       if (sourceSelect.from instanceof SqlBasicCall && sourceSelect.from.getKind() == SqlKind.AS) {
-        return Optional.of((SqlIdentifier) ((SqlBasicCall) sourceSelect.from).operands[1]);
+        return Optional.of((SqlIdentifier) ((SqlBasicCall) sourceSelect.from)
+                .getOperandList().get(1));
       }
     }
     return Optional.empty();
