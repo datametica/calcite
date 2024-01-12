@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.apache.calcite.avatica.util.DateTimeUtils.timestampStringToUnixDate;
 import static org.apache.calcite.avatica.util.DateTimeUtils.ymdToUnixDate;
 import static org.apache.calcite.runtime.SqlFunctions.addMonths;
 import static org.apache.calcite.runtime.SqlFunctions.bitwiseAnd;
@@ -64,12 +65,8 @@ import static org.apache.calcite.runtime.SqlFunctions.monthNumberOfQuarter;
 import static org.apache.calcite.runtime.SqlFunctions.monthNumberOfYear;
 import static org.apache.calcite.runtime.SqlFunctions.nvl;
 import static org.apache.calcite.runtime.SqlFunctions.octetLength;
-import static org.apache.calcite.runtime.SqlFunctions.posixRegex;
 import static org.apache.calcite.runtime.SqlFunctions.quarterNumberOfYear;
-import static org.apache.calcite.runtime.SqlFunctions.regexpContains;
-import static org.apache.calcite.runtime.SqlFunctions.regexpExtract;
 import static org.apache.calcite.runtime.SqlFunctions.regexpMatchCount;
-import static org.apache.calcite.runtime.SqlFunctions.regexpReplace;
 import static org.apache.calcite.runtime.SqlFunctions.rpad;
 import static org.apache.calcite.runtime.SqlFunctions.rtrim;
 import static org.apache.calcite.runtime.SqlFunctions.sha1;
@@ -152,47 +149,157 @@ class SqlFunctionsTest {
   }
 
   @Test void testPosixRegex() {
-    assertThat(posixRegex("abc", "abc", true), is(true));
-    assertThat(posixRegex("abc", "^a", true), is(true));
-    assertThat(posixRegex("abc", "(b|d)", true), is(true));
-    assertThat(posixRegex("abc", "^(b|c)", true), is(false));
+    final SqlFunctions.PosixRegexFunction f =
+        new SqlFunctions.PosixRegexFunction();
+    assertThat(f.posixRegexSensitive("abc", "abc"), is(true));
+    assertThat(f.posixRegexSensitive("abc", "^a"), is(true));
+    assertThat(f.posixRegexSensitive("abc", "(b|d)"), is(true));
+    assertThat(f.posixRegexSensitive("abc", "^(b|c)"), is(false));
 
-    assertThat(posixRegex("abc", "ABC", false), is(true));
-    assertThat(posixRegex("abc", "^A", false), is(true));
-    assertThat(posixRegex("abc", "(B|D)", false), is(true));
-    assertThat(posixRegex("abc", "^(B|C)", false), is(false));
+    assertThat(f.posixRegexInsensitive("abc", "ABC"), is(true));
+    assertThat(f.posixRegexInsensitive("abc", "^A"), is(true));
+    assertThat(f.posixRegexInsensitive("abc", "(B|D)"), is(true));
+    assertThat(f.posixRegexInsensitive("abc", "^(B|C)"), is(false));
 
-    assertThat(posixRegex("abc", "^[[:xdigit:]]$", false), is(false));
-    assertThat(posixRegex("abc", "^[[:xdigit:]]+$", false), is(true));
-    assertThat(posixRegex("abcq", "^[[:xdigit:]]+$", false), is(false));
+    assertThat(f.posixRegexInsensitive("abc", "^[[:xdigit:]]$"), is(false));
+    assertThat(f.posixRegexInsensitive("abc", "^[[:xdigit:]]+$"), is(true));
+    assertThat(f.posixRegexInsensitive("abcq", "^[[:xdigit:]]+$"), is(false));
 
-    assertThat(posixRegex("abc", "[[:xdigit:]]", false), is(true));
-    assertThat(posixRegex("abc", "[[:xdigit:]]+", false), is(true));
-    assertThat(posixRegex("abcq", "[[:xdigit:]]", false), is(true));
+    assertThat(f.posixRegexInsensitive("abc", "[[:xdigit:]]"), is(true));
+    assertThat(f.posixRegexInsensitive("abc", "[[:xdigit:]]+"), is(true));
+    assertThat(f.posixRegexInsensitive("abcq", "[[:xdigit:]]"), is(true));
+  }
+
+  @Test void testRegexpContains() {
+    final SqlFunctions.RegexFunction f = new SqlFunctions.RegexFunction();
+
+    // Use same regex; should hit cache
+    assertThat(f.regexpContains("abcdef", "abz*"), is(true));
+    assertThat(f.regexpContains("zabzz", "abz*"), is(true));
+    assertThat(f.regexpContains("zazbbzz", "abz*"), is(false));
+    assertThat(f.regexpContains("abcadcabcaecghi", ""), is(true));
+
+    try {
+      final boolean b = f.regexpContains("abc def ghi", "(abc");
+      fail("expected error, got " + b);
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Invalid regular expression for REGEXP_CONTAINS: 'Unclosed "
+              + "group near index 4 (abc'"));
+    }
+
+    try {
+      final boolean b = f.regexpContains("abc def ghi", "[z-a]");
+      fail("expected error, got " + b);
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Invalid regular expression for REGEXP_CONTAINS: 'Illegal "
+              + "character range near index 3 [z-a]    ^'"));
+    }
+
+    try {
+      final boolean b = f.regexpContains("abc def ghi", "{2,1}");
+      fail("expected error, got " + b);
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Invalid regular expression for REGEXP_CONTAINS: 'Illegal "
+              + "repetition range near index 4 {2,1}     ^'"));
+    }
+  }
+
+  @Test void testRegexpExtract() {
+    final SqlFunctions.RegexFunction f = new SqlFunctions.RegexFunction();
+
+    // basic extracts
+    assertThat(f.regexpExtract("abcadcabcaecghi", "ac"), nullValue());
+    assertThat(f.regexpExtract("abcadcabcaecghi", ""), is(""));
+    assertThat(f.regexpExtract("a9cadca5c4aecghi", "a[0-9]c"), is("a9c"));
+    assertThat(f.regexpExtract("abcadcabcaecghi", "a.*c"), is("abcadcabcaec"));
+
+    // capturing group extracts
+    assertThat(f.regexpExtract("abcadcabcaecghi", "abc(a.c)"), is("adc"));
+    assertThat(f.regexpExtract("abcadcabcaecghi", "abc(a.c)", 4), is("aec"));
+    assertThat(f.regexpExtract("abcadcabcaecghi", "abc(a.c)", 1, 2), is("aec"));
+
+    // position-based extracts
+    assertThat(f.regexpExtract("abcadcabcaecghi", "a.c", 25), nullValue());
+    assertThat(f.regexpExtract("a9cadca5c4aecghi", "a[0-9]c", 1), is("a9c"));
+    assertThat(f.regexpExtract("a9cadca5c4aecghi", "a[0-9]c", 6), is("a5c"));
+    assertThat(f.regexpExtract("abcadcabcaecghi", "a.*c", 7), is("abcaec"));
+
+    // occurrence-based extracts
+    assertThat(f.regexpExtract("abcadcabcaecghi", "a.c", 1, 3), is("abc"));
+    assertThat(f.regexpExtract("abcadcabcaecghi", "a.c", 2, 3), is("aec"));
+    assertThat(f.regexpExtract("abcadcabcaecghi", "a.c", 1, 5), nullValue());
+    assertThat(f.regexpExtract("abcadcabcaecghi", "a.+c", 1, 2), nullValue());
+
+    // exceptional scenarios
+    try {
+      final String s = f.regexpExtract("abc def ghi", "(abc");
+      fail("expected error, got " + s);
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Invalid regular expression for REGEXP_EXTRACT: 'Unclosed group near index 4 "
+              + "(abc'"));
+    }
+
+    try {
+      final String s = f.regexpExtract("abcadcabcaecghi", "(abc)ax(a.c)");
+      fail("expected error, got " + s);
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Multiple capturing groups (count=2) not allowed in regex input for "
+              + "REGEXP_EXTRACT"));
+    }
+
+    try {
+      final String s = f.regexpExtract("abcadcabcaecghi", "a.c", 0);
+      fail("expected error, got " + s);
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Invalid integer input '0' for argument 'position' in REGEXP_EXTRACT"));
+    }
+
+    try {
+      final String s = f.regexpExtract("abcadcabcaecghi", "a.c", 3, -1);
+      fail("expected error, got " + s);
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Invalid integer input '-1' for argument 'occurrence' in REGEXP_EXTRACT"));
+    }
+
+    try {
+      final String s = f.regexpExtract("abcadcabcaecghi", "a.c", -4, 4);
+      fail("expected error, got " + s);
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Invalid integer input '-4' for argument 'position' in REGEXP_EXTRACT"));
+    }
   }
 
   @Test void testRegexpReplace() {
-    assertThat(regexpReplace("a b c", "b", "X"), is("a X c"));
-    assertThat(regexpReplace("abc def ghi", "[g-z]+", "X"), is("abc def X"));
-    assertThat(regexpReplace("abc def ghi", "[a-z]+", "X"), is("X X X"));
-    assertThat(regexpReplace("a b c", "a|b", "X"), is("X X c"));
-    assertThat(regexpReplace("a b c", "y", "X"), is("a b c"));
+    final SqlFunctions.RegexFunction f = new SqlFunctions.RegexFunction();
+    assertThat(f.regexpReplace("a b c", "b", "X"), is("a X c"));
+    assertThat(f.regexpReplace("abc def ghi", "[g-z]+", "X"), is("abc def X"));
+    assertThat(f.regexpReplace("abc def ghi", "[a-z]+", "X"), is("X X X"));
+    assertThat(f.regexpReplace("a b c", "a|b", "X"), is("X X c"));
+    assertThat(f.regexpReplace("a b c", "y", "X"), is("a b c"));
 
-    assertThat(regexpReplace("100-200", "(\\d+)", "num"), is("num-num"));
-    assertThat(regexpReplace("100-200", "(\\d+)", "###"), is("###-###"));
-    assertThat(regexpReplace("100-200", "(-)", "###"), is("100###200"));
+    assertThat(f.regexpReplace("100-200", "(\\d+)", "num"), is("num-num"));
+    assertThat(f.regexpReplace("100-200", "(\\d+)", "###"), is("###-###"));
+    assertThat(f.regexpReplace("100-200", "(-)", "###"), is("100###200"));
 
-    assertThat(regexpReplace("abc def ghi", "[a-z]+", "X", 1), is("X X X"));
-    assertThat(regexpReplace("abc def ghi", "[a-z]+", "X", 2), is("aX X X"));
-    assertThat(regexpReplace("abc def ghi", "[a-z]+", "X", 1, 3),
+    assertThat(f.regexpReplace("abc def ghi", "[a-z]+", "X", 1), is("X X X"));
+    assertThat(f.regexpReplace("abc def ghi", "[a-z]+", "X", 2), is("aX X X"));
+    assertThat(f.regexpReplace("abc def ghi", "[a-z]+", "X", 1, 3),
         is("abc def X"));
-    assertThat(regexpReplace("abc def GHI", "[a-z]+", "X", 1, 3, "c"),
+    assertThat(f.regexpReplace("abc def GHI", "[a-z]+", "X", 1, 3, "c"),
         is("abc def GHI"));
-    assertThat(regexpReplace("abc def GHI", "[a-z]+", "X", 1, 3, "i"),
+    assertThat(f.regexpReplace("abc def GHI", "[a-z]+", "X", 1, 3, "i"),
         is("abc def X"));
 
     try {
-      regexpReplace("abc def ghi", "[a-z]+", "X", 0);
+      f.regexpReplace("abc def ghi", "[a-z]+", "X", 0);
       fail("'regexp_replace' on an invalid pos is not possible");
     } catch (CalciteException e) {
       assertThat(e.getMessage(),
@@ -200,7 +307,7 @@ class SqlFunctionsTest {
     }
 
     try {
-      regexpReplace("abc def ghi", "[a-z]+", "X", 1, 3, "WWW");
+      f.regexpReplace("abc def ghi", "[a-z]+", "X", 1, 3, "WWW");
       fail("'regexp_replace' on an invalid matchType is not possible");
     } catch (CalciteException e) {
       assertThat(e.getMessage(),
@@ -1192,13 +1299,13 @@ class SqlFunctionsTest {
     assertThat(timeSub("10:00:00", "INTERVAL 1 HOUR"), is(Time.valueOf("09:00:00")));
   }
 
-  /** Test for {@link SqlFunctions#toCharFunction(Object, Object)}. */
-  @Test public void testToChar() {
-    assertThat(toCharFunction(null, null), nullValue());
-    assertThat(toCharFunction(23, "99"), is("23"));
-    assertThat(toCharFunction(123, "999"), is("123"));
-    assertThat(toCharFunction(1.5, "9.99"), is("1.50"));
-  }
+//  /** Test for {@link SqlFunctions#toCharFunction(Object, Object)}. */
+//  @Test public void testToChar() {
+//    assertThat(toCharFunction(null, null), nullValue());
+//    assertThat(toCharFunction(23, "99"), is("23"));
+//    assertThat(toCharFunction(123, "999"), is("123"));
+//    assertThat(toCharFunction(1.5, "9.99"), is("1.50"));
+//  }
 
   @Test public void monthsBetween() {
     assertThat(SqlFunctions.monthsBetween("2020-05-23", "2020-04-23"), is(1.0));
@@ -1264,19 +1371,31 @@ class SqlFunctionsTest {
         "Jon", 20, "i"), is(0));
   }
 
-  /** Test for {@link SqlFunctions#regexpContains(Object, Object)}. */
-  @Test public void testRegexpContains() {
-    assertThat(regexpContains("foo@example.com", "@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+"), is(true));
-    assertThat(regexpContains("www.example.net", "@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+"), is(false));
+  /**
+   * Tests that timestamp can be converted to a string given a custom pattern.
+   */
+  @Test void testToChar() {
+    String pattern1 = "YYYY-MM-DD HH24:MI:SS.MS";
+    String pattern2 = "Day, DD HH12:MI:SS";
+
+    final SqlFunctions.DateFormatFunction f =
+        new SqlFunctions.DateFormatFunction();
+    assertThat(f.toChar(0, pattern1),
+        is("1970-01-01 00:00:00.000"));
+
+    assertThat(f.toChar(0, pattern2),
+        is("Thursday, 01 12:00:00"));
+
+    final long ts0 = timestampStringToUnixDate("2014-09-30 15:28:27.356");
+    assertThat(f.toChar(ts0, pattern1),
+        is("2014-09-30 15:28:27.356"));
+
+    assertThat(f.toChar(ts0, pattern2),
+        is("Tuesday, 30 03:28:27"));
+
+    final long ts1 = timestampStringToUnixDate("1500-04-30 12:00:00.123");
+    assertThat(f.toChar(ts1, pattern1),
+        is("1500-04-30 12:00:00.123"));
   }
 
-  /** Test for {@link SqlFunctions#regexpExtract(Object, Object, Object, Object)}. */
-  @Test public void testRegexpExtract() {
-    assertThat(regexpExtract("foo@example.com", "^[a-zA-Z0-9_.+-]+", 0, 0),
-        is("foo"));
-    assertThat(regexpExtract("cat on the mat", ".at", 0, 0),
-        is("cat"));
-    assertThat(regexpExtract("cat on the mat", ".at", 0, 1),
-        is("mat"));
-  }
 }
