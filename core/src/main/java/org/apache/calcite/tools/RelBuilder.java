@@ -73,6 +73,8 @@ import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexOrdinalRef;
+import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSimplify;
 import org.apache.calcite.rex.RexUtil;
@@ -427,6 +429,13 @@ public class RelBuilder {
     }
   }
 
+  public RexNode makeArrayLiteral(Object value) {
+    final RexBuilder rexBuilder = cluster.getRexBuilder();
+    RelDataType arrayDataType = getTypeFactory().
+        createArrayType(getTypeFactory().createSqlType(SqlTypeName.ANY), -1);
+    return rexBuilder.makeLiteral(value, arrayDataType, false);
+  }
+
   /** Creates a correlation variable for the current input, and writes it into
    * a Holder. */
   public RelBuilder variable(Holder<RexCorrelVariable> v) {
@@ -463,6 +472,14 @@ public class RelBuilder {
       throw new IllegalArgumentException("field [" + fieldName
           + "] not found; input fields are: " + fieldNames);
     }
+  }
+
+  /** Creates a reference to an input field of type ordinal.
+   *
+   * @param fieldOrdinal Field Ordinal
+   */
+  public RexOrdinalRef ordinal(int fieldOrdinal) {
+    return RexOrdinalRef.of(field(fieldOrdinal));
   }
 
   /** Creates a reference to an input field by ordinal.
@@ -640,19 +657,13 @@ public class RelBuilder {
   private RexCall call(SqlOperator operator, List<RexNode> operandList) {
     switch (operator.getKind()) {
     case LIKE:
-      if (((SqlLikeOperator) operator).isNegated()) {
-        return (RexCall) not(call(SqlStdOperatorTable.LIKE, operandList));
-      }
-      break;
     case SIMILAR:
-      if (((SqlLikeOperator) operator).isNegated()) {
-        return (RexCall) not(call(SqlStdOperatorTable.SIMILAR_TO, operandList));
+      final SqlLikeOperator likeOperator = (SqlLikeOperator) operator;
+      if (likeOperator.isNegated()) {
+        final SqlOperator notLikeOperator = likeOperator.not();
+        return (RexCall) not(call(notLikeOperator, operandList));
       }
       break;
-    case BETWEEN:
-      assert operandList.size() == 3;
-      return (RexCall) between(operandList.get(0), operandList.get(1),
-          operandList.get(2));
     default:
       break;
     }
@@ -733,7 +744,10 @@ public class RelBuilder {
 
   /** Creates an expression that casts an expression to a given type. */
   public RexNode cast(RexNode expr, SqlTypeName typeName) {
-    final RelDataType type = cluster.getTypeFactory().createSqlType(typeName);
+    RelDataType type = cluster.getTypeFactory().createSqlType(typeName);
+    if (SqlTypeName.NULL == expr.getType().getSqlTypeName()) {
+      type = getTypeFactory().createTypeWithNullability(type, true);
+    }
     return cluster.getRexBuilder().makeCast(type, expr);
   }
 
@@ -1302,22 +1316,29 @@ public class RelBuilder {
    *
    * <p>The predicates are combined using AND,
    * and optimized in a similar way to the {@link #and} method.
-   * If the result is TRUE no filter is created. */
+   * If simplification is on and the result is TRUE, no filter is created. */
   public RelBuilder filter(Iterable<CorrelationId> variablesSet,
       Iterable<? extends RexNode> predicates) {
-    final RexNode simplifiedPredicates =
-        simplifier.simplifyFilterPredicates(predicates);
-    if (simplifiedPredicates == null) {
-      return empty();
+    final RexNode conjunctionPredicates;
+    if (config.simplify()) {
+      conjunctionPredicates = simplifier.simplifyFilterPredicates(predicates);
+    } else {
+      conjunctionPredicates =
+          RexUtil.composeConjunction(simplifier.rexBuilder, predicates);
     }
 
-    if (!simplifiedPredicates.isAlwaysTrue()) {
-      final Frame frame = stack.pop();
-      final RelNode filter =
-          struct.filterFactory.createFilter(frame.rel,
-              simplifiedPredicates, ImmutableSet.copyOf(variablesSet));
-      stack.push(new Frame(filter, frame.fields));
+    if (conjunctionPredicates == null || conjunctionPredicates.isAlwaysFalse()) {
+      return empty();
     }
+    if (conjunctionPredicates.isAlwaysTrue()) {
+      return this;
+    }
+
+    final Frame frame = stack.pop();
+    final RelNode filter =
+        struct.filterFactory.createFilter(frame.rel,
+            conjunctionPredicates, ImmutableSet.copyOf(variablesSet));
+    stack.push(new Frame(filter, frame.fields));
     return this;
   }
 
@@ -1375,7 +1396,24 @@ public class RelBuilder {
    */
   public RelBuilder project(Iterable<? extends RexNode> nodes,
       Iterable<? extends @Nullable String> fieldNames, boolean force) {
-    return project_(nodes, fieldNames, ImmutableList.of(), force);
+    return project(nodes, fieldNames, force, ImmutableSet.of());
+  }
+
+  /**
+   * The same with {@link #project(Iterable, Iterable, boolean)}, with additional
+   * variablesSet param.
+   *
+   * @param nodes Expressions
+   * @param fieldNames Suggested field names
+   * @param force create project even if it is identity
+   * @param variablesSet Correlating variables that are set when reading a row
+   *                     from the input, and which may be referenced from the
+   *                     projection expressions
+   */
+  public RelBuilder project(Iterable<? extends RexNode> nodes,
+      Iterable<? extends @Nullable String> fieldNames, boolean force,
+      Iterable<CorrelationId> variablesSet) {
+    return project_(nodes, fieldNames, ImmutableList.of(), force, variablesSet);
   }
 
   /** Creates a {@link Project} of all original fields, plus the given
@@ -1449,10 +1487,12 @@ public class RelBuilder {
       Iterable<? extends RexNode> nodes,
       Iterable<? extends @Nullable String> fieldNames,
       Iterable<RelHint> hints,
-      boolean force) {
+      boolean force,
+      Iterable<CorrelationId> variablesSet) {
     final Frame frame = requireNonNull(peek_(), "frame stack is empty");
     final RelDataType inputRowType = frame.rel.getRowType();
     final List<RexNode> nodeList = Lists.newArrayList(nodes);
+    final Set<CorrelationId> variables = ImmutableSet.copyOf(variablesSet);
 
     // Perform a quick check for identity. We'll do a deeper check
     // later when we've derived column names.
@@ -1466,9 +1506,12 @@ public class RelBuilder {
       fieldNameList.add(null);
     }
 
+    // Do not merge projection when top projection has correlation variables
     bloat:
     if (frame.rel instanceof Project
-        && config.bloat() >= 0) {
+        && config.bloat() >= 0
+        && variables.isEmpty()
+        && shouldMergeProject(nodeList)) {
       final Project project = (Project) frame.rel;
       // Populate field names. If the upper expression is an input ref and does
       // not have a recommended name, use the name of the underlying field.
@@ -1516,7 +1559,9 @@ public class RelBuilder {
       final ImmutableSet.Builder<RelHint> mergedHints = ImmutableSet.builder();
       mergedHints.addAll(project.getHints());
       mergedHints.addAll(hints);
-      return project_(newNodes, fieldNameList, mergedHints.build(), force);
+      // Keep bottom projection's variablesSet.
+      return project_(newNodes, fieldNameList, mergedHints.build(), force,
+          ImmutableSet.copyOf(project.getVariablesSet()));
     }
 
     // Simplify expressions.
@@ -1606,10 +1651,66 @@ public class RelBuilder {
         struct.projectFactory.createProject(frame.rel,
             ImmutableList.copyOf(hints),
             ImmutableList.copyOf(nodeList),
-            fieldNameList);
+            fieldNameList,
+            variables);
     stack.pop();
     stack.push(new Frame(project, fields.build()));
     return this;
+  }
+
+  /** Whether to attempt to merge consecutive {@link Project} operators.
+   *
+   * <p>The default implementation returns {@code true};
+   * sub-classes may disable merge by overriding to return {@code false}. */
+  @Experimental
+  protected boolean shouldMergeProject(List<RexNode> nodeList) {
+    return !hasNestedAnalyticalFunctions(nodeList);
+  }
+
+  private Boolean hasNestedAnalyticalFunctions(List<RexNode> nodeList) {
+    List<RexInputRef> rexInputRefsInAnalytical = new ArrayList<>();
+    for (RexNode rexNode : nodeList) {
+      if (isAnalyticalRex(rexNode)) {
+        rexInputRefsInAnalytical.addAll(getIdentifiers(rexNode));
+      }
+    }
+    if (rexInputRefsInAnalytical.isEmpty()) {
+      return false;
+    }
+    Project projectRel = (Project) stack.peek().rel;
+    List<RexNode> previousRelNodeList = projectRel.getProjects();
+    for (RexInputRef rexInputRef : rexInputRefsInAnalytical) {
+      RexNode rexNode = previousRelNodeList.get(rexInputRef.getIndex());
+      if (isAnalyticalRex(rexNode)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean isAnalyticalRex(RexNode rexNode) {
+    if (rexNode instanceof RexOver) {
+      return true;
+    } else if (rexNode instanceof RexCall) {
+      for (RexNode operand : ((RexCall) rexNode).getOperands()) {
+        if (isAnalyticalRex(operand)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static List<RexInputRef> getIdentifiers(RexNode rexNode) {
+    List<RexInputRef> identifiers = new ArrayList<>();
+    if (rexNode instanceof RexInputRef) {
+      identifiers.add((RexInputRef) rexNode);
+    } else if (rexNode instanceof RexCall) {
+      for (RexNode operand : ((RexCall) rexNode).getOperands()) {
+        identifiers.addAll(getIdentifiers(operand));
+      }
+    }
+    return identifiers;
   }
 
   /** Creates a {@link Project} of the given
@@ -1631,6 +1732,32 @@ public class RelBuilder {
    */
   public RelBuilder projectNamed(Iterable<? extends RexNode> nodes,
       @Nullable Iterable<? extends @Nullable String> fieldNames, boolean force) {
+    return projectNamed(nodes, fieldNames, force, ImmutableSet.of());
+  }
+
+  /** Creates a {@link Project} of the given
+   * expressions and field names, and optionally optimizing.
+   *
+   * <p>If {@code fieldNames} is null, or if a particular entry in
+   * {@code fieldNames} is null, derives field names from the input
+   * expressions.
+   *
+   * <p>If {@code force} is false,
+   * and the input is a {@code Project},
+   * and the expressions  make the trivial projection ($0, $1, ...),
+   * modifies the input.
+   *
+   * @param nodes       Expressions
+   * @param fieldNames  Suggested field names, or null to generate
+   * @param force       Whether to create a renaming Project if the
+   *                    projections are trivial
+   * @param variablesSet Correlating variables that are set when reading a row
+   *                     from the input, and which may be referenced from the
+   *                     projection expressions
+   */
+  public RelBuilder projectNamed(Iterable<? extends RexNode> nodes,
+      @Nullable Iterable<? extends @Nullable String> fieldNames, boolean force,
+      Iterable<CorrelationId> variablesSet) {
     @SuppressWarnings("unchecked") final List<? extends RexNode> nodeList =
         nodes instanceof List ? (List) nodes : ImmutableList.copyOf(nodes);
     final List<@Nullable String> fieldNameList =
@@ -1666,7 +1793,7 @@ public class RelBuilder {
         stack.push(new Frame(newValues, frame.fields));
       }
     } else {
-      project(nodeList, rowType.getFieldNames(), force);
+      project(nodeList, rowType.getFieldNames(), force, variablesSet);
     }
     return this;
   }
@@ -2801,7 +2928,8 @@ public class RelBuilder {
                 struct.projectFactory.createProject(sort,
                     project.getHints(),
                     project.getProjects(),
-                    Pair.right(project.getNamedProjects())));
+                    Pair.right(project.getNamedProjects()),
+                    project.getVariablesSet()));
             return this;
           }
         }
@@ -2827,6 +2955,9 @@ public class RelBuilder {
     case INPUT_REF:
       return new RelFieldCollation(((RexInputRef) node).getIndex(), direction,
           Util.first(nullDirection, direction.defaultNullDirection()));
+    case ORDINAL_REF:
+      return new RelFieldCollation(((RexInputRef) node).getIndex(), direction,
+          Util.first(nullDirection, direction.defaultNullDirection()), true);
     case DESCENDING:
       return collation(((RexCall) node).getOperands().get(0),
           RelFieldCollation.Direction.DESCENDING,

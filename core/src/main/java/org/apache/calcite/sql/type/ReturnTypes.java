@@ -281,6 +281,15 @@ public abstract class ReturnTypes {
   public static final SqlReturnTypeInference DATE =
       explicit(SqlTypeName.DATE);
 
+  public static final SqlReturnTypeInference TIMESTAMP =
+          explicit(SqlTypeName.TIMESTAMP);
+
+  public static final SqlReturnTypeInference TIMESTAMP_WITH_TIME_ZONE =
+      explicit(SqlTypeName.TIMESTAMP_WITH_TIME_ZONE);
+
+  public static final SqlReturnTypeInference BINARY =
+      explicit(SqlTypeName.BINARY);
+
   /**
    * Type-inference strategy whereby the result type of a call is nullable
    * DATE.
@@ -302,17 +311,19 @@ public abstract class ReturnTypes {
       TIME.andThen(SqlTypeTransforms.TO_NULLABLE);
 
   /**
-   * Type-inference strategy whereby the result type of a call is TIMESTAMP.
-   */
-  public static final SqlReturnTypeInference TIMESTAMP =
-      explicit(SqlTypeName.TIMESTAMP);
-
-  /**
    * Type-inference strategy whereby the result type of a call is nullable
    * TIMESTAMP.
    */
   public static final SqlReturnTypeInference TIMESTAMP_NULLABLE =
       TIMESTAMP.andThen(SqlTypeTransforms.TO_NULLABLE);
+
+  /**
+   * Type-inference strategy whereby the result type of a call is nullable
+   * TIMESTAMP_WITH_TIME_ZONE.
+   */
+  public static final SqlReturnTypeInference TIMESTAMP_WITH_TIME_ZONE_NULLABLE =
+      TIMESTAMP_WITH_TIME_ZONE.andThen(SqlTypeTransforms.TO_NULLABLE);
+
 
   /**
    * Type-inference strategy whereby the result type of a call is Double.
@@ -332,6 +343,20 @@ public abstract class ReturnTypes {
    */
   public static final SqlReturnTypeInference CHAR =
           explicit(SqlTypeName.CHAR);
+
+  /**
+   * Type-inference strategy whereby the result type of a call is an Decimal.
+   */
+  public static final SqlReturnTypeInference DECIMAL =
+      explicit(SqlTypeName.DECIMAL);
+
+  /**
+   * Type-inference strategy whereby the result type of a call is an Decimal
+   * with nulls allowed if any of the operands allow nulls.
+   */
+  public static final SqlReturnTypeInference DECIMAL_NULLABLE =
+      DECIMAL.andThen(SqlTypeTransforms.TO_NULLABLE);
+
 
   /**
    * Type-inference strategy whereby the result type of a call is an Integer.

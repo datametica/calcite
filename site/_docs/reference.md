@@ -50,6 +50,28 @@ here to appease testAllFunctionsAreDocumented:
 | TABLE          | Documented as part of FROM syntax
 | VARIANCE()     | In SqlStdOperatorTable, but not fully implemented
 | TO_NUMBER()    | Converts string_expr to a NUMBER data type
+| CONV()         | Converts the given number n from one base to another base
+| LPAD()         | Append paddingString to the beginning of the string
+| RPAD()         | Append paddingString to the end of the string
+| FORMAT         | Format the value as per the pattern defined
+| TO_VARCHAR     | Derives the value as per the pattern defined
+| INSTR          | Finds substring position from Source string
+| WEEKNUMBER_OF_YEAR     | Get week number of the year
+| YEARNUMBER_OF_CALENDAR | Get year from the calendar value
+| MONTHNUMBER_OF_YEAR    | Get month of the year
+| QUARTERNUMBER_OF_YEAR  | Get quarter value of the year
+| MONTHNUMBER_OF_QUARTER | Get month from the quarter of the year
+| WEEKNUMBER_OF_MONTH    | Get week number of the month
+| WEEKNUMBER_OF_CALENDAR | Get week number of the calendar
+| DAYOCCURRENCE_OF_MONTH | Get day occurrence of the month
+| DATE_MOD       | Return division result between date and integer
+| TO_BINARY      | Return binary format based on charset
+| TIME_SUB       | Return time minus from interval
+| TO_CHAR        | Format date based on the format given
+| STRTOK         | Tokenizes a given string and returns the requested part
+| REGEXP_MATCH_COUNT | Returns the number of matching occurrences in the input
+| REGEXP_CONTAINS    | Returns TRUE if value is a partial match for the regular expression.
+| MONTHS_BETWEEN | Returns the month difference between two dates or timestamp
 {% endcomment %}
 -->
 
@@ -633,6 +655,7 @@ HOP,
 HOURS,
 **IDENTITY**,
 IGNORE,
+ILIKE,
 IMMEDIATE,
 IMMEDIATELY,
 IMPLEMENTATION,
@@ -1057,6 +1080,7 @@ VERSION,
 **VERSIONING**,
 VIEW,
 WEEK,
+WEEKS,
 **WHEN**,
 **WHENEVER**,
 **WHERE**,
@@ -1358,6 +1382,7 @@ Not implemented:
 | HOUR(date)                | Equivalent to `EXTRACT(HOUR FROM date)`. Returns an integer between 0 and 23.
 | MINUTE(date)              | Equivalent to `EXTRACT(MINUTE FROM date)`. Returns an integer between 0 and 59.
 | SECOND(date)              | Equivalent to `EXTRACT(SECOND FROM date)`. Returns an integer between 0 and 59.
+| MICROSECOND(DATETIME)     | Equivalent to `EXTRACT(MICROSECOND FROM DATETIME)`. Returns an integer between 0 and 999 999.
 | TIMESTAMPADD(timeUnit, integer, datetime) | Returns *datetime* with an interval of (signed) *integer* *timeUnit*s added. Equivalent to `datetime + INTERVAL 'integer' timeUnit`
 | TIMESTAMPDIFF(timeUnit, datetime, datetime2) | Returns the (signed) number of *timeUnit* intervals between *datetime* and *datetime2*. Equivalent to `(datetime2 - datetime) timeUnit`
 | LAST_DAY(date)            | Returns the date of the last day of the month in a value of datatype DATE; For example, it returns DATE'2020-02-29' for both DATE'2020-02-10' and TIMESTAMP'2020-02-10 10:10:10'
@@ -1769,6 +1794,7 @@ Not implemented:
 | {fn HOUR(date)} | Equivalent to `EXTRACT(HOUR FROM date)`. Returns an integer between 0 and 23.
 | {fn MINUTE(date)} | Equivalent to `EXTRACT(MINUTE FROM date)`. Returns an integer between 0 and 59.
 | {fn SECOND(date)} | Equivalent to `EXTRACT(SECOND FROM date)`. Returns an integer between 0 and 59.
+| {fn MICROSECOND(DATETIME)} | Equivalent to `EXTRACT(MICROSECOND FROM DATETIME)`. Returns an integer between 0 and 999 999.
 | {fn TIMESTAMPADD(timeUnit, count, datetime)} | Adds an interval of *count* *timeUnit*s to a datetime
 | {fn TIMESTAMPDIFF(timeUnit, timestamp1, timestamp2)} | Subtracts *timestamp1* from *timestamp2* and returns the result in *timeUnit*s
 
@@ -1853,6 +1879,21 @@ Not implemented:
 * REGR_R2(numeric1, numeric2)
 * REGR_SLOPE(numeric1, numeric2)
 * REGR_SXY(numeric1, numeric2)
+
+#### Ordered-Set Aggregate Functions
+
+The syntax is as for *aggregateCall*, except that `WITHIN GROUP` is
+required.
+
+In the following:
+
+* *fraction* is a numeric literal between 0 and 1, inclusive, and
+  represents a percentage
+
+| Operator syntax                    | Description
+|:---------------------------------- |:-----------
+| PERCENTILE_CONT(fraction) WITHIN GROUP (ORDER BY orderItem) | Returns a percentile based on a continuous distribution of the column values, interpolating between adjacent input items if needed
+| PERCENTILE_DISC(fraction) WITHIN GROUP (ORDER BY orderItem [, orderItem ]*) | Returns a percentile based on a discrete distribution of the column values returning the first input value whose position in the ordering equals or exceeds the specified fraction
 
 ### Window functions
 
@@ -2482,6 +2523,7 @@ The 'C' (compatibility) column contains value:
 * 'o' for Oracle ('fun=oracle' in the connect string),
 * 'p' for PostgreSQL ('fun=postgresql' in the connect string),
 * 's' for Apache Spark ('fun=spark' in the connect string).
+'sf' for Snowflake ('fun=snowflake' in the connect string).
 
 One operator name may correspond to multiple SQL dialects, but with different
 semantics.
@@ -2506,6 +2548,8 @@ semantics.
 | m | EXTRACTVALUE(xml, xpathExpr))                  | Returns the text of the first text node which is a child of the element or elements matched by the XPath expression.
 | o | GREATEST(expr [, expr ]*)                      | Returns the greatest of the expressions
 | b h s | IF(condition, value1, value2)              | Returns *value1* if *condition* is TRUE, *value2* otherwise
+| p | string1 ILIKE string2 [ ESCAPE string3 ]       | Whether *string1* matches pattern *string2*, ignoring case (similar to `LIKE`)
+| p | string1 NOT ILIKE string2 [ ESCAPE string3 ]   | Whether *string1* does not match pattern *string2*, ignoring case (similar to `NOT LIKE`)
 | m | JSON_TYPE(jsonValue)                           | Returns a string value indicating the type of *jsonValue*
 | m | JSON_DEPTH(jsonValue)                          | Returns an integer value indicating the depth of *jsonValue*
 | m | JSON_PRETTY(jsonValue)                         | Returns a pretty-printing of *jsonValue*
@@ -2549,6 +2593,7 @@ semantics.
 | b | UNIX_SECONDS(timestamp)                        | Returns the number of seconds since 1970-01-01 00:00:00
 | b | UNIX_DATE(date)                                | Returns the number of days since 1970-01-01
 | o | XMLTRANSFORM(xml, xslt)                        | Applies XSLT transform *xslt* to XML string *xml* and returns the result
+| sf  | TO_VARCHAR(value, format)                    | Returns formatted value based on the format operand to the value operand
 
 Note:
 

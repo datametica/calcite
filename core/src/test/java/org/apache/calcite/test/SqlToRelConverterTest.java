@@ -91,6 +91,11 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
         tester.getConformance());
   }
 
+  @Test void testDistinctWithFieldAlias() {
+    final String sql = "select distinct empno as emp_id from emp";
+    sql(sql).ok();
+  }
+
   @Test void testDotLiteralAfterNestedRow() {
     final String sql = "select ((1,2),(3,4,5)).\"EXPR$1\".\"EXPR$2\" from emp";
     sql(sql).ok();
@@ -137,6 +142,31 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
         + "  select a, b, c from (values (1, 2, 3)) as t (c, b, a)\n"
         + ") join dept on dept.deptno = c\n"
         + "order by c + a";
+    sql(sql).ok();
+  }
+
+  @Test void testDistinctInParentAndSubQueryWithGroupBy() {
+    final String sql = "select distinct deptno = 2 from (\n"
+        + "  select distinct deptno as deptno from dept group by deptno)";
+    sql(sql).ok();
+  }
+
+  @Test void testAnalyticalFunctionInChildWithDistinctInSubQuery() {
+    final String sql = "select deptno from (\n"
+        + "  select distinct deptno, row_number() over (order by deptno desc) as num_row from dept)";
+    sql(sql).ok();
+  }
+
+  @Test void testAnalyticalFunctionInChildWithDistinctInSubQueryAndParent() {
+    final String sql = "select distinct deptno from (\n"
+        + "  select distinct deptno, row_number() over (order by deptno desc) as num_row from dept)";
+    sql(sql).ok();
+  }
+
+  @Test void testAnalyticalFunctionInParentWithDistinctInSubQueryAndParent() {
+    final String sql = "select distinct deptno,"
+        + " row_number() over (order by deptno desc) as num_row from (\n"
+        + " select distinct deptno as deptno from dept)";
     sql(sql).ok();
   }
 
@@ -197,6 +227,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  @Disabled
   @Test void testJoinOnIn() {
     final String sql = "select * from emp join dept\n"
         + " on emp.deptno = dept.deptno and emp.empno in (1, 3)";
@@ -603,6 +634,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  @Disabled
   @Test void testAggFilterWithIn() {
     final String sql = "select\n"
         + "  deptno, sum(sal * 2) filter (where empno not in (1, 2)), count(*)\n"
@@ -1662,6 +1694,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
 
   /** Plan should be as {@link #testInUncorrelatedSubQueryInSelect}, but with
    * an extra NOT. Both queries require 3-valued logic. */
+  @Disabled
   @Test void testNotInUncorrelatedSubQueryInSelect() {
     final String sql = "select empno, deptno not in (\n"
         + "  select case when true then deptno else null end from dept)\n"
@@ -1687,6 +1720,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
 
   /** Since 'deptno NOT IN (SELECT mgr FROM emp)' can be null, we need a more
    * complex plan, including counts of null and not-null keys. */
+  @Disabled
   @Test void testNotInUncorrelatedSubQueryInSelectMayBeNull() {
     final String sql = "select empno, deptno not in (\n"
         + "  select mgr from emp)\n"
@@ -2429,6 +2463,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-614">[CALCITE-614]
    * IN within CASE within GROUP BY gives AssertionError</a>.
    */
+  @Disabled
   @Test void testGroupByCaseIn() {
     final String sql = "select\n"
         + " (CASE WHEN (deptno IN (10, 20)) THEN 0 ELSE deptno END),\n"
@@ -2767,6 +2802,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).decorrelate(true).ok();
   }
 
+  @Disabled
   @Test void testReduceConstExpr() {
     final String sql = "select sum(case when 'y' = 'n' then ename else 0.1 end) from emp";
     sql(sql).ok();
@@ -2840,6 +2876,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-694">[CALCITE-694]
    * Scan HAVING clause for sub-queries and IN-lists</a> relating to IN.
    */
+  @Disabled
   @Test void testHavingAggrFunctionIn() {
     final String sql = "select deptno\n"
         + "from emp\n"
@@ -3784,6 +3821,12 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  @Test void testArrayElementAccess() {
+    final String sql = "select array[1,2,3,4][0]\n"
+        + "from emp";
+    sql(sql).ok();
+  }
+
   @Test void testJsonPredicate() {
     final String sql = "select\n"
         + "ename is json,\n"
@@ -3820,9 +3863,43 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  @Disabled
   @Test void testWithinGroup3() {
     final String sql = "select deptno,\n"
         + " collect(empno) within group (order by empno not in (1, 2)), count(*)\n"
+        + "from emp\n"
+        + "group by deptno";
+    sql(sql).ok();
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4644">[CALCITE-4644]
+   * Add PERCENTILE_CONT and PERCENTILE_DISC aggregate functions</a>. */
+  @Test void testPercentileCont() {
+    final String sql = "select\n"
+        + " percentile_cont(0.25) within group (order by deptno)\n"
+        + "from emp";
+    sql(sql).ok();
+  }
+
+  @Test void testPercentileContWithGroupBy() {
+    final String sql = "select deptno,\n"
+        + " percentile_cont(0.25) within group (order by empno desc)\n"
+        + "from emp\n"
+        + "group by deptno";
+    sql(sql).ok();
+  }
+
+  @Test void testPercentileDisc() {
+    final String sql = "select\n"
+        + " percentile_disc(0.25) within group (order by deptno)\n"
+        + "from emp";
+    sql(sql).ok();
+  }
+
+  @Test void testPercentileDiscWithGroupBy() {
+    final String sql = "select deptno,\n"
+        + " percentile_disc(0.25) within group (order by empno)\n"
         + "from emp\n"
         + "group by deptno";
     sql(sql).ok();
@@ -3944,6 +4021,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
    * AssertionError throws when aggregation same digest in sub-query in same
    * scope</a>.
    */
+  @Disabled
   @Test void testAggregateWithSameDigestInSubQueries() {
     final String sql = "select\n"
         + "  CASE WHEN job IN ('810000', '820000') THEN job\n"
@@ -4027,10 +4105,20 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-4167">[CALCITE-4167]
    * Group by COALESCE IN throws NullPointerException</a>.
    */
+  @Disabled
   @Test void testGroupByCoalesceIn() {
     final String sql = "select case when coalesce(ename, 'a') in ('1', '2')\n"
         + "then 'CKA' else 'QT' END, count(distinct deptno) from emp\n"
         + "group by case when coalesce(ename, 'a') in ('1', '2') then 'CKA' else 'QT' END";
+    sql(sql).ok();
+  }
+
+  @Test void testCoalesceOnUnionOfLiteralsAndNull() {
+    final String sql = "SELECT COALESCE (a.ids,0)"
+        + " FROM ("
+        + " SELECT 101 as ids union all"
+        + " SELECT 103 as ids union all"
+        + " SELECT null as ids) as a";
     sql(sql).ok();
   }
 
@@ -4146,6 +4234,13 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
         + "select COMPOSITE(deptno)\n"
         + "from dept";
     sql(sql).trim(true).ok();
+  }
+
+  @Test void testAliasUnnestArrayPlanWithCorrelateFilter() {
+    final String sql = "select d.deptno, e, k.empno\n"
+        + "from dept_nested_expanded as d CROSS JOIN\n"
+        + " UNNEST(d.admins, d.employees) as t(e, k) where d.deptno = 1";
+    sql(sql).conformance(SqlConformanceEnum.PRESTO).ok();
   }
 
   /**

@@ -134,19 +134,14 @@ public enum SqlKind {
   POSITION,
 
   /**
-   * CHAR_LENGTH Function
+   * CHAR_LENGTH Function.
    * */
   CHAR_LENGTH,
 
   /**
-   * CHARACTER_LENGTH Function
+   * CHARACTER_LENGTH Function.
    * */
   CHARACTER_LENGTH,
-
-  /**
-   * SUBSTRING Function
-   * */
-  SUBSTRING,
 
   /** EXPLAIN statement. */
   EXPLAIN,
@@ -340,6 +335,9 @@ public enum SqlKind {
   /** {@code IS NOT DISTINCT FROM} operator. */
   IS_NOT_DISTINCT_FROM,
 
+  /** {@code USING} condition operator. */
+  USING,
+
   /** {@code SEARCH} operator. (Analogous to scalar {@code IN}, used only in
    * RexNode, not SqlNode.) */
   SEARCH,
@@ -381,6 +379,9 @@ public enum SqlKind {
 
   /** {@code SIMILAR} operator. */
   SIMILAR,
+
+  /** The {@code QUANTILE} aggregate function. */
+  QUANTILE,
 
   /** {@code ~} operator (for POSIX-style regular expressions). */
   POSIX_REGEX_CASE_SENSITIVE,
@@ -435,6 +436,12 @@ public enum SqlKind {
 
   /** {@code TIMESTAMP_DIFF} function (ODBC, SQL Server, MySQL). */
   TIMESTAMP_DIFF,
+
+  /** {@code MEDIAN} function. */
+  MEDIAN,
+
+  /** {@code HASH_AGG} function. */
+  HASH_AGG,
 
   // prefix operators
 
@@ -578,6 +585,11 @@ public enum SqlKind {
   INPUT_REF,
 
   /**
+   * Reference to an ordinal field exclusively.
+   */
+  ORDINAL_REF,
+
+  /**
    * Reference to an input field, with a qualified name and an identifier.
    *
    * <p>(Only used at the RexNode level.)</p>
@@ -630,6 +642,10 @@ public enum SqlKind {
    */
   CAST,
 
+  /** The {@code SAFE_CAST} function, which is similar to {@link #CAST} but
+   * returns NULL rather than throwing an error if the conversion fails. */
+  SAFE_CAST,
+
   /**
    * The "NEXT VALUE OF sequence" operator.
    */
@@ -663,12 +679,7 @@ public enum SqlKind {
    */
   TO_NUMBER,
 
-  /**
-   * The "IF" function.
-   */
-  IF,
-
-  /**
+   /**
    * The "ASCII" function.
    */
   ASCII,
@@ -882,6 +893,12 @@ public enum SqlKind {
   /** The {@code COLLECT} aggregate function. */
   COLLECT,
 
+  /** The {@code PERCENTILE_CONT} aggregate function. */
+  PERCENTILE_CONT,
+
+  /** The {@code PERCENTILE_DISC} aggregate function. */
+  PERCENTILE_DISC,
+
   /** The {@code FUSION} aggregate function. */
   FUSION,
 
@@ -1084,7 +1101,7 @@ public enum SqlKind {
   OTHER_DDL,
 
   /**
-   * CONCAT Function
+   * CONCAT Function.
    */
   CONCAT,
 
@@ -1183,6 +1200,7 @@ public enum SqlKind {
    * {@link #SELECT},
    * {@link #JOIN},
    * {@link #OTHER_FUNCTION},
+   * {@link #FORMAT},
    * {@link #CAST},
    * {@link #TRIM},
    * {@link #LITERAL_CHAIN},
@@ -1203,12 +1221,12 @@ public enum SqlKind {
                   FILTER, WITHIN_GROUP, IGNORE_NULLS, RESPECT_NULLS,
                   DESCENDING, CUBE, ROLLUP, GROUPING_SETS, EXTEND, LATERAL,
                   SELECT, JOIN, OTHER_FUNCTION, POSITION, CHAR_LENGTH,
-                  CHARACTER_LENGTH, SUBSTRING, TRUNCATE, CAST, TRIM, FLOOR, CEIL,
+                  CHARACTER_LENGTH, TRUNCATE, CAST, TRIM, FLOOR, CEIL,
                   TIMESTAMP_ADD, TIMESTAMP_DIFF, EXTRACT, INTERVAL,
                   LITERAL_CHAIN, JDBC_FN, PRECEDING, FOLLOWING, ORDER_BY,
                   NULLS_FIRST, NULLS_LAST, COLLECTION_TABLE, TABLESAMPLE,
                   VALUES, WITH, WITH_ITEM, ITEM, SKIP_TO_FIRST, SKIP_TO_LAST,
-                  JSON_VALUE_EXPRESSION, UNNEST),
+                  JSON_VALUE_EXPRESSION, UNNEST, FORMAT),
               AGGREGATE, DML, DDL));
 
   /**
@@ -1226,7 +1244,7 @@ public enum SqlKind {
    */
   public static final Set<SqlKind> FUNCTION =
       EnumSet.of(OTHER_FUNCTION, ROW, TRIM, LTRIM, RTRIM, CAST,
-                 JDBC_FN, POSITION, REVERSE, CHAR_LENGTH, CHARACTER_LENGTH, SUBSTRING, TRUNCATE);
+                 JDBC_FN, POSITION, REVERSE, CHAR_LENGTH, CHARACTER_LENGTH, TRUNCATE);
 
   /**
    * Category of SqlAvgAggFunction.

@@ -6737,6 +6737,106 @@ public class JdbcTest {
         .with(CalciteConnectionProperty.FUN, "spark")
         .query("select if(1 = 1,1,2) as r")
         .returnsUnordered("R=1");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "snowflake")
+      .query("select if(\"commission\" = -99, -99, 0) as r from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=0");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "snowflake")
+      .query("SELECT if('ABC'='' or 'ABC' is null, null, ASCII('ABC')) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+  }
+
+  @Test public void testIfWithNullCheck() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "bigquery")
+      .query("SELECT if('ABC'='' or 'ABC' is null, null, ASCII('ABC')) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "hive")
+      .query("SELECT if('ABC'='' or 'ABC' is null, null, ASCII('ABC')) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "spark")
+      .query("SELECT if('ABC'='' or 'ABC' is null, null, ASCII('ABC')) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "snowflake")
+      .query("SELECT if('ABC'='' or 'ABC' is null, null, ASCII('ABC')) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+  }
+
+  @Test public void testIfMethodArgument() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "bigquery")
+      .query("SELECT if (SUBSTRING('ABC',1,1)='' or SUBSTRING('ABC',1,1) is null, null, "
+        + "ASCII(SUBSTRING('ABC',1,1))) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "hive")
+      .query("SELECT if (SUBSTRING('ABC',1,1)='' or SUBSTRING('ABC',1,1) is null, null, "
+        + "ASCII(SUBSTRING('ABC',1,1))) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "spark")
+      .query("SELECT if (SUBSTRING('ABC',1,1)='' or SUBSTRING('ABC',1,1) is null, null, "
+        + "ASCII(SUBSTRING('ABC',1,1))) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "snowflake")
+      .query("SELECT if (SUBSTRING('ABC',1,1)='' or SUBSTRING('ABC',1,1) is null, null, "
+        + "ASCII(SUBSTRING('ABC',1,1))) as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=65");
+  }
+
+  @Test public void testIfColumnArgument() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "bigquery")
+      .query("SELECT if (\"commission\"=0 , 0, "
+        + "\"commission\") as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=1000");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "hive")
+      .query("SELECT if (\"commission\"=0 , 0, "
+        + "\"commission\") as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=1000");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "spark")
+      .query("SELECT if (\"commission\"=0 , 0, "
+        + "\"commission\") as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=1000");
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+      .with(CalciteConnectionProperty.FUN, "snowflake")
+      .query("SELECT if (\"commission\"=0 , 0, "
+        + "\"commission\") as r\n"
+        + "from \"hr\".\"emps\"\n"
+        + "where \"commission\" = 1000")
+      .returnsUnordered("R=1000");
   }
 
   @Test public void testIfWithExpression() {
@@ -6776,6 +6876,16 @@ public class JdbcTest {
     CalciteAssert.that(CalciteAssert.Config.REGULAR)
             .with(CalciteConnectionProperty.FUN, "bigquery")
             .query("select ifnull(\"commission\", -99) as c from \"hr\".\"emps\"")
+            .returnsUnordered("C=-99",
+                    "C=1000",
+                    "C=250",
+                    "C=500");
+  }
+
+  @Test public void testIsNull() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+            .with(CalciteConnectionProperty.FUN, "mssql")
+            .query("select isnull(\"commission\", -99) as c from \"hr\".\"emps\"")
             .returnsUnordered("C=-99",
                     "C=1000",
                     "C=250",
@@ -7647,6 +7757,64 @@ public class JdbcTest {
         .returns("A=29; B=35; C=37; D=36\n");
   }
 
+  @Test public void testFormat() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with(CalciteConnectionProperty.FUN, "bigquery")
+        .query("select FORMAT('%4d', 12) as \"result\"")
+        .returns("result=  12\n");
+  }
+
+  @Test public void testToVarchar() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with(CalciteConnectionProperty.FUN, "snowflake")
+        .query("select TO_VARCHAR(12, '999') as \"result\"")
+        .returns("result= 12\n");
+  }
+
+  @Test public void testInStr() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with(CalciteConnectionProperty.FUN, "snowflake")
+        .query("SELECT INSTR('Choose a chocolate chip cookie', 'ch', 12, 1) as \"result\"")
+        .returns("result=20\n");
+  }
+
+  @Test public void testInStrWith4Arguments() {
+    final String sql = "SELECT\n"
+        + "INSTR('Choose a chocolate chip cookie from the chocolate chip jar',"
+        + " 'ch', 12, 2) as \"result\"";
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with(CalciteConnectionProperty.FUN, "bigquery")
+        .query(sql)
+        .returns("result=41\n");
+  }
+
+  @Test public void testInStrWith3Arguments() {
+    final String sql = "SELECT\n"
+        + "INSTR('Choose a chocolate chip cookie from the chocolate chip jar',"
+        + " 'ch', 12) as \"result\"";
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with(CalciteConnectionProperty.FUN, "bigquery")
+        .query(sql)
+        .returns("result=20\n");
+  }
+
+  @Test public void testInStrWith2Arguments() {
+    final String sql = "SELECT\n"
+        + "INSTR('Choose a chocolate chip cookie from the chocolate chip jar',"
+        + " 'ch') as \"result\"";
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with(CalciteConnectionProperty.FUN, "bigquery")
+        .query(sql)
+        .returns("result=10\n");
+  }
+
+  @Test public void testCharindex() {
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with(CalciteConnectionProperty.FUN, "mssql")
+        .query("SELECT CHARINDEX('ch', 'Choose a chocolate chip cookie', 3) as \"result\"")
+        .returns("result=10\n");
+  }
+
   /**
    * Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2609">[CALCITE-2609]
@@ -7728,6 +7896,50 @@ public class JdbcTest {
         + "select \"id\" from (VALUES(TIMESTAMP '2008-03-31 12:23:34')) \"foo\"(\"id\"))";
     assertThat.query(query).returns("id=2008-03-31 12:23:34\nid=2018-02-03 00:00:00\n");
   }
+
+  @Test public void testLPAD() {
+    CalciteAssert.that(CalciteAssert.Config.JDBC_FOODMART)
+      .with(CalciteConnectionProperty.FUN, "hive")
+      .query("select LPAD('pilot', 9, 'auto') as \"result\""
+        + " from \"foodmart\".\"employee\""
+        + " where \"employee_id\" = 1")
+      .returns("result=autopilot\n");
+    CalciteAssert.that(CalciteAssert.Config.JDBC_FOODMART)
+      .with(CalciteConnectionProperty.FUN, "spark")
+      .query("select LPAD('pilot', 9, 'auto') as \"result\""
+        + " from \"foodmart\".\"employee\""
+        + " where \"employee_id\" = 1")
+      .returns("result=autopilot\n");
+    CalciteAssert.that(CalciteAssert.Config.JDBC_FOODMART)
+      .with(CalciteConnectionProperty.FUN, "bigquery")
+      .query("select LPAD('pilot', 9, 'auto') as \"result\""
+        + " from \"foodmart\".\"employee\""
+        + " where \"employee_id\" = 1")
+      .returns("result=autopilot\n");
+  }
+
+  @Test public void testRPAD() {
+    CalciteAssert.that(CalciteAssert.Config.JDBC_FOODMART)
+      .with(CalciteConnectionProperty.FUN, "hive")
+      .query("select RPAD('auto', 9, 'pilot') as \"result\""
+        + " from \"foodmart\".\"employee\""
+        + " where \"employee_id\" = 1")
+      .returns("result=autopilot\n");
+    CalciteAssert.that(CalciteAssert.Config.JDBC_FOODMART)
+      .with(CalciteConnectionProperty.FUN, "spark")
+      .query("select RPAD('auto', 9, 'pilot') as \"result\""
+        + " from \"foodmart\".\"employee\""
+        + " where \"employee_id\" = 1")
+      .returns("result=autopilot\n");
+    CalciteAssert.that(CalciteAssert.Config.JDBC_FOODMART)
+      .with(CalciteConnectionProperty.FUN, "bigquery")
+      .query("select RPAD('auto', 9, 'pilot') as \"result\""
+        + " from \"foodmart\".\"employee\""
+        + " where \"employee_id\" = 1")
+      .returns("result=autopilot\n");
+  }
+
+
 
   private static String sums(int n, boolean c) {
     final StringBuilder b = new StringBuilder();

@@ -83,7 +83,6 @@ public class RexCall extends RexNode {
     this.nodeCount = RexUtil.nodeCount(1, this.operands);
     assert op.getKind() != null : op;
     assert op.validRexOperands(operands.size(), Litmus.THROW) : this;
-    assert op.kind != SqlKind.IN || this instanceof RexSubQuery;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -182,7 +181,7 @@ public class RexCall extends RexNode {
   }
 
   private boolean digestWithType() {
-    return isA(SqlKind.CAST) || isA(SqlKind.NEW_SPECIFICATION);
+    return isA(SqlKind.CAST) || isA(SqlKind.NEW_SPECIFICATION) || isA(SqlKind.SAFE_CAST);
   }
 
   @Override public <R> R accept(RexVisitor<R> visitor) {

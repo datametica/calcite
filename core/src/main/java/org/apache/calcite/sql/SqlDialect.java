@@ -26,6 +26,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
@@ -37,6 +38,11 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
+import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.TimeString;
+import org.apache.calcite.util.TimestampString;
+
+import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
@@ -47,19 +53,24 @@ import org.checkerframework.dataflow.qual.Pure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import static org.apache.calcite.util.DateTimeStringUtils.getDateFormatter;
-
+import static org.apache.calcite.linq4j.Nullness.castNonNull;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
+import static org.apache.calcite.util.DateTimeStringUtils.getDateFormatter;
 
 /**
  * <code>SqlDialect</code> encapsulates the differences between dialects of SQL.
@@ -70,10 +81,10 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
  * <p>To add a new {@link SqlDialect} sub-class, extends this class to hold 2 public final
  * static member:
  * <ul>
- *   <li>DEFAULT_CONTEXT: a default {@link Context} instance, which can be used to customize
- *   or extending the dialect if the DEFAULT instance does not meet the requests</li>
- *   <li>DEFAULT: the default {@link SqlDialect} instance with context properties defined with
- *   <code>DEFAULT_CONTEXT</code></li>
+ * <li>DEFAULT_CONTEXT: a default {@link Context} instance, which can be used to customize
+ * or extending the dialect if the DEFAULT instance does not meet the requests</li>
+ * <li>DEFAULT: the default {@link SqlDialect} instance with context properties defined with
+ * <code>DEFAULT_CONTEXT</code></li>
  * </ul>
  */
 public class SqlDialect {
@@ -82,10 +93,14 @@ public class SqlDialect {
   protected static final Logger LOGGER =
       LoggerFactory.getLogger(SqlDialect.class);
 
-  /** Empty context. */
+  /**
+   * Empty context.
+   */
   public static final Context EMPTY_CONTEXT = emptyContext();
 
-  /** Built-in scalar functions and operators common for every dialect. */
+  /**
+   * Built-in scalar functions and operators common for every dialect.
+   */
   protected static final Set<SqlOperator> BUILT_IN_OPERATORS_LIST =
       ImmutableSet.<SqlOperator>builder()
           .add(SqlStdOperatorTable.ABS)
@@ -137,6 +152,13 @@ public class SqlDialect {
           .add(SqlStdOperatorTable.TAN)
           .build();
 
+  /**
+   * Valid Date Time Separators.
+   * '@' is a standard Format added at mig side in case if we don't have any separators
+   * between two tokens which makes us easy to getFinalFormat
+   */
+  private static final List<Character> DATE_FORMAT_SEPARATORS =
+      Arrays.asList('-', '/', ',', '.', ':', ' ', '\'', '@', '_');
 
   //~ Instance fields --------------------------------------------------------
 
@@ -242,8 +264,8 @@ public class SqlDialect {
 
   //~ Methods ----------------------------------------------------------------
 
-  /** Creates an empty context. Use {@link #EMPTY_CONTEXT} to reference the instance. */
-  private static Context emptyContext() {
+  /** Creates an empty context. Use {@link #EMPTY_CONTEXT} if possible. */
+  protected static Context emptyContext() {
     return new ContextImpl(DatabaseProduct.UNKNOWN, null, null, -1, -1,
         "'", "''", null,
         Casing.UNCHANGED, Casing.TO_UPPER, true, SqlConformanceEnum.DEFAULT,
@@ -422,7 +444,7 @@ public class SqlDialect {
    * @param charsetName Character set name, e.g. "utf16", or null
    * @param val String value
    */
-  public void quoteStringLiteral(StringBuilder buf, @Nullable String charsetName,
+  public void quoteStringLiteral(StringBuilder buf, String charsetName,
       String val) {
     if (containsNonAscii(val) && charsetName == null) {
       quoteStringLiteralUnicode(buf, val);
@@ -435,6 +457,10 @@ public class SqlDialect {
       buf.append(val.replace(literalEndQuoteString, literalEscapedQuote));
       buf.append(literalEndQuoteString);
     }
+  }
+
+  public String handleEscapeSequences(String val) {
+    return val;
   }
 
   public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec,
@@ -498,6 +524,7 @@ public class SqlDialect {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public void unparseIntervalOperandsBasedFunctions(SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
     SqlUtil.unparseFunctionSyntax(call.getOperator(), writer, call);
@@ -539,7 +566,7 @@ public class SqlDialect {
         writer.keyword("TO");
         final String end = qualifier.timeUnitRange.endUnit.name();
         if ((TimeUnit.SECOND == qualifier.timeUnitRange.endUnit)
-                && !qualifier.useDefaultFractionalSecondPrecision()) {
+                && (!qualifier.useDefaultFractionalSecondPrecision())) {
           final SqlWriter.Frame frame = writer.startFunCall(end);
           writer.print(fractionalSecondPrecision);
           writer.endList(frame);
@@ -564,6 +591,71 @@ public class SqlDialect {
     writer.literal("'" + interval.getIntervalLiteral() + "'");
     unparseSqlIntervalQualifier(writer, interval.getIntervalQualifier(),
         RelDataTypeSystem.DEFAULT);
+  }
+
+  protected void unparseDateMod(SqlWriter writer, SqlCall call,
+                                 int leftPrec, int rightPrec) {
+    final SqlWriter.Frame frame = writer.startFunCall("MOD");
+    writer.print("(");
+    unparseTimeUnitExtract(TimeUnit.YEAR, call.operand(0), writer, leftPrec, rightPrec);
+    writer.print("- 1900) * 10000 + ");
+    unparseTimeUnitExtract(TimeUnit.MONTH, call.operand(0), writer, leftPrec, rightPrec);
+    writer.print(" * 100 + ");
+    unparseTimeUnitExtract(TimeUnit.DAY, call.operand(0), writer, leftPrec, rightPrec);
+    writer.print(", ");
+    call.operand(1).unparse(writer, leftPrec, rightPrec);
+    writer.endFunCall(frame);
+  }
+
+  protected void unparseTimeUnitExtract(TimeUnit timeUnit, SqlNode operand,
+                                      SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlNode[] operands = new SqlNode[] {
+        SqlLiteral.createSymbol(timeUnit, SqlParserPos.ZERO), operand
+    };
+    SqlCall extractCall = new SqlBasicCall(SqlStdOperatorTable.EXTRACT, operands,
+        SqlParserPos.ZERO);
+    extractCall.unparse(writer, leftPrec, rightPrec);
+  }
+
+  protected void unparseDateDiff(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    if (call.operand(0) instanceof SqlDateLiteral
+        && call.operand(1) instanceof SqlDateLiteral) {
+      unparseDateOperandForDateDiff(writer, call.operand(0), leftPrec, rightPrec);
+      writer.print(" - ");
+      unparseDateOperandForDateDiff(writer, call.operand(1), leftPrec, rightPrec);
+    } else {
+      unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseDateOperandForDateDiff(SqlWriter writer, SqlDateLiteral sqlDateLiteral,
+                                             int leftPrec, int rightPrec) {
+    SqlWriter.Frame castFrame = writer.startFunCall("CAST");
+    writer.print("(YEAR(");
+    sqlDateLiteral.unparse(writer, leftPrec, rightPrec);
+    writer.print(") - 1900) * 10000");
+    writer.print(" + ");
+    writer.print("MONTH(");
+    sqlDateLiteral.unparse(writer, leftPrec, rightPrec);
+    writer.print(") * 100");
+    writer.print(" + ");
+    writer.print("DAY(");
+    sqlDateLiteral.unparse(writer, leftPrec, rightPrec);
+    writer.print(") AS INT");
+    writer.endFunCall(castFrame);
+  }
+
+  protected void unparseTimestampDiff(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    unparseTimestampOperand(writer, call, leftPrec, rightPrec, 0);
+    writer.print(" - ");
+    unparseTimestampOperand(writer, call, leftPrec, rightPrec, 1);
+  }
+
+  private void unparseTimestampOperand(SqlWriter writer, SqlCall call, int leftPrec,
+      int rightPrec, int index) {
+    writer.print("(");
+    call.operand(index).unparse(writer, leftPrec, rightPrec);
+    writer.print(")");
   }
 
   /**
@@ -591,11 +683,11 @@ public class SqlDialect {
    * <code>can't{tab}run\</code> becomes <code>u'can''t\0009run\\'</code>.
    */
   public void quoteStringLiteralUnicode(StringBuilder buf, String val) {
-    buf.append("u&'");
+    buf.append("'");
     for (int i = 0; i < val.length(); i++) {
       char c = val.charAt(i);
       if (c < 32 || c >= 128) {
-        buf.append('\\');
+        buf.append("\\u");
         buf.append(HEXITS[(c >> 12) & 0xf]);
         buf.append(HEXITS[(c >> 8) & 0xf]);
         buf.append(HEXITS[(c >> 4) & 0xf]);
@@ -631,8 +723,23 @@ public class SqlDialect {
     return val;
   }
 
+  /**
+   * Unparses <code>TITLE</code> present in the column's definition.
+   **/
+  public void unparseTitleInColumnDefinition(SqlWriter writer, String title,
+                                              int leftPrec, int rightPrec) {
+    throw new UnsupportedOperationException();
+  }
+
   protected boolean allowsAs() {
     return true;
+  }
+
+  /**Setting hasDualTable as false by default ,
+  *because most of the dialects supports SELECT without FROM clause .
+   */
+  public boolean hasDualTable() {
+    return false;
   }
 
   // -- behaviors --
@@ -677,6 +784,18 @@ public class SqlDialect {
    */
   public boolean hasImplicitTableAlias() {
     return true;
+  }
+
+  public boolean supportsIdenticalTableAndColumnName() {
+    return true;
+  }
+
+  public boolean supportsQualifyClause() {
+    return false;
+  }
+
+  public boolean supportsUnpivot() {
+    return false;
   }
 
   /**
@@ -743,13 +862,30 @@ public class SqlDialect {
     return false;
   }
 
-  /** Returns whether this dialect supports the use of FILTER clauses for
-   * aggregate functions. e.g. {@code COUNT(*) FILTER (WHERE a = 2)}. */
+  public boolean supportAggInGroupByClause() {
+    return true;
+  }
+
+  /**
+   * Returns whether the dialect supports nested analytical functions in over() clause,
+   * for instance <br>
+   * {@code SELECT LAG(emp_id) OVER( ORDER BY ROW_NUMBER() OVER() ) FROM employee }.
+   */
+  public boolean supportNestedAnalyticalFunctions() {
+    return true;
+  }
+
+  /**
+   * Returns whether this dialect supports the use of FILTER clauses for aggregate functions. e.g.
+   * {@code COUNT(*) FILTER (WHERE a = 2)}.
+   */
   public boolean supportsAggregateFunctionFilter() {
     return true;
   }
 
-  /** Returns whether this dialect supports window functions (OVER clause). */
+  /**
+   * Returns whether this dialect supports window functions (OVER clause).
+   */
   public boolean supportsWindowFunctions() {
     return true;
   }
@@ -801,16 +937,18 @@ public class SqlDialect {
     return true;
   }
 
- /** Returns SqlNode for type in "cast(column as type)", which might be
-  * different between databases by type name, precision etc.
-  *
-  * <p>If this method returns null, the cast will be omitted. In the default
-  * implementation, this is the case for the NULL type, and therefore
-  * {@code CAST(NULL AS <nulltype>)} is rendered as {@code NULL}. */
+  /**
+   * Returns SqlNode for type in "cast(column as type)", which might be different between databases
+   * by type name, precision etc.
+   *
+   * <p>If this method returns null, the cast will be omitted. In the default
+   * implementation, this is the case for the NULL type, and therefore {@code CAST(NULL AS
+   * <nulltype>)} is rendered as {@code NULL}.
+   */
   public @Nullable SqlNode getCastSpec(RelDataType type) {
     int maxPrecision = -1;
     if (type instanceof AbstractSqlType) {
-      System.out.println("type.getSqlTypeName() = " + type.getSqlTypeName().getName());
+      //System.out.println("type.getSqlTypeName() = " + type.getSqlTypeName().getName());
       switch (type.getSqlTypeName()) {
       case NULL:
         return null;
@@ -829,6 +967,30 @@ public class SqlDialect {
     return SqlTypeUtil.convertTypeToSpec(type);
   }
 
+  public @Nullable SqlNode getCastSpecWithPrecisionAndScale(RelDataType type) {
+    return this.getCastSpec(type);
+  }
+
+  public SqlNode getCastCall(SqlKind sqlKind, SqlNode operandToCast,
+      RelDataType castFrom, RelDataType castTo) {
+    return CAST.createCall(SqlParserPos.ZERO,
+      operandToCast, castNonNull(this.getCastSpec(castTo)));
+  }
+
+  public SqlNode getNumericLiteral(RexLiteral literal, SqlParserPos pos) {
+    return SqlLiteral.createExactNumeric(
+        castNonNull(literal.getValueAs(BigDecimal.class)).toPlainString(), pos);
+  }
+
+  public SqlNode getTimeLiteral(TimeString timeString, int precision, SqlParserPos pos) {
+    return SqlLiteral.createTime(timeString, precision, pos);
+  }
+
+  public SqlNode getTimestampLiteral(TimestampString timestampString,
+      int precision, SqlParserPos pos) {
+    return SqlLiteral.createTimestamp(timestampString, precision, pos);
+  }
+
   /** Rewrite SINGLE_VALUE into expression based on database variants
    *  E.g. HSQLDB, MYSQL, ORACLE, etc
    */
@@ -844,8 +1006,8 @@ public class SqlDialect {
    * @param node The SqlNode representing the expression
    * @param nullsFirst Whether nulls should come first
    * @param desc Whether the sort direction is
-   * {@link RelFieldCollation.Direction#DESCENDING} or
-   * {@link RelFieldCollation.Direction#STRICTLY_DESCENDING}
+   * {@link org.apache.calcite.rel.RelFieldCollation.Direction#DESCENDING} or
+   * {@link org.apache.calcite.rel.RelFieldCollation.Direction#STRICTLY_DESCENDING}
    * @return A SqlNode for null direction emulation or <code>null</code> if not required
    */
   public @Nullable SqlNode emulateNullDirection(SqlNode node, boolean nullsFirst,
@@ -921,13 +1083,14 @@ public class SqlDialect {
    *
    * @param writer Writer
    * @param offset Number of rows to skip before emitting, or null
-   * @param fetch Number of rows to fetch, or null
+   * @param fetch  Number of rows to fetch, or null
    */
   public void unparseTopN(SqlWriter writer, @Nullable SqlNode offset, @Nullable SqlNode fetch) {
   }
 
-  /** Unparses offset/fetch using ANSI standard "OFFSET offset ROWS FETCH NEXT
-   * fetch ROWS ONLY" syntax. */
+  /**
+   * Unparses offset/fetch using ANSI standard "OFFSET offset ROWS FETCH NEXT fetch ROWS ONLY"
+   * syntax. */
   protected static void unparseFetchUsingAnsi(SqlWriter writer, @Nullable SqlNode offset,
       @Nullable SqlNode fetch) {
     Preconditions.checkArgument(fetch != null || offset != null);
@@ -1014,6 +1177,9 @@ public class SqlDialect {
     return false;
   }
 
+  public boolean supportsColumnListForWithItem() {
+    return true;
+  }
   /**
    * Returns whether this dialect supports "WITH ROLLUP" in the "GROUP BY"
    * clause.
@@ -1054,6 +1220,13 @@ public class SqlDialect {
    */
   public boolean supportsGroupByWithCube() {
     return false;
+  }
+
+  /**
+   * Return whether this dialect requires Column names in the INSERT clause of MERGE statements.
+   */
+  public boolean requiresColumnsInMergeInsertClause() {
+    throw new UnsupportedOperationException();
   }
 
   /** Returns how NULL values are sorted if an ORDER BY item does not contain
@@ -1098,9 +1271,8 @@ public class SqlDialect {
    * Returns whether the dialect supports implicit type coercion.
    *
    * <p>Most of the sql dialects support implicit type coercion, so we make this method
-   * default return true. For instance, "cast('10' as integer) &gt; 5"
-   * can be simplified to "'10' &gt; 5" if the dialect supports implicit type coercion
-   * for VARCHAR and INTEGER comparison.
+   * default return true. For instance, "cast('10' as integer) &gt; 5" can be simplified to "'10'
+   * &gt; 5" if the dialect supports implicit type coercion for VARCHAR and INTEGER comparison.
    *
    * <p>For sql dialect that does not support implicit type coercion, such as the BigQuery,
    * we can not convert '10' into INT64 implicitly.
@@ -1158,15 +1330,14 @@ public class SqlDialect {
    * but currently include the following:
    *
    * <ul>
-   *   <li>{@link #getQuoting()}
-   *   <li>{@link #getQuotedCasing()}
-   *   <li>{@link #getUnquotedCasing()}
-   *   <li>{@link #isCaseSensitive()}
-   *   <li>{@link #getConformance()}
+   * <li>{@link #getQuoting()}
+   * <li>{@link #getQuotedCasing()}
+   * <li>{@link #getUnquotedCasing()}
+   * <li>{@link #isCaseSensitive()}
+   * <li>{@link #getConformance()}
    * </ul>
    *
    * @param config Parser configuration builder
-   *
    * @return The configuration builder
    */
   public SqlParser.Config configureParser(SqlParser.Config config) {
@@ -1175,19 +1346,20 @@ public class SqlDialect {
       config = config.withQuoting(quoting);
     }
     return config.withQuotedCasing(getQuotedCasing())
-        .withUnquotedCasing(getUnquotedCasing())
-        .withCaseSensitive(isCaseSensitive())
-        .withConformance(getConformance());
+      .withUnquotedCasing(getUnquotedCasing())
+      .withCaseSensitive(isCaseSensitive())
+      .withConformance(getConformance());
   }
 
   @Deprecated // to be removed before 2.0
   public SqlParser.ConfigBuilder configureParser(
       SqlParser.ConfigBuilder configBuilder) {
     return SqlParser.configBuilder(
-        configureParser(configBuilder.build()));
+      configureParser(configBuilder.build()));
   }
 
-  /** Returns the {@link SqlConformance} that matches this dialect.
+  /**
+   * Returns the {@link SqlConformance} that matches this dialect.
    *
    * <p>The base implementation returns its best guess, based upon
    * {@link #databaseProduct}; sub-classes may override. */
@@ -1206,6 +1378,10 @@ public class SqlDialect {
       return SqlConformanceEnum.SQL_SERVER_2008;
     case HIVE:
       return SqlConformanceEnum.HIVE;
+    case SNOWFLAKE:
+      return SqlConformanceEnum.SNOWFLAKE;
+    case SPARK:
+      return SqlConformanceEnum.SPARK;
     default:
       return SqlConformanceEnum.PRAGMATIC_2003;
     }
@@ -1245,6 +1421,10 @@ public class SqlDialect {
   }
 
   public SqlOperator getTargetFunc(RexCall call) {
+    return call.getOperator();
+  }
+
+  public SqlOperator getOperatorForOtherFunc(RexCall call) {
     return call.getOperator();
   }
 
@@ -1295,6 +1475,100 @@ public class SqlDialect {
     }
   }
 
+  protected String getDateTimeFormatString(
+      String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
+    Pair<List<String>, List<List<Character>>> dateTimeTokensWithSeparators =
+        getDateTimeTokensWithSeparators(standardDateFormat, DATE_FORMAT_SEPARATORS);
+    return getFinalFormat(dateTimeTokensWithSeparators.left,
+        dateTimeTokensWithSeparators.right, dateTimeFormatMap);
+  }
+
+  public static Pair<List<String>, List<List<Character>>> getDateTimeTokensWithSeparators(
+      String standardDateFormat, List<Character> dateFormatSeparators) {
+    List<String> dateTimeTokens = new ArrayList<>();
+    List<List<Character>> separators = new ArrayList<>();
+    List<Character> separator = new ArrayList<>();
+    int startIndex = 0;
+    int previousIndex = -1;
+    int lastIndex = standardDateFormat.length() - 1;
+    for (int i = 0; i <= lastIndex; i++) {
+      Character currentChar = standardDateFormat.charAt(i);
+      if (dateFormatSeparators.contains(currentChar)
+          && (!isDotSeparatorInAMPM(currentChar, standardDateFormat, i))) {
+        separator.add(currentChar);
+        String token = StringUtils.substring(standardDateFormat, startIndex, i);
+        boolean isNextASeparator = standardDateFormat.length() - 1 > i
+              && dateFormatSeparators.contains(standardDateFormat.charAt(i + 1));
+        if (!token.isEmpty()) {
+          previousIndex = i;
+          dateTimeTokens.add(token);
+          if (!isNextASeparator) {
+            separators.add(separator);
+            separator = new ArrayList<>();
+          }
+        } else if (previousIndex + 1 == i) {
+          if (!isNextASeparator) {
+            separators.add(separator);
+            separator = new ArrayList<>();
+          }
+          previousIndex = i;
+        }
+        startIndex = i + 1;
+      }
+    }
+
+    if (lastIndex >= startIndex) {
+      dateTimeTokens.add(StringUtils.substring(standardDateFormat, startIndex));
+    }
+    return new Pair<>(dateTimeTokens, separators);
+  }
+
+  private static boolean isDotSeparatorInAMPM(
+      Character currentChar, String standardDateFormat, int indexofCurrentChar) {
+    return currentChar.toString().equals(".")
+        && (
+        (standardDateFormat.charAt(indexofCurrentChar - 1) == 'A'
+            && standardDateFormat.charAt(indexofCurrentChar + 1) == 'M')
+            || (standardDateFormat.charAt(indexofCurrentChar - 1) == 'P'
+            && standardDateFormat.charAt(indexofCurrentChar + 1) == 'M')
+            || (standardDateFormat.charAt(indexofCurrentChar - 1) == 'M'
+            && standardDateFormat.charAt(indexofCurrentChar - 2) == '.'
+            && (standardDateFormat.charAt(indexofCurrentChar - 3) == 'A'
+            || standardDateFormat.charAt(indexofCurrentChar - 3) == 'P')));
+  }
+
+  private String getFinalFormat(
+      List<String> dateTimeTokens, List<List<Character>> separators,
+      Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
+    StringBuilder finalFormatBuilder = new StringBuilder();
+    int i = 0;
+    while (i < dateTimeTokens.size()) {
+      String token = dateTimeTokens.get(i);
+      if (StringUtils.isNumeric(token)
+          || token.equals("")
+          || (separators.size() > 0
+          && (separators.get(0).toString().contains("'")
+          && !(separators.size() > 1 && separators.get(1).toString().contains("'"))))) {
+        finalFormatBuilder.append(token);
+      } else {
+        finalFormatBuilder.append(dateTimeFormatMap.get(SqlDateTimeFormat.of(token)));
+      }
+
+      StringBuilder separator = new StringBuilder();
+      if (!separators.isEmpty()) {
+        for (int j = 0; j < separators.get(0).size(); j++) {
+          separator.append(
+              separators.get(0).get(j) == '@'
+                  ? ""
+                  : separators.get(0).get(j).toString());
+        }
+        separators.remove(0);
+      }
+      finalFormatBuilder.append(separator);
+      i++;
+    }
+    return finalFormatBuilder.toString();
+  }
 
   /** Whether this JDBC driver needs you to pass a Calendar object to methods
    * such as {@link ResultSet#getTimestamp(int, java.util.Calendar)}. */
@@ -1368,7 +1642,7 @@ public class SqlDialect {
     private final Supplier<SqlDialect> dialect;
 
     @SuppressWarnings("argument.type.incompatible")
-    DatabaseProduct(String databaseProductName, @Nullable String quoteString,
+    DatabaseProduct(String databaseProductName, String quoteString,
         NullCollation nullCollation) {
       Objects.requireNonNull(databaseProductName);
       Objects.requireNonNull(nullCollation);
@@ -1491,7 +1765,7 @@ public class SqlDialect {
     }
 
     @Override public Context withDatabaseProduct(
-        DatabaseProduct databaseProduct) {
+       DatabaseProduct databaseProduct) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1577,7 +1851,7 @@ public class SqlDialect {
     }
 
     @Override public Context withIdentifierQuoteString(
-        @Nullable String identifierQuoteString) {
+       @Nullable String identifierQuoteString) {
       return new ContextImpl(databaseProduct, databaseProductName,
           databaseVersion, databaseMajorVersion, databaseMinorVersion,
           literalQuoteString, literalEscapedQuoteString,
@@ -1670,4 +1944,5 @@ public class SqlDialect {
           conformance, nullCollation, dataTypeSystem, jethroInfo);
     }
   }
+
 }

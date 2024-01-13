@@ -37,14 +37,18 @@ import org.apache.calcite.sql.SqlPrefixOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlTimeLiteral;
 import org.apache.calcite.sql.SqlTimestampLiteral;
+import org.apache.calcite.sql.SqlTimestampWithTimezoneLiteral;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.PrecedenceClimbingParser;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.calcite.util.TimestampWithTimeZoneString;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTrace;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -192,6 +196,36 @@ public final class SqlParserUtil {
         TimestampString.fromCalendarFields(pt.getCalendar())
             .withFraction(pt.getFraction());
     return SqlLiteral.createTimestamp(ts, pt.getPrecision(), pos);
+  }
+
+  /**
+   * Added support to create SqlNode for TIMESTAMP WITH TIME ZONE literal.
+   * <p>
+   * Current Behaviour: Hardcoded precision value.
+   * To-Do:
+   * Need to add support to calculate precision from input and get expected count of precision.
+   */
+  public static SqlTimestampWithTimezoneLiteral parseTimestampWithTimeZoneLiteral(String s,
+      SqlParserPos pos) {
+    String modifiedValue = getModifiedValueForTimestampWithTimeZone(s);
+    TimestampWithTimeZoneString timestampWithTimeZoneString =
+        new TimestampWithTimeZoneString(modifiedValue);
+    return SqlLiteral.createTimestampWithTimeZone(timestampWithTimeZoneString, 6, pos);
+  }
+
+  private static String getModifiedValueForTimestampWithTimeZone(
+      String timestampWithTimeZoneLiteral) {
+    if (StringUtils.isNumeric(timestampWithTimeZoneLiteral.replaceAll("-|:|\\.| ", ""))) {
+      String timestampString = timestampWithTimeZoneLiteral.substring(0,
+          timestampWithTimeZoneLiteral.length() - 6);
+      String timezoneString =
+          timestampWithTimeZoneLiteral.substring(timestampWithTimeZoneLiteral.length() - 6,
+              timestampWithTimeZoneLiteral.length());
+      String defaultTimeZoneString = " GMT";
+      String finalTimezoneString = defaultTimeZoneString.concat(timezoneString);
+      timestampWithTimeZoneLiteral = timestampString.concat(finalTimezoneString);
+    }
+    return timestampWithTimeZoneLiteral;
   }
 
   public static SqlIntervalLiteral parseIntervalLiteral(SqlParserPos pos,
@@ -653,7 +687,7 @@ public final class SqlParserUtil {
    *                    we encounter a token of this kind.
    * @return the root node of the tree which the list condenses into
    */
-  public static @Nullable SqlNode toTreeEx(SqlSpecialOperator.TokenSequence list,
+  public static SqlNode toTreeEx(SqlSpecialOperator.TokenSequence list,
       int start, final int minPrec, final SqlKind stopperKind) {
     PrecedenceClimbingParser parser = list.parser(start,
         token -> {
@@ -676,10 +710,10 @@ public final class SqlParserUtil {
     return node;
   }
 
-  private static @Nullable SqlNode convert(PrecedenceClimbingParser.Token token) {
+  private static SqlNode convert(PrecedenceClimbingParser.Token token) {
     switch (token.type) {
     case ATOM:
-      return (SqlNode) token.o;
+      return requireNonNull((SqlNode) token.o);
     case CALL:
       final PrecedenceClimbingParser.Call call =
           (PrecedenceClimbingParser.Call) token;
@@ -865,11 +899,11 @@ public final class SqlParserUtil {
       return list.get(i).o instanceof ToTreeListItem;
     }
 
-    @Override public @Nullable SqlNode node(int i) {
+    @Override public SqlNode node(int i) {
       return convert(list.get(i));
     }
 
-    @Override public void replaceSublist(int start, int end, @Nullable SqlNode e) {
+    @Override public void replaceSublist(int start, int end, SqlNode e) {
       SqlParserUtil.replaceSublist(list, start, end, parser.atom(e));
     }
   }
@@ -918,7 +952,7 @@ public final class SqlParserUtil {
             throw new AssertionError();
           }
         } else {
-          builder.atom(o);
+          builder.atom(requireNonNull(o));
         }
       }
       return builder.build();
@@ -946,11 +980,11 @@ public final class SqlParserUtil {
       return list.get(i) instanceof ToTreeListItem;
     }
 
-    @Override public @Nullable SqlNode node(int i) {
-      return (@Nullable SqlNode) list.get(i);
+    @Override public SqlNode node(int i) {
+      return requireNonNull((SqlNode) list.get(i));
     }
 
-    @Override public void replaceSublist(int start, int end, @Nullable SqlNode e) {
+    @Override public void replaceSublist(int start, int end, SqlNode e) {
       SqlParserUtil.replaceSublist(list, start, end, e);
     }
   }

@@ -32,6 +32,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserUtil;
+import org.apache.calcite.sql.type.IntervalSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.CompositeList;
 import org.apache.calcite.util.ConversionUtil;
@@ -41,6 +42,7 @@ import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Sarg;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.calcite.util.TimestampWithTimeZoneString;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Preconditions;
@@ -340,6 +342,8 @@ public class RexLiteral extends RexNode {
       return value instanceof TimestampString;
     case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       return value instanceof TimestampString;
+    case TIMESTAMP_WITH_TIME_ZONE:
+      return value instanceof TimestampWithTimeZoneString;
     case INTERVAL_YEAR:
     case INTERVAL_YEAR_MONTH:
     case INTERVAL_MONTH:
@@ -544,8 +548,15 @@ public class RexLiteral extends RexNode {
   private String intervalString(BigDecimal v) {
     final List<TimeUnit> timeUnits = getTimeUnits(type.getSqlTypeName());
     final StringBuilder b = new StringBuilder();
+    final long millisPerWeek = 604800000;
+    BigDecimal[] result;
     for (TimeUnit timeUnit : timeUnits) {
-      final BigDecimal[] result = v.divideAndRemainder(timeUnit.multiplier);
+      if (((IntervalSqlType) this.type).getIntervalQualifier().timeUnitRange.name()
+          == TimeUnit.WEEK.name()) {
+        result = v.divideAndRemainder(BigDecimal.valueOf(millisPerWeek));
+      } else {
+        result = v.divideAndRemainder(timeUnit.multiplier);
+      }
       if (b.length() > 0) {
         b.append(timeUnit.separator);
       }
@@ -639,6 +650,7 @@ public class RexLiteral extends RexNode {
       assert value instanceof Boolean;
       sb.append(value.toString());
       break;
+    case FLOAT:
     case DECIMAL:
       assert value instanceof BigDecimal;
       sb.append(value.toString());

@@ -70,10 +70,12 @@ public class SqlAsOperator extends SqlSpecialOperator {
       int leftPrec,
       int rightPrec) {
     assert call.operandCount() >= 2;
-    final SqlWriter.Frame frame =
-        writer.startList(
-            SqlWriter.FrameTypeEnum.AS);
-    call.operand(0).unparse(writer, leftPrec, getLeftPrec());
+    final SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.AS);
+    if (call.operand(0) instanceof SqlCharStringLiteral) {
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+    } else {
+      call.operand(0).unparse(writer, leftPrec, getLeftPrec());
+    }
     final boolean needsSpace = true;
     writer.setNeedWhitespace(needsSpace);
     if (writer.getDialect().allowsAs()) {
@@ -91,6 +93,14 @@ public class SqlAsOperator extends SqlSpecialOperator {
       writer.endList(frame1);
     }
     writer.endList(frame);
+  }
+
+  public String unquoteStringLiteral(String val) {
+    if (val != null && val.startsWith("'") && val.endsWith("'")) {
+      final String stripped = val.substring(1, val.length() - 1);
+      return stripped.replace("\\'", "");
+    }
+    return val;
   }
 
   @Override public void validateCall(

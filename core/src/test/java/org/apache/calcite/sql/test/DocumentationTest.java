@@ -111,10 +111,13 @@ class DocumentationTest {
       case MYSQL:
       case ORACLE:
       case POSTGRESQL:
-      case BIGQUERY:
+      case BIG_QUERY:
       case HIVE:
       case SPARK:
       case TERADATA:
+      case SNOWFLAKE:
+      case MSSQL:
+      case NETEZZA:
         continue;
       }
       addOperators(map, "\\| [^|]*" + library.abbrev + "[^|]* ",

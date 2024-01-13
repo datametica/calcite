@@ -83,7 +83,15 @@ public enum SqlConformanceEnum implements SqlConformance {
 
   /** Conformance value that instructs Calcite to use SQL semantics
    * consistent with Apache Hive. */
-  HIVE;
+  HIVE,
+
+  /** Conformance value that instructs Calcite to use SQL semantics
+   * consistent with Snowflake. */
+  SNOWFLAKE,
+
+  /** Conformance value that instructs Calcite to use SQL semantics
+   * consistent with Spark. */
+  SPARK;
 
   @Override public boolean isLiberal() {
     switch (this) {
@@ -107,13 +115,13 @@ public enum SqlConformanceEnum implements SqlConformance {
     }
   }
 
-
   @Override public boolean isGroupByAlias() {
     switch (this) {
     case BABEL:
     case LENIENT:
     case BIG_QUERY:
     case MYSQL_5:
+    case SPARK:
       return true;
     default:
       return false;
@@ -127,6 +135,8 @@ public enum SqlConformanceEnum implements SqlConformance {
     case LENIENT:
     case MYSQL_5:
     case PRESTO:
+    case SNOWFLAKE:
+    case SPARK:
       return true;
     default:
       return false;
@@ -139,6 +149,7 @@ public enum SqlConformanceEnum implements SqlConformance {
     case LENIENT:
     case BIG_QUERY:
     case MYSQL_5:
+    case SPARK:
       return true;
     default:
       return false;
@@ -159,6 +170,7 @@ public enum SqlConformanceEnum implements SqlConformance {
     case PRAGMATIC_2003:
     case SQL_SERVER_2008:
     case PRESTO:
+    case SPARK:
       return true;
     default:
       return false;
@@ -177,6 +189,8 @@ public enum SqlConformanceEnum implements SqlConformance {
     case SQL_SERVER_2008:
     case HIVE:
     case BIG_QUERY:
+    case SNOWFLAKE:
+    case SPARK:
       return true;
     default:
       return false;
@@ -366,6 +380,16 @@ public enum SqlConformanceEnum implements SqlConformance {
     }
   }
 
+  @Override public boolean allowIsTrue() {
+
+    switch (this) {
+    case BIG_QUERY:
+      return false;
+    default:
+      return true;
+    }
+  }
+
   @Override public boolean allowPluralTimeUnits() {
     switch (this) {
     case BABEL:
@@ -396,6 +420,15 @@ public enum SqlConformanceEnum implements SqlConformance {
       return true;
     default:
       return false;
+    }
+  }
+
+  public boolean isElseCaseNeeded() {
+    switch (this) {
+    case SNOWFLAKE:
+      return false;
+    default:
+      return true;
     }
   }
 

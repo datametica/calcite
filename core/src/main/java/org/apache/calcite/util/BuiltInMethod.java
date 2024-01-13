@@ -119,6 +119,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -337,6 +338,25 @@ public enum BuiltInMethod {
   DIFFERENCE(SqlFunctions.class, "difference", String.class, String.class),
   REVERSE(SqlFunctions.class, "reverse", String.class),
   IFNULL(SqlFunctions.class, "ifNull", Object.class, Object.class),
+  ISNULL(SqlFunctions.class, "isNull", Object.class, Object.class),
+  LPAD(SqlFunctions.class, "lpad", String.class, Integer.class, String.class),
+  RPAD(SqlFunctions.class, "rpad", String.class, Integer.class, String.class),
+  FORMAT(SqlFunctions.class, "format", Object.class, Object.class),
+  TO_VARCHAR(SqlFunctions.class, "toVarchar", Object.class, Object.class),
+  DATE_MOD(SqlFunctions.class, "dateMod", Object.class, Object.class),
+  TIMESTAMPSECONDS(SqlFunctions.class, "timestampSeconds", Long.class),
+  TIME_DIFF(SqlFunctions.class, "timeDiff", Date.class, Date.class),
+  TIMESTAMPINTADD(SqlFunctions.class, "timestampIntAdd", Timestamp.class, Integer.class),
+  TIMESTAMPINTSUB(SqlFunctions.class, "timestampIntSub", Timestamp.class, Integer.class),
+  WEEKNUMBER_OF_YEAR(SqlFunctions.class, "weekNumberOfYear", Object.class),
+  YEARNUMBER_OF_CALENDAR(SqlFunctions.class, "yearNumberOfCalendar", Object.class),
+  MONTHNUMBER_OF_YEAR(SqlFunctions.class, "monthNumberOfYear", Object.class),
+  QUARTERNUMBER_OF_YEAR(SqlFunctions.class, "quarterNumberOfYear", Object.class),
+  MONTHNUMBER_OF_QUARTER(SqlFunctions.class, "monthNumberOfQuarter", Object.class),
+  WEEKNUMBER_OF_MONTH(SqlFunctions.class, "weekNumberOfMonth", Object.class),
+  WEEKNUMBER_OF_CALENDAR(SqlFunctions.class, "weekNumberOfCalendar", Object.class),
+  DAYOCCURRENCE_OF_MONTH(SqlFunctions.class, "dayOccurrenceOfMonth", Object.class),
+  DAYNUMBER_OF_CALENDAR(SqlFunctions.class, "dayNumberOfCalendar", Object.class),
   LEFT(SqlFunctions.class, "left", String.class, int.class),
   RIGHT(SqlFunctions.class, "right", String.class, int.class),
   TO_BASE64(SqlFunctions.class, "toBase64", String.class),
@@ -350,6 +370,16 @@ public enum BuiltInMethod {
   EXISTS_NODE(XmlFunctions.class, "existsNode", String.class, String.class, String.class),
   JSONIZE(JsonFunctions.class, "jsonize", Object.class),
   DEJSONIZE(JsonFunctions.class, "dejsonize", String.class),
+  TO_BINARY(SqlFunctions.class, "toBinary", Object.class, Object.class),
+  TIME_SUB(SqlFunctions.class, "timeSub", Object.class, Object.class),
+  TO_CHAR(SqlFunctions.class, "toCharFunction", Object.class, Object.class),
+  STRTOK(SqlFunctions.class, "strTok", Object.class, Object.class, Object.class),
+  REGEXP_MATCH_COUNT(SqlFunctions.class, "regexpMatchCount", Object.class,
+      Object.class, Object.class, Object.class),
+  REGEXP_CONTAINS(SqlFunctions.class, "regexpContains", Object.class,
+      Object.class),
+  REGEXP_EXTRACT(SqlFunctions.class, "regexpExtract", Object.class,
+      Object.class, Object.class, Object.class),
   JSON_VALUE_EXPRESSION(JsonFunctions.class, "jsonValueExpression",
       String.class),
   JSON_API_COMMON_SYNTAX(JsonFunctions.class, "jsonApiCommonSyntax",
@@ -420,6 +450,7 @@ public enum BuiltInMethod {
   LTRIM(SqlFunctions.class, "ltrim", String.class),
   RTRIM(SqlFunctions.class, "rtrim", String.class),
   LIKE(SqlFunctions.class, "like", String.class, String.class),
+  ILIKE(SqlFunctions.class, "ilike", String.class, String.class),
   SIMILAR(SqlFunctions.class, "similar", String.class, String.class),
   POSIX_REGEX(SqlFunctions.class, "posixRegex", String.class, String.class, boolean.class),
   REGEXP_REPLACE3(SqlFunctions.class, "regexpReplace", String.class,
@@ -618,12 +649,24 @@ public enum BuiltInMethod {
       "resultSelector", Function2.class),
   AGG_LAMBDA_FACTORY_ACC_SINGLE_GROUP_RESULT_SELECTOR(AggregateLambdaFactory.class,
       "singleGroupResultSelector", Function1.class),
+  TIMESTAMP_TO_DATE(SqlFunctions.class, "timestampToDate", Object.class),
   TUMBLING(EnumUtils.class, "tumbling", Enumerable.class, Function1.class),
   HOPPING(EnumUtils.class, "hopping", Enumerator.class, int.class, long.class,
       long.class, long.class),
   SESSIONIZATION(EnumUtils.class, "sessionize", Enumerator.class, int.class, int.class,
       long.class),
-  BIG_DECIMAL_NEGATE(BigDecimal.class, "negate");
+  BIG_DECIMAL_NEGATE(BigDecimal.class, "negate"),
+  INSTR(SqlFunctions.class, "instr", String.class, String.class, Integer.class, Integer.class),
+  CHARINDEX(SqlFunctions.class, "charindex", String.class, String.class, Integer.class),
+  DATETIME_ADD(SqlFunctions.class, "datetimeAdd", Object.class, Object.class),
+  DATETIME_SUB(SqlFunctions.class, "datetimeSub", Object.class, Object.class),
+  MONTHS_BETWEEN(SqlFunctions.class, "monthsBetween", Object.class, Object.class),
+  INT2SHR(SqlFunctions.class, "bitwiseSHR", Integer.class, Integer.class, Integer.class),
+  INT8XOR(SqlFunctions.class, "bitwiseXOR", Integer.class, Integer.class),
+  INT2SHL(SqlFunctions.class, "bitwiseSHL", Integer.class, Integer.class, Integer.class),
+  BITWISE_OR(SqlFunctions.class, "bitwiseOR", Integer.class, Integer.class),
+  BITWISE_AND(SqlFunctions.class, "bitwiseAnd", Integer.class, Integer.class),;
+
 
   @SuppressWarnings("ImmutableEnumChecker")
   public final Method method;

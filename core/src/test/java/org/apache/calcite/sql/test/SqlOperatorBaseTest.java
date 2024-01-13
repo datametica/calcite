@@ -380,7 +380,7 @@ public abstract class SqlOperatorBaseTest {
   protected SqlTester bigQueryTester() {
     return tester.withOperatorTable(
             SqlLibraryOperatorTableFactory.INSTANCE
-                    .getOperatorTable(SqlLibrary.STANDARD, SqlLibrary.BIGQUERY))
+                    .getOperatorTable(SqlLibrary.STANDARD, SqlLibrary.BIG_QUERY))
             .withConnectionFactory(
                     CalciteAssert.EMPTY_CONNECTION_FACTORY
                             .with(new CalciteAssert
@@ -3897,6 +3897,19 @@ public abstract class SqlOperatorBaseTest {
     tester.checkBoolean("'abbc' like 'a\\%c' escape '\\'", Boolean.FALSE);
   }
 
+  @Test void testIlikeEscape() {
+    tester.setFor(SqlLibraryOperators.ILIKE);
+    final SqlTester tester1 = libraryTester(SqlLibrary.POSTGRESQL);
+    tester1.checkBoolean("'a_c' ilike 'a#_C' escape '#'", Boolean.TRUE);
+    tester1.checkBoolean("'axc' ilike 'a#_C' escape '#'", Boolean.FALSE);
+    tester1.checkBoolean("'a_c' ilike 'a\\_C' escape '\\'", Boolean.TRUE);
+    tester1.checkBoolean("'axc' ilike 'a\\_C' escape '\\'", Boolean.FALSE);
+    tester1.checkBoolean("'a%c' ilike 'a\\%C' escape '\\'", Boolean.TRUE);
+    tester1.checkBoolean("'a%cde' ilike 'a\\%C_e' escape '\\'", Boolean.TRUE);
+    tester1.checkBoolean("'abbc' ilike 'a%C' escape '\\'", Boolean.TRUE);
+    tester1.checkBoolean("'abbc' ilike 'a\\%C' escape '\\'", Boolean.FALSE);
+  }
+
   @Disabled("[CALCITE-525] Exception-handling in built-in functions")
   @Test void testLikeEscape2() {
     tester.checkBoolean("'x' not like 'x' escape 'x'", Boolean.TRUE);
@@ -3927,6 +3940,48 @@ public abstract class SqlOperatorBaseTest {
     tester.checkBoolean("'ab\ncd\nef' like '%cde%'", Boolean.FALSE);
   }
 
+  @Test void testIlikeOperator() {
+    tester.setFor(SqlLibraryOperators.ILIKE);
+    final String noLike = "No match found for function signature ILIKE";
+    tester.checkFails("^'a' ilike 'b'^", noLike, false);
+    tester.checkFails("^'a' ilike 'b' escape 'c'^", noLike, false);
+    final String noNotLike = "No match found for function signature NOT ILIKE";
+    tester.checkFails("^'a' not ilike 'b'^", noNotLike, false);
+    tester.checkFails("^'a' not ilike 'b' escape 'c'^", noNotLike, false);
+
+    final SqlTester tester1 = libraryTester(SqlLibrary.POSTGRESQL);
+    tester1.checkBoolean("''  ilike ''", Boolean.TRUE);
+    tester1.checkBoolean("'a' ilike 'a'", Boolean.TRUE);
+    tester1.checkBoolean("'a' ilike 'b'", Boolean.FALSE);
+    tester1.checkBoolean("'a' ilike 'A'", Boolean.TRUE);
+    tester1.checkBoolean("'a' ilike 'a_'", Boolean.FALSE);
+    tester1.checkBoolean("'a' ilike '_a'", Boolean.FALSE);
+    tester1.checkBoolean("'a' ilike '%a'", Boolean.TRUE);
+    tester1.checkBoolean("'a' ilike '%A'", Boolean.TRUE);
+    tester1.checkBoolean("'a' ilike '%a%'", Boolean.TRUE);
+    tester1.checkBoolean("'a' ilike '%A%'", Boolean.TRUE);
+    tester1.checkBoolean("'a' ilike 'a%'", Boolean.TRUE);
+    tester1.checkBoolean("'a' ilike 'A%'", Boolean.TRUE);
+    tester1.checkBoolean("'ab'   ilike 'a_'", Boolean.TRUE);
+    tester1.checkBoolean("'ab'   ilike 'A_'", Boolean.TRUE);
+    tester1.checkBoolean("'abc'  ilike 'a_'", Boolean.FALSE);
+    tester1.checkBoolean("'abcd' ilike 'a%'", Boolean.TRUE);
+    tester1.checkBoolean("'abcd' ilike 'A%'", Boolean.TRUE);
+    tester1.checkBoolean("'ab'   ilike '_b'", Boolean.TRUE);
+    tester1.checkBoolean("'ab'   ilike '_B'", Boolean.TRUE);
+    tester1.checkBoolean("'abcd' ilike '_d'", Boolean.FALSE);
+    tester1.checkBoolean("'abcd' ilike '%d'", Boolean.TRUE);
+    tester1.checkBoolean("'abcd' ilike '%D'", Boolean.TRUE);
+    tester1.checkBoolean("'ab\ncd' ilike 'ab%'", Boolean.TRUE);
+    tester1.checkBoolean("'ab\ncd' ilike 'aB%'", Boolean.TRUE);
+    tester1.checkBoolean("'abc\ncd' ilike 'ab%'", Boolean.TRUE);
+    tester1.checkBoolean("'abc\ncd' ilike 'Ab%'", Boolean.TRUE);
+    tester1.checkBoolean("'123\n\n45\n' ilike '%'", Boolean.TRUE);
+    tester1.checkBoolean("'ab\ncd\nef' ilike '%cd%'", Boolean.TRUE);
+    tester1.checkBoolean("'ab\ncd\nef' ilike '%CD%'", Boolean.TRUE);
+    tester1.checkBoolean("'ab\ncd\nef' ilike '%cde%'", Boolean.FALSE);
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1898">[CALCITE-1898]
    * LIKE must match '.' (period) literally</a>. */
@@ -3934,6 +3989,15 @@ public abstract class SqlOperatorBaseTest {
     tester.checkBoolean("'abc' like 'a.c'", Boolean.FALSE);
     tester.checkBoolean("'abcde' like '%c.e'", Boolean.FALSE);
     tester.checkBoolean("'abc.e' like '%c.e'", Boolean.TRUE);
+  }
+
+  @Test void testIlikeDot() {
+    tester.setFor(SqlLibraryOperators.ILIKE);
+    final SqlTester tester1 = libraryTester(SqlLibrary.POSTGRESQL);
+    tester1.checkBoolean("'abc' ilike 'a.c'", Boolean.FALSE);
+    tester1.checkBoolean("'abcde' ilike '%c.e'", Boolean.FALSE);
+    tester1.checkBoolean("'abc.e' ilike '%c.e'", Boolean.TRUE);
+    tester1.checkBoolean("'abc.e' ilike '%c.E'", Boolean.TRUE);
   }
 
   @Test void testNotSimilarToOperator() {
@@ -5532,12 +5596,16 @@ public abstract class SqlOperatorBaseTest {
     tester.setFor(
         SqlStdOperatorTable.SQRT, SqlTester.VmName.EXPAND);
     tester.checkType("sqrt(2)", "DOUBLE NOT NULL");
+    tester.checkType("sqrt(2, false, true)", "DOUBLE NOT NULL");
+    tester.checkType("sqrt(3, false)", "DOUBLE NOT NULL");
     tester.checkType("sqrt(cast(2 as float))", "DOUBLE NOT NULL");
     tester.checkType(
         "sqrt(case when false then 2 else null end)", "DOUBLE");
     strictTester.checkFails(
         "^sqrt('abc')^",
-        "Cannot apply 'SQRT' to arguments of type 'SQRT\\(<CHAR\\(3\\)>\\)'\\. Supported form\\(s\\): 'SQRT\\(<NUMERIC>\\)'",
+        "Cannot apply 'SQRT' to arguments of type 'SQRT\\(<CHAR\\(3\\)>\\)'\\."
+            + " Supported form\\(s\\): 'SQRT\\(<NUMERIC>\\)'\n'SQRT\\(<NUMERIC>, <BOOLEAN>\\)'\n"
+            + "'SQRT\\(<NUMERIC>, <BOOLEAN>, <BOOLEAN>\\)'",
         false);
     tester.checkType("sqrt('abc')", "DOUBLE NOT NULL");
     tester.checkScalarApprox(
@@ -5775,12 +5843,16 @@ public abstract class SqlOperatorBaseTest {
     tester.setFor(
         SqlStdOperatorTable.ACOS);
     tester.checkType("acos(0)", "DOUBLE NOT NULL");
+    tester.checkType("acos(1, true, true)", "DOUBLE NOT NULL");
+    tester.checkType("acos(2, false)", "DOUBLE NOT NULL");
     tester.checkType("acos(cast(1 as float))", "DOUBLE NOT NULL");
     tester.checkType(
         "acos(case when false then 0.5 else null end)", "DOUBLE");
     strictTester.checkFails(
         "^acos('abc')^",
-        "Cannot apply 'ACOS' to arguments of type 'ACOS\\(<CHAR\\(3\\)>\\)'\\. Supported form\\(s\\): 'ACOS\\(<NUMERIC>\\)'",
+        "Cannot apply 'ACOS' to arguments of type 'ACOS\\(<CHAR\\(3\\)>\\)'\\."
+            + " Supported form\\(s\\): 'ACOS\\(<NUMERIC>\\)'\n'ACOS\\(<NUMERIC>, <BOOLEAN>\\)'\n"
+            + "'ACOS\\(<NUMERIC>, <BOOLEAN>, <BOOLEAN>\\)'",
         false);
     tester.checkType("acos('abc')", "DOUBLE NOT NULL");
     tester.checkScalarApprox(
@@ -5801,12 +5873,16 @@ public abstract class SqlOperatorBaseTest {
     tester.setFor(
         SqlStdOperatorTable.ASIN);
     tester.checkType("asin(0)", "DOUBLE NOT NULL");
+    tester.checkType("asin(3, true, false)", "DOUBLE NOT NULL");
+    tester.checkType("asin(2, true)", "DOUBLE NOT NULL");
     tester.checkType("asin(cast(1 as float))", "DOUBLE NOT NULL");
     tester.checkType(
         "asin(case when false then 0.5 else null end)", "DOUBLE");
     strictTester.checkFails(
         "^asin('abc')^",
-        "Cannot apply 'ASIN' to arguments of type 'ASIN\\(<CHAR\\(3\\)>\\)'\\. Supported form\\(s\\): 'ASIN\\(<NUMERIC>\\)'",
+        "Cannot apply 'ASIN' to arguments of type 'ASIN\\(<CHAR\\(3\\)>\\)'\\."
+            + " Supported form\\(s\\): 'ASIN\\(<NUMERIC>\\)'\n'ASIN\\(<NUMERIC>, <BOOLEAN>\\)'\n"
+            + "'ASIN\\(<NUMERIC>, <BOOLEAN>, <BOOLEAN>\\)'",
         false);
     tester.checkType("asin('abc')", "DOUBLE NOT NULL");
     tester.checkScalarApprox(
@@ -5827,12 +5903,16 @@ public abstract class SqlOperatorBaseTest {
     tester.setFor(
         SqlStdOperatorTable.ATAN);
     tester.checkType("atan(2)", "DOUBLE NOT NULL");
+    tester.checkType("atan(2, false, true)", "DOUBLE NOT NULL");
+    tester.checkType("atan(2, false)", "DOUBLE NOT NULL");
     tester.checkType("atan(cast(2 as float))", "DOUBLE NOT NULL");
     tester.checkType(
         "atan(case when false then 2 else null end)", "DOUBLE");
     strictTester.checkFails(
         "^atan('abc')^",
-        "Cannot apply 'ATAN' to arguments of type 'ATAN\\(<CHAR\\(3\\)>\\)'\\. Supported form\\(s\\): 'ATAN\\(<NUMERIC>\\)'",
+        "Cannot apply 'ATAN' to arguments of type 'ATAN\\(<CHAR\\(3\\)>\\)'\\."
+            + " Supported form\\(s\\): 'ATAN\\(<NUMERIC>\\)'\n'ATAN\\(<NUMERIC>, <BOOLEAN>\\)'\n"
+            + "'ATAN\\(<NUMERIC>, <BOOLEAN>, <BOOLEAN>\\)'",
         false);
     tester.checkType("atan('abc')", "DOUBLE NOT NULL");
     tester.checkScalarApprox(
@@ -8860,6 +8940,38 @@ public abstract class SqlOperatorBaseTest {
         SqlStdOperatorTable.ROW_NUMBER,
         VM_FENNEL,
         VM_JAVA);
+  }
+
+  @Test void testPercentileContFunc() {
+    tester.setFor(SqlStdOperatorTable.PERCENTILE_CONT, VM_FENNEL, VM_JAVA);
+    tester.checkType("percentile_cont(0.25) within group (order by 1)",
+        "DOUBLE NOT NULL");
+    tester.checkFails("percentile_cont(0.25) within group (^order by 'a'^)",
+        "Invalid type 'CHAR' in ORDER BY clause of 'PERCENTILE_CONT' function. "
+            + "Only NUMERIC types are supported", false);
+    tester.checkFails("percentile_cont(0.25) within group (^order by 1, 2^)",
+        "'PERCENTILE_CONT' requires precisely one ORDER BY key", false);
+    tester.checkFails(" ^percentile_cont(2 + 3)^ within group (order by 1)",
+        "Argument to function 'PERCENTILE_CONT' must be a literal", false);
+    tester.checkFails(" ^percentile_cont(2)^ within group (order by 1)",
+        "Argument to function 'PERCENTILE_CONT' must be a numeric literal "
+            + "between 0 and 1", false);
+  }
+
+  @Test void testPercentileDiscFunc() {
+    tester.setFor(SqlStdOperatorTable.PERCENTILE_DISC, VM_FENNEL, VM_JAVA);
+    tester.checkType("percentile_disc(0.25) within group (order by 1)",
+        "DOUBLE NOT NULL");
+    tester.checkFails("percentile_disc(0.25) within group (^order by 'a'^)",
+        "Invalid type 'CHAR' in ORDER BY clause of 'PERCENTILE_DISC' function. "
+            + "Only NUMERIC types are supported", false);
+    tester.checkFails("percentile_disc(0.25) within group (^order by 1, 2^)",
+        "'PERCENTILE_DISC' requires precisely one ORDER BY key", false);
+    tester.checkFails(" ^percentile_disc(2 + 3)^ within group (order by 1)",
+        "Argument to function 'PERCENTILE_DISC' must be a literal", false);
+    tester.checkFails(" ^percentile_disc(2)^ within group (order by 1)",
+        "Argument to function 'PERCENTILE_DISC' must be a numeric literal "
+            + "between 0 and 1", false);
   }
 
   @Test void testCountFunc() {

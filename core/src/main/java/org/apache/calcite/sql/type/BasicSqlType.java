@@ -148,6 +148,10 @@ public class BasicSqlType extends AbstractSqlType {
     return precision;
   }
 
+  @Override public int getMaxNumericPrecision() {
+    return typeSystem.getMaxNumericPrecision();
+  }
+
   @Override public int getScale() {
     if (scale == SCALE_NOT_SPECIFIED) {
       switch (typeName) {
@@ -192,6 +196,11 @@ public class BasicSqlType extends AbstractSqlType {
     }
     if (!withDetail) {
       return;
+    }
+    if (!printPrecision && getSqlTypeName().equals(SqlTypeName.DECIMAL)) {
+      sb.append('(');
+      sb.append(getMaxNumericPrecision());
+      sb.append(')');
     }
     if (wrappedCharset != null
         && !SqlCollation.IMPLICIT.getCharset().equals(wrappedCharset.getCharset())) {

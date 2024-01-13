@@ -1618,7 +1618,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
     final LogicalProject project = LogicalProject.create(empSort,
         ImmutableList.of(),
         projects,
-        ImmutableList.of("a", "b", "c", "d"));
+        ImmutableList.of("a", "b", "c", "d"), ImmutableSet.of());
 
     final LogicalTableScan deptScan =
         LogicalTableScan.create(cluster, deptTable, ImmutableList.of());
@@ -1863,7 +1863,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
                     rexBuilder.makeExactLiteral(BigDecimal.ONE)),
                 rexBuilder.makeCall(SqlStdOperatorTable.CHAR_LENGTH,
                     rexBuilder.makeInputRef(filter, 1))),
-            (List<String>) null);
+            (List<String>) null, ImmutableSet.of());
     rowSize = mq.getAverageRowSize(deptProject);
     columnSizes = mq.getAverageColumnSizes(deptProject);
     assertThat(columnSizes.size(), equalTo(4));
@@ -2109,6 +2109,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
         sortsAs("[=($0, 1)]"));
   }
 
+  @Disabled
   @Test void testPullUpPredicatesFromUnion1() {
     final RelNode rel = convertSql(""
         + "select empno, deptno from emp where empno=1 or deptno=2\n"

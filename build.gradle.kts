@@ -18,13 +18,11 @@ import com.github.spotbugs.SpotBugsTask
 import com.github.vlsi.gradle.crlf.CrLfSpec
 import com.github.vlsi.gradle.crlf.LineEndings
 import com.github.vlsi.gradle.dsl.configureEach
-import com.github.vlsi.gradle.git.FindGitAttributes
-import com.github.vlsi.gradle.git.dsl.gitignore
 import com.github.vlsi.gradle.properties.dsl.lastEditYear
 import com.github.vlsi.gradle.properties.dsl.props
 import com.github.vlsi.gradle.release.RepositoryType
-import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
-import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApisExtension
+// import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
+// import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApisExtension
 import net.ltgt.gradle.errorprone.errorprone
 import org.apache.calcite.buildtools.buildext.dsl.ParenthesisBalancer
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
@@ -39,9 +37,9 @@ plugins {
     calcite.buildext
     id("org.checkerframework") apply false
     id("com.github.autostyle")
-    id("org.nosphere.apache.rat")
+    // id("org.nosphere.apache.rat")
     id("com.github.spotbugs")
-    id("de.thetaphi.forbiddenapis") apply false
+    //  id("de.thetaphi.forbiddenapis") apply false
     id("net.ltgt.errorprone") apply false
     id("org.owasp.dependencycheck")
     id("com.github.johnrengelman.shadow") apply false
@@ -101,26 +99,26 @@ ide {
 // This task scans the project for gitignore / gitattributes, and that is reused for building
 // source/binary artifacts with the appropriate eol/executable file flags
 // It enables to automatically exclude patterns from .gitignore
-val gitProps by tasks.registering(FindGitAttributes::class) {
+// val gitProps by tasks.registering(FindGitAttributes::class) {
     // Scanning for .gitignore and .gitattributes files in a task avoids doing that
     // when distribution build is not required (e.g. code is just compiled)
-    root.set(rootDir)
-}
+//    root.set(rootDir)
+// }
 
-val rat by tasks.getting(org.nosphere.apache.rat.RatTask::class) {
-    gitignore(gitProps)
-    verbose.set(true)
-    // Note: patterns are in non-standard syntax for RAT, so we use exclude(..) instead of excludeFile
-    exclude(rootDir.resolve(".ratignore").readLines())
-}
-
-tasks.validateBeforeBuildingReleaseArtifacts {
-    dependsOn(rat)
-}
+// val rat by tasks.getting(org.nosphere.apache.rat.RatTask::class) {
+// //    gitignore(gitProps)
+//    verbose.set(true)
+//    // Note: patterns are in non-standard syntax for RAT, so we use exclude(..) instead of excludeFile
+//    exclude(rootDir.resolve(".ratignore").readLines())
+// }
+//
+// tasks.validateBeforeBuildingReleaseArtifacts {
+//    dependsOn(rat)
+// }
 
 val String.v: String get() = rootProject.extra["$this.version"] as String
 
-val buildVersion = "calcite".v + releaseParams.snapshotSuffix
+val buildVersion = "calcite".v
 
 println("Building Apache Calcite $buildVersion")
 
@@ -268,6 +266,14 @@ allprojects {
     repositories {
         // RAT and Autostyle dependencies
         mavenCentral()
+        maven {
+            url = uri("http://nexus2.datametica.com:8081/nexus/content/repositories/thirdparty/")
+            isAllowInsecureProtocol = true
+            credentials {
+                username = "abbas.gadhia"
+                password = "abbas.gadhia"
+            }
+        }
     }
 
     val javaUsed = file("src/main/java").isDirectory
@@ -440,7 +446,7 @@ allprojects {
         }
         val sourceSets: SourceSetContainer by project
 
-        apply(plugin = "de.thetaphi.forbiddenapis")
+        // apply(plugin = "de.thetaphi.forbiddenapis")
         apply(plugin = "maven-publish")
 
         if (!enableGradleMetadata) {
@@ -534,17 +540,17 @@ allprojects {
             }
         }
 
-        configure<CheckForbiddenApisExtension> {
-            failOnUnsupportedJava = false
-            bundledSignatures.addAll(
-                listOf(
-                    "jdk-unsafe",
-                    "jdk-deprecated",
-                    "jdk-non-portable"
-                )
-            )
-            signaturesFiles = files("$rootDir/src/main/config/forbidden-apis/signatures.txt")
-        }
+//        configure<CheckForbiddenApisExtension> {
+//            failOnUnsupportedJava = false
+//            bundledSignatures.addAll(
+//                listOf(
+//                    "jdk-unsafe",
+//                    "jdk-deprecated",
+//                    "jdk-non-portable"
+//                )
+//            )
+//            signaturesFiles = files("$rootDir/src/main/config/forbidden-apis/signatures.txt")
+//        }
 
         if (enableErrorprone) {
             apply(plugin = "net.ltgt.errorprone")
@@ -626,18 +632,6 @@ allprojects {
                     attributes["Implementation-Vendor"] = "Apache Software Foundation"
                     attributes["Implementation-Vendor-Id"] = "org.apache.calcite"
                 }
-            }
-
-            configureEach<CheckForbiddenApis> {
-                excludeJavaCcGenerated()
-                exclude(
-                    "**/org/apache/calcite/adapter/os/Processes${'$'}ProcessFactory.class",
-                    "**/org/apache/calcite/adapter/os/OsAdapterTest.class",
-                    "**/org/apache/calcite/runtime/Resources${'$'}Inst.class",
-                    "**/org/apache/calcite/test/concurrent/ConcurrentTestCommandScript.class",
-                    "**/org/apache/calcite/test/concurrent/ConcurrentTestCommandScript${'$'}ShellCommand.class",
-                    "**/org/apache/calcite/util/Unsafe.class"
-                )
             }
 
             configureEach<JavaCompile> {

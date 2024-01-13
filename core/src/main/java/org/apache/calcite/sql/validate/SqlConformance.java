@@ -96,7 +96,8 @@ public interface SqlConformance {
    * {@link SqlConformanceEnum#BABEL},
    * {@link SqlConformanceEnum#BIG_QUERY},
    * {@link SqlConformanceEnum#LENIENT},
-   * {@link SqlConformanceEnum#MYSQL_5};
+   * {@link SqlConformanceEnum#MYSQL_5},
+   * {@link SqlConformanceEnum#SPARK};
    * false otherwise.
    */
   boolean isGroupByAlias();
@@ -110,7 +111,8 @@ public interface SqlConformance {
    * {@link SqlConformanceEnum#BIG_QUERY},
    * {@link SqlConformanceEnum#LENIENT},
    * {@link SqlConformanceEnum#MYSQL_5},
-   * {@link SqlConformanceEnum#PRESTO};
+   * {@link SqlConformanceEnum#PRESTO},
+   * {@link SqlConformanceEnum#SPARK};
    * false otherwise.
    */
   boolean isGroupByOrdinal();
@@ -143,7 +145,8 @@ public interface SqlConformance {
    * {@link SqlConformanceEnum#PRAGMATIC_2003},
    * {@link SqlConformanceEnum#PRESTO},
    * {@link SqlConformanceEnum#SQL_SERVER_2008},
-   * {@link SqlConformanceEnum#STRICT_92};
+   * {@link SqlConformanceEnum#STRICT_92},
+   * {@link SqlConformanceEnum#SPARK};
    * false otherwise.
    */
   boolean isSortByOrdinal();
@@ -160,9 +163,10 @@ public interface SqlConformance {
    * {@link SqlConformanceEnum#ORACLE_10},
    * {@link SqlConformanceEnum#ORACLE_12},
    * {@link SqlConformanceEnum#SQL_SERVER_2008},
-   * {@link SqlConformanceEnum#STRICT_92};
-   * {@link SqlConformanceEnum#BIG_QUERY};
-   * {@link SqlConformanceEnum#HIVE};
+   * {@link SqlConformanceEnum#STRICT_92},
+   * {@link SqlConformanceEnum#BIG_QUERY},
+   * {@link SqlConformanceEnum#HIVE},
+   * {@link SqlConformanceEnum#SPARK};
    * false otherwise.
    */
   boolean isSortByAlias();
@@ -467,6 +471,12 @@ public interface SqlConformance {
   boolean allowExtendedTrim();
 
   /**
+   * Whether the Is True is allowed in
+   * the parser.
+   */
+  boolean allowIsTrue();
+
+  /**
    * Whether interval literals should allow plural time units
    * such as "YEARS" and "DAYS" in interval literals.
    *
@@ -535,4 +545,10 @@ public interface SqlConformance {
 
   boolean isDollarSupportedinAlias();
 
+
+  /**
+   * Check if the "else" condition is mandatory in the "Case" operator.
+   *
+   */
+  boolean isElseCaseNeeded();
 }
