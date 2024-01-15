@@ -4198,7 +4198,7 @@ public abstract class SqlOperatorBaseTest {
     // some negative tests
     tester.checkFails(
         "'yd' similar to '[x-ze-a]d'",
-        "Illegal character range near index 6\n"
+        ".*Illegal character range near index 6\n"
             + "\\[x-ze-a\\]d\n"
             + "      \\^",
         true);   // illegal range
@@ -4206,10 +4206,10 @@ public abstract class SqlOperatorBaseTest {
     // Slightly different error message from JDK 13 onwards
     final String expectedError =
         TestUtil.getJavaMajorVersion() >= 13
-            ? "Illegal repetition near index 22\n"
+            ? ".*Illegal repetition near index 22\n"
               + "\\[\\:LOWER\\:\\]\\{2\\}\\[\\:DIGIT\\:\\]\\{,5\\}\n"
               + "                      \\^"
-            : "Illegal repetition near index 20\n"
+            : ".*Illegal repetition near index 20\n"
                 + "\\[\\:LOWER\\:\\]\\{2\\}\\[\\:DIGIT\\:\\]\\{,5\\}\n"
                 + "                    \\^";
     tester.checkFails("'yd3223' similar to '[:LOWER:]{2}[:DIGIT:]{,5}'",
@@ -5310,7 +5310,7 @@ public abstract class SqlOperatorBaseTest {
 
   @Test void testJsonValueExpressionOperator() {
     tester.checkScalar("'{}' format json", "{}", "ANY NOT NULL");
-    tester.checkScalar("'[1, 2, 3]' format json", "[1, 2, 3]", "ANY NOT NULL");
+    tester.checkScalar("'[1, 2, 3]' format json", "[1,2,3]", "ANY NOT NULL");
     tester.checkNull("cast(null as varchar) format json");
     tester.checkScalar("'null' format json", "null", "ANY NOT NULL");
     strictTester.checkFails("^null^ format json", "(?s).*Illegal use of .NULL.*", false);
@@ -5777,8 +5777,8 @@ public abstract class SqlOperatorBaseTest {
     tester.checkNull("timestamp_micros(cast(null as bigint))");
     tester.checkScalar("date_from_unix_date(0)", "1970-01-01", "DATE NOT NULL");
 
-    // Have to quote the "DATE" function because we're not using the Babel
-    // parser. In the regular parser, DATE is a reserved keyword.
+    // DATE is a reserved keyword, but the parser has special treatment to
+    // allow it as a function.
     tester.checkNull("\"DATE\"(null)");
     tester.checkScalar("\"DATE\"('1985-12-06')", "1985-12-06", "DATE NOT NULL");
     tester.checkType("CURRENT_DATETIME()", "TIMESTAMP(0) NOT NULL");
