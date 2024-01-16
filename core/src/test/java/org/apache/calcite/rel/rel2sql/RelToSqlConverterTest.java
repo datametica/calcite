@@ -12325,6 +12325,19 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
   }
 
+  @Test public void testStrPos() {
+    RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode strposCall = builder.call(SqlLibraryOperators.STRPOS,
+        builder.literal("foo@example.com"),
+        builder.literal("@"));
+    RelNode root = builder
+        .project(strposCall)
+        .build();
+    final String expectedBqSql = "SELECT STRPOS('foo@example.com', '@') AS `$f0`\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
   @Test public void testToChar() {
     final RelBuilder builder = relBuilder();
 
