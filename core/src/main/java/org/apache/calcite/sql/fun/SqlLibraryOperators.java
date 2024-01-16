@@ -39,6 +39,7 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Optionality;
 
@@ -48,6 +49,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.apache.calcite.sql.fun.SqlLibrary.BIG_QUERY;
 import static org.apache.calcite.sql.fun.SqlLibrary.CALCITE;
@@ -63,6 +66,9 @@ import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
+import static org.apache.calcite.util.Static.RESOURCE;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Defines functions and operators that are not part of standard SQL but
@@ -76,18 +82,16 @@ public abstract class SqlLibraryOperators {
   private SqlLibraryOperators() {
   }
 
-  /**
-   * The "AGGREGATE(m)" aggregate function;
+  /** The "AGGREGATE(m)" aggregate function;
    * aggregates a measure column according to the measure's rollup strategy.
    * This is a Calcite-specific extension.
    *
    * <p>This operator is for SQL (and AST); for internal use (RexNode and
-   * Aggregate) use {@code AGG_M2M}.
-   */
+   * Aggregate) use {@code AGG_M2M}. */
   @LibraryOperator(libraries = {CALCITE})
   public static final SqlFunction AGGREGATE =
-          SqlBasicAggFunction.create("AGGREGATE", SqlKind.AGGREGATE_FN,
-                  ReturnTypes.ARG0, OperandTypes.MEASURE);
+      SqlBasicAggFunction.create("AGGREGATE", SqlKind.AGGREGATE_FN,
+          ReturnTypes.ARG0, OperandTypes.MEASURE);
 
   /** The "CONVERT_TIMEZONE(tz1, tz2, datetime)" function;
    * converts the timezone of {@code datetime} from {@code tz1} to {@code tz2}.
@@ -231,7 +235,7 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction STARTSWITH = STARTS_WITH.withName("STARTSWITH");
 
-  /** BIG_QUERY's "SUBSTR(string, position [, substringLength ])" function. */
+  /** BigQuery's "SUBSTR(string, position [, substringLength ])" function. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction SUBSTR_BIG_QUERY =
       new SqlFunction("SUBSTR", SqlKind.SUBSTR_BIG_QUERY,
@@ -359,6 +363,15 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {MYSQL})
   public static final SqlFunction JSON_STORAGE_SIZE = new SqlJsonStorageSizeFunction();
 
+  @LibraryOperator(libraries = {MYSQL})
+  public static final SqlFunction JSON_INSERT = new SqlJsonModifyFunction("JSON_INSERT");
+
+  @LibraryOperator(libraries = {MYSQL})
+  public static final SqlFunction JSON_REPLACE = new SqlJsonModifyFunction("JSON_REPLACE");
+
+  @LibraryOperator(libraries = {MYSQL})
+  public static final SqlFunction JSON_SET = new SqlJsonModifyFunction("JSON_SET");
+
   @LibraryOperator(libraries = {MYSQL, ORACLE})
   public static final SqlFunction REGEXP_REPLACE = new SqlRegexpReplaceFunction();
 
@@ -408,19 +421,19 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction BOOL_OR =
       new SqlMinMaxAggFunction("BOOL_OR", SqlKind.MAX, OperandTypes.BOOLEAN);
 
-  /** The "LOGICAL_AND(condition)" aggregate function, BIG_QUERY's
+  /** The "LOGICAL_AND(condition)" aggregate function, BigQuery's
    * equivalent to {@link SqlStdOperatorTable#EVERY}. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlAggFunction LOGICAL_AND =
       new SqlMinMaxAggFunction("LOGICAL_AND", SqlKind.MIN, OperandTypes.BOOLEAN);
 
-  /** The "LOGICAL_OR(condition)" aggregate function, BIG_QUERY's
+  /** The "LOGICAL_OR(condition)" aggregate function, BigQuery's
    * equivalent to {@link SqlStdOperatorTable#SOME}. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlAggFunction LOGICAL_OR =
       new SqlMinMaxAggFunction("LOGICAL_OR", SqlKind.MAX, OperandTypes.BOOLEAN);
 
-  /** The "COUNTIF(condition) [OVER (...)]" function, in BIG_QUERY,
+  /** The "COUNTIF(condition) [OVER (...)]" function, in BigQuery,
    * returns the count of TRUE values for expression.
    *
    * <p>{@code COUNTIF(b)} is equivalent to
@@ -466,7 +479,7 @@ public abstract class SqlLibraryOperators {
       new SqlItemOperator("SAFE_ORDINAL", OperandTypes.ARRAY, 1, true);
 
   /** The "ARRAY_AGG(value [ ORDER BY ...])" aggregate function,
-   * in BIG_QUERY and PostgreSQL, gathers values into arrays. */
+   * in BigQuery and PostgreSQL, gathers values into arrays. */
   @LibraryOperator(libraries = {POSTGRESQL, BIG_QUERY})
   public static final SqlAggFunction ARRAY_AGG =
       SqlBasicAggFunction
@@ -478,7 +491,7 @@ public abstract class SqlLibraryOperators {
           .withAllowsNullTreatment(true);
 
   /** The "ARRAY_CONCAT_AGG(value [ ORDER BY ...])" aggregate function,
-   * in BIG_QUERY and PostgreSQL, concatenates array values into arrays. */
+   * in BigQuery and PostgreSQL, concatenates array values into arrays. */
   @LibraryOperator(libraries = {POSTGRESQL, BIG_QUERY})
   public static final SqlAggFunction ARRAY_CONCAT_AGG =
       SqlBasicAggFunction
@@ -488,7 +501,7 @@ public abstract class SqlLibraryOperators {
           .withSyntax(SqlSyntax.ORDERED_FUNCTION);
 
   /** The "STRING_AGG(value [, separator ] [ ORDER BY ...])" aggregate function,
-   * BIG_QUERY and PostgreSQL's equivalent of
+   * BigQuery and PostgreSQL's equivalent of
    * {@link SqlStdOperatorTable#LISTAGG}.
    *
    * <p>{@code STRING_AGG(v, sep ORDER BY x, y)} is implemented by
@@ -497,7 +510,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction STRING_AGG =
       SqlBasicAggFunction
           .create(SqlKind.STRING_AGG, ReturnTypes.ARG0_NULLABLE,
-              OperandTypes.or(OperandTypes.STRING, OperandTypes.STRING_STRING))
+              OperandTypes.STRING.or(OperandTypes.STRING_STRING))
           .withFunctionType(SqlFunctionCategory.SYSTEM)
           .withSyntax(SqlSyntax.ORDERED_FUNCTION);
 
@@ -647,16 +660,16 @@ public abstract class SqlLibraryOperators {
    * a given number of seconds after 1970-01-01. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction DATE_FROM_UNIX_DATE =
-      new SqlFunction("DATE_FROM_UNIX_DATE", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DATE_NULLABLE, null, OperandTypes.INTEGER,
+      SqlBasicFunction.create("DATE_FROM_UNIX_DATE",
+          ReturnTypes.DATE_NULLABLE, OperandTypes.INTEGER,
           SqlFunctionCategory.TIMEDATE);
 
   /** The "UNIX_DATE(date)" function; returns the number of days since
    * 1970-01-01. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction UNIX_DATE =
-      new SqlFunction("UNIX_DATE", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER_NULLABLE, null, OperandTypes.DATE,
+      SqlBasicFunction.create("UNIX_DATE",
+          ReturnTypes.INTEGER_NULLABLE, OperandTypes.DATE,
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
@@ -965,7 +978,10 @@ public abstract class SqlLibraryOperators {
       new SqlLikeOperator("NOT RLIKE", SqlKind.RLIKE, true, true);
 
   /** The "CONCAT(arg, ...)" function that concatenates strings.
-   * For example, "CONCAT('a', 'bc', 'd')" returns "abcd". */
+   * For example, "CONCAT('a', 'bc', 'd')" returns "abcd".
+   *
+   * <p>It accepts at least 1 argument and returns null if any of
+   * the arguments is null. */
   @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
   public static final SqlFunction CONCAT_FUNCTION =
       new SqlFunction("CONCAT",
@@ -990,6 +1006,12 @@ public abstract class SqlLibraryOperators {
   /** The "CONCAT(arg0, arg1)" function that concatenates strings.
    * For example, "CONCAT('a', 'bc')" returns "abc".
    *
+   * <p>If one of the arguments is null, it will be treated as empty string.
+   * "CONCAT('a', null)" returns "a".
+   *
+   * <p>Returns null only when both arguments are null.
+   * "CONCAT(null, null)" returns null.
+   *
    * <p>It is assigned {@link SqlKind#CONCAT2} to make it not equal to
    * {@link #CONCAT_FUNCTION}. */
   @LibraryOperator(libraries = {ORACLE})
@@ -1001,6 +1023,341 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_SAME_SAME,
           SqlFunctionCategory.STRING);
 
+  @SuppressWarnings("argument.type.incompatible")
+  private static RelDataType arrayAppendPrependReturnType(SqlOperatorBinding opBinding) {
+    final RelDataType arrayType = opBinding.collectOperandTypes().get(0);
+    final RelDataType componentType = arrayType.getComponentType();
+    final RelDataType elementType = opBinding.collectOperandTypes().get(1);
+    RelDataType type =
+            opBinding.getTypeFactory().leastRestrictive(
+                    ImmutableList.of(componentType, elementType));
+    if (elementType.isNullable()) {
+      type = opBinding.getTypeFactory().createTypeWithNullability(type, true);
+    }
+    requireNonNull(type, "inferred array element type");
+    return SqlTypeUtil.createArrayType(opBinding.getTypeFactory(), type, arrayType.isNullable());
+  }
+
+  /** The "ARRAY_APPEND(array, element)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_APPEND =
+      SqlBasicFunction.create(SqlKind.ARRAY_APPEND,
+          SqlLibraryOperators::arrayAppendPrependReturnType,
+          OperandTypes.ARRAY_ELEMENT);
+
+  /** The "EXISTS(array, lambda)" function (Spark); returns whether a predicate holds
+   * for one or more elements in the array. */
+//  @LibraryOperator(libraries = {SPARK})
+//  public static final SqlFunction EXISTS =
+//      SqlBasicFunction.create("EXISTS",
+//          ReturnTypes.BOOLEAN_NULLABLE,
+//          OperandTypes.EXISTS);
+
+  @SuppressWarnings("argument.type.incompatible")
+  private static RelDataType arrayCompactReturnType(SqlOperatorBinding opBinding) {
+    final RelDataType arrayType = opBinding.collectOperandTypes().get(0);
+    if (arrayType.getSqlTypeName() == SqlTypeName.NULL) {
+      return arrayType;
+    }
+    RelDataType type = arrayType.getComponentType();
+    // force set nullable=false, and there are no side effects for 'NULL' type
+    if (type != null && type.isNullable()) {
+      type = opBinding.getTypeFactory().createTypeWithNullability(type, false);
+    }
+    requireNonNull(type, "inferred array element type");
+    return SqlTypeUtil.createArrayType(opBinding.getTypeFactory(), type, arrayType.isNullable());
+  }
+
+  /** The "ARRAY_COMPACT(array)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_COMPACT =
+      SqlBasicFunction.create(SqlKind.ARRAY_COMPACT,
+          SqlLibraryOperators::arrayCompactReturnType,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_CONCAT(array [, array]*)" function. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ARRAY_CONCAT =
+      SqlBasicFunction.create(SqlKind.ARRAY_CONCAT,
+          ReturnTypes.LEAST_RESTRICTIVE,
+          OperandTypes.AT_LEAST_ONE_SAME_VARIADIC);
+
+  /** The "ARRAY_CONTAINS(array, element)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_CONTAINS =
+      SqlBasicFunction.create(SqlKind.ARRAY_CONTAINS,
+          ReturnTypes.BOOLEAN_NULLABLE,
+          OperandTypes.ARRAY_ELEMENT);
+
+  /** The "ARRAY_DISTINCT(array)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_DISTINCT =
+      SqlBasicFunction.create(SqlKind.ARRAY_DISTINCT,
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_EXCEPT(array1, array2)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_EXCEPT =
+      SqlBasicFunction.create(SqlKind.ARRAY_EXCEPT,
+          ReturnTypes.LEAST_RESTRICTIVE,
+          OperandTypes.and(
+              OperandTypes.SAME_SAME,
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY)));
+
+  @SuppressWarnings("argument.type.incompatible")
+  private static RelDataType arrayInsertReturnType(SqlOperatorBinding opBinding) {
+    final RelDataType arrayType = opBinding.collectOperandTypes().get(0);
+    final RelDataType componentType = arrayType.getComponentType();
+    final RelDataType elementType = opBinding.collectOperandTypes().get(2);
+    // we don't need to do leastRestrictive on componentType and elementType,
+    // because in operand checker we limit the elementType must equals array component type.
+    // So we use componentType directly.
+    RelDataType type = componentType;
+    if (elementType.isNullable()) {
+      type = opBinding.getTypeFactory().createTypeWithNullability(type, true);
+    }
+    requireNonNull(type, "inferred array element type");
+    return SqlTypeUtil.createArrayType(opBinding.getTypeFactory(), type, arrayType.isNullable());
+  }
+
+  /** The "ARRAY_INSERT(array, pos, val)" function (Spark). */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_INSERT =
+      SqlBasicFunction.create(SqlKind.ARRAY_INSERT,
+          SqlLibraryOperators::arrayInsertReturnType,
+          OperandTypes.ARRAY_INSERT);
+
+  /** The "ARRAY_INTERSECT(array1, array2)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_INTERSECT =
+      SqlBasicFunction.create(SqlKind.ARRAY_INTERSECT,
+          ReturnTypes.LEAST_RESTRICTIVE,
+          OperandTypes.and(
+              OperandTypes.SAME_SAME,
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY)));
+
+  /** The "ARRAY_JOIN(array, delimiter [, nullText ])" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_JOIN =
+      SqlBasicFunction.create(SqlKind.ARRAY_JOIN,
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING_ARRAY_CHARACTER_OPTIONAL_CHARACTER);
+
+  /** The "ARRAY_LENGTH(array)" function. */
+  @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE})
+  public static final SqlFunction ARRAY_LENGTH =
+      SqlBasicFunction.create(SqlKind.ARRAY_LENGTH,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_MAX(array)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_MAX =
+      SqlBasicFunction.create(SqlKind.ARRAY_MAX,
+          ReturnTypes.TO_COLLECTION_ELEMENT_FORCE_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_MAX(array)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_MIN =
+      SqlBasicFunction.create(SqlKind.ARRAY_MIN,
+          ReturnTypes.TO_COLLECTION_ELEMENT_FORCE_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_POSITION(array, element)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_POSITION =
+      SqlBasicFunction.create(SqlKind.ARRAY_POSITION,
+          ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.ARRAY_ELEMENT);
+
+  /** The "ARRAY_PREPEND(array, element)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_PREPEND =
+      SqlBasicFunction.create(SqlKind.ARRAY_PREPEND,
+          SqlLibraryOperators::arrayAppendPrependReturnType,
+          OperandTypes.ARRAY_ELEMENT);
+
+  /** The "ARRAY_REMOVE(array, element)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_REMOVE =
+      SqlBasicFunction.create(SqlKind.ARRAY_REMOVE,
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.ARRAY_ELEMENT);
+
+  /** The "ARRAY_REPEAT(element, count)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_REPEAT =
+      SqlBasicFunction.create(SqlKind.ARRAY_REPEAT,
+          ReturnTypes.TO_ARRAY,
+          OperandTypes.sequence(
+              "ARRAY_REPEAT(ANY, INTEGER)",
+              OperandTypes.ANY, OperandTypes.typeName(SqlTypeName.INTEGER)));
+
+  /** The "ARRAY_REVERSE(array)" function. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ARRAY_REVERSE =
+      SqlBasicFunction.create(SqlKind.ARRAY_REVERSE,
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_SIZE(array)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_SIZE =
+      SqlBasicFunction.create(SqlKind.ARRAY_SIZE,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_UNION(array1, array2)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAY_UNION =
+      SqlBasicFunction.create(SqlKind.ARRAY_UNION,
+          ReturnTypes.LEAST_RESTRICTIVE,
+          OperandTypes.and(
+              OperandTypes.SAME_SAME,
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY)));
+
+  /** The "ARRAY_TO_STRING(array, delimiter [, nullText ])" function. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ARRAY_TO_STRING =
+      SqlBasicFunction.create(SqlKind.ARRAY_TO_STRING,
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING_ARRAY_CHARACTER_OPTIONAL_CHARACTER);
+
+  /** The "ARRAYS_OVERLAP(array1, array2)" function (Spark). */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAYS_OVERLAP =
+      SqlBasicFunction.create(SqlKind.ARRAYS_OVERLAP,
+          ReturnTypes.BOOLEAN_NULLABLE.andThen(SqlTypeTransforms.COLLECTION_ELEMENT_TYPE_NULLABLE),
+          OperandTypes.and(
+              OperandTypes.SAME_SAME,
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY)));
+
+  private static RelDataType deriveTypeArraysZip(SqlOperatorBinding opBinding) {
+    final List<RelDataType> argComponentTypes = new ArrayList<>();
+    for (RelDataType arrayType : opBinding.collectOperandTypes()) {
+      final RelDataType componentType = requireNonNull(arrayType.getComponentType());
+      argComponentTypes.add(componentType);
+    }
+
+    final List<String> indexes = IntStream.range(0, argComponentTypes.size())
+        .mapToObj(i -> String.valueOf(i))
+        .collect(Collectors.toList());
+    final RelDataType structType =
+        opBinding.getTypeFactory().createStructType(argComponentTypes, indexes);
+    return SqlTypeUtil.createArrayType(
+        opBinding.getTypeFactory(),
+        requireNonNull(structType, "inferred value type"),
+        false);
+  }
+
+  /** The "ARRAYS_ZIP(array, ...)" function (Spark). */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction ARRAYS_ZIP =
+      SqlBasicFunction.create(SqlKind.ARRAYS_ZIP,
+          ((SqlReturnTypeInference) SqlLibraryOperators::deriveTypeArraysZip)
+              .andThen(SqlTypeTransforms.TO_NULLABLE),
+          OperandTypes.SAME_VARIADIC);
+
+  /** The "SORT_ARRAY(array)" function (Spark). */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction SORT_ARRAY =
+      SqlBasicFunction.create(SqlKind.SORT_ARRAY,
+          ReturnTypes.ARG0_NULLABLE,
+          OperandTypes.ARRAY.or(OperandTypes.ARRAY_BOOLEAN_LITERAL));
+
+  private static RelDataType deriveTypeMapConcat(SqlOperatorBinding opBinding) {
+    if (opBinding.getOperandCount() == 0) {
+      final RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
+      final RelDataType type = typeFactory.createSqlType(SqlTypeName.VARCHAR);
+      requireNonNull(type, "type");
+      return SqlTypeUtil.createMapType(typeFactory, type, type, true);
+    } else {
+      final List<RelDataType> operandTypes = opBinding.collectOperandTypes();
+      for (RelDataType operandType : operandTypes) {
+        if (!SqlTypeUtil.isMap(operandType)) {
+          throw opBinding.newError(
+              RESOURCE.typesShouldAllBeMap(
+                  opBinding.getOperator().getName(),
+                  operandType.getFullTypeString()));
+        }
+      }
+      return requireNonNull(opBinding.getTypeFactory().leastRestrictive(operandTypes));
+    }
+  }
+
+  /** The "MAP_CONCAT(map [, map]*)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction MAP_CONCAT =
+      SqlBasicFunction.create(SqlKind.MAP_CONCAT,
+          SqlLibraryOperators::deriveTypeMapConcat,
+          OperandTypes.SAME_VARIADIC);
+
+  /** The "MAP_ENTRIES(map)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction MAP_ENTRIES =
+      SqlBasicFunction.create(SqlKind.MAP_ENTRIES,
+          ReturnTypes.TO_MAP_ENTRIES_NULLABLE,
+          OperandTypes.MAP);
+
+  /** The "MAP_KEYS(map)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction MAP_KEYS =
+      SqlBasicFunction.create(SqlKind.MAP_KEYS,
+          ReturnTypes.TO_MAP_KEYS_NULLABLE,
+          OperandTypes.MAP);
+
+  /** The "MAP_VALUES(map)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction MAP_VALUES =
+      SqlBasicFunction.create(SqlKind.MAP_VALUES,
+          ReturnTypes.TO_MAP_VALUES_NULLABLE,
+          OperandTypes.MAP);
+
+  private static RelDataType deriveTypeMapFromArrays(SqlOperatorBinding opBinding) {
+    final RelDataType keysArrayType = opBinding.getOperandType(0);
+    final RelDataType valuesArrayType = opBinding.getOperandType(1);
+    final boolean nullable = keysArrayType.isNullable() || valuesArrayType.isNullable();
+    return SqlTypeUtil.createMapType(
+        opBinding.getTypeFactory(),
+        requireNonNull(keysArrayType.getComponentType(), "inferred key type"),
+        requireNonNull(valuesArrayType.getComponentType(), "inferred value type"),
+        nullable);
+  }
+
+  /** The "MAP_FROM_ARRAYS(keysArray, valuesArray)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction MAP_FROM_ARRAYS =
+      SqlBasicFunction.create(SqlKind.MAP_FROM_ARRAYS,
+          SqlLibraryOperators::deriveTypeMapFromArrays,
+          OperandTypes.ARRAY_ARRAY);
+
+  private static RelDataType deriveTypeMapFromEntries(SqlOperatorBinding opBinding) {
+    final RelDataType entriesType = opBinding.collectOperandTypes().get(0);
+    final RelDataType entryType = entriesType.getComponentType();
+    requireNonNull(entryType, () -> "componentType of " + entriesType);
+    return SqlTypeUtil.createMapType(
+        opBinding.getTypeFactory(),
+        requireNonNull(entryType.getFieldList().get(0).getType(), "inferred key type"),
+        requireNonNull(entryType.getFieldList().get(1).getType(), "inferred value type"),
+        entriesType.isNullable() || entryType.isNullable());
+  }
+
+  /** The "MAP_FROM_ENTRIES(arrayOfEntries)" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction MAP_FROM_ENTRIES =
+      SqlBasicFunction.create(SqlKind.MAP_FROM_ENTRIES,
+          SqlLibraryOperators::deriveTypeMapFromEntries,
+          OperandTypes.MAP_FROM_ENTRIES);
+
+  /** The "STR_TO_MAP(string[, stringDelimiter[, keyValueDelimiter]])" function. */
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction STR_TO_MAP =
+      SqlBasicFunction.create(SqlKind.STR_TO_MAP,
+          ReturnTypes.IDENTITY_TO_MAP_NULLABLE,
+          OperandTypes.STRING_OPTIONAL_STRING_OPTIONAL_STRING);
+
   @LibraryOperator(libraries = {MYSQL})
   public static final SqlFunction REVERSE =
       new SqlFunction("REVERSE",
@@ -1010,25 +1367,52 @@ public abstract class SqlLibraryOperators {
           OperandTypes.CHARACTER,
           SqlFunctionCategory.STRING);
 
-  @LibraryOperator(libraries = {MYSQL})
+  @LibraryOperator(libraries = {BIG_QUERY, MYSQL})
   public static final SqlFunction FROM_BASE64 =
-      new SqlFunction("FROM_BASE64",
-        SqlKind.OTHER_FUNCTION,
-        ReturnTypes.explicit(SqlTypeName.VARBINARY)
-          .andThen(SqlTypeTransforms.TO_NULLABLE),
-        null,
-        OperandTypes.STRING,
-        SqlFunctionCategory.STRING);
+      SqlBasicFunction.create("FROM_BASE64",
+          ReturnTypes.VARBINARY_NULLABLE,
+          OperandTypes.STRING, SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {MYSQL})
   public static final SqlFunction TO_BASE64 =
-      new SqlFunction("TO_BASE64",
-        SqlKind.OTHER_FUNCTION,
-        ReturnTypes.explicit(SqlTypeName.VARCHAR)
-          .andThen(SqlTypeTransforms.TO_NULLABLE),
-        null,
-        OperandTypes.or(OperandTypes.STRING, OperandTypes.BINARY),
-        SqlFunctionCategory.STRING);
+      SqlBasicFunction.create("TO_BASE64",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING.or(OperandTypes.BINARY),
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction FROM_BASE32 =
+      SqlBasicFunction.create("FROM_BASE32",
+          ReturnTypes.VARBINARY_NULLABLE,
+          OperandTypes.CHARACTER, SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction TO_BASE32 =
+      SqlBasicFunction.create("TO_BASE32",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  /**
+   * The "FROM_HEX(varchar)" function; converts a hexadecimal-encoded {@code varchar} into bytes.
+   */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction FROM_HEX =
+      SqlBasicFunction.create("FROM_HEX",
+          ReturnTypes.VARBINARY_NULLABLE,
+          OperandTypes.CHARACTER,
+          SqlFunctionCategory.STRING);
+
+  /**
+   * The "TO_HEX(binary)" function; converts {@code binary} into a hexadecimal varchar.
+   */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction TO_HEX =
+      SqlBasicFunction.create("TO_HEX",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.BINARY,
+          SqlFunctionCategory.STRING);
+
 
   /** The "TO_DATE(string1, string2)" function; casts string1
    * to a DATE using the format specified in string2. */
@@ -1154,25 +1538,69 @@ public abstract class SqlLibraryOperators {
    * since 1970-01-01 00:00:00. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction UNIX_SECONDS =
-      new SqlFunction("UNIX_SECONDS", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.BIGINT_NULLABLE, null, OperandTypes.TIMESTAMP,
-          SqlFunctionCategory.TIMEDATE);
+      SqlBasicFunction.create("UNIX_SECONDS", ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.TIMESTAMP, SqlFunctionCategory.TIMEDATE);
 
   /** The "UNIX_MILLIS(bigint)" function; returns the number of milliseconds
    * since 1970-01-01 00:00:00. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction UNIX_MILLIS =
-      new SqlFunction("UNIX_MILLIS", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.BIGINT_NULLABLE, null, OperandTypes.TIMESTAMP,
+      SqlBasicFunction.create("UNIX_MILLIS",
+          ReturnTypes.BIGINT_NULLABLE, OperandTypes.TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
 
   /** The "UNIX_MICROS(bigint)" function; returns the number of microseconds
    * since 1970-01-01 00:00:00. */
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction UNIX_MICROS =
-      new SqlFunction("UNIX_MICROS", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.BIGINT_NULLABLE, null, OperandTypes.TIMESTAMP,
+      SqlBasicFunction.create("UNIX_MICROS",
+          ReturnTypes.BIGINT_NULLABLE, OperandTypes.TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
+
+  /** The "SAFE_ADD(numeric1, numeric2)" function; equivalent to the {@code +} operator but
+   * returns null if overflow occurs. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_ADD =
+      SqlBasicFunction.create("SAFE_ADD",
+          ReturnTypes.SUM_FORCE_NULLABLE,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "SAFE_DIVIDE(numeric1, numeric2)" function; equivalent to the {@code /} operator but
+   * returns null if an error occurs, such as overflow or division by zero. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_DIVIDE =
+      SqlBasicFunction.create("SAFE_DIVIDE",
+          ReturnTypes.DOUBLE_IF_INTEGERS.orElse(ReturnTypes.QUOTIENT_FORCE_NULLABLE),
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "SAFE_MULTIPLY(numeric1, numeric2)" function; equivalent to the {@code *} operator but
+   * returns null if overflow occurs. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_MULTIPLY =
+      SqlBasicFunction.create("SAFE_MULTIPLY",
+          ReturnTypes.PRODUCT_FORCE_NULLABLE,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "SAFE_NEGATE(numeric)" function; negates {@code numeric} and returns null if overflow
+   * occurs. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_NEGATE =
+      SqlBasicFunction.create("SAFE_NEGATE",
+          ReturnTypes.ARG0_FORCE_NULLABLE,
+          OperandTypes.NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "SAFE_SUBTRACT(numeric1, numeric2)" function; equivalent to the {@code -} operator but
+   * returns null if overflow occurs. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_SUBTRACT =
+      SqlBasicFunction.create("SAFE_SUBTRACT",
+          ReturnTypes.SUM_FORCE_NULLABLE,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction CHR =
@@ -1210,24 +1638,31 @@ public abstract class SqlLibraryOperators {
           OperandTypes.NUMERIC,
           SqlFunctionCategory.NUMERIC);
 
-  @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
-  public static final SqlFunction MD5 =
-      new SqlFunction("MD5",
-        SqlKind.OTHER_FUNCTION,
-        ReturnTypes.explicit(SqlTypeName.VARCHAR)
-          .andThen(SqlTypeTransforms.TO_NULLABLE),
-        null,
-        OperandTypes.or(OperandTypes.STRING, OperandTypes.BINARY),
-        SqlFunctionCategory.STRING);
+  /** The {@code FACTORIAL(integer)} function.
+   * Returns the factorial of integer, the range of integer is [0, 20].
+   * Otherwise, returns NULL. */
+  @LibraryOperator(libraries = {HIVE, SPARK})
+  public static final SqlFunction FACTORIAL =
+      SqlBasicFunction.create("FACTORIAL",
+          ReturnTypes.BIGINT_FORCE_NULLABLE,
+          OperandTypes.INTEGER,
+          SqlFunctionCategory.NUMERIC);
 
-  @LibraryOperator(libraries = {BIG_QUERY})
-  public static final SqlFunction TO_HEX =
-      new SqlFunction("TO_HEX",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.VARCHAR_2000,
-          null,
-          OperandTypes.family(SqlTypeFamily.STRING),
+  @LibraryOperator(libraries = {BIG_QUERY, MYSQL, POSTGRESQL})
+  public static final SqlFunction MD5 =
+      SqlBasicFunction.create("MD5",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING.or(OperandTypes.BINARY),
           SqlFunctionCategory.STRING);
+
+//  @LibraryOperator(libraries = {BIG_QUERY})
+//  public static final SqlFunction TO_HEX =
+//      new SqlFunction("TO_HEX",
+//          SqlKind.OTHER_FUNCTION,
+//          ReturnTypes.VARCHAR_2000,
+//          null,
+//          OperandTypes.family(SqlTypeFamily.STRING),
+//          SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
   public static final SqlFunction SHA1 =
@@ -2087,11 +2522,11 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.INTEGER_NULLABLE,
           null, OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
 
-  @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlFunction ARRAY_LENGTH =
-      new SqlFunction("ARRAY_LENGTH", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER,
-          null, OperandTypes.ARRAY, SqlFunctionCategory.SYSTEM);
+//  @LibraryOperator(libraries = {SNOWFLAKE})
+//  public static final SqlFunction ARRAY_LENGTH =
+//      new SqlFunction("ARRAY_LENGTH", SqlKind.OTHER_FUNCTION,
+//          ReturnTypes.INTEGER,
+//          null, OperandTypes.ARRAY, SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction JSON_OBJECT =

@@ -77,6 +77,7 @@ import java.util.Objects;
 import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
@@ -1307,7 +1308,10 @@ public class RexBuilder {
    */
   public RexLiteral makeIntervalLiteral(
       SqlIntervalQualifier intervalQualifier) {
-    assert intervalQualifier != null;
+    verifyNotNull(intervalQualifier);
+    if (intervalQualifier.timeFrameName != null) {
+      return makePreciseStringLiteral(intervalQualifier.timeFrameName);
+    }
     return makeFlag(intervalQualifier.timeUnitRange);
   }
 
