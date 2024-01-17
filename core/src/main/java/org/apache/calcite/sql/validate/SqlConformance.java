@@ -59,7 +59,7 @@ public interface SqlConformance {
   @SuppressWarnings("unused")
   @Deprecated // to be removed before 2.0
   SqlConformanceEnum STRICT_2003 = SqlConformanceEnum.STRICT_2003;
-  /** Short-cut for {@link SqlConformanceEnum#PRAGMATIC_2003}. zxz */
+  /** Short-cut for {@link SqlConformanceEnum#PRAGMATIC_2003}. */
   @SuppressWarnings("unused")
   @Deprecated // to be removed before 2.0
   SqlConformanceEnum PRAGMATIC_2003 = SqlConformanceEnum.PRAGMATIC_2003;
@@ -560,7 +560,6 @@ public interface SqlConformance {
    * the parser.
    */
   boolean allowIsTrue();
-}
 
   /**
    * Controls the behavior of operators that are part of Standard SQL but

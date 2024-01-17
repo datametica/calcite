@@ -140,7 +140,6 @@ public abstract class SqlAbstractConformance implements SqlConformance {
   public boolean allowIsTrue() {
     return SqlConformanceEnum.DEFAULT.allowIsTrue();
   }
-}
 
   @Override public boolean isValueAllowed() {
     return SqlConformanceEnum.DEFAULT.isValueAllowed();

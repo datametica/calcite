@@ -146,8 +146,6 @@ public class SqlDelegatingConformance implements SqlConformance {
     return delegate.allowIsTrue();
   }
 
-}
-
   @Override public boolean isValueAllowed() {
     return delegate.isValueAllowed();
   }
