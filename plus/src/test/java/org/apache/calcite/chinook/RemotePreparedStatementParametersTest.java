@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.chinook;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -24,11 +24,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 /**
- * Tests against parameters in prepared statement when using underlying jdbc subschema
+ * Tests against parameters in prepared statement when using underlying JDBC
+ * sub-schema.
  */
-public class RemotePreparedStatementParametersTest {
+class RemotePreparedStatementParametersTest {
 
-  @Test public void testSimpleStringParameterShouldWorkWithCalcite() throws Exception {
+  @Test void testSimpleStringParameterShouldWorkWithCalcite() throws Exception {
     // given
     ChinookAvaticaServer server = new ChinookAvaticaServer();
     server.startWithCalcite();
@@ -42,7 +43,7 @@ public class RemotePreparedStatementParametersTest {
     server.stop();
   }
 
-  @Test public void testSeveralParametersShouldWorkWithCalcite() throws Exception {
+  @Test void testSeveralParametersShouldWorkWithCalcite() throws Exception {
     // given
     ChinookAvaticaServer server = new ChinookAvaticaServer();
     server.startWithCalcite();
@@ -58,19 +59,17 @@ public class RemotePreparedStatementParametersTest {
     server.stop();
   }
 
-  @Test public void testParametersShouldWorkWithRaw() throws Exception {
+  @Test void testParametersShouldWorkWithRaw() throws Exception {
     // given
     ChinookAvaticaServer server = new ChinookAvaticaServer();
     server.startWithRaw();
     Connection connection = DriverManager.getConnection(server.getURL());
     // when
     PreparedStatement pS =
-        connection.prepareStatement("select * from artist where name = ?");
+        connection.prepareStatement("select * from \"Artist\" where \"Name\" = ?");
     pS.setString(1, "AC/DC");
     // then
     ResultSet resultSet = pS.executeQuery();
     server.stop();
   }
 }
-
-// End RemotePreparedStatementParametersTest.java

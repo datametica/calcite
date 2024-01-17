@@ -19,7 +19,7 @@ package org.apache.calcite.rel.rules;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.test.RexImplicationCheckerTest.Fixture;
+import org.apache.calcite.test.RexImplicationCheckerFixtures.Fixture;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.Util;
@@ -27,20 +27,21 @@ import org.apache.calcite.util.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Calendar;
 import java.util.Set;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.core.IsInstanceOf.any;
 
 /** Unit tests for {@link DateRangeRules} algorithms. */
-public class DateRangeRulesTest {
+class DateRangeRulesTest {
 
-  @Test public void testExtractYearFromDateColumn() {
+  @Test void testExtractYearFromDateColumn() {
     final Fixture2 f = new Fixture2();
 
     final RexNode e = f.eq(f.literal(2014), f.exYearD);
@@ -65,7 +66,7 @@ public class DateRangeRulesTest {
         is("<>(EXTRACT(FLAG(YEAR), $8), 2014)"));
   }
 
-  @Test public void testExtractYearFromTimestampColumn() {
+  @Test void testExtractYearFromTimestampColumn() {
     final Fixture2 f = new Fixture2();
     checkDateRange(f, f.eq(f.exYearTs, f.literal(2014)),
         is("AND(>=($9, 2014-01-01 00:00:00), <($9, 2015-01-01 00:00:00))"));
@@ -81,21 +82,20 @@ public class DateRangeRulesTest {
         is("<>(EXTRACT(FLAG(YEAR), $9), 2014)"));
   }
 
-  @Test public void testExtractYearAndMonthFromDateColumn() {
+  @Test void testExtractYearAndMonthFromDateColumn() {
     final Fixture2 f = new Fixture2();
     checkDateRange(f,
         f.and(f.eq(f.exYearD, f.literal(2014)), f.eq(f.exMonthD, f.literal(6))),
         "UTC",
         is("AND(AND(>=($8, 2014-01-01), <($8, 2015-01-01)),"
             + " AND(>=($8, 2014-06-01), <($8, 2014-07-01)))"),
-        is("AND(>=($8, 2014-01-01), <($8, 2015-01-01),"
-            + " >=($8, 2014-06-01), <($8, 2014-07-01))"));
+        is("SEARCH($8, Sarg[[2014-06-01..2014-07-01)])"));
   }
 
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1601">[CALCITE-1601]
    * DateRangeRules loses OR filters</a>. */
-  @Test public void testExtractYearAndMonthFromDateColumn2() {
+  @Test void testExtractYearAndMonthFromDateColumn2() {
     final Fixture2 f = new Fixture2();
     final String s1 = "AND("
         + "AND(>=($8, 2000-01-01), <($8, 2001-01-01)),"
@@ -103,11 +103,8 @@ public class DateRangeRulesTest {
         + "AND(>=($8, 2000-02-01), <($8, 2000-03-01)), "
         + "AND(>=($8, 2000-03-01), <($8, 2000-04-01)), "
         + "AND(>=($8, 2000-05-01), <($8, 2000-06-01))))";
-    final String s2 = "AND(>=($8, 2000-01-01), <($8, 2001-01-01),"
-        + " OR("
-        + "AND(>=($8, 2000-02-01), <($8, 2000-03-01)), "
-        + "AND(>=($8, 2000-03-01), <($8, 2000-04-01)), "
-        + "AND(>=($8, 2000-05-01), <($8, 2000-06-01))))";
+    final String s2 = "SEARCH($8, Sarg[[2000-02-01..2000-04-01),"
+        + " [2000-05-01..2000-06-01)])";
     final RexNode e =
         f.and(f.eq(f.exYearD, f.literal(2000)),
             f.or(f.eq(f.exMonthD, f.literal(2)),
@@ -116,7 +113,7 @@ public class DateRangeRulesTest {
     checkDateRange(f, e, "UTC", is(s1), is(s2));
   }
 
-  @Test public void testExtractYearAndDayFromDateColumn() {
+  @Test void testExtractYearAndDayFromDateColumn() {
     final Fixture2 f = new Fixture2();
     checkDateRange(f,
         f.and(f.eq(f.exYearD, f.literal(2010)), f.eq(f.exDayD, f.literal(31))),
@@ -131,7 +128,7 @@ public class DateRangeRulesTest {
 
   }
 
-  @Test public void testExtractYearMonthDayFromDateColumn() {
+  @Test void testExtractYearMonthDayFromDateColumn() {
     final Fixture2 f = new Fixture2();
     // The following condition finds the 2 leap days between 2010 and 2020,
     // namely 29th February 2012 and 2016.
@@ -158,7 +155,7 @@ public class DateRangeRulesTest {
             + " AND(>=($8, 2016-02-29), <($8, 2016-03-01))))"));
   }
 
-  @Test public void testExtractYearMonthDayFromTimestampColumn() {
+  @Test void testExtractYearMonthDayFromTimestampColumn() {
     final Fixture2 f = new Fixture2();
     checkDateRange(f,
         f.and(f.gt(f.exYearD, f.literal(2010)),
@@ -182,7 +179,7 @@ public class DateRangeRulesTest {
   /** Test case #1 for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1658">[CALCITE-1658]
    * DateRangeRules issues</a>. */
-  @Test public void testExtractWithOrCondition1() {
+  @Test void testExtractWithOrCondition1() {
     // (EXTRACT(YEAR FROM __time) = 2000
     //    AND EXTRACT(MONTH FROM __time) IN (2, 3, 5))
     // OR (EXTRACT(YEAR FROM __time) = 2001
@@ -207,7 +204,7 @@ public class DateRangeRulesTest {
   /** Test case #2 for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1658">[CALCITE-1658]
    * DateRangeRules issues</a>. */
-  @Test public void testExtractWithOrCondition2() {
+  @Test void testExtractWithOrCondition2() {
     // EXTRACT(YEAR FROM __time) IN (2000, 2001)
     //   AND ((EXTRACT(YEAR FROM __time) = 2000
     //         AND EXTRACT(MONTH FROM __time) IN (2, 3, 5))
@@ -238,7 +235,7 @@ public class DateRangeRulesTest {
   /** Test case #3 for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1658">[CALCITE-1658]
    * DateRangeRules issues</a>. */
-  @Test public void testExtractPartialRewriteForNotEqualsYear() {
+  @Test void testExtractPartialRewriteForNotEqualsYear() {
     // EXTRACT(YEAR FROM __time) <> 2000
     // AND ((EXTRACT(YEAR FROM __time) = 2000
     //     AND EXTRACT(MONTH FROM __time) IN (2, 3, 5))
@@ -267,7 +264,7 @@ public class DateRangeRulesTest {
   /** Test case #4 for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1658">[CALCITE-1658]
    * DateRangeRules issues</a>. */
-  @Test public void testExtractPartialRewriteForInMonth() {
+  @Test void testExtractPartialRewriteForInMonth() {
     // EXTRACT(MONTH FROM __time) in (1, 2, 3, 4, 5)
     // AND ((EXTRACT(YEAR FROM __time) = 2000
     //     AND EXTRACT(MONTH FROM __time) IN (2, 3, 5))
@@ -301,7 +298,7 @@ public class DateRangeRulesTest {
             + " AND(>=($8, 2001-01-01), <($8, 2001-02-01)))))"));
   }
 
-  @Test public void testExtractRewriteForInvalidMonthComparison() {
+  @Test void testExtractRewriteForInvalidMonthComparison() {
     // "EXTRACT(MONTH FROM ts) = 14" will never be TRUE
     final Fixture2 f = new Fixture2();
     checkDateRange(f,
@@ -341,7 +338,7 @@ public class DateRangeRulesTest {
             + " AND(>=($9, 2010-01-01 00:00:00), <($9, 2010-02-01 00:00:00)))"));
   }
 
-  @Test public void testExtractRewriteForInvalidDayComparison() {
+  @Test void testExtractRewriteForInvalidDayComparison() {
     final Fixture2 f = new Fixture2();
     checkDateRange(f,
         f.and(f.eq(f.exYearTs, f.literal(2010)),
@@ -358,7 +355,7 @@ public class DateRangeRulesTest {
             + " AND(>=($9, 2010-02-01 00:00:00), <($9, 2010-03-01 00:00:00)), false)"));
   }
 
-  @Test public void testUnboundYearExtractRewrite() {
+  @Test void testUnboundYearExtractRewrite() {
     final Fixture2 f = new Fixture2();
     // No lower bound on YEAR
     checkDateRange(f,
@@ -388,7 +385,7 @@ public class DateRangeRulesTest {
   }
 
   // Test reWrite with multiple operands
-  @Test public void testExtractRewriteMultipleOperands() {
+  @Test void testExtractRewriteMultipleOperands() {
     final Fixture2 f = new Fixture2();
     checkDateRange(f,
         f.and(f.eq(f.exYearTs, f.literal(2010)),
@@ -409,7 +406,7 @@ public class DateRangeRulesTest {
             + " <($8, 2011-06-01)))"));
   }
 
-  @Test public void testFloorEqRewrite() {
+  @Test void testFloorEqRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 10, 11, 12, 05);
@@ -460,7 +457,7 @@ public class DateRangeRulesTest {
         is("AND(>=($9, 2010-02-04 02:59:00), <($9, 2010-02-04 03:00:00))"));
   }
 
-  @Test public void testFloorLtRewrite() {
+  @Test void testFloorLtRewrite() {
     final Calendar c = Util.calendar();
 
     c.clear();
@@ -475,7 +472,7 @@ public class DateRangeRulesTest {
         is("<($9, 2010-01-01 00:00:00)"));
   }
 
-  @Test public void testFloorLeRewrite() {
+  @Test void testFloorLeRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 10, 11, 12, 05);
@@ -489,7 +486,7 @@ public class DateRangeRulesTest {
         is("<($9, 2011-01-01 00:00:00)"));
   }
 
-  @Test public void testFloorGtRewrite() {
+  @Test void testFloorGtRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 10, 11, 12, 05);
@@ -503,7 +500,7 @@ public class DateRangeRulesTest {
         is(">=($9, 2011-01-01 00:00:00)"));
   }
 
-  @Test public void testFloorGeRewrite() {
+  @Test void testFloorGeRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 10, 11, 12, 05);
@@ -517,7 +514,7 @@ public class DateRangeRulesTest {
         is(">=($9, 2010-01-01 00:00:00)"));
   }
 
-  @Test public void testFloorExtractBothRewrite() {
+  @Test void testFloorExtractBothRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     Fixture2 f = new Fixture2();
@@ -551,7 +548,7 @@ public class DateRangeRulesTest {
 
   }
 
-  @Test public void testCeilEqRewrite() {
+  @Test void testCeilEqRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 10, 11, 12, 05);
@@ -602,7 +599,7 @@ public class DateRangeRulesTest {
         is("AND(>($9, 2010-02-04 02:58:00), <=($9, 2010-02-04 02:59:00))"));
   }
 
-  @Test public void testCeilLtRewrite() {
+  @Test void testCeilLtRewrite() {
     final Calendar c = Util.calendar();
 
     c.clear();
@@ -617,7 +614,7 @@ public class DateRangeRulesTest {
         is("<=($9, 2009-01-01 00:00:00)"));
   }
 
-  @Test public void testCeilLeRewrite() {
+  @Test void testCeilLeRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 10, 11, 12, 05);
@@ -631,7 +628,7 @@ public class DateRangeRulesTest {
         is("<=($9, 2010-01-01 00:00:00)"));
   }
 
-  @Test public void testCeilGtRewrite() {
+  @Test void testCeilGtRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 10, 11, 12, 05);
@@ -645,7 +642,7 @@ public class DateRangeRulesTest {
         is(">($9, 2010-01-01 00:00:00)"));
   }
 
-  @Test public void testCeilGeRewrite() {
+  @Test void testCeilGeRewrite() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 10, 11, 12, 05);
@@ -659,7 +656,7 @@ public class DateRangeRulesTest {
         is(">($9, 2009-01-01 00:00:00)"));
   }
 
-  @Test public void testFloorRewriteWithTimezone() {
+  @Test void testFloorRewriteWithTimezone() {
     final Calendar c = Util.calendar();
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 1, 11, 30, 0);
@@ -669,7 +666,7 @@ public class DateRangeRulesTest {
             f.timestampLocalTzLiteral(TimestampString.fromCalendarFields(c))),
         "IST",
         is("AND(>=($9, 2010-02-01 17:00:00), <($9, 2010-02-01 18:00:00))"),
-        CoreMatchers.any(String.class));
+        any(String.class));
 
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 1, 11, 00, 0);
@@ -678,7 +675,7 @@ public class DateRangeRulesTest {
             f.timestampLiteral(TimestampString.fromCalendarFields(c))),
         "IST",
         is("AND(>=($9, 2010-02-01 11:00:00), <($9, 2010-02-01 12:00:00))"),
-        CoreMatchers.any(String.class));
+        any(String.class));
 
     c.clear();
     c.set(2010, Calendar.FEBRUARY, 1, 00, 00, 0);
@@ -686,7 +683,7 @@ public class DateRangeRulesTest {
         f.eq(f.floorHour, f.dateLiteral(DateString.fromCalendarFields(c))),
         "IST",
         is("AND(>=($9, 2010-02-01 00:00:00), <($9, 2010-02-01 01:00:00))"),
-        CoreMatchers.any(String.class));
+        any(String.class));
   }
 
   private static Set<TimeUnitRange> set(TimeUnitRange... es) {
@@ -694,15 +691,15 @@ public class DateRangeRulesTest {
   }
 
   private void checkDateRange(Fixture f, RexNode e, Matcher<String> matcher) {
-    checkDateRange(f, e, "UTC", matcher, CoreMatchers.any(String.class));
+    checkDateRange(f, e, "UTC", matcher, any(String.class));
   }
 
   private void checkDateRange(Fixture f, RexNode e, String timeZone,
       Matcher<String> matcher, Matcher<String> simplifyMatcher) {
     e = DateRangeRules.replaceTimeUnits(f.rexBuilder, e, timeZone);
-    assertThat(e.toString(), matcher);
+    assertThat(e, hasToString(matcher));
     final RexNode e2 = f.simplify.simplify(e);
-    assertThat(e2.toString(), simplifyMatcher);
+    assertThat(e2, hasToString(simplifyMatcher));
   }
 
   /** Common expressions across tests. */
@@ -727,46 +724,56 @@ public class DateRangeRulesTest {
     private final RexNode ceilMinute;
 
     Fixture2() {
-      exYearTs = rexBuilder.makeCall(SqlStdOperatorTable.EXTRACT,
-          ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.YEAR), ts));
-      exMonthTs = rexBuilder.makeCall(intRelDataType,
-          SqlStdOperatorTable.EXTRACT,
-          ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.MONTH), ts));
-      exDayTs = rexBuilder.makeCall(intRelDataType,
-          SqlStdOperatorTable.EXTRACT,
-          ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.DAY), ts));
-      exYearD = rexBuilder.makeCall(SqlStdOperatorTable.EXTRACT,
-          ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.YEAR), d));
-      exMonthD = rexBuilder.makeCall(intRelDataType,
-          SqlStdOperatorTable.EXTRACT,
-          ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.MONTH), d));
-      exDayD = rexBuilder.makeCall(intRelDataType,
-          SqlStdOperatorTable.EXTRACT,
-          ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.DAY), d));
+      exYearTs =
+          rexBuilder.makeCall(SqlStdOperatorTable.EXTRACT,
+              ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.YEAR), ts));
+      exMonthTs =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.EXTRACT,
+              ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.MONTH), ts));
+      exDayTs =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.EXTRACT,
+              ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.DAY), ts));
+      exYearD =
+          rexBuilder.makeCall(SqlStdOperatorTable.EXTRACT,
+              ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.YEAR), d));
+      exMonthD =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.EXTRACT,
+              ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.MONTH), d));
+      exDayD =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.EXTRACT,
+              ImmutableList.of(rexBuilder.makeFlag(TimeUnitRange.DAY), d));
 
-      floorYear = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.YEAR)));
-      floorMonth = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.MONTH)));
-      floorDay = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.DAY)));
-      floorHour = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.HOUR)));
-      floorMinute = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.MINUTE)));
+      floorYear =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.YEAR)));
+      floorMonth =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.MONTH)));
+      floorDay =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.DAY)));
+      floorHour =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.HOUR)));
+      floorMinute =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.FLOOR,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.MINUTE)));
 
-      ceilYear = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.YEAR)));
-      ceilMonth = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.MONTH)));
-      ceilDay = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.DAY)));
-      ceilHour = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.HOUR)));
-      ceilMinute = rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
-          ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.MINUTE)));
+      ceilYear =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.YEAR)));
+      ceilMonth =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.MONTH)));
+      ceilDay =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.DAY)));
+      ceilHour =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.HOUR)));
+      ceilMinute =
+          rexBuilder.makeCall(intRelDataType, SqlStdOperatorTable.CEIL,
+              ImmutableList.of(ts, rexBuilder.makeFlag(TimeUnitRange.MINUTE)));
     }
   }
 }
-
-// End DateRangeRulesTest.java

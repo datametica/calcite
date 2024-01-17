@@ -16,9 +16,7 @@
  */
 package org.apache.calcite.linq4j.tree;
 
-/**
- * <p>Parse tree node.</p>
- */
+/** Parse tree node. */
 public interface Node {
   <R> R accept(Visitor<R> visitor);
 
@@ -26,5 +24,3 @@ public interface Node {
 
   void accept(ExpressionWriter expressionWriter);
 }
-
-// End Node.java

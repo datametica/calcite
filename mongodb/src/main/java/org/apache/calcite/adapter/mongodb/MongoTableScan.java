@@ -27,13 +27,17 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
+import com.google.common.collect.ImmutableList;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.util.List;
 
 /**
  * Relational expression representing a scan of a MongoDB collection.
  *
  * <p> Additional operations might be applied,
- * using the "find" or "aggregate" methods.</p>
+ * using the "find" or "aggregate" methods.
  */
 public class MongoTableScan extends TableScan implements MongoRel {
   final MongoTable mongoTable;
@@ -50,7 +54,7 @@ public class MongoTableScan extends TableScan implements MongoRel {
    */
   protected MongoTableScan(RelOptCluster cluster, RelTraitSet traitSet,
       RelOptTable table, MongoTable mongoTable, RelDataType projectRowType) {
-    super(cluster, traitSet, table);
+    super(cluster, traitSet, ImmutableList.of(), table);
     this.mongoTable = mongoTable;
     this.projectRowType = projectRowType;
 
@@ -67,11 +71,12 @@ public class MongoTableScan extends TableScan implements MongoRel {
     return projectRowType != null ? projectRowType : super.deriveRowType();
   }
 
-  @Override public RelOptCost computeSelfCost(RelOptPlanner planner,
+  @Override public @Nullable RelOptCost computeSelfCost(RelOptPlanner planner,
       RelMetadataQuery mq) {
     // scans with a small project list are cheaper
-    final float f = projectRowType == null ? 1f
-        : (float) projectRowType.getFieldCount() / 100f;
+    final float f =
+        projectRowType == null ? 1f
+            : (float) projectRowType.getFieldCount() / 100f;
     return super.computeSelfCost(planner, mq).multiplyBy(.1 * f);
   }
 
@@ -82,10 +87,8 @@ public class MongoTableScan extends TableScan implements MongoRel {
     }
   }
 
-  public void implement(Implementor implementor) {
+  @Override public void implement(Implementor implementor) {
     implementor.mongoTable = mongoTable;
     implementor.table = table;
   }
 }
-
-// End MongoTableScan.java

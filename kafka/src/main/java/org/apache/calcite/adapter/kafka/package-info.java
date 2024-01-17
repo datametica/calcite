@@ -18,11 +18,6 @@
 /**
  * Kafka query provider.
  *
- * <p>One Kafka topic is mapping to one STREAM table.</p>
+ * <p>One Kafka topic is mapping to one STREAM table.
  */
-@PackageMarker
 package org.apache.calcite.adapter.kafka;
-
-import org.apache.calcite.avatica.util.PackageMarker;
-
-// End package-info.java

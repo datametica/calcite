@@ -23,15 +23,17 @@ import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 
 import com.google.common.collect.ImmutableMap;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.util.Map;
-import java.util.Objects;
 
 import static org.apache.calcite.util.Static.RESOURCE;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A <code>SqlJdbcFunctionCall</code> is a node of a parse tree which represents
@@ -50,7 +52,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * <tr>
  * <td colspan="2"><br>
  *
- * <h3>NUMERIC FUNCTIONS</h3>
+ * <h2>NUMERIC FUNCTIONS</h2>
  * </td>
  * </tr>
  * <tr>
@@ -72,6 +74,10 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * <tr>
  * <td>ATAN2(float1, float2)</td>
  * <td>Arctangent, in radians, of float2 / float1</td>
+ * </tr>
+ * <tr>
+ * <td>CBRT(number)</td>
+ * <td>The cube root of number</td>
  * </tr>
  * <tr>
  * <td>CEILING(number)</td>
@@ -107,7 +113,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * </tr>
  * <tr>
  * <td>MOD(integer1, integer2)</td>
- * <td>Rh3ainder for integer1 / integer2</td>
+ * <td>Remainder for integer1 / integer2</td>
  * </tr>
  * <tr>
  * <td>PI()</td>
@@ -153,7 +159,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * <tr>
  * <td colspan="2"><br>
  *
- * <h3>STRING FUNCTIONS</h3>
+ * <h2>STRING FUNCTIONS</h2>
  * </td>
  * </tr>
  * <tr>
@@ -202,7 +208,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * </tr>
  * <tr>
  * <td>LTRIM(string)</td>
- * <td>Characters of string with leading blank spaces rh3oved</td>
+ * <td>Characters of string with leading blank spaces removed</td>
  * </tr>
  * <tr>
  * <td>REPEAT(string, count)</td>
@@ -246,7 +252,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * <tr>
  * <td colspan="2"><br>
  *
- * <h3>TIME and DATE FUNCTIONS</h3>
+ * <h2>TIME and DATE FUNCTIONS</h2>
  * </td>
  * </tr>
  * <tr>
@@ -331,7 +337,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * <tr>
  * <td colspan="2"><br>
  *
- * <h3>SYSTEM FUNCTIONS</h3>
+ * <h2>SYSTEM FUNCTIONS</h2>
  * </td>
  * </tr>
  * <tr>
@@ -357,7 +363,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * <tr>
  * <td colspan="2"><br>
  *
- * <h3>CONVERSION FUNCTIONS</h3>
+ * <h2>CONVERSION FUNCTIONS</h2>
  * </td>
  * </tr>
  * <tr>
@@ -381,39 +387,39 @@ public class SqlJdbcFunctionCall extends SqlFunction {
   //~ Static fields/initializers ---------------------------------------------
 
   /** List of all numeric function names defined by JDBC. */
-  private static final String NUMERIC_FUNCTIONS = constructFuncList(
-      "ABS", "ACOS", "ASIN", "ATAN", "ATAN2", "CEILING", "COS", "COT",
-      "DEGREES", "EXP", "FLOOR", "LOG", "LOG10", "MOD", "PI",
-      "POWER", "RADIANS", "RAND", "ROUND", "SIGN", "SIN", "SQRT",
-      "TAN", "TRUNCATE");
+  private static final String NUMERIC_FUNCTIONS =
+      constructFuncList("ABS", "ACOS", "ASIN", "ATAN", "ATAN2",
+          "CBRT", "CEILING", "COS", "COT",
+          "DEGREES", "EXP", "FLOOR", "LOG", "LOG10", "MOD", "PI",
+          "POWER", "RADIANS", "RAND", "ROUND", "SIGN", "SIN", "SQRT",
+          "TAN", "TRUNCATE");
 
   /** List of all string function names defined by JDBC. */
-  private static final String STRING_FUNCTIONS = constructFuncList(
-      "ASCII", "CHAR", "CONCAT", "DIFFERENCE", "INSERT", "LCASE",
-      "LEFT", "LENGTH", "LOCATE", "LTRIM", "REPEAT", "REPLACE",
-      "RIGHT", "RTRIM", "SOUNDEX", "SPACE", "SUBSTRING", "UCASE");
-      // "ASCII", "CHAR", "DIFFERENCE", "LOWER",
-      // "LEFT", "TRIM", "REPEAT", "REPLACE",
-      // "RIGHT", "SPACE", "SUBSTRING", "UPPER", "INITCAP", "OVERLAY"
+  private static final String STRING_FUNCTIONS =
+      constructFuncList("ASCII", "CHAR", "CONCAT",
+          "DIFFERENCE", "INSERT", "LCASE",
+          "LEFT", "LENGTH", "LOCATE", "LTRIM", "REPEAT", "REPLACE",
+          "RIGHT", "RTRIM", "SOUNDEX", "SPACE", "SUBSTRING", "UCASE");
 
   /** List of all time/date function names defined by JDBC. */
-  private static final String TIME_DATE_FUNCTIONS = constructFuncList(
-      "CONVERT_TIMEZONE", "CURDATE", "CURTIME", "DAYNAME", "DAYOFMONTH", "DAYOFWEEK",
-      "DAYOFYEAR", "HOUR", "MINUTE", "MONTH", "MONTHNAME", "NOW",
-      "QUARTER", "SECOND", "TIMESTAMPADD", "TIMESTAMPDIFF", "TO_DATE", "TO_TIMESTAMP",
-      "WEEK", "YEAR");
+  private static final String TIME_DATE_FUNCTIONS =
+      constructFuncList("CONVERT_TIMEZONE", "CURDATE", "CURTIME",
+          "DAYNAME", "DAYOFMONTH", "DAYOFWEEK",
+          "DAYOFYEAR", "HOUR", "MINUTE", "MONTH", "MONTHNAME", "NOW",
+          "QUARTER", "SECOND", "TIMESTAMPADD", "TIMESTAMPDIFF",
+          "TO_DATE", "TO_TIMESTAMP", "WEEK", "YEAR");
 
   /** List of all system function names defined by JDBC. */
-  private static final String SYSTEM_FUNCTIONS = constructFuncList(
-      "CONVERT", "DATABASE", "IFNULL", "USER");
+  private static final String SYSTEM_FUNCTIONS =
+      constructFuncList("CONVERT", "DATABASE", "IFNULL", "USER");
 
   //~ Instance fields --------------------------------------------------------
 
   private final String jdbcName;
-  private final MakeCall lookupMakeCallObj;
-  private SqlCall lookupCall;
+  private final @Nullable MakeCall lookupMakeCallObj;
+  private @Nullable SqlCall lookupCall;
 
-  private SqlNode[] thisOperands;
+  private @Nullable SqlNode @Nullable [] thisOperands;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -447,10 +453,10 @@ public class SqlJdbcFunctionCall extends SqlFunction {
     return sb.toString();
   }
 
-  public SqlCall createCall(
-      SqlLiteral functionQualifier,
+  @Override public SqlCall createCall(
+      @Nullable SqlLiteral functionQualifier,
       SqlParserPos pos,
-      SqlNode... operands) {
+      @Nullable SqlNode... operands) {
     thisOperands = operands;
     return super.createCall(functionQualifier, pos, operands);
   }
@@ -467,16 +473,18 @@ public class SqlJdbcFunctionCall extends SqlFunction {
   public SqlCall getLookupCall() {
     if (null == lookupCall) {
       lookupCall =
-          lookupMakeCallObj.createCall(SqlParserPos.ZERO, thisOperands);
+          requireNonNull(lookupMakeCallObj, "lookupMakeCallObj")
+              .createCall(SqlParserPos.ZERO, requireNonNull(thisOperands, "thisOperands"));
     }
     return lookupCall;
   }
 
-  public String getAllowedSignatures(String name) {
-    return lookupMakeCallObj.getOperator().getAllowedSignatures(name);
+  @Override public String getAllowedSignatures(String name) {
+    return requireNonNull(lookupMakeCallObj, "lookupMakeCallObj")
+        .getOperator().getAllowedSignatures(name);
   }
 
-  public RelDataType deriveType(
+  @Override public RelDataType deriveType(
       SqlValidator validator,
       SqlValidatorScope scope,
       SqlCall call) {
@@ -487,12 +495,12 @@ public class SqlJdbcFunctionCall extends SqlFunction {
 
     for (SqlNode operand : call.getOperandList()) {
       RelDataType nodeType = validator.deriveType(scope, operand);
-      ((SqlValidatorImpl) validator).setValidatedNodeType(operand, nodeType);
+      validator.setValidatedNodeType(operand, nodeType);
     }
     return validateOperands(validator, scope, call);
   }
 
-  public RelDataType inferReturnType(
+  @Override public RelDataType inferReturnType(
       SqlOperatorBinding opBinding) {
     // only expected to come here if validator called this method
     SqlCallBinding callBinding = (SqlCallBinding) opBinding;
@@ -505,7 +513,8 @@ public class SqlJdbcFunctionCall extends SqlFunction {
     final String message = lookupMakeCallObj.isValidArgCount(callBinding);
     if (message != null) {
       throw callBinding.newValidationError(
-          RESOURCE.wrongNumberOfParam(getName(), thisOperands.length,
+          RESOURCE.wrongNumberOfParam(getName(),
+              requireNonNull(thisOperands, "thisOperands").length,
               message));
     }
 
@@ -523,7 +532,7 @@ public class SqlJdbcFunctionCall extends SqlFunction {
         callBinding.getScope(), newCall);
   }
 
-  public void unparse(
+  @Override public void unparse(
       SqlWriter writer,
       SqlCall call,
       int leftPrec,
@@ -540,28 +549,28 @@ public class SqlJdbcFunctionCall extends SqlFunction {
   }
 
   /**
-   * @see java.sql.DatabaseMetaData#getNumericFunctions
+   * As {@link java.sql.DatabaseMetaData#getNumericFunctions}.
    */
   public static String getNumericFunctions() {
     return NUMERIC_FUNCTIONS;
   }
 
   /**
-   * @see java.sql.DatabaseMetaData#getStringFunctions
+   * As {@link java.sql.DatabaseMetaData#getStringFunctions}.
    */
   public static String getStringFunctions() {
     return STRING_FUNCTIONS;
   }
 
   /**
-   * @see java.sql.DatabaseMetaData#getTimeDateFunctions
+   * As {@link java.sql.DatabaseMetaData#getTimeDateFunctions}.
    */
   public static String getTimeDateFunctions() {
     return TIME_DATE_FUNCTIONS;
   }
 
   /**
-   * @see java.sql.DatabaseMetaData#getSystemFunctions
+   * As {@link java.sql.DatabaseMetaData#getSystemFunctions}.
    */
   public static String getSystemFunctions() {
     return SYSTEM_FUNCTIONS;
@@ -578,11 +587,11 @@ public class SqlJdbcFunctionCall extends SqlFunction {
      *
      * @param operands Operands
      */
-    SqlCall createCall(SqlParserPos pos, SqlNode... operands);
+    SqlCall createCall(SqlParserPos pos, @Nullable SqlNode... operands);
 
     SqlOperator getOperator();
 
-    String isValidArgCount(SqlCallBinding binding);
+    @Nullable String isValidArgCount(SqlCallBinding binding);
   }
 
   /** Converter that calls a built-in function with the same arguments. */
@@ -593,15 +602,15 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       this.operator = operator;
     }
 
-    public SqlOperator getOperator() {
+    @Override public SqlOperator getOperator() {
       return operator;
     }
 
-    public SqlCall createCall(SqlParserPos pos, SqlNode... operands) {
+    @Override public SqlCall createCall(SqlParserPos pos, @Nullable SqlNode... operands) {
       return operator.createCall(pos, operands);
     }
 
-    public String isValidArgCount(SqlCallBinding binding) {
+    @Override public @Nullable String isValidArgCount(SqlCallBinding binding) {
       return null; // any number of arguments is valid
     }
   }
@@ -622,15 +631,15 @@ public class SqlJdbcFunctionCall extends SqlFunction {
      */
     PermutingMakeCall(SqlOperator operator, int[] order) {
       super(operator);
-      this.order = Objects.requireNonNull(order);
+      this.order = requireNonNull(order, "order");
     }
 
     @Override public SqlCall createCall(SqlParserPos pos,
-        SqlNode... operands) {
+        @Nullable SqlNode... operands) {
       return super.createCall(pos, reorder(operands));
     }
 
-    @Override public String isValidArgCount(SqlCallBinding binding) {
+    @Override public @Nullable String isValidArgCount(SqlCallBinding binding) {
       if (order.length == binding.getOperandCount()) {
         return null; // operand count is valid
       } else {
@@ -638,7 +647,7 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       }
     }
 
-    private String getArgCountMismatchMsg(int... possible) {
+    private static String getArgCountMismatchMsg(int... possible) {
       StringBuilder ret = new StringBuilder();
       for (int i = 0; i < possible.length; i++) {
         if (i > 0) {
@@ -655,9 +664,9 @@ public class SqlJdbcFunctionCall extends SqlFunction {
      *
      * @param operands Operands
      */
-    protected SqlNode[] reorder(SqlNode[] operands) {
+    protected @Nullable SqlNode[] reorder(@Nullable SqlNode[] operands) {
       assert operands.length == order.length;
-      SqlNode[] newOrder = new SqlNode[operands.length];
+      @Nullable SqlNode[] newOrder = new SqlNode[operands.length];
       for (int i = 0; i < operands.length; i++) {
         assert operands[i] != null;
         int joyDivision = order[i];
@@ -669,7 +678,7 @@ public class SqlJdbcFunctionCall extends SqlFunction {
   }
 
   /**
-   * Lookup table between JDBC functions and internal representation
+   * Lookup table between JDBC functions and internal representation.
    */
   private static class JdbcToInternalLookupTable {
     /**
@@ -681,6 +690,7 @@ public class SqlJdbcFunctionCall extends SqlFunction {
 
     private final Map<String, MakeCall> map;
 
+    @SuppressWarnings("method.invocation.invalid")
     private JdbcToInternalLookupTable() {
       // A table of all functions can be found at
       // http://java.sun.com/products/jdbc/driverdevs.html
@@ -692,6 +702,7 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       map.put("ASIN", simple(SqlStdOperatorTable.ASIN));
       map.put("ATAN", simple(SqlStdOperatorTable.ATAN));
       map.put("ATAN2", simple(SqlStdOperatorTable.ATAN2));
+      map.put("CBRT", simple(SqlStdOperatorTable.CBRT));
       map.put("CEILING", simple(SqlStdOperatorTable.CEIL));
       map.put("COS", simple(SqlStdOperatorTable.COS));
       map.put("COT", simple(SqlStdOperatorTable.COT));
@@ -713,6 +724,7 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       map.put("TRUNCATE", simple(SqlStdOperatorTable.TRUNCATE));
 
       map.put("ASCII", simple(SqlStdOperatorTable.ASCII));
+      map.put("CHAR", simple(SqlLibraryOperators.CHAR));
       map.put("CONCAT", simple(SqlStdOperatorTable.CONCAT));
       map.put("DIFFERENCE", simple(SqlLibraryOperators.DIFFERENCE));
       map.put("INSERT",
@@ -751,13 +763,14 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       map.put("NOW", simple(SqlStdOperatorTable.CURRENT_TIMESTAMP));
       map.put("TIMESTAMPADD", simple(SqlStdOperatorTable.TIMESTAMP_ADD));
       map.put("TIMESTAMPDIFF", simple(SqlStdOperatorTable.TIMESTAMP_DIFF));
+      map.put("TO_CHAR", simple(SqlLibraryOperators.TO_CHAR));
       map.put("TO_DATE", simple(SqlLibraryOperators.TO_DATE));
       map.put("TO_TIMESTAMP", simple(SqlLibraryOperators.TO_TIMESTAMP));
       map.put("DATABASE", simple(SqlStdOperatorTable.CURRENT_CATALOG));
       map.put("IFNULL",
           new SimpleMakeCall(SqlStdOperatorTable.COALESCE) {
             @Override public SqlCall createCall(SqlParserPos pos,
-                SqlNode... operands) {
+                @Nullable SqlNode... operands) {
               assert 2 == operands.length;
               return super.createCall(pos, operands);
             }
@@ -768,13 +781,14 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       map.put("CONVERT",
           new SimpleMakeCall(SqlStdOperatorTable.CAST) {
             @Override public SqlCall createCall(SqlParserPos pos,
-                SqlNode... operands) {
+                @Nullable SqlNode... operands) {
               assert 2 == operands.length;
               SqlNode typeOperand = operands[1];
-              assert typeOperand.getKind() == SqlKind.LITERAL;
+              assert typeOperand != null && typeOperand.getKind() == SqlKind.LITERAL
+                  : "literal expected, got " + typeOperand;
 
               SqlJdbcDataTypeName jdbcType = ((SqlLiteral) typeOperand)
-                  .symbolValue(SqlJdbcDataTypeName.class);
+                  .getValueAs(SqlJdbcDataTypeName.class);
 
               return super.createCall(pos, operands[0], jdbcType.createDataType(typeOperand.pos));
             }
@@ -784,10 +798,10 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       this.map = map.build();
     }
 
-    private MakeCall trim(SqlTrimFunction.Flag flag) {
+    private static MakeCall trim(SqlTrimFunction.Flag flag) {
       return new SimpleMakeCall(SqlStdOperatorTable.TRIM) {
         @Override public SqlCall createCall(SqlParserPos pos,
-            SqlNode... operands) {
+            @Nullable SqlNode... operands) {
           assert 1 == operands.length;
           return super.createCall(pos, flag.symbol(pos),
               SqlLiteral.createCharString(" ", SqlParserPos.ZERO),
@@ -796,7 +810,7 @@ public class SqlJdbcFunctionCall extends SqlFunction {
       };
     }
 
-    private MakeCall simple(SqlOperator operator) {
+    private static MakeCall simple(SqlOperator operator) {
       return new SimpleMakeCall(operator);
     }
 
@@ -804,10 +818,8 @@ public class SqlJdbcFunctionCall extends SqlFunction {
      * Tries to lookup a given function name JDBC to an internal
      * representation. Returns null if no function defined.
      */
-    public MakeCall lookup(String name) {
+    public @Nullable MakeCall lookup(String name) {
       return map.get(name);
     }
   }
 }
-
-// End SqlJdbcFunctionCall.java

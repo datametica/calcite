@@ -25,6 +25,10 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.type.RelDataType;
 
+import com.google.common.collect.ImmutableList;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.util.List;
 
 /**
@@ -32,7 +36,7 @@ import java.util.List;
  */
 public class CassandraTableScan extends TableScan implements CassandraRel {
   final CassandraTable cassandraTable;
-  final RelDataType projectRowType;
+  final @Nullable RelDataType projectRowType;
 
   /**
    * Creates a CassandraTableScan.
@@ -44,12 +48,11 @@ public class CassandraTableScan extends TableScan implements CassandraRel {
    * @param projectRowType Fields and types to project; null to project raw row
    */
   protected CassandraTableScan(RelOptCluster cluster, RelTraitSet traitSet,
-      RelOptTable table, CassandraTable cassandraTable, RelDataType projectRowType) {
-    super(cluster, traitSet, table);
+      RelOptTable table, CassandraTable cassandraTable, @Nullable RelDataType projectRowType) {
+    super(cluster, traitSet, ImmutableList.of(), table);
     this.cassandraTable = cassandraTable;
     this.projectRowType = projectRowType;
 
-    assert cassandraTable != null;
     assert getConvention() == CassandraRel.CONVENTION;
   }
 
@@ -63,16 +66,14 @@ public class CassandraTableScan extends TableScan implements CassandraRel {
   }
 
   @Override public void register(RelOptPlanner planner) {
-    planner.addRule(CassandraToEnumerableConverterRule.INSTANCE);
+    planner.addRule(CassandraRules.TO_ENUMERABLE);
     for (RelOptRule rule : CassandraRules.RULES) {
       planner.addRule(rule);
     }
   }
 
-  public void implement(Implementor implementor) {
+  @Override public void implement(Implementor implementor) {
     implementor.cassandraTable = cassandraTable;
     implementor.table = table;
   }
 }
-
-// End CassandraTableScan.java

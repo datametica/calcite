@@ -31,10 +31,10 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Internal util methods for ElasticSearch tests
+ * Internal utility methods for Elasticsearch tests.
  */
 public class ElasticsearchChecker {
 
@@ -48,14 +48,15 @@ public class ElasticsearchChecker {
 
   /** Returns a function that checks that a particular Elasticsearch pipeline is
    * generated to implement a query.
+   *
    * @param strings expected expressions
    * @return validation function
    */
   public static Consumer<List> elasticsearchChecker(final String... strings) {
     Objects.requireNonNull(strings, "strings");
     return a -> {
-      ObjectNode actual = a == null || a.isEmpty() ? null
-            : ((ObjectNode) a.get(0));
+      ObjectNode actual =
+          a == null || a.isEmpty() ? null : (ObjectNode) a.get(0);
 
       actual = expandDots(actual);
       try {
@@ -65,9 +66,8 @@ public class ElasticsearchChecker {
         expected = expandDots(expected);
 
         if (!expected.equals(actual)) {
-          assertEquals("expected and actual Elasticsearch queries do not match",
-              MAPPER.writeValueAsString(expected),
-              MAPPER.writeValueAsString(actual));
+          assertEquals(MAPPER.writeValueAsString(expected), MAPPER.writeValueAsString(actual),
+              "expected and actual Elasticsearch queries do not match");
         }
       } catch (IOException e) {
         throw new UncheckedIOException(e);
@@ -84,6 +84,7 @@ public class ElasticsearchChecker {
    *   expanded to
    *   {a: { b: {c: 1}}}}
    * </pre>
+   *
    * @param parent current node
    * @param <T> type of node (usually JsonNode).
    * @return copy of existing node with field {@code a.b.c} expanded.
@@ -114,7 +115,7 @@ public class ElasticsearchChecker {
       final String[] names = property.split("\\.");
       ObjectNode copy2 = copy;
       for (int i = 0; i < names.length - 1; i++) {
-        copy2 = copy2.with(names[i]);
+        copy2 = copy2.withObject("/" + names[i]);
       }
       copy2.set(names[names.length - 1], expandDots(node));
     });
@@ -123,5 +124,3 @@ public class ElasticsearchChecker {
   }
 
 }
-
-// End ElasticsearchChecker.java

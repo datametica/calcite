@@ -32,7 +32,7 @@ import org.apache.calcite.rel.RelNode;
  * <p>A {@code Metadata} instance already knows which particular {@code RelNode}
  * it is describing, so the methods do not pass in the {@code RelNode}. In fact,
  * quite a few metadata methods have no extra parameters. For instance, you can
- * get the row-count as follows:</p>
+ * get the row-count as follows:
  *
  * <blockquote><pre><code>
  * RelNode rel;
@@ -43,5 +43,3 @@ public interface Metadata {
   /** Returns the relational expression that this metadata is about. */
   RelNode rel();
 }
-
-// End Metadata.java

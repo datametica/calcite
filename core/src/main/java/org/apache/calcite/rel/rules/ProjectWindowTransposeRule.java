@@ -17,11 +17,11 @@
 package org.apache.calcite.rel.rules;
 
 import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.plan.RelRule;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
-import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalWindow;
@@ -36,6 +36,11 @@ import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.BitSets;
 import org.apache.calcite.util.ImmutableBitSet;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
+import org.immutables.value.Value;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,28 +48,28 @@ import java.util.List;
  * Planner rule that pushes
  * a {@link org.apache.calcite.rel.logical.LogicalProject}
  * past a {@link org.apache.calcite.rel.logical.LogicalWindow}.
+ *
+ * @see CoreRules#PROJECT_WINDOW_TRANSPOSE
  */
-public class ProjectWindowTransposeRule extends RelOptRule {
-  /** The default instance of
-   * {@link org.apache.calcite.rel.rules.ProjectWindowTransposeRule}. */
-  public static final ProjectWindowTransposeRule INSTANCE =
-      new ProjectWindowTransposeRule(RelFactories.LOGICAL_BUILDER);
+@Value.Enclosing
+public class ProjectWindowTransposeRule
+    extends RelRule<ProjectWindowTransposeRule.Config>
+    implements TransformationRule {
 
-  /**
-   * Creates ProjectWindowTransposeRule.
-   *
-   * @param relBuilderFactory Builder for relational expressions
-   */
+  /** Creates a ProjectWindowTransposeRule. */
+  protected ProjectWindowTransposeRule(Config config) {
+    super(config);
+  }
+
+  @Deprecated // to be removed before 2.0
   public ProjectWindowTransposeRule(RelBuilderFactory relBuilderFactory) {
-    super(
-        operand(LogicalProject.class,
-            operand(LogicalWindow.class, any())),
-        relBuilderFactory, null);
+    this(Config.DEFAULT.withRelBuilderFactory(relBuilderFactory)
+        .as(Config.class));
   }
 
   @Override public void onMatch(RelOptRuleCall call) {
-    final LogicalProject project = call.rel(0);
-    final LogicalWindow window = call.rel(1);
+    final Project project = call.rel(0);
+    final Window window = call.rel(1);
     final RelOptCluster cluster = window.getCluster();
     final List<RelDataTypeField> rowTypeWindowInput =
         window.getInput().getRowType().getFieldList();
@@ -75,13 +80,13 @@ public class ProjectWindowTransposeRule extends RelOptRule {
     // (Note that the constants used in LogicalWindow are not considered here)
     final ImmutableBitSet beReferred = findReference(project, window);
 
-    // If all the the window input columns are referred,
+    // If all the window input columns are referred,
     // it is impossible to trim anyone of them out
     if (beReferred.cardinality() == windowInputColumn) {
       return;
     }
 
-    // Put a DrillProjectRel below LogicalWindow
+    // Put a Project below LogicalWindow
     final List<RexNode> exps = new ArrayList<>();
     final RelDataTypeFactory.Builder builder =
         cluster.getTypeFactory().builder();
@@ -94,8 +99,8 @@ public class ProjectWindowTransposeRule extends RelOptRule {
     }
 
     final LogicalProject projectBelowWindow =
-        new LogicalProject(cluster, window.getTraitSet(),
-            window.getInput(), exps, builder.build());
+        new LogicalProject(cluster, window.getTraitSet(), ImmutableList.of(),
+            window.getInput(), exps, builder.build(), ImmutableSet.of());
 
     // Create a new LogicalWindow with necessary inputs only
     final List<Window.Group> groups = new ArrayList<>();
@@ -168,19 +173,15 @@ public class ProjectWindowTransposeRule extends RelOptRule {
 
     final LogicalWindow newLogicalWindow =
         LogicalWindow.create(window.getTraitSet(), projectBelowWindow,
-        window.constants, outputBuilder.build(), groups);
+            window.constants, outputBuilder.build(), groups);
 
     // Modify the top LogicalProject
-    final List<RexNode> topProjExps = new ArrayList<>();
-    for (RexNode rexNode : project.getChildExps()) {
-      topProjExps.add(rexNode.accept(indexAdjustment));
-    }
+    final List<RexNode> topProjExps =
+        indexAdjustment.visitList(project.getProjects());
 
-    final LogicalProject newTopProj = project.copy(
-        newLogicalWindow.getTraitSet(),
-        newLogicalWindow,
-        topProjExps,
-        project.getRowType());
+    final Project newTopProj =
+        project.copy(newLogicalWindow.getTraitSet(), newLogicalWindow,
+            topProjExps, project.getRowType());
 
     if (ProjectRemoveRule.isTrivial(newTopProj)) {
       call.transformTo(newLogicalWindow);
@@ -189,8 +190,8 @@ public class ProjectWindowTransposeRule extends RelOptRule {
     }
   }
 
-  private ImmutableBitSet findReference(final LogicalProject project,
-      final LogicalWindow window) {
+  private static ImmutableBitSet findReference(final Project project,
+      final Window window) {
     final int windowInputColumn = window.getInput().getRowType().getFieldCount();
     final ImmutableBitSet.Builder beReferred = ImmutableBitSet.builder();
 
@@ -205,9 +206,7 @@ public class ProjectWindowTransposeRule extends RelOptRule {
     };
 
     // Reference in LogicalProject
-    for (RexNode rexNode : project.getChildExps()) {
-      rexNode.accept(referenceFinder);
-    }
+    referenceFinder.visitEach(project.getProjects());
 
     // Reference in LogicalWindow
     for (Window.Group group : window.groups) {
@@ -226,14 +225,12 @@ public class ProjectWindowTransposeRule extends RelOptRule {
       }
 
       // Reference in Window Functions
-      for (Window.RexWinAggCall rexWinAggCall : group.aggCalls) {
-        rexWinAggCall.accept(referenceFinder);
-      }
+      referenceFinder.visitEach(group.aggCalls);
     }
     return beReferred.build();
   }
 
-  private int getAdjustedIndex(final int initIndex,
+  private static int getAdjustedIndex(final int initIndex,
       final ImmutableBitSet beReferred, final int windowInputColumn) {
     if (initIndex >= windowInputColumn) {
       return beReferred.cardinality() + (initIndex - windowInputColumn);
@@ -241,6 +238,24 @@ public class ProjectWindowTransposeRule extends RelOptRule {
       return beReferred.get(0, initIndex).cardinality();
     }
   }
-}
 
-// End ProjectWindowTransposeRule.java
+  /** Rule configuration. */
+  @Value.Immutable
+  public interface Config extends RelRule.Config {
+    Config DEFAULT = ImmutableProjectWindowTransposeRule.Config.of()
+        .withOperandFor(LogicalProject.class, LogicalWindow.class);
+
+    @Override default ProjectWindowTransposeRule toRule() {
+      return new ProjectWindowTransposeRule(this);
+    }
+
+    /** Defines an operand tree for the given classes. */
+    default Config withOperandFor(Class<? extends Project> projectClass,
+        Class<? extends Window> windowClass) {
+      return withOperandSupplier(b0 ->
+          b0.operand(projectClass).oneInput(b1 ->
+              b1.operand(windowClass).anyInputs()))
+          .as(Config.class);
+    }
+  }
+}

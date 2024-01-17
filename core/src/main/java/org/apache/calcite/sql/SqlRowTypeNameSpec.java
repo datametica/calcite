@@ -45,8 +45,9 @@ import java.util.stream.Collectors;
  *   &lt;field name&gt; &lt;data type&gt;
  * </pre></blockquote>
  *
- * <p>We also support to add a [ NULL | NOT NULL ] suffix for every field type, i.e.
- * Row(f0 int null, f1 varchar not null), the default is not nullable.
+ * <p>As a extended syntax to the standard SQL, each field type can have a
+ * [ NULL | NOT NULL ] suffix specification, i.e.
+ * Row(f0 int null, f1 varchar not null). The default is NOT NULL(not nullable).
  */
 public class SqlRowTypeNameSpec extends SqlTypeNameSpec {
 
@@ -56,17 +57,17 @@ public class SqlRowTypeNameSpec extends SqlTypeNameSpec {
   /**
    * Creates a row type specification.
    *
-   * @param pos        The parser position.
-   * @param fieldNames The field names.
-   * @param fieldTypes The field data types.
+   * @param pos        The parser position
+   * @param fieldNames The field names
+   * @param fieldTypes The field data types
    */
   public SqlRowTypeNameSpec(
       SqlParserPos pos,
       List<SqlIdentifier> fieldNames,
       List<SqlDataTypeSpec> fieldTypes) {
     super(new SqlIdentifier(SqlTypeName.ROW.getName(), pos), pos);
-    Objects.requireNonNull(fieldNames);
-    Objects.requireNonNull(fieldTypes);
+    Objects.requireNonNull(fieldNames, "fieldNames");
+    Objects.requireNonNull(fieldTypes, "fieldTypes");
     assert fieldNames.size() > 0; // there must be at least one field.
     this.fieldNames = fieldNames;
     this.fieldTypes = fieldTypes;
@@ -91,7 +92,8 @@ public class SqlRowTypeNameSpec extends SqlTypeNameSpec {
       writer.sep(",", false);
       p.left.unparse(writer, 0, 0);
       p.right.unparse(writer, leftPrec, rightPrec);
-      if (p.right.getNullable() != null && p.right.getNullable()) {
+      Boolean isNullable = p.right.getNullable();
+      if (isNullable != null && isNullable) {
         // Row fields default is not nullable.
         writer.print("NULL");
       }
@@ -104,21 +106,13 @@ public class SqlRowTypeNameSpec extends SqlTypeNameSpec {
       return litmus.fail("{} != {}", this, node);
     }
     SqlRowTypeNameSpec that = (SqlRowTypeNameSpec) node;
-    if (this.fieldNames.size() != that.fieldNames.size()) {
+    if (!SqlNode.equalDeep(this.fieldNames, that.fieldNames,
+        litmus.withMessageArgs("{} != {}", this, node))) {
       return litmus.fail("{} != {}", this, node);
     }
-    for (int i = 0; i < fieldNames.size(); i++) {
-      if (!this.fieldNames.get(i).equalsDeep(that.fieldNames.get(i), litmus)) {
-        return litmus.fail("{} != {}", this, node);
-      }
-    }
-    if (this.fieldTypes.size() != that.fieldTypes.size()) {
+    if (!SqlNode.equalDeep(this.fieldTypes, that.fieldTypes,
+        litmus.withMessageArgs("{} != {}", this, node))) {
       return litmus.fail("{} != {}", this, node);
-    }
-    for (int i = 0; i < fieldTypes.size(); i++) {
-      if (!this.fieldTypes.get(i).equals(that.fieldTypes.get(i))) {
-        return litmus.fail("{} != {}", this, node);
-      }
     }
     return litmus.succeed();
   }
@@ -134,5 +128,3 @@ public class SqlRowTypeNameSpec extends SqlTypeNameSpec {
             .collect(Collectors.toList()));
   }
 }
-
-// End SqlRowTypeNameSpec.java

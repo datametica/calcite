@@ -19,7 +19,7 @@ package org.apache.calcite.linq4j.tree;
 import java.lang.reflect.Type;
 
 /**
- * <p>Statement.</p>
+ * Statement.
  */
 public abstract class Statement extends AbstractNode {
   protected Statement(ExpressionType nodeType, Type type) {
@@ -36,5 +36,3 @@ public abstract class Statement extends AbstractNode {
   // kind of statement; it can't become an expression.
   @Override public abstract Statement accept(Shuttle shuttle);
 }
-
-// End Statement.java

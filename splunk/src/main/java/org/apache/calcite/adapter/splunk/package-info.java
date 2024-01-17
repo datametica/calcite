@@ -20,11 +20,6 @@
  *
  * <p>There is a single table, called "Splunk". It has fixed columns
  * "host", "index", "source", "sourcetype". It has a variable type, so other
- * fields are held in a map field called "_others".</p>
+ * fields are held in a map field called "_others".
  */
-@PackageMarker
 package org.apache.calcite.adapter.splunk;
-
-import org.apache.calcite.avatica.util.PackageMarker;
-
-// End package-info.java

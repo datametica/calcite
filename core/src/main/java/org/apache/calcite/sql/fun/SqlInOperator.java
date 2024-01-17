@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.ComparableOperandTypeChecker;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
@@ -33,7 +34,6 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Litmus;
 
@@ -60,7 +60,8 @@ public class SqlInOperator extends SqlBinaryOperator {
    */
   SqlInOperator(SqlKind kind) {
     this(kind.sql, kind);
-    assert kind == SqlKind.IN || kind == SqlKind.NOT_IN;
+    assert kind == SqlKind.IN || kind == SqlKind.NOT_IN
+        || kind == SqlKind.DRUID_IN || kind == SqlKind.DRUID_NOT_IN;
   }
 
   protected SqlInOperator(String name, SqlKind kind) {
@@ -79,6 +80,25 @@ public class SqlInOperator extends SqlBinaryOperator {
     return kind == SqlKind.NOT_IN;
   }
 
+  @Override public SqlOperator not() {
+    return of(kind.negateNullSafe());
+  }
+
+  private static SqlBinaryOperator of(SqlKind kind) {
+    switch (kind) {
+    case IN:
+      return SqlStdOperatorTable.IN;
+    case NOT_IN:
+      return SqlStdOperatorTable.NOT_IN;
+    case DRUID_IN:
+      return SqlInternalOperators.DRUID_IN;
+    case DRUID_NOT_IN:
+      return SqlInternalOperators.DRUID_NOT_IN;
+    default:
+      throw new AssertionError("unexpected " + kind);
+    }
+  }
+
   @Override public boolean validRexOperands(int count, Litmus litmus) {
     if (count == 0) {
       return litmus.fail("wrong operand count {} for {}", count, this);
@@ -86,7 +106,7 @@ public class SqlInOperator extends SqlBinaryOperator {
     return litmus.succeed();
   }
 
-  public RelDataType deriveType(
+  @Override public RelDataType deriveType(
       SqlValidator validator,
       SqlValidatorScope scope,
       SqlCall call) {
@@ -114,7 +134,7 @@ public class SqlInOperator extends SqlBinaryOperator {
       // First check that the expressions in the IN list are compatible
       // with each other. Same rules as the VALUES operator (per
       // SQL:2003 Part 2 Section 8.4, <in predicate>).
-      if (null == rightType && validator.isTypeCoercionEnabled()) {
+      if (null == rightType && validator.config().typeCoercionEnabled()) {
         // Do implicit type cast if it is allowed to.
         rightType = validator.getTypeCoercion().getWiderTypeFor(rightTypeList, true);
       }
@@ -124,14 +144,14 @@ public class SqlInOperator extends SqlBinaryOperator {
       }
 
       // Record the RHS type for use by SqlToRelConverter.
-      ((SqlValidatorImpl) validator).setValidatedNodeType(nodeList, rightType);
+      validator.setValidatedNodeType(nodeList, rightType);
     } else {
       // Handle the 'IN (query)' form.
       rightType = validator.deriveType(scope, right);
     }
     SqlCallBinding callBinding = new SqlCallBinding(validator, scope, call);
     // Coerce type first.
-    if (callBinding.getValidator().isTypeCoercionEnabled()) {
+    if (callBinding.isTypeCoercionEnabled()) {
       boolean coerced = callBinding.getValidator().getTypeCoercion()
           .inOperationCoercion(callBinding);
       if (coerced) {
@@ -184,7 +204,7 @@ public class SqlInOperator extends SqlBinaryOperator {
     return false;
   }
 
-  public boolean argumentMustBeScalar(int ordinal) {
+  @Override public boolean argumentMustBeScalar(int ordinal) {
     // Argument #0 must be scalar, argument #1 can be a list (1, 2) or
     // a query (select deptno from emp). So, only coerce argument #0 into
     // a scalar sub-query. For example, in
@@ -194,5 +214,3 @@ public class SqlInOperator extends SqlBinaryOperator {
     return ordinal == 0;
   }
 }
-
-// End SqlInOperator.java

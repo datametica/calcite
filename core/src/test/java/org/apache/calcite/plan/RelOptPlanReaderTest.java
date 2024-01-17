@@ -21,20 +21,20 @@ import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.externalize.RelJson;
 import org.apache.calcite.rel.logical.LogicalProject;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.sameInstance;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit test for {@link org.apache.calcite.rel.externalize.RelJson}.
  */
-public class RelOptPlanReaderTest {
-  @Test public void testTypeToClass() {
-    RelJson relJson = new RelJson(null);
+class RelOptPlanReaderTest {
+  @Test void testTypeToClass() {
+    RelJson relJson = RelJson.create();
 
     // in org.apache.calcite.rel package
     assertThat(relJson.classToTypeName(LogicalProject.class),
@@ -82,11 +82,9 @@ public class RelOptPlanReaderTest {
   }
 
   /** Dummy relational expression. */
-  public static class MyRel extends AbstractRelNode {
-    public MyRel(RelOptCluster cluster, RelTraitSet traitSet) {
+  static class MyRel extends AbstractRelNode {
+    MyRel(RelOptCluster cluster, RelTraitSet traitSet) {
       super(cluster, traitSet);
     }
   }
 }
-
-// End RelOptPlanReaderTest.java

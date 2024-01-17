@@ -16,20 +16,26 @@
  */
 package org.apache.calcite.rel;
 
+import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.ImmutablePairList;
+import org.apache.calcite.runtime.PairList;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Root of a tree of {@link RelNode}.
@@ -76,8 +82,9 @@ public class RelRoot {
   public final RelNode rel;
   public final RelDataType validatedRowType;
   public final SqlKind kind;
-  public final ImmutableList<Pair<Integer, String>> fields;
+  public final ImmutablePairList<Integer, String> fields;
   public final RelCollation collation;
+  public final ImmutableList<RelHint> hints;
 
   /**
    * Creates a RelRoot.
@@ -87,12 +94,14 @@ public class RelRoot {
    */
 
   public RelRoot(RelNode rel, RelDataType validatedRowType, SqlKind kind,
-       List<Pair<Integer, String>> fields, RelCollation collation) {
+      Iterable<? extends Map.Entry<Integer, String>> fields,
+      RelCollation collation, List<RelHint> hints) {
     this.rel = rel;
     this.validatedRowType = validatedRowType;
     this.kind = kind;
-    this.fields = ImmutableList.copyOf(fields);
-    this.collation = Objects.requireNonNull(collation);
+    this.fields = ImmutablePairList.copyOf(fields);
+    this.collation = requireNonNull(collation, "collation");
+    this.hints = ImmutableList.copyOf(hints);
   }
 
   /** Creates a simple RelRoot. */
@@ -102,11 +111,11 @@ public class RelRoot {
 
   /** Creates a simple RelRoot. */
   public static RelRoot of(RelNode rel, RelDataType rowType, SqlKind kind) {
-    final ImmutableIntList refs =
-        ImmutableIntList.identity(rowType.getFieldCount());
-    final List<String> names = rowType.getFieldNames();
-    return new RelRoot(rel, rowType, kind, Pair.zip(refs, names),
-        RelCollations.EMPTY);
+    final PairList<Integer, String> fields = PairList.of();
+    Pair.forEach(ImmutableIntList.identity(rowType.getFieldCount()),
+        rowType.getFieldNames(), fields::add);
+    return new RelRoot(rel, rowType, kind, fields, RelCollations.EMPTY,
+        ImmutableList.of());
   }
 
   @Override public String toString() {
@@ -122,7 +131,7 @@ public class RelRoot {
     if (rel == this.rel) {
       return this;
     }
-    return new RelRoot(rel, validatedRowType, kind, fields, collation);
+    return new RelRoot(rel, validatedRowType, kind, fields, collation, hints);
   }
 
   /** Creates a copy, assigning a new kind. */
@@ -130,11 +139,16 @@ public class RelRoot {
     if (kind == this.kind) {
       return this;
     }
-    return new RelRoot(rel, validatedRowType, kind, fields, collation);
+    return new RelRoot(rel, validatedRowType, kind, fields, collation, hints);
   }
 
   public RelRoot withCollation(RelCollation collation) {
-    return new RelRoot(rel, validatedRowType, kind, fields, collation);
+    return new RelRoot(rel, validatedRowType, kind, fields, collation, hints);
+  }
+
+  /** Creates a copy, assigning the query hints. */
+  public RelRoot withHints(List<RelHint> hints) {
+    return new RelRoot(rel, validatedRowType, kind, fields, collation, hints);
   }
 
   /** Returns the root relational expression, creating a {@link LogicalProject}
@@ -153,17 +167,16 @@ public class RelRoot {
             || rel instanceof LogicalProject)) {
       return rel;
     }
-    final List<RexNode> projects = new ArrayList<>();
+    final List<RexNode> projects = new ArrayList<>(fields.size());
     final RexBuilder rexBuilder = rel.getCluster().getRexBuilder();
-    for (Pair<Integer, String> field : fields) {
-      projects.add(rexBuilder.makeInputRef(rel, field.left));
-    }
-    return LogicalProject.create(rel, projects, Pair.right(fields));
+    fields.forEach((i, name) -> projects.add(rexBuilder.makeInputRef(rel, i)));
+    return LogicalProject.create(rel, hints, projects, fields.rightList(),
+        ImmutableSet.of());
   }
 
   public boolean isNameTrivial() {
     final RelDataType inputRowType = rel.getRowType();
-    return Pair.right(fields).equals(inputRowType.getFieldNames());
+    return fields.rightList().equals(inputRowType.getFieldNames());
   }
 
   public boolean isRefTrivial() {
@@ -174,7 +187,7 @@ public class RelRoot {
       return true;
     }
     final RelDataType inputRowType = rel.getRowType();
-    return Mappings.isIdentity(Pair.left(fields), inputRowType.getFieldCount());
+    return Mappings.isIdentity(fields.leftList(), inputRowType.getFieldCount());
   }
 
   public boolean isCollationTrivial() {
@@ -185,5 +198,3 @@ public class RelRoot {
         && collations.get(0).equals(collation);
   }
 }
-
-// End RelRoot.java

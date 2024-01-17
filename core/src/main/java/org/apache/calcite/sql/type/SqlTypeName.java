@@ -29,6 +29,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.math.BigDecimal;
 import java.sql.Types;
 import java.util.Arrays;
@@ -67,8 +69,8 @@ public enum SqlTypeName {
       SqlTypeFamily.TIME),
   TIMESTAMP(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.TIMESTAMP,
       SqlTypeFamily.TIMESTAMP),
-  TIMESTAMP_WITH_LOCAL_TIME_ZONE(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.OTHER,
-      SqlTypeFamily.TIMESTAMP),
+  TIMESTAMP_WITH_LOCAL_TIME_ZONE(PrecScale.NO_NO | PrecScale.YES_NO, false,
+      Types.TIMESTAMP, SqlTypeFamily.TIMESTAMP),
   INTERVAL_YEAR(PrecScale.NO_NO, false, Types.OTHER,
       SqlTypeFamily.INTERVAL_YEAR_MONTH),
   INTERVAL_YEAR_MONTH(PrecScale.NO_NO, false, Types.OTHER,
@@ -104,6 +106,7 @@ public enum SqlTypeName {
   VARBINARY(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.VARBINARY,
       SqlTypeFamily.BINARY),
   NULL(PrecScale.NO_NO, true, Types.NULL, SqlTypeFamily.NULL),
+  UNKNOWN(PrecScale.NO_NO, true, Types.NULL, SqlTypeFamily.NULL),
   ANY(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES, true,
       Types.JAVA_OBJECT, SqlTypeFamily.ANY),
   SYMBOL(PrecScale.NO_NO, true, Types.OTHER, null),
@@ -120,7 +123,12 @@ public enum SqlTypeName {
       SqlTypeFamily.COLUMN_LIST),
   DYNAMIC_STAR(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES, true,
       Types.JAVA_OBJECT, SqlTypeFamily.ANY),
-  GEOMETRY(PrecScale.NO_NO, true, ExtraSqlTypes.GEOMETRY, SqlTypeFamily.GEO);
+  /** Spatial type. Though not standard, it is common to several DBs, so we
+   * do not flag it 'special' (internal). */
+  GEOMETRY(PrecScale.NO_NO, false, ExtraSqlTypes.GEOMETRY, SqlTypeFamily.GEO),
+  MEASURE(PrecScale.NO_NO, true, Types.OTHER, SqlTypeFamily.ANY),
+  FUNCTION(PrecScale.NO_NO, true, Types.OTHER, SqlTypeFamily.FUNCTION),
+  SARG(PrecScale.NO_NO, true, Types.OTHER, SqlTypeFamily.ANY);
 
   public static final int MAX_DATETIME_PRECISION = 3;
 
@@ -130,7 +138,7 @@ public enum SqlTypeName {
   public static final int DEFAULT_INTERVAL_START_PRECISION = 2;
   public static final int DEFAULT_INTERVAL_FRACTIONAL_SECOND_PRECISION = 6;
   public static final int MIN_INTERVAL_START_PRECISION = 1;
-  public static final int MIN_INTERVAL_FRACTIONAL_SECOND_PRECISION = 1;
+  public static final int MIN_INTERVAL_FRACTIONAL_SECOND_PRECISION = 0;
   public static final int MAX_INTERVAL_START_PRECISION = 10;
   public static final int MAX_INTERVAL_FRACTIONAL_SECOND_PRECISION = 9;
 
@@ -181,6 +189,9 @@ public enum SqlTypeName {
   public static final List<SqlTypeName> STRING_TYPES =
       combine(CHAR_TYPES, BINARY_TYPES);
 
+  public static final List<SqlTypeName> GEOMETRY_TYPES =
+      ImmutableList.of(GEOMETRY);
+
   public static final List<SqlTypeName> DATETIME_TYPES =
       ImmutableList.of(DATE, TIME, TIME_WITH_LOCAL_TIME_ZONE,
           TIMESTAMP, TIMESTAMP_WITH_LOCAL_TIME_ZONE);
@@ -205,6 +216,12 @@ public enum SqlTypeName {
   public static final Set<SqlTypeName> INTERVAL_TYPES =
       Sets.immutableEnumSet(
           Iterables.concat(YEAR_INTERVAL_TYPES, DAY_INTERVAL_TYPES));
+
+  /** The possible types of a time frame argument to a function such as
+   * {@code TIMESTAMP_DIFF}. */
+  public static final Set<SqlTypeName> TIME_FRAME_TYPES =
+      Sets.immutableEnumSet(
+          Iterables.concat(INTERVAL_TYPES, ImmutableList.of(SYMBOL)));
 
   private static final Map<Integer, SqlTypeName> JDBC_TYPE_TO_NAME =
       ImmutableMap.<Integer, SqlTypeName>builder()
@@ -260,10 +277,10 @@ public enum SqlTypeName {
    */
   private final boolean special;
   private final int jdbcOrdinal;
-  private final SqlTypeFamily family;
+  private final @Nullable SqlTypeFamily family;
 
   SqlTypeName(int signatures, boolean special, int jdbcType,
-      SqlTypeFamily family) {
+      @Nullable SqlTypeFamily family) {
     this.signatures = signatures;
     this.special = special;
     this.jdbcOrdinal = jdbcType;
@@ -275,7 +292,7 @@ public enum SqlTypeName {
    *
    * @return Type name, or null if not found
    */
-  public static SqlTypeName get(String name) {
+  public static @Nullable SqlTypeName get(String name) {
     if (false) {
       // The following code works OK, but the spurious exceptions are
       // annoying.
@@ -286,6 +303,14 @@ public enum SqlTypeName {
       }
     }
     return VALUES_MAP.get(name);
+  }
+
+  /** Returns the SqlTypeName value whose name or {@link #getSpaceName()}
+   * matches the given name, or throws {@link IllegalArgumentException}; never
+   * returns null. */
+  public static SqlTypeName lookup(String tag) {
+    String tag2 = tag.replace(' ', '_');
+    return valueOf(tag2);
   }
 
   public boolean allowsNoPrecNoScale() {
@@ -314,7 +339,7 @@ public enum SqlTypeName {
    * true</code>, because the VARCHAR type allows a precision parameter, as in
    * <code>VARCHAR(10)</code>.</li>
    * <li><code>Varchar.allowsPrecScale(true, true)</code> returns <code>
-   * true</code>, because the VARCHAR type does not allow a precision and a
+   * false</code>, because the VARCHAR type does not allow a precision and a
    * scale parameter, as in <code>VARCHAR(10, 4)</code>.</li>
    * <li><code>allowsPrecScale(false, true)</code> returns <code>false</code>
    * for every type.</li>
@@ -338,10 +363,8 @@ public enum SqlTypeName {
     return special;
   }
 
-  /**
-   * @return the ordinal from {@link java.sql.Types} corresponding to this
-   * SqlTypeName
-   */
+  /** Returns the ordinal from {@link java.sql.Types} corresponding to this
+   * SqlTypeName. */
   public int getJdbcOrdinal() {
     return jdbcOrdinal;
   }
@@ -355,10 +378,8 @@ public enum SqlTypeName {
         .build();
   }
 
-  /**
-   * @return default scale for this type if supported, otherwise -1 if scale
-   * is either unsupported or must be specified explicitly
-   */
+  /** Returns the default scale for this type if supported, otherwise -1 if
+   * scale is either unsupported or must be specified explicitly. */
   public int getDefaultScale() {
     switch (this) {
     case DECIMAL:
@@ -385,9 +406,9 @@ public enum SqlTypeName {
   /**
    * Gets the SqlTypeFamily containing this SqlTypeName.
    *
-   * @return containing family, or null for none
+   * @return containing family, or null for none (SYMBOL, DISTINCT, STRUCTURED, ROW, OTHER)
    */
-  public SqlTypeFamily getFamily() {
+  public @Nullable SqlTypeFamily getFamily() {
     return family;
   }
 
@@ -397,7 +418,7 @@ public enum SqlTypeName {
    * @param jdbcType the JDBC type of interest
    * @return corresponding SqlTypeName, or null if the type is not known
    */
-  public static SqlTypeName getNameForJdbcType(int jdbcType) {
+  public static @Nullable SqlTypeName getNameForJdbcType(int jdbcType) {
     return JDBC_TYPE_TO_NAME.get(jdbcType);
   }
 
@@ -471,7 +492,7 @@ public enum SqlTypeName {
    * @param scale     Scale, or -1 if not applicable
    * @return Limit value
    */
-  public Object getLimit(
+  public @Nullable Object getLimit(
       boolean sign,
       Limit limit,
       boolean beyond,
@@ -528,9 +549,12 @@ public enum SqlTypeName {
       case OVERFLOW:
         final BigDecimal other =
             (BigDecimal) BIGINT.getLimit(sign, limit, beyond, -1, -1);
-        if (decimal.compareTo(other) == (sign ? 1 : -1)) {
+        if (other != null && decimal.compareTo(other) == (sign ? 1 : -1)) {
           decimal = other;
         }
+        break;
+      default:
+        break;
       }
 
       // Apply scale.
@@ -568,6 +592,8 @@ public enum SqlTypeName {
           buf.append("Z");
         }
         break;
+      default:
+        break;
       }
       return buf.toString();
 
@@ -602,7 +628,6 @@ public enum SqlTypeName {
       calendar = Util.calendar();
       switch (limit) {
       case ZERO:
-
         // The epoch.
         calendar.set(Calendar.YEAR, 1970);
         calendar.set(Calendar.MONTH, 0);
@@ -633,6 +658,8 @@ public enum SqlTypeName {
           calendar.set(Calendar.MONTH, 0);
           calendar.set(Calendar.DAY_OF_MONTH, 1);
         }
+        break;
+      default:
         break;
       }
       calendar.set(Calendar.HOUR_OF_DAY, 0);
@@ -668,6 +695,8 @@ public enum SqlTypeName {
                 : ((precision == 2) ? 990 : ((precision == 1) ? 900 : 0));
         calendar.set(Calendar.MILLISECOND, millis);
         break;
+      default:
+        break;
       }
       return calendar;
 
@@ -675,7 +704,6 @@ public enum SqlTypeName {
       calendar = Util.calendar();
       switch (limit) {
       case ZERO:
-
         // The epoch.
         calendar.set(Calendar.YEAR, 1970);
         calendar.set(Calendar.MONTH, 0);
@@ -722,6 +750,8 @@ public enum SqlTypeName {
           calendar.set(Calendar.SECOND, 0);
           calendar.set(Calendar.MILLISECOND, 0);
         }
+        break;
+      default:
         break;
       }
       return calendar;
@@ -869,7 +899,7 @@ public enum SqlTypeName {
     ZERO, UNDERFLOW, OVERFLOW
   }
 
-  private BigDecimal getNumericLimit(
+  private static @Nullable BigDecimal getNumericLimit(
       int radix,
       int exponent,
       boolean sign,
@@ -930,7 +960,7 @@ public enum SqlTypeName {
           ? TimeString.fromCalendarFields((Calendar) o)
           : (TimeString) o, 0 /* todo */, pos);
     case TIMESTAMP:
-      return SqlLiteral.createTimestamp(o instanceof Calendar
+      return SqlLiteral.createTimestamp(this, o instanceof Calendar
           ? TimestampString.fromCalendarFields((Calendar) o)
           : (TimestampString) o, 0 /* todo */, pos);
     default:
@@ -938,11 +968,15 @@ public enum SqlTypeName {
     }
   }
 
-  /**
-   * @return name of this type
-   */
+  /** Returns the name of this type. */
   public String getName() {
-    return toString();
+    return name();
+  }
+
+  /** Returns the name of this type, with underscores converted to spaces,
+   * for example "TIMESTAMP WITH LOCAL TIME ZONE", "DATE". */
+  public String getSpaceName() {
+    return name().replace('_', ' ');
   }
 
   /**
@@ -961,5 +995,3 @@ public enum SqlTypeName {
     int YES_YES = 4;
   }
 }
-
-// End SqlTypeName.java

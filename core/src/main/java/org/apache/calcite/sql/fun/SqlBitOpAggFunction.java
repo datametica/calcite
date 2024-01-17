@@ -26,12 +26,14 @@ import org.apache.calcite.util.Optionality;
 
 import com.google.common.base.Preconditions;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 /**
  * Definition of the <code>BIT_AND</code> and <code>BIT_OR</code> aggregate functions,
  * returning the bitwise AND/OR of all non-null input values, or null if none.
  *
- * <p>Only INTEGER types are supported:
- * tinyint, smallint, int, bigint
+ * <p>INTEGER and BINARY types are supported:
+ * tinyint, smallint, int, bigint, binary, varbinary
  */
 public class SqlBitOpAggFunction extends SqlAggFunction {
 
@@ -44,25 +46,35 @@ public class SqlBitOpAggFunction extends SqlAggFunction {
         kind,
         ReturnTypes.ARG0_NULLABLE_IF_EMPTY,
         null,
-        OperandTypes.INTEGER,
+        OperandTypes.INTEGER.or(OperandTypes.BINARY),
         SqlFunctionCategory.NUMERIC,
         false,
         false,
         Optionality.FORBIDDEN);
     Preconditions.checkArgument(kind == SqlKind.BIT_AND
-        || kind == SqlKind.BIT_OR);
+        || kind == SqlKind.BIT_OR
+        || kind == SqlKind.BIT_XOR);
   }
 
-  @Override public <T> T unwrap(Class<T> clazz) {
-    if (clazz == SqlSplittableAggFunction.class) {
+  @Override public <T extends Object> @Nullable T unwrap(Class<T> clazz) {
+    if (clazz.isInstance(SqlSplittableAggFunction.SelfSplitter.INSTANCE)) {
       return clazz.cast(SqlSplittableAggFunction.SelfSplitter.INSTANCE);
     }
     return super.unwrap(clazz);
   }
 
   @Override public Optionality getDistinctOptionality() {
-    return Optionality.IGNORED;
+    final Optionality optionality;
+
+    switch (kind) {
+    case BIT_AND:
+    case BIT_OR:
+      optionality = Optionality.IGNORED;
+      break;
+    default:
+      optionality = Optionality.OPTIONAL;
+      break;
+    }
+    return optionality;
   }
 }
-
-// End SqlBitOpAggFunction.java

@@ -59,11 +59,15 @@ import org.apache.calcite.util.mapping.Mapping;
 import org.apache.calcite.util.mapping.MappingType;
 import org.apache.calcite.util.mapping.Mappings;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /** Utilities for dealing with {@link MutableRel}s. */
@@ -77,8 +81,8 @@ public abstract class MutableRels {
     }
     try {
       new MutableRelVisitor() {
-        @Override public void visit(MutableRel node) {
-          if (node.equals(target)) {
+        @Override public void visit(@Nullable MutableRel node) {
+          if (Objects.equals(node, target)) {
             throw Util.FoundOne.NULL;
           }
           super.visit(node);
@@ -91,7 +95,7 @@ public abstract class MutableRels {
     }
   }
 
-  public static MutableRel preOrderTraverseNext(MutableRel node) {
+  public static @Nullable MutableRel preOrderTraverseNext(MutableRel node) {
     MutableRel parent = node.getParent();
     int ordinal = node.ordinalInParent + 1;
     while (parent != null) {
@@ -153,15 +157,41 @@ public abstract class MutableRels {
         RelOptUtil.permute(child.cluster.getTypeFactory(), rowType, mapping),
         child,
         new AbstractList<RexNode>() {
-          public int size() {
+          @Override public int size() {
             return posList.size();
           }
 
-          public RexNode get(int index) {
+          @Override public RexNode get(int index) {
             final int pos = posList.get(index);
             return RexInputRef.of(pos, rowType);
           }
         });
+  }
+
+  /**
+   * Construct expression list of Project by the given fields of the input.
+   */
+  public static List<RexNode> createProjectExprs(final MutableRel child,
+      final List<Integer> posList) {
+    return posList.stream().map(pos -> RexInputRef.of(pos, child.rowType))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Construct expression list of Project by the given fields of the input.
+   */
+  public static List<RexNode> createProjects(final MutableRel child,
+      final List<RexNode> projects) {
+    List<RexNode> rexNodeList = new ArrayList<>(projects.size());
+    for (RexNode project : projects) {
+      if (project instanceof RexInputRef) {
+        RexInputRef rexInputRef = (RexInputRef) project;
+        rexNodeList.add(RexInputRef.of(rexInputRef.getIndex(), child.rowType));
+      } else {
+        rexNodeList.add(project);
+      }
+    }
+    return rexNodeList;
   }
 
   /** Equivalence to {@link org.apache.calcite.plan.RelOptUtil#createCastRel}
@@ -221,12 +251,13 @@ public abstract class MutableRels {
     case COLLECT: {
       final MutableCollect collect = (MutableCollect) node;
       final RelNode child = fromMutable(collect.getInput(), relBuilder);
-      return new Collect(collect.cluster, child.getTraitSet(), child, collect.fieldName);
+      return Collect.create(child, collect.rowType);
     }
     case UNCOLLECT: {
       final MutableUncollect uncollect = (MutableUncollect) node;
       final RelNode child = fromMutable(uncollect.getInput(), relBuilder);
-      return Uncollect.create(child.getTraitSet(), child, uncollect.withOrdinality);
+      return Uncollect.create(child.getTraitSet(), child, uncollect.withOrdinality,
+          Collections.emptyList());
     }
     case WINDOW: {
       final MutableWindow window = (MutableWindow) node;
@@ -265,7 +296,8 @@ public abstract class MutableRels {
     case CORRELATE:
       final MutableCorrelate correlate = (MutableCorrelate) node;
       return LogicalCorrelate.create(fromMutable(correlate.getLeft(), relBuilder),
-          fromMutable(correlate.getRight(), relBuilder), correlate.correlationId,
+          fromMutable(correlate.getRight(), relBuilder),
+          ImmutableList.of(), correlate.correlationId,
           correlate.requiredColumns, correlate.joinType);
     case UNION:
       final MutableUnion union = (MutableUnion) node;
@@ -289,17 +321,16 @@ public abstract class MutableRels {
 
   private static List<RelNode> fromMutables(List<MutableRel> nodes,
       final RelBuilder relBuilder) {
-    return Lists.transform(nodes,
+    return Util.transform(nodes,
         mutableRel -> fromMutable(mutableRel, relBuilder));
   }
 
   public static MutableRel toMutable(RelNode rel) {
     if (rel instanceof HepRelVertex) {
-      return toMutable(((HepRelVertex) rel).getCurrentRel());
+      return toMutable(rel.stripped());
     }
     if (rel instanceof RelSubset) {
-      return toMutable(
-          Util.first(((RelSubset) rel).getBest(), ((RelSubset) rel).getOriginal()));
+      return toMutable(rel.stripped());
     }
     if (rel instanceof TableScan) {
       return MutableScan.of((TableScan) rel);
@@ -423,5 +454,3 @@ public abstract class MutableRels {
         .collect(Collectors.toList());
   }
 }
-
-// End MutableRels.java

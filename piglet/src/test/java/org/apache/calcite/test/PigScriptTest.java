@@ -18,9 +18,9 @@ package org.apache.calcite.test;
 
 import org.apache.calcite.rel.RelNode;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -38,26 +38,26 @@ import static org.hamcrest.MatcherAssert.assertThat;
 /**
  * Test for converting a Pig script file.
  */
-public class PigScriptTest extends PigRelTestBase {
+class PigScriptTest extends PigRelTestBase {
   private static String projectRootDir;
   private static String dataFile;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpOnce() throws IOException {
     projectRootDir = System.getProperty("user.dir");
     dataFile = projectRootDir + "/src/test/resources/input.data";
-    List<String> lines = Arrays.asList("yahoo 10", "twitter 3", "facebook 10",
-        "yahoo 15", "facebook 5", "twitter 2");
+    List<String> lines =
+        Arrays.asList("yahoo 10", "twitter 3", "facebook 10",
+            "yahoo 15", "facebook 5", "twitter 2");
     Files.write(Paths.get(dataFile), lines, StandardCharsets.UTF_8);
   }
 
-  @AfterClass
+  @AfterAll
   public static void testClean() throws IOException {
     Files.delete(Paths.get(dataFile));
   }
 
-  @Test
-  public void testReadScript() throws IOException {
+  @Test void testReadScript() throws IOException {
     Map<String, String> params = new HashMap<>();
     params.put("input", dataFile);
     params.put("output", "outputFile");
@@ -75,5 +75,3 @@ public class PigScriptTest extends PigRelTestBase {
     assertThat(rel, hasTree(expectedPlan));
   }
 }
-
-// End PigScriptTest.java

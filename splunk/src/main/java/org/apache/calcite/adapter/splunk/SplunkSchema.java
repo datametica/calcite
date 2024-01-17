@@ -32,7 +32,7 @@ public class SplunkSchema extends AbstractSchema {
   public static final String SPLUNK_TABLE_NAME = "splunk";
 
   public static final ImmutableMap<String, Table> TABLE_MAP =
-      ImmutableMap.of(SPLUNK_TABLE_NAME, (Table) SplunkTable.INSTANCE);
+      ImmutableMap.of(SPLUNK_TABLE_NAME, SplunkTable.INSTANCE);
 
   public final SplunkConnection splunkConnection;
 
@@ -46,5 +46,3 @@ public class SplunkSchema extends AbstractSchema {
     return TABLE_MAP;
   }
 }
-
-// End SplunkSchema.java

@@ -24,7 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
-import java.util.ArrayList;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 
 /**
  * Workspace that partialMatches patterns against an automaton.
+ *
  * @param <E> Type of rows matched by this automaton
  */
 public class Matcher<E> {
@@ -49,16 +51,15 @@ public class Matcher<E> {
   // but only one thread can use them at a time. Putting them here saves the
   // expense of creating a fresh object each call to "match".
 
-  private final ImmutableList<Tuple<Integer>> emptyStateSet = ImmutableList.of();
+  @SuppressWarnings("unused")
   private final ImmutableBitSet startSet;
-  private final List<Integer> rowSymbols = new ArrayList<>();
 
   /**
    * Creates a Matcher; use {@link #builder}.
    */
   private Matcher(Automaton automaton,
       ImmutableMap<String, Predicate<MemoryFactory.Memory<E>>> predicates) {
-    this.predicates = Objects.requireNonNull(predicates);
+    this.predicates = Objects.requireNonNull(predicates, "predicates");
     final ImmutableBitSet.Builder startSetBuilder =
         ImmutableBitSet.builder();
     startSetBuilder.set(automaton.startState.id);
@@ -72,14 +73,14 @@ public class Matcher<E> {
     return new Builder<>(automaton);
   }
 
-  public List<List<E>> match(E... rows) {
+  public List<PartialMatch<E>> match(E... rows) {
     return match(Arrays.asList(rows));
   }
 
-  public List<List<E>> match(Iterable<E> rows) {
-    final ImmutableList.Builder<List<E>> resultMatchBuilder =
+  public List<PartialMatch<E>> match(Iterable<E> rows) {
+    final ImmutableList.Builder<PartialMatch<E>> resultMatchBuilder =
         ImmutableList.builder();
-    final Consumer<List<E>> resultMatchConsumer = resultMatchBuilder::add;
+    final Consumer<PartialMatch<E>> resultMatchConsumer = resultMatchBuilder::add;
     final PartitionState<E> partitionState = createPartitionState(0, 0);
     for (E row : rows) {
       partitionState.getMemoryFactory().add(row);
@@ -98,10 +99,10 @@ public class Matcher<E> {
    * This method ignores the symbols that caused a transition.
    */
   protected void matchOne(MemoryFactory.Memory<E> rows,
-      PartitionState<E> partitionState, Consumer<List<E>> resultMatches) {
+      PartitionState<E> partitionState, Consumer<PartialMatch<E>> resultMatches) {
     List<PartialMatch<E>> matches = matchOneWithSymbols(rows, partitionState);
     for (PartialMatch<E> pm : matches) {
-      resultMatches.accept(pm.rows);
+      resultMatches.accept(pm);
     }
   }
 
@@ -122,8 +123,8 @@ public class Matcher<E> {
 
           for (DeterministicAutomaton.Transition transition : transitions) {
             // System.out.println("Append new transition to ");
-            final PartialMatch<E> newMatch = pm.append(transition.symbol,
-                rows.get(), transition.toState);
+            final PartialMatch<E> newMatch =
+                pm.append(transition.symbol, rows.get(), transition.toState);
             newMatches.add(newMatch);
           }
         }
@@ -137,9 +138,9 @@ public class Matcher<E> {
                 .collect(Collectors.toList());
 
         for (DeterministicAutomaton.Transition transition : transitions) {
-          final PartialMatch<E> newMatch = new PartialMatch<>(-1L,
-              ImmutableList.of(transition.symbol), ImmutableList.of(rows.get()),
-              transition.toState);
+          final PartialMatch<E> newMatch =
+              new PartialMatch<>(-1L, ImmutableList.of(transition.symbol),
+                  ImmutableList.of(rows.get()), transition.toState);
           newMatches.add(newMatch);
         }
       }
@@ -243,7 +244,7 @@ public class Matcher<E> {
       return new PartialMatch<>(startRow, symbols, rows, toState);
     }
 
-    @Override public boolean equals(Object o) {
+    @Override public boolean equals(@Nullable Object o) {
       return o == this
           || o instanceof PartialMatch
           && startRow == ((PartialMatch) o).startRow
@@ -320,7 +321,7 @@ public class Matcher<E> {
   }
 
   /**
-   * Represents a Tuple of a symbol and a row
+   * A 2-tuple consisting of a symbol and a row.
    *
    * @param <E> Type of Row
    */
@@ -333,7 +334,7 @@ public class Matcher<E> {
       this.row = row;
     }
 
-    @Override public boolean equals(Object o) {
+    @Override public boolean equals(@Nullable Object o) {
       return o == this
           || o instanceof Tuple
           && ((Tuple) o).symbol.equals(symbol)
@@ -349,5 +350,3 @@ public class Matcher<E> {
     }
   }
 }
-
-// End Matcher.java

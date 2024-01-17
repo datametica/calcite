@@ -17,21 +17,20 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.Casing;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.FormatFunctionUtil;
 import org.apache.calcite.util.ToNumberUtils;
 
@@ -41,12 +40,13 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
  * A <code>SqlDialect</code> implementation for the Snowflake database.
  */
 public class SnowflakeSqlDialect extends SqlDialect {
+  public static final SqlDialect.Context DEFAULT_CONTEXT = SqlDialect.EMPTY_CONTEXT
+      .withDatabaseProduct(SqlDialect.DatabaseProduct.SNOWFLAKE)
+      .withIdentifierQuoteString("\"")
+      .withUnquotedCasing(Casing.TO_UPPER);
+
   public static final SqlDialect DEFAULT =
-      new SnowflakeSqlDialect(EMPTY_CONTEXT
-          .withDatabaseProduct(DatabaseProduct.SNOWFLAKE)
-          .withIdentifierQuoteString("\"")
-          .withUnquotedCasing(Casing.TO_UPPER)
-          .withConformance(SqlConformanceEnum.SNOWFLAKE));
+      new SnowflakeSqlDialect(DEFAULT_CONTEXT);
 
   /** Creates a SnowflakeSqlDialect. */
   public SnowflakeSqlDialect(Context context) {
@@ -84,6 +84,21 @@ public class SnowflakeSqlDialect extends SqlDialect {
   @Override public void unparseCall(final SqlWriter writer, final SqlCall call, final
   int leftPrec, final int rightPrec) {
     switch (call.getKind()) {
+      case CHAR_LENGTH:
+        SqlCall lengthCall = SqlLibraryOperators.LENGTH
+                .createCall(SqlParserPos.ZERO, call.getOperandList());
+        super.unparseCall(writer, lengthCall, leftPrec, rightPrec);
+        break;
+      case ENDS_WITH:
+        SqlCall endsWithCall = SqlLibraryOperators.ENDSWITH
+                .createCall(SqlParserPos.ZERO, call.getOperandList());
+        super.unparseCall(writer, endsWithCall, leftPrec, rightPrec);
+        break;
+      case STARTS_WITH:
+        SqlCall startsWithCall = SqlLibraryOperators.STARTSWITH
+                .createCall(SqlParserPos.ZERO, call.getOperandList());
+        super.unparseCall(writer, startsWithCall, leftPrec, rightPrec);
+        break;
     case SUBSTRING:
       final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTR");
       for (SqlNode operand : call.getOperandList()) {
@@ -98,11 +113,6 @@ public class SnowflakeSqlDialect extends SqlDialect {
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
-      break;
-    case CHAR_LENGTH:
-      final SqlWriter.Frame lengthFrame = writer.startFunCall("LENGTH");
-      call.operand(0).unparse(writer, leftPrec, rightPrec);
-      writer.endFunCall(lengthFrame);
       break;
     case FORMAT:
       FormatFunctionUtil ffu = new FormatFunctionUtil();
@@ -321,10 +331,8 @@ public class SnowflakeSqlDialect extends SqlDialect {
     return intervalOperand.operand(0);
   }
 
-  @Override public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
-    return ((SqlBasicCall) aggCall).operand(0);
+
+  @Override public boolean supportsApproxCountDistinct() {
+    return true;
   }
-
 }
-
-// End SnowflakeSqlDialect.java

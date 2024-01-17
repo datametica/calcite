@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * Definitions of objects to be statically imported.
  *
- * <h3>Note to developers</h3>
+ * <h2>Note to developers</h2>
  *
  * <p>Please give careful consideration before including an object in this
  * class. Pros:
@@ -33,7 +33,7 @@ import java.util.List;
  * <li>Code that uses these objects will be terser.
  * </ul>
  *
- * <p>Cons:</p>
+ * <p>Cons:
  * <ul>
  * <li>Namespace pollution,
  * <li>code that is difficult to understand (a general problem with static
@@ -53,5 +53,3 @@ public abstract class Static {
     return ConsList.of(first, rest);
   }
 }
-
-// End Static.java

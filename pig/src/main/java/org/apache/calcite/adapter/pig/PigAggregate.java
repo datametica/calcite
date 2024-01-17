@@ -27,6 +27,8 @@ import org.apache.calcite.util.ImmutableBitSet;
 
 import org.apache.pig.scripting.Pig;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -42,7 +44,7 @@ public class PigAggregate extends Aggregate implements PigRel {
   public PigAggregate(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode input, ImmutableBitSet groupSet,
       List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
-    super(cluster, traitSet, input, groupSet, groupSets, aggCalls);
+    super(cluster, traitSet, ImmutableList.of(), input, groupSet, groupSets, aggCalls);
     assert getConvention() == PigRel.CONVENTION;
   }
 
@@ -112,6 +114,7 @@ public class PigAggregate extends Aggregate implements PigRel {
    * Generates a FOREACH statement containing invocation of aggregate functions
    * and projection of grouped fields. e.g.
    * <code>A = FOREACH A GENERATE group, SUM(A.pet_num);</code>
+   *
    * @see Pig documentation for special meaning of the "group" field after GROUP
    *      BY.
    */
@@ -157,7 +160,7 @@ public class PigAggregate extends Aggregate implements PigRel {
     return aggFunc.name() + "(" + fields + ") AS " + alias;
   }
 
-  private PigAggFunction toPigAggFunc(AggregateCall aggCall) {
+  private static PigAggFunction toPigAggFunc(AggregateCall aggCall) {
     return PigAggFunction.valueOf(aggCall.getAggregation().getKind(),
         aggCall.getArgList().size() < 1);
   }
@@ -178,8 +181,11 @@ public class PigAggregate extends Aggregate implements PigRel {
   }
 
   /**
-   * A agg function call like <code>COUNT(DISTINCT COL)</code> in Pig is
-   * achieved via two statements in a FOREACH that follows a GROUP statement:
+   * Returns the calls to aggregate functions that have the {@code DISTINT} flag.
+   *
+   * <p>An aggregate function call like <code>COUNT(DISTINCT COL)</code> in Pig
+   * is achieved via two statements in a {@code FOREACH} that follows a
+   * {@code GROUP} statement:
    *
    * <blockquote>
    * <code>
@@ -197,8 +203,8 @@ public class PigAggregate extends Aggregate implements PigRel {
       if (aggCall.isDistinct()) {
         for (int fieldIndex : aggCall.getArgList()) {
           String fieldName = getInputFieldName(fieldIndex);
-          result.add("  " + fieldName + DISTINCT_FIELD_SUFFIX + " = DISTINCT " + relAlias + '.'
-              + fieldName + ";\n");
+          result.add("  " + fieldName + DISTINCT_FIELD_SUFFIX + " = DISTINCT "
+              + relAlias + '.' + fieldName + ";\n");
         }
       }
     }
@@ -209,5 +215,3 @@ public class PigAggregate extends Aggregate implements PigRel {
     return getInput().getRowType().getFieldList().get(fieldIndex).getName();
   }
 }
-
-// End PigAggregate.java

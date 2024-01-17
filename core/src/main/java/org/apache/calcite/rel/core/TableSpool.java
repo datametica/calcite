@@ -39,10 +39,10 @@ public abstract class TableSpool extends Spool {
   protected TableSpool(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode input, Type readType, Type writeType, RelOptTable table) {
     super(cluster, traitSet, input, readType, writeType);
-    this.table = Objects.requireNonNull(table);
+    this.table = Objects.requireNonNull(table, "table");
   }
 
-  public RelOptTable getTable() {
+  @Override public RelOptTable getTable() {
     return table;
   }
 
@@ -51,5 +51,3 @@ public abstract class TableSpool extends Spool {
     return pw.item("table", table.getQualifiedName());
   }
 }
-
-// End TableSpool.java

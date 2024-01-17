@@ -20,6 +20,7 @@ import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.rel.type.TimeFrames;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -29,12 +30,19 @@ import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Util;
 
+import com.google.common.collect.ImmutableSet;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.math.BigDecimal;
-import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.apache.calcite.linq4j.Nullness.castNonNull;
 import static org.apache.calcite.util.Static.RESOURCE;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Represents an INTERVAL qualifier.
@@ -89,33 +97,86 @@ public class SqlIntervalQualifier extends SqlNode {
   private static final BigDecimal INT_MAX_VALUE_PLUS_ONE =
       BigDecimal.valueOf(Integer.MAX_VALUE).add(BigDecimal.ONE);
 
+  private static final Set<TimeUnitRange> TIME_UNITS =
+      ImmutableSet.of(TimeUnitRange.HOUR,
+          TimeUnitRange.MINUTE,
+          TimeUnitRange.SECOND);
+
+  private static final Set<TimeUnitRange> MONTH_UNITS =
+      ImmutableSet.of(TimeUnitRange.MILLENNIUM,
+          TimeUnitRange.CENTURY,
+          TimeUnitRange.DECADE,
+          TimeUnitRange.YEAR,
+          TimeUnitRange.ISOYEAR,
+          TimeUnitRange.QUARTER,
+          TimeUnitRange.MONTH);
+
+  private static final Set<TimeUnitRange> DAY_UNITS =
+      ImmutableSet.of(TimeUnitRange.WEEK,
+          TimeUnitRange.DAY);
+
+  private static final Set<TimeUnitRange> DATE_UNITS =
+      ImmutableSet.<TimeUnitRange>builder()
+          .addAll(MONTH_UNITS).addAll(DAY_UNITS).build();
+
+  private static final Set<String> WEEK_FRAMES =
+      ImmutableSet.<String>builder()
+          .addAll(TimeFrames.WEEK_FRAME_NAMES)
+          .add("ISOWEEK")
+          .add("WEEK")
+          .add("SQL_TSI_WEEK")
+          .build();
+
+  private static final Set<String> TSI_TIME_FRAMES =
+      ImmutableSet.of(
+          "SQL_TSI_FRAC_SECOND",
+          "SQL_TSI_MICROSECOND",
+          "SQL_TSI_SECOND",
+          "SQL_TSI_MINUTE",
+          "SQL_TSI_HOUR");
+
+  private static final Set<String> TSI_DATE_FRAMES =
+      ImmutableSet.of(
+          "SQL_TSI_DAY",
+          "SQL_TSI_WEEK",
+          "SQL_TSI_MONTH",
+          "SQL_TSI_QUARTER",
+          "SQL_TSI_YEAR");
+
   //~ Instance fields --------------------------------------------------------
 
   private final int startPrecision;
+  public final @Nullable String timeFrameName;
   public final TimeUnitRange timeUnitRange;
   private final int fractionalSecondPrecision;
 
   //~ Constructors -----------------------------------------------------------
 
-  public SqlIntervalQualifier(
-      TimeUnit startUnit,
-      int startPrecision,
-      TimeUnit endUnit,
-      int fractionalSecondPrecision,
-      SqlParserPos pos) {
+  private SqlIntervalQualifier(SqlParserPos pos, @Nullable String timeFrameName,
+      TimeUnitRange timeUnitRange, int startPrecision,
+      int fractionalSecondPrecision) {
     super(pos);
-    if (endUnit == startUnit) {
-      endUnit = null;
-    }
-    this.timeUnitRange =
-        TimeUnitRange.of(Objects.requireNonNull(startUnit), endUnit);
+    this.timeFrameName = timeFrameName;
+    this.timeUnitRange = requireNonNull(timeUnitRange, "timeUnitRange");
     this.startPrecision = startPrecision;
     this.fractionalSecondPrecision = fractionalSecondPrecision;
   }
 
   public SqlIntervalQualifier(
       TimeUnit startUnit,
-      TimeUnit endUnit,
+      int startPrecision,
+      @Nullable TimeUnit endUnit,
+      int fractionalSecondPrecision,
+      SqlParserPos pos) {
+    this(pos, null,
+        TimeUnitRange.of(requireNonNull(startUnit, "startUnit"),
+            endUnit == startUnit ? null : endUnit),
+        startPrecision, fractionalSecondPrecision);
+  }
+
+  public SqlIntervalQualifier(
+      TimeUnit startUnit,
+      @Nullable TimeUnit endUnit,
       SqlParserPos pos) {
     this(
         startUnit,
@@ -125,7 +186,20 @@ public class SqlIntervalQualifier extends SqlNode {
         pos);
   }
 
+  /** Creates a qualifier based on a time frame name. */
+  public SqlIntervalQualifier(String timeFrameName,
+      SqlParserPos pos) {
+    this(pos, requireNonNull(timeFrameName, "timeFrameName"),
+        // EPOCH is a placeholder because code expects a non-null TimeUnitRange.
+        TimeUnitRange.EPOCH, RelDataType.PRECISION_NOT_SPECIFIED,
+        RelDataType.PRECISION_NOT_SPECIFIED);
+  }
+
   //~ Methods ----------------------------------------------------------------
+
+  @Override public SqlKind getKind() {
+    return SqlKind.INTERVAL_QUALIFIER;
+  }
 
   public SqlTypeName typeName() {
     switch (timeUnitRange) {
@@ -173,17 +247,46 @@ public class SqlIntervalQualifier extends SqlNode {
     }
   }
 
-  public void validate(
+  /** Whether this is a DATE interval (including all week intervals). */
+  public boolean isDate() {
+    return DATE_UNITS.contains(timeUnitRange)
+        || timeFrameName != null && TSI_DATE_FRAMES.contains(timeFrameName)
+        || isWeek();
+  }
+
+  /** Whether this is a TIME interval. */
+  public boolean isTime() {
+    return TIME_UNITS.contains(timeUnitRange)
+        || timeFrameName != null && TSI_TIME_FRAMES.contains(timeFrameName);
+  }
+
+  /** Whether this is a TIMESTAMP interval (including all week intervals). */
+  public boolean isTimestamp() {
+    return isDate() || isTime();
+  }
+
+  /** Whether this qualifier represents {@code WEEK}, {@code ISOWEEK},
+   * or {@code WEEK(}<i>weekday</i>{@code )}
+   * (for <i>weekday</i> in {@code SUNDAY} .. {@code SATURDAY}). */
+  public boolean isWeek() {
+    return timeUnitRange == TimeUnitRange.WEEK
+        || timeFrameName != null && WEEK_FRAMES.contains(timeFrameName);
+  }
+
+  @Override public void validate(
       SqlValidator validator,
       SqlValidatorScope scope) {
     validator.validateIntervalQualifier(this);
   }
 
-  public <R> R accept(SqlVisitor<R> visitor) {
+  @Override public <R> R accept(SqlVisitor<R> visitor) {
     return visitor.visit(this);
   }
 
-  public boolean equalsDeep(SqlNode node, Litmus litmus) {
+  @Override public boolean equalsDeep(@Nullable SqlNode node, Litmus litmus) {
+    if (node == null) {
+      return litmus.fail("other==null");
+    }
     final String thisString = this.toString();
     final String thatString = node.toString();
     if (!thisString.equals(thatString)) {
@@ -300,12 +403,12 @@ public class SqlIntervalQualifier extends SqlNode {
     return Util.first(timeUnitRange.endUnit, timeUnitRange.startUnit);
   }
 
-  public SqlNode clone(SqlParserPos pos) {
+  @Override public SqlNode clone(SqlParserPos pos) {
     return new SqlIntervalQualifier(timeUnitRange.startUnit, startPrecision,
         timeUnitRange.endUnit, fractionalSecondPrecision, pos);
   }
 
-  public void unparse(
+  @Override public void unparse(
       SqlWriter writer,
       int leftPrec,
       int rightPrec) {
@@ -328,7 +431,7 @@ public class SqlIntervalQualifier extends SqlNode {
   }
 
   /**
-   * @return 1 or -1
+   * Returns 1 or -1.
    */
   public int getIntervalSign(String value) {
     int sign = 1; // positive until proven otherwise
@@ -342,7 +445,7 @@ public class SqlIntervalQualifier extends SqlNode {
     return sign;
   }
 
-  private String stripLeadingSign(String value) {
+  private static String stripLeadingSign(String value) {
     String unsignedValue = value;
 
     if (!Util.isNullOrEmpty(value)) {
@@ -355,7 +458,7 @@ public class SqlIntervalQualifier extends SqlNode {
   }
 
   private boolean isLeadFieldInRange(RelDataTypeSystem typeSystem,
-      BigDecimal value, TimeUnit unit) {
+      BigDecimal value, @SuppressWarnings("unused") TimeUnit unit) {
     // we should never get handed a negative field value
     assert value.compareTo(ZERO) >= 0;
 
@@ -387,7 +490,7 @@ public class SqlIntervalQualifier extends SqlNode {
     BigDecimal.valueOf(1000000000),
   };
 
-  private boolean isFractionalSecondFieldInRange(BigDecimal field) {
+  private static boolean isFractionalSecondFieldInRange(BigDecimal field) {
     // we should never get handed a negative field value
     assert field.compareTo(ZERO) >= 0;
 
@@ -397,7 +500,7 @@ public class SqlIntervalQualifier extends SqlNode {
     return true;
   }
 
-  private boolean isSecondaryFieldInRange(BigDecimal field, TimeUnit unit) {
+  private static boolean isSecondaryFieldInRange(BigDecimal field, TimeUnit unit) {
     // we should never get handed a negative field value
     assert field.compareTo(ZERO) >= 0;
 
@@ -419,13 +522,13 @@ public class SqlIntervalQualifier extends SqlNode {
     }
   }
 
-  private BigDecimal normalizeSecondFraction(String secondFracStr) {
+  private static BigDecimal normalizeSecondFraction(String secondFracStr) {
     // Decimal value can be more than 3 digits. So just get
     // the millisecond part.
     return new BigDecimal("0." + secondFracStr).multiply(THOUSAND);
   }
 
-  private int[] fillIntervalValueArray(
+  private static int[] fillIntervalValueArray(
       int sign,
       BigDecimal year,
       BigDecimal month) {
@@ -438,7 +541,7 @@ public class SqlIntervalQualifier extends SqlNode {
     return ret;
   }
 
-  private int[] fillIntervalValueArray(
+  private static int[] fillIntervalValueArray(
       int sign,
       BigDecimal day,
       BigDecimal hour,
@@ -521,7 +624,7 @@ public class SqlIntervalQualifier extends SqlNode {
 
       // Validate individual fields
       checkLeadFieldInRange(typeSystem, sign, year, TimeUnit.YEAR, pos);
-      if (!(isSecondaryFieldInRange(month, TimeUnit.MONTH))) {
+      if (!isSecondaryFieldInRange(month, TimeUnit.MONTH)) {
         throw invalidValueException(pos, originalValue);
       }
 
@@ -562,6 +665,76 @@ public class SqlIntervalQualifier extends SqlNode {
 
       // package values up for return
       return fillIntervalValueArray(sign, ZERO, month);
+    } else {
+      throw invalidValueException(pos, originalValue);
+    }
+  }
+
+  /**
+   * Validates an INTERVAL literal against a QUARTER interval qualifier.
+   *
+   * @throws org.apache.calcite.runtime.CalciteContextException if the interval
+   * value is illegal
+   */
+  private int[] evaluateIntervalLiteralAsQuarter(
+      RelDataTypeSystem typeSystem, int sign,
+      String value,
+      String originalValue,
+      SqlParserPos pos) {
+    BigDecimal quarter;
+
+    // validate as QUARTER(startPrecision), e.g. 'MM'
+    String intervalPattern = "(\\d+)";
+
+    Matcher m = Pattern.compile(intervalPattern).matcher(value);
+    if (m.matches()) {
+      // Break out  field values
+      try {
+        quarter = parseField(m, 1);
+      } catch (NumberFormatException e) {
+        throw invalidValueException(pos, originalValue);
+      }
+
+      // Validate individual fields
+      checkLeadFieldInRange(typeSystem, sign, quarter, TimeUnit.QUARTER, pos);
+
+      // package values up for return
+      return fillIntervalValueArray(sign, ZERO, quarter);
+    } else {
+      throw invalidValueException(pos, originalValue);
+    }
+  }
+
+  /**
+   * Validates an INTERVAL literal against a WEEK interval qualifier.
+   *
+   * @throws org.apache.calcite.runtime.CalciteContextException if the interval
+   * value is illegal
+   */
+  private int[] evaluateIntervalLiteralAsWeek(
+      RelDataTypeSystem typeSystem, int sign,
+      String value,
+      String originalValue,
+      SqlParserPos pos) {
+    BigDecimal week;
+
+    // validate as WEEK(startPrecision), e.g. 'MM'
+    String intervalPattern = "(\\d+)";
+
+    Matcher m = Pattern.compile(intervalPattern).matcher(value);
+    if (m.matches()) {
+      // Break out  field values
+      try {
+        week = parseField(m, 1);
+      } catch (NumberFormatException e) {
+        throw invalidValueException(pos, originalValue);
+      }
+
+      // Validate individual fields
+      checkLeadFieldInRange(typeSystem, sign, week, TimeUnit.WEEK, pos);
+
+      // package values up for return
+      return fillIntervalValueArray(sign, ZERO, week);
     } else {
       throw invalidValueException(pos, originalValue);
     }
@@ -631,7 +804,7 @@ public class SqlIntervalQualifier extends SqlNode {
 
       // Validate individual fields
       checkLeadFieldInRange(typeSystem, sign, day, TimeUnit.DAY, pos);
-      if (!(isSecondaryFieldInRange(hour, TimeUnit.HOUR))) {
+      if (!isSecondaryFieldInRange(hour, TimeUnit.HOUR)) {
         throw invalidValueException(pos, originalValue);
       }
 
@@ -673,8 +846,8 @@ public class SqlIntervalQualifier extends SqlNode {
 
       // Validate individual fields
       checkLeadFieldInRange(typeSystem, sign, day, TimeUnit.DAY, pos);
-      if (!(isSecondaryFieldInRange(hour, TimeUnit.HOUR))
-          || !(isSecondaryFieldInRange(minute, TimeUnit.MINUTE))) {
+      if (!isSecondaryFieldInRange(hour, TimeUnit.HOUR)
+          || !isSecondaryFieldInRange(minute, TimeUnit.MINUTE)) {
         throw invalidValueException(pos, originalValue);
       }
 
@@ -709,7 +882,7 @@ public class SqlIntervalQualifier extends SqlNode {
     final int fractionalSecondPrecision =
         getFractionalSecondPrecision(typeSystem);
     String intervalPatternWithFracSec =
-        "(\\d+) (\\d{1,2}):(\\d{1,2}):(\\d{1,2})\\.(\\d{1,"
+        "(\\d+) (\\d{1,2}):(\\d{1,2}):(\\d{1,2})\\.(\\d{0,"
         + fractionalSecondPrecision + "})";
     String intervalPatternWithoutFracSec =
         "(\\d+) (\\d{1,2}):(\\d{1,2}):(\\d{1,2})";
@@ -734,17 +907,17 @@ public class SqlIntervalQualifier extends SqlNode {
       }
 
       if (hasFractionalSecond) {
-        secondFrac = normalizeSecondFraction(m.group(5));
+        secondFrac = normalizeSecondFraction(castNonNull(m.group(5)));
       } else {
         secondFrac = ZERO;
       }
 
       // Validate individual fields
       checkLeadFieldInRange(typeSystem, sign, day, TimeUnit.DAY, pos);
-      if (!(isSecondaryFieldInRange(hour, TimeUnit.HOUR))
-          || !(isSecondaryFieldInRange(minute, TimeUnit.MINUTE))
-          || !(isSecondaryFieldInRange(second, TimeUnit.SECOND))
-          || !(isFractionalSecondFieldInRange(secondFrac))) {
+      if (!isSecondaryFieldInRange(hour, TimeUnit.HOUR)
+          || !isSecondaryFieldInRange(minute, TimeUnit.MINUTE)
+          || !isSecondaryFieldInRange(second, TimeUnit.SECOND)
+          || !isFractionalSecondFieldInRange(secondFrac)) {
         throw invalidValueException(pos, originalValue);
       }
 
@@ -826,7 +999,7 @@ public class SqlIntervalQualifier extends SqlNode {
 
       // Validate individual fields
       checkLeadFieldInRange(typeSystem, sign, hour, TimeUnit.HOUR, pos);
-      if (!(isSecondaryFieldInRange(minute, TimeUnit.MINUTE))) {
+      if (!isSecondaryFieldInRange(minute, TimeUnit.MINUTE)) {
         throw invalidValueException(pos, originalValue);
       }
 
@@ -861,7 +1034,7 @@ public class SqlIntervalQualifier extends SqlNode {
     final int fractionalSecondPrecision =
         getFractionalSecondPrecision(typeSystem);
     String intervalPatternWithFracSec =
-        "(\\d+):(\\d{1,2}):(\\d{1,2})\\.(\\d{1,"
+        "(\\d+):(\\d{1,2}):(\\d{1,2})\\.(\\d{0,"
         + fractionalSecondPrecision + "})";
     String intervalPatternWithoutFracSec =
         "(\\d+):(\\d{1,2}):(\\d{1,2})";
@@ -885,16 +1058,16 @@ public class SqlIntervalQualifier extends SqlNode {
       }
 
       if (hasFractionalSecond) {
-        secondFrac = normalizeSecondFraction(m.group(4));
+        secondFrac = normalizeSecondFraction(castNonNull(m.group(4)));
       } else {
         secondFrac = ZERO;
       }
 
       // Validate individual fields
       checkLeadFieldInRange(typeSystem, sign, hour, TimeUnit.HOUR, pos);
-      if (!(isSecondaryFieldInRange(minute, TimeUnit.MINUTE))
-          || !(isSecondaryFieldInRange(second, TimeUnit.SECOND))
-          || !(isFractionalSecondFieldInRange(secondFrac))) {
+      if (!isSecondaryFieldInRange(minute, TimeUnit.MINUTE)
+          || !isSecondaryFieldInRange(second, TimeUnit.SECOND)
+          || !isFractionalSecondFieldInRange(secondFrac)) {
         throw invalidValueException(pos, originalValue);
       }
 
@@ -969,7 +1142,7 @@ public class SqlIntervalQualifier extends SqlNode {
     final int fractionalSecondPrecision =
         getFractionalSecondPrecision(typeSystem);
     String intervalPatternWithFracSec =
-        "(\\d+):(\\d{1,2})\\.(\\d{1," + fractionalSecondPrecision + "})";
+        "(\\d+):(\\d{1,2})\\.(\\d{0," + fractionalSecondPrecision + "})";
     String intervalPatternWithoutFracSec =
         "(\\d+):(\\d{1,2})";
 
@@ -991,15 +1164,15 @@ public class SqlIntervalQualifier extends SqlNode {
       }
 
       if (hasFractionalSecond) {
-        secondFrac = normalizeSecondFraction(m.group(3));
+        secondFrac = normalizeSecondFraction(castNonNull(m.group(3)));
       } else {
         secondFrac = ZERO;
       }
 
       // Validate individual fields
       checkLeadFieldInRange(typeSystem, sign, minute, TimeUnit.MINUTE, pos);
-      if (!(isSecondaryFieldInRange(second, TimeUnit.SECOND))
-          || !(isFractionalSecondFieldInRange(secondFrac))) {
+      if (!isSecondaryFieldInRange(second, TimeUnit.SECOND)
+          || !isFractionalSecondFieldInRange(secondFrac)) {
         throw invalidValueException(pos, originalValue);
       }
 
@@ -1038,7 +1211,7 @@ public class SqlIntervalQualifier extends SqlNode {
     final int fractionalSecondPrecision =
         getFractionalSecondPrecision(typeSystem);
     String intervalPatternWithFracSec =
-        "(\\d+)\\.(\\d{1," + fractionalSecondPrecision + "})";
+        "(\\d+)\\.(\\d{0," + fractionalSecondPrecision + "})";
     String intervalPatternWithoutFracSec =
         "(\\d+)";
 
@@ -1059,14 +1232,14 @@ public class SqlIntervalQualifier extends SqlNode {
       }
 
       if (hasFractionalSecond) {
-        secondFrac = normalizeSecondFraction(m.group(2));
+        secondFrac = normalizeSecondFraction(castNonNull(m.group(2)));
       } else {
         secondFrac = ZERO;
       }
 
       // Validate individual fields
       checkLeadFieldInRange(typeSystem, sign, second, TimeUnit.SECOND, pos);
-      if (!(isFractionalSecondFieldInRange(secondFrac))) {
+      if (!isFractionalSecondFieldInRange(secondFrac)) {
         throw invalidValueException(pos, originalValue);
       }
 
@@ -1122,6 +1295,12 @@ public class SqlIntervalQualifier extends SqlNode {
     case MONTH:
       return evaluateIntervalLiteralAsMonth(typeSystem, sign, value, value0,
           pos);
+    case QUARTER:
+      return evaluateIntervalLiteralAsQuarter(typeSystem, sign, value, value0,
+          pos);
+    case WEEK:
+      return evaluateIntervalLiteralAsWeek(typeSystem, sign, value, value0,
+          pos);
     case DAY:
       return evaluateIntervalLiteralAsDay(typeSystem, sign, value, value0, pos);
     case DAY_TO_HOUR:
@@ -1156,8 +1335,8 @@ public class SqlIntervalQualifier extends SqlNode {
     }
   }
 
-  private BigDecimal parseField(Matcher m, int i) {
-    return new BigDecimal(m.group(i));
+  private static BigDecimal parseField(Matcher m, int i) {
+    return new BigDecimal(castNonNull(m.group(i)));
   }
 
   private CalciteContextException invalidValueException(SqlParserPos pos,
@@ -1167,7 +1346,7 @@ public class SqlIntervalQualifier extends SqlNode {
             "'" + value + "'", "INTERVAL " + toString()));
   }
 
-  private CalciteContextException fieldExceedsPrecisionException(
+  private static CalciteContextException fieldExceedsPrecisionException(
       SqlParserPos pos, int sign, BigDecimal value, TimeUnit type,
       int precision) {
     if (sign == -1) {
@@ -1177,6 +1356,20 @@ public class SqlIntervalQualifier extends SqlNode {
         RESOURCE.intervalFieldExceedsPrecision(
             value, type.name() + "(" + precision + ")"));
   }
-}
 
-// End SqlIntervalQualifier.java
+  /** Converts a {@link SqlIntervalQualifier} to a
+   * {@link org.apache.calcite.sql.SqlIdentifier} if it is a time frame
+   * reference.
+   *
+   * <p>Helps with unparsing of EXTRACT, FLOOR, CEIL functions. */
+  public static SqlNode asIdentifier(SqlNode node) {
+    if (node instanceof SqlIntervalQualifier) {
+      SqlIntervalQualifier intervalQualifier = (SqlIntervalQualifier) node;
+      if (intervalQualifier.timeFrameName != null) {
+        return new SqlIdentifier(intervalQualifier.timeFrameName,
+            node.getParserPosition());
+      }
+    }
+    return node;
+  }
+}

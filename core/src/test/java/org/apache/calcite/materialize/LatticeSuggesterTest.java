@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 package org.apache.calcite.materialize;
-
 import org.apache.calcite.prepare.PlannerImpl;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
@@ -26,10 +25,11 @@ import org.apache.calcite.sql.fun.SqlLibrary;
 import org.apache.calcite.sql.fun.SqlLibraryOperatorTableFactory;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.statistic.MapSqlStatisticProvider;
+import org.apache.calcite.statistic.QuerySqlStatisticProvider;
 import org.apache.calcite.test.CalciteAssert;
 import org.apache.calcite.test.FoodMartQuerySet;
-import org.apache.calcite.test.SlowTests;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.Planner;
@@ -44,29 +44,34 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.hasToString;
 
 /**
  * Unit tests for {@link LatticeSuggester}.
  */
-@Category(SlowTests.class)
-public class LatticeSuggesterTest {
+class LatticeSuggesterTest {
 
   /** Some basic query patterns on the Scott schema with "EMP" and "DEPT"
    * tables. */
-  @Test public void testEmpDept() throws Exception {
+  @Test void testEmpDept() throws Exception {
     final Tester t = new Tester();
     final String q0 = "select dept.dname, count(*), sum(sal)\n"
         + "from emp\n"
@@ -134,10 +139,10 @@ public class LatticeSuggesterTest {
         + " [scott, EMP]], "
         + "edges: [Step([scott, EMP], [scott, DEPT], DEPTNO:DEPTNO),"
         + " Step([scott, EMP], [scott, EMP], MGR:EMPNO)])";
-    assertThat(t.s.space.g.toString(), is(expected));
+    assertThat(t.s.space.g, hasToString(expected));
   }
 
-  @Test public void testFoodmart() throws Exception {
+  @Test void testFoodmart() throws Exception {
     final Tester t = new Tester().foodmart();
     final String q = "select \"t\".\"the_year\" as \"c0\",\n"
         + " \"t\".\"quarter\" as \"c1\",\n"
@@ -174,10 +179,10 @@ public class LatticeSuggesterTest {
         + " product_id:product_id), "
         + "Step([foodmart, sales_fact_1997], [foodmart, time_by_day],"
         + " time_id:time_id)])";
-    assertThat(t.s.space.g.toString(), is(expected));
+    assertThat(t.s.space.g, hasToString(expected));
   }
 
-  @Test public void testAggregateExpression() throws Exception {
+  @Test void testAggregateExpression() throws Exception {
     final Tester t = new Tester().foodmart();
     final String q = "select \"t\".\"the_year\" as \"c0\",\n"
         + " \"pc\".\"product_family\" as \"c1\",\n"
@@ -241,7 +246,8 @@ public class LatticeSuggesterTest {
     };
   }
 
-  @Test public void testSharedSnowflake() throws Exception {
+  @Tag("slow")
+  @Test void testSharedSnowflake() throws Exception {
     final Tester t = new Tester().foodmart();
     // foodmart query 5827 (also 5828, 5830, 5832) uses the "region" table
     // twice: once via "store" and once via "customer";
@@ -272,7 +278,7 @@ public class LatticeSuggesterTest {
         isGraphs(g, "[SUM(sales_fact_1997.unit_sales)]"));
   }
 
-  @Test public void testExpressionInAggregate() throws Exception {
+  @Test void testExpressionInAggregate() throws Exception {
     final Tester t = new Tester().withEvolve(true).foodmart();
     final FoodMartQuerySet set = FoodMartQuerySet.instance();
     for (int id : new int[]{392, 393}) {
@@ -281,7 +287,9 @@ public class LatticeSuggesterTest {
   }
 
   private void checkFoodMartAll(boolean evolve) throws Exception {
-    final Tester t = new Tester().foodmart().withEvolve(evolve);
+    final Tester t = new Tester().sqlToRelConverter(config -> config.withExpand(true))
+        .foodmart()
+        .withEvolve(evolve);
     final FoodMartQuerySet set = FoodMartQuerySet.instance();
     for (FoodMartQuerySet.FoodmartQuery query : set.queries.values()) {
       if (query.sql.contains("\"agg_10_foo_fact\"")
@@ -378,29 +386,31 @@ public class LatticeSuggesterTest {
         + "Step([foodmart, warehouse], [foodmart, store], stores_id:store_id), "
         + "Step([foodmart, warehouse], [foodmart, warehouse_class],"
         + " warehouse_class_id:warehouse_class_id)])";
-    assertThat(t.s.space.g.toString(), is(expected));
+    assertThat(t.s.space.g, hasToString(expected));
     if (evolve) {
       // compared to evolve=false, there are a few more nodes (137 vs 119),
       // the same number of paths, and a lot fewer lattices (27 vs 388)
-      assertThat(t.s.space.nodeMap.size(), is(137));
-      assertThat(t.s.latticeMap.size(), is(27));
-      assertThat(t.s.space.pathMap.size(), is(46));
+      assertThat(t.s.space.nodeMap, aMapWithSize(137));
+      assertThat(t.s.latticeMap, aMapWithSize(27));
+      assertThat(t.s.space.pathMap, aMapWithSize(46));
     } else {
-      assertThat(t.s.space.nodeMap.size(), is(119));
-      assertThat(t.s.latticeMap.size(), is(388));
-      assertThat(t.s.space.pathMap.size(), is(46));
+      assertThat(t.s.space.nodeMap, aMapWithSize(119));
+      assertThat(t.s.latticeMap, aMapWithSize(388));
+      assertThat(t.s.space.pathMap, aMapWithSize(46));
     }
   }
 
-  @Test public void testFoodMartAll() throws Exception {
+  @Tag("slow")
+  @Test void testFoodMartAll() throws Exception {
     checkFoodMartAll(false);
   }
 
-  @Test public void testFoodMartAllEvolve() throws Exception {
+  @Tag("slow")
+  @Test void testFoodMartAllEvolve() throws Exception {
     checkFoodMartAll(true);
   }
 
-  @Test public void testContains() throws Exception {
+  @Test void testContains() throws Exception {
     final Tester t = new Tester().foodmart();
     final LatticeRootNode fNode = t.node("select *\n"
         + "from \"sales_fact_1997\"");
@@ -422,14 +432,14 @@ public class LatticeSuggesterTest {
     assertThat(fcpNode.contains(fcpNode), is(true));
   }
 
-  @Test public void testEvolve() throws Exception {
+  @Test void testEvolve() throws Exception {
     final Tester t = new Tester().foodmart().withEvolve(true);
 
     final String q0 = "select count(*)\n"
         + "from \"sales_fact_1997\"";
     final String l0 = "sales_fact_1997:[COUNT()]";
     t.addQuery(q0);
-    assertThat(t.s.latticeMap.size(), is(1));
+    assertThat(t.s.latticeMap, aMapWithSize(1));
     assertThat(Iterables.getOnlyElement(t.s.latticeMap.keySet()),
         is(l0));
 
@@ -440,7 +450,7 @@ public class LatticeSuggesterTest {
     final String l1 = "sales_fact_1997 (customer:customer_id)"
         + ":[COUNT(), SUM(sales_fact_1997.unit_sales)]";
     t.addQuery(q1);
-    assertThat(t.s.latticeMap.size(), is(1));
+    assertThat(t.s.latticeMap, aMapWithSize(1));
     assertThat(Iterables.getOnlyElement(t.s.latticeMap.keySet()),
         is(l1));
 
@@ -453,7 +463,7 @@ public class LatticeSuggesterTest {
         + ":[COUNT(), SUM(sales_fact_1997.unit_sales),"
         + " COUNT(DISTINCT time_by_day.the_day)]";
     t.addQuery(q2);
-    assertThat(t.s.latticeMap.size(), is(1));
+    assertThat(t.s.latticeMap, aMapWithSize(1));
     assertThat(Iterables.getOnlyElement(t.s.latticeMap.keySet()),
         is(l2));
 
@@ -462,9 +472,9 @@ public class LatticeSuggesterTest {
         lattice.tables().stream().map(table ->
             table.t.getQualifiedName())
             .sorted(Comparator.comparing(Object::toString))
-            .collect(Util.toImmutableList());
-    assertThat(tableNames.toString(),
-        is("[[foodmart, customer],"
+            .collect(toImmutableList());
+    assertThat(tableNames,
+        hasToString("[[foodmart, customer],"
             + " [foodmart, product],"
             + " [foodmart, sales_fact_1997],"
             + " [foodmart, time_by_day]]"));
@@ -480,12 +490,12 @@ public class LatticeSuggesterTest {
         + ":[COUNT(), SUM(sales_fact_1997.unit_sales),"
         + " MIN(product.product_id), COUNT(DISTINCT time_by_day.the_day)]";
     t.addQuery(q3);
-    assertThat(t.s.latticeMap.size(), is(1));
+    assertThat(t.s.latticeMap, aMapWithSize(1));
     assertThat(Iterables.getOnlyElement(t.s.latticeMap.keySet()),
         is(l3));
   }
 
-  @Test public void testExpression() throws Exception {
+  @Test void testExpression() throws Exception {
     final Tester t = new Tester().foodmart().withEvolve(true);
 
     final String q0 = "select\n"
@@ -496,7 +506,7 @@ public class LatticeSuggesterTest {
         + "group by \"fname\", \"lname\"";
     final String l0 = "customer:[COUNT(), AVG($f2)]";
     t.addQuery(q0);
-    assertThat(t.s.latticeMap.size(), is(1));
+    assertThat(t.s.latticeMap, aMapWithSize(1));
     assertThat(Iterables.getOnlyElement(t.s.latticeMap.keySet()),
         is(l0));
     final Lattice lattice = Iterables.getOnlyElement(t.s.latticeMap.values());
@@ -504,7 +514,7 @@ public class LatticeSuggesterTest {
         .filter(c -> c instanceof Lattice.DerivedColumn)
         .map(c -> (Lattice.DerivedColumn) c)
         .collect(Collectors.toList());
-    assertThat(derivedColumns.size(), is(2));
+    assertThat(derivedColumns, hasSize(2));
     final List<String> tables = ImmutableList.of("customer");
     checkDerivedColumn(lattice, tables, derivedColumns, 0, "$f2", true);
     checkDerivedColumn(lattice, tables, derivedColumns, 1, "full_name", false);
@@ -512,7 +522,7 @@ public class LatticeSuggesterTest {
 
   /** As {@link #testExpression()} but with multiple queries.
    * Some expressions are measures in one query and dimensions in another. */
-  @Test public void testExpressionEvolution() throws Exception {
+  @Test void testExpressionEvolution() throws Exception {
     final Tester t = new Tester().foodmart().withEvolve(true);
 
     // q0 uses n10 as a measure, n11 as a measure, n12 as a dimension
@@ -539,7 +549,7 @@ public class LatticeSuggesterTest {
     // n14 = [_, dimension] -> not always measure
     t.addQuery(q0);
     t.addQuery(q1);
-    assertThat(t.s.latticeMap.size(), is(1));
+    assertThat(t.s.latticeMap, aMapWithSize(1));
     final String l0 =
         "customer:[COUNT(), SUM(n10), SUM(n11), SUM(n12), SUM(n13)]";
     assertThat(Iterables.getOnlyElement(t.s.latticeMap.keySet()),
@@ -549,7 +559,7 @@ public class LatticeSuggesterTest {
         .filter(c -> c instanceof Lattice.DerivedColumn)
         .map(c -> (Lattice.DerivedColumn) c)
         .collect(Collectors.toList());
-    assertThat(derivedColumns.size(), is(5));
+    assertThat(derivedColumns, hasSize(5));
     final List<String> tables = ImmutableList.of("customer");
 
     checkDerivedColumn(lattice, tables, derivedColumns, 0, "n10", false);
@@ -568,7 +578,7 @@ public class LatticeSuggesterTest {
     assertThat(lattice.isAlwaysMeasure(dc0), is(alwaysMeasure));
   }
 
-  @Test public void testExpressionInJoin() throws Exception {
+  @Test void testExpressionInJoin() throws Exception {
     final Tester t = new Tester().foodmart().withEvolve(true);
 
     final String q0 = "select\n"
@@ -580,7 +590,7 @@ public class LatticeSuggesterTest {
     final String l0 = "sales_fact_1997 (customer:customer_id)"
         + ":[COUNT(), AVG($f2)]";
     t.addQuery(q0);
-    assertThat(t.s.latticeMap.size(), is(1));
+    assertThat(t.s.latticeMap, aMapWithSize(1));
     assertThat(Iterables.getOnlyElement(t.s.latticeMap.keySet()),
         is(l0));
     final Lattice lattice = Iterables.getOnlyElement(t.s.latticeMap.values());
@@ -588,13 +598,15 @@ public class LatticeSuggesterTest {
         .filter(c -> c instanceof Lattice.DerivedColumn)
         .map(c -> (Lattice.DerivedColumn) c)
         .collect(Collectors.toList());
-    assertThat(derivedColumns.size(), is(2));
+    assertThat(derivedColumns, hasSize(2));
     final List<String> tables = ImmutableList.of("customer");
     assertThat(derivedColumns.get(0).tables, is(tables));
     assertThat(derivedColumns.get(1).tables, is(tables));
   }
 
-  @Test public void testRedshiftDialect() throws Exception {
+  /** Tests a number of features only available in Redshift: the {@code CONCAT}
+   * and {@code CONVERT_TIMEZONE} functions. */
+  @Test void testRedshiftDialect() throws Exception {
     final Tester t = new Tester().foodmart().withEvolve(true)
         .withDialect(SqlDialect.DatabaseProduct.REDSHIFT.getDialect())
         .withLibrary(SqlLibrary.POSTGRESQL);
@@ -611,19 +623,159 @@ public class LatticeSuggesterTest {
         + "from \"customer\" join \"sales_fact_1997\" using (\"customer_id\")\n"
         + "group by \"fname\", \"lname\"";
     t.addQuery(q0);
-    assertThat(t.s.latticeMap.size(), is(1));
+    assertThat(t.s.latticeMap, aMapWithSize(1));
+  }
+
+  /** Tests a number of features only available in BigQuery: back-ticks;
+   * GROUP BY ordinal; case-insensitive unquoted identifiers;
+   * the {@code COUNTIF} aggregate function. */
+  @Test void testBigQueryDialect() throws Exception {
+    final Tester t = new Tester().foodmart().withEvolve(true)
+        .withDialect(SqlDialect.DatabaseProduct.BIG_QUERY.getDialect())
+        .withLibrary(SqlLibrary.BIG_QUERY);
+
+    final String q0 = "select `product_id`,\n"
+        + "  countif(unit_sales > 1000) as num_over_thousand,\n"
+        + "  SUM(unit_sales)\n"
+        + "from\n"
+        + "  `sales_fact_1997`"
+        + "group by 1";
+    t.addQuery(q0);
+    assertThat(t.s.latticeMap, aMapWithSize(1));
+  }
+
+  /** A tricky case involving a CTE (WITH), a join condition that references an
+   * expression, a complex WHERE clause, and some other queries. */
+  @Test void testJoinUsingExpression() throws Exception {
+    final Tester t = new Tester().foodmart().withEvolve(true);
+
+    final String q0 = "with c as (select\n"
+        + "    \"customer_id\" + 1 as \"customer_id\",\n"
+        + "    \"fname\"\n"
+        + "  from \"customer\")\n"
+        + "select\n"
+        + "  COUNT(distinct c.\"customer_id\") as \"customer.count\"\n"
+        + "from c\n"
+        + "left join \"sales_fact_1997\" using (\"customer_id\")\n"
+        + "where case\n"
+        + "  when lower(substring(\"fname\", 11, 1)) in (0, 1)\n"
+        + "    then 'Amy Adams'\n"
+        + "  when lower(substring(\"fname\", 11, 1)) in (2, 3)\n"
+        + "    then 'Barry Manilow'\n"
+        + "  when lower(substring(\"fname\", 11, 1)) in ('y', 'z')\n"
+        + "   then 'Yvonne Zane'\n"
+        + "  end = 'Barry Manilow'\n"
+        + "LIMIT 500";
+    final String q1 = "select * from \"customer\"";
+    final String q2 = "select sum(\"product_id\") from \"product\"";
+    // similar to q0, but "c" is a sub-select rather than CTE
+    final String q4 = "select\n"
+        + "  COUNT(distinct c.\"customer_id\") as \"customer.count\"\n"
+        + "from (select \"customer_id\" + 1 as \"customer_id\", \"fname\"\n"
+        + "  from \"customer\") as c\n"
+        + "left join \"sales_fact_1997\" using (\"customer_id\")\n";
+    t.addQuery(q1);
+    t.addQuery(q0);
+    t.addQuery(q1);
+    t.addQuery(q4);
+    t.addQuery(q2);
+    assertThat(t.s.latticeMap, aMapWithSize(3));
+  }
+
+  @Test void testDerivedColRef() throws Exception {
+    final FrameworkConfig config = Frameworks.newConfigBuilder()
+        .defaultSchema(Tester.schemaFrom(CalciteAssert.SchemaSpec.SCOTT))
+        .statisticProvider(QuerySqlStatisticProvider.SILENT_CACHING_INSTANCE)
+        .build();
+    final Tester t = new Tester(config).foodmart().withEvolve(true);
+
+    final String q0 = "select\n"
+        + "  min(c.\"fname\") as \"customer.count\"\n"
+        + "from \"customer\" as c\n"
+        + "left join \"sales_fact_1997\" as s\n"
+        + "on c.\"customer_id\" + 1 = s.\"customer_id\" + 2";
+    t.addQuery(q0);
+    assertThat(t.s.latticeMap, aMapWithSize(1));
+    assertThat(t.s.latticeMap.keySet().iterator().next(),
+        is("sales_fact_1997 (customer:+($2, 2)):[MIN(customer.fname)]"));
+    assertThat(t.s.space.g,
+        hasToString("graph(vertices: [[foodmart, customer],"
+            + " [foodmart, sales_fact_1997]], "
+            + "edges: [Step([foodmart, sales_fact_1997],"
+            + " [foodmart, customer], +($2, 2):+($0, 1))])"));
+  }
+
+  /** Tests that we can run the suggester against non-JDBC schemas.
+   *
+   * <p>{@link org.apache.calcite.test.CalciteAssert.SchemaSpec#FAKE_FOODMART}
+   * is not based on {@link org.apache.calcite.adapter.jdbc.JdbcSchema} or
+   * {@link org.apache.calcite.adapter.jdbc.JdbcTable} but can provide a
+   * {@link javax.sql.DataSource}
+   * and {@link SqlDialect} for executing statistics queries.
+   *
+   * <p>The query has a join, and so we have to execute statistics queries
+   * to deduce the direction of the foreign key.
+   */
+  @Test void testFoodmartSimpleJoin() throws Exception {
+    checkFoodmartSimpleJoin(CalciteAssert.SchemaSpec.JDBC_FOODMART);
+    checkFoodmartSimpleJoin(CalciteAssert.SchemaSpec.FAKE_FOODMART);
+  }
+
+  private void checkFoodmartSimpleJoin(CalciteAssert.SchemaSpec schemaSpec)
+      throws Exception {
+    final FrameworkConfig config = Frameworks.newConfigBuilder()
+        .defaultSchema(Tester.schemaFrom(schemaSpec))
+        .statisticProvider(QuerySqlStatisticProvider.SILENT_CACHING_INSTANCE)
+        .build();
+    final Tester t = new Tester(config);
+    final String q = "select *\n"
+        + "from \"time_by_day\" as \"t\",\n"
+        + " \"sales_fact_1997\" as \"s\"\n"
+        + "where \"s\".\"time_id\" = \"t\".\"time_id\"\n";
+    final String g = "sales_fact_1997 (time_by_day:time_id)";
+    assertThat(t.addQuery(q), isGraphs(g, "[]"));
+  }
+
+  @Test void testUnion() throws Exception {
+    checkUnion("union");
+    checkUnion("union all");
+    checkUnion("intersect");
+    checkUnion("except");
+  }
+
+  private void checkUnion(String setOp) throws Exception {
+    final Tester t = new Tester().foodmart().withEvolve(true);
+    final String q = "select \"t\".\"time_id\"\n"
+        + "from \"time_by_day\" as \"t\",\n"
+        + " \"sales_fact_1997\" as \"s\"\n"
+        + "where \"s\".\"time_id\" = \"t\".\"time_id\"\n"
+        + setOp + "\n"
+        + "select min(\"unit_sales\")\n"
+        + "from \"sales_fact_1997\" as \"s\" join \"product\" as \"p\"\n"
+        + " using (\"product_id\")\n"
+        + "group by \"s\".\"customer_id\"";
+
+    // Adding a query generates two lattices
+    final List<Lattice> latticeList = t.addQuery(q);
+    assertThat(latticeList, hasSize(2));
+
+    // But because of 'evolve' flag, the lattices are merged into a single
+    // lattice
+    final String g = "sales_fact_1997 (product:product_id time_by_day:time_id)";
+    final String measures = "[MIN(sales_fact_1997.unit_sales)]";
+    assertThat(t.s.getLatticeSet(), isGraphs(g, measures));
   }
 
   /** Creates a matcher that matches query graphs to strings. */
-  private BaseMatcher<List<Lattice>> isGraphs(
+  private BaseMatcher<Collection<Lattice>> isGraphs(
       String... strings) {
     final List<String> expectedList = Arrays.asList(strings);
-    return new BaseMatcher<List<Lattice>>() {
+    return new BaseMatcher<Collection<Lattice>>() {
       public boolean matches(Object item) {
         //noinspection unchecked
-        return item instanceof List
-            && ((List) item).size() * 2 == expectedList.size()
-            && allEqual((List) item, expectedList);
+        return item instanceof Collection
+            && ((Collection<Object>) item).size() * 2 == expectedList.size()
+            && allEqual(ImmutableList.copyOf((Collection) item), expectedList);
       }
 
       private boolean allEqual(List<Lattice> items,
@@ -670,6 +822,12 @@ public class LatticeSuggesterTest {
       return new Tester(config);
     }
 
+    Tester sqlToRelConverter(UnaryOperator<SqlToRelConverter.Config> sqlToRelConverterConfig) {
+      return withConfig(
+          builder().sqlToRelConverterConfig(sqlToRelConverterConfig
+              .apply(config.getSqlToRelConverterConfig())).build());
+    }
+
     Tester foodmart() {
       return schema(CalciteAssert.SchemaSpec.JDBC_FOODMART);
     }
@@ -697,7 +855,7 @@ public class LatticeSuggesterTest {
     LatticeRootNode node(String q) throws SqlParseException,
         ValidationException, RelConversionException {
       final List<Lattice> list = addQuery(q);
-      assertThat(list.size(), is(1));
+      assertThat(list, hasSize(1));
       return list.get(0).rootNode;
     }
 
@@ -710,13 +868,11 @@ public class LatticeSuggesterTest {
       return withConfig(builder().evolveLattice(evolve).build());
     }
 
-    private Tester withParser(
-        Function<SqlParser.ConfigBuilder, SqlParser.ConfigBuilder> transform) {
-      return withConfig(builder()
-          .parserConfig(
-              transform.apply(SqlParser.configBuilder(config.getParserConfig()))
-                  .build())
-          .build());
+    private Tester withParser(UnaryOperator<SqlParser.Config> transform) {
+      return withConfig(
+          builder()
+              .parserConfig(transform.apply(config.getParserConfig()))
+              .build());
     }
 
     Tester withDialect(SqlDialect dialect) {
@@ -730,5 +886,3 @@ public class LatticeSuggesterTest {
     }
   }
 }
-
-// End LatticeSuggesterTest.java

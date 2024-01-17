@@ -21,24 +21,35 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
+import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlUserDefinedTypeNameSpec;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.util.List;
+
+import static org.apache.calcite.linq4j.Nullness.castNonNull;
 
 /**
  * A <code>SqlDialect</code> implementation for the PostgreSQL database.
  */
 public class PostgresqlSqlDialect extends SqlDialect {
-
   /** PostgreSQL type system. */
-  private static final RelDataTypeSystem POSTGRESQL_TYPE_SYSTEM =
+  public static final RelDataTypeSystem POSTGRESQL_TYPE_SYSTEM =
       new RelDataTypeSystemImpl() {
         @Override public int getMaxPrecision(SqlTypeName typeName) {
           switch (typeName) {
@@ -56,12 +67,13 @@ public class PostgresqlSqlDialect extends SqlDialect {
         }
       };
 
-  public static final SqlDialect DEFAULT =
-      new PostgresqlSqlDialect(EMPTY_CONTEXT
-          .withDatabaseProduct(DatabaseProduct.POSTGRESQL)
-          .withIdentifierQuoteString("\"")
-          .withUnquotedCasing(Casing.TO_LOWER)
-          .withDataTypeSystem(POSTGRESQL_TYPE_SYSTEM));
+  public static final SqlDialect.Context DEFAULT_CONTEXT = SqlDialect.EMPTY_CONTEXT
+      .withDatabaseProduct(SqlDialect.DatabaseProduct.POSTGRESQL)
+      .withIdentifierQuoteString("\"")
+      .withUnquotedCasing(Casing.TO_LOWER)
+      .withDataTypeSystem(POSTGRESQL_TYPE_SYSTEM);
+
+  public static final SqlDialect DEFAULT = new PostgresqlSqlDialect(DEFAULT_CONTEXT);
 
   /** Creates a PostgresqlSqlDialect. */
   public PostgresqlSqlDialect(Context context) {
@@ -72,24 +84,68 @@ public class PostgresqlSqlDialect extends SqlDialect {
     return false;
   }
 
-  @Override public SqlNode getCastSpec(RelDataType type) {
+  @Override public @Nullable SqlNode getCastSpec(RelDataType type) {
     String castSpec;
     switch (type.getSqlTypeName()) {
     case TINYINT:
       // Postgres has no tinyint (1 byte), so instead cast to smallint (2 bytes)
-      castSpec = "_smallint";
+      castSpec = "smallint";
       break;
     case DOUBLE:
       // Postgres has a double type but it is named differently
-      castSpec = "_double precision";
+      castSpec = "double precision";
       break;
     default:
       return super.getCastSpec(type);
     }
 
     return new SqlDataTypeSpec(
-        new SqlUserDefinedTypeNameSpec(castSpec, SqlParserPos.ZERO),
+        new SqlAlienSystemTypeNameSpec(castSpec, type.getSqlTypeName(), SqlParserPos.ZERO),
         SqlParserPos.ZERO);
+  }
+
+  @Override public SqlNode rewriteSingleValueExpr(SqlNode aggCall, RelDataType relDataType) {
+    final SqlNode operand = ((SqlBasicCall) aggCall).operand(0);
+    final SqlLiteral nullLiteral = SqlLiteral.createNull(SqlParserPos.ZERO);
+    final SqlNode unionOperand =
+        new SqlSelect(SqlParserPos.ZERO, SqlNodeList.EMPTY,
+            SqlNodeList.of(
+                SqlStdOperatorTable.CAST.createCall(SqlParserPos.ZERO, SqlNodeList.of(nullLiteral),
+                    SqlNodeList.of(castNonNull(getCastSpec(relDataType))))), null, null, null, null,
+            SqlNodeList.EMPTY, null, null, null, null, SqlNodeList.EMPTY);
+    // For PostgreSQL, generate
+    //   CASE COUNT(value)
+    //   WHEN 0 THEN NULL
+    //   WHEN 1 THEN min(value)
+    //   ELSE (SELECT CAST(NULL AS valueDataType) UNION ALL SELECT CAST(NULL AS valueDataType))
+    //   END
+    final SqlNode caseExpr =
+        new SqlCase(SqlParserPos.ZERO,
+            SqlStdOperatorTable.COUNT.createCall(SqlParserPos.ZERO, operand),
+            SqlNodeList.of(
+                SqlLiteral.createExactNumeric("0", SqlParserPos.ZERO),
+                SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO)),
+            SqlNodeList.of(
+                nullLiteral,
+                SqlStdOperatorTable.MIN.createCall(SqlParserPos.ZERO, operand)),
+            SqlStdOperatorTable.SCALAR_QUERY.createCall(SqlParserPos.ZERO,
+                SqlStdOperatorTable.UNION_ALL
+                    .createCall(SqlParserPos.ZERO, unionOperand, unionOperand)));
+
+    LOGGER.debug("SINGLE_VALUE rewritten into [{}]", caseExpr);
+
+    return caseExpr;
+  }
+
+  @Override public boolean supportsFunction(SqlOperator operator,
+      RelDataType type, final List<RelDataType> paramTypes) {
+    switch (operator.kind) {
+    case LIKE:
+      // introduces support for ILIKE as well
+      return true;
+    default:
+      return super.supportsFunction(operator, type, paramTypes);
+    }
   }
 
   @Override public boolean requiresAliasForFromItems() {
@@ -112,8 +168,9 @@ public class PostgresqlSqlDialect extends SqlDialect {
       final SqlLiteral timeUnitNode = call.operand(1);
       final TimeUnitRange timeUnit = timeUnitNode.getValueAs(TimeUnitRange.class);
 
-      SqlCall call2 = SqlFloorFunction.replaceTimeUnitOperand(call, timeUnit.name(),
-          timeUnitNode.getParserPosition());
+      SqlCall call2 =
+          SqlFloorFunction.replaceTimeUnitOperand(call, timeUnit.name(),
+              timeUnitNode.getParserPosition());
       SqlFloorFunction.unparseDatetimeFunction(writer, call2, "DATE_TRUNC", false);
       break;
 
@@ -121,6 +178,8 @@ public class PostgresqlSqlDialect extends SqlDialect {
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
-}
 
-// End PostgresqlSqlDialect.java
+  @Override public boolean supportsGroupByLiteral() {
+    return false;
+  }
+}

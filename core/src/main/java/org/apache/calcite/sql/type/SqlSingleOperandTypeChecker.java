@@ -18,6 +18,7 @@ package org.apache.calcite.sql.type;
 
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperandCountRange;
 
 /**
  * SqlSingleOperandTypeChecker is an extension of {@link SqlOperandTypeChecker}
@@ -46,6 +47,13 @@ public interface SqlSingleOperandTypeChecker extends SqlOperandTypeChecker {
    * <code>iFormalOperand</code> would be zero, even though the position of Z
    * within call C is two.
    *
+   * <p>Caution that we could not(shouldn't) implement implicit type coercion for this checker,
+   * implicit type coercion has side effect(modify the AST), if this single operand checker is
+   * subsumed in a composite rule(OR or AND), we can not make any side effect if we
+   * can not make sure that all the single operands type check are passed(with type coercion).
+   * But there is an exception: only if the call has just one operand, for this case,
+   * use {@link SqlOperandTypeChecker#checkOperandTypes} instead.
+   *
    * @param callBinding    description of the call being checked; this is only
    *                       provided for context when throwing an exception; the
    *                       implementation should <em>NOT</em> examine the
@@ -61,6 +69,26 @@ public interface SqlSingleOperandTypeChecker extends SqlOperandTypeChecker {
       SqlNode operand,
       int iFormalOperand,
       boolean throwOnFailure);
-}
 
-// End SqlSingleOperandTypeChecker.java
+  @Override default boolean checkOperandTypes(SqlCallBinding callBinding,
+      boolean throwOnFailure) {
+    return checkSingleOperandType(callBinding, callBinding.operand(0), 0,
+        throwOnFailure);
+  }
+
+  @Override default SqlOperandCountRange getOperandCountRange() {
+    return SqlOperandCountRanges.of(1);
+  }
+
+  /** Composes this with another single-operand checker using AND. */
+  default SqlSingleOperandTypeChecker and(
+      SqlSingleOperandTypeChecker checker) {
+    return OperandTypes.and(this, checker);
+  }
+
+  /** Composes this with another single-operand checker using OR. */
+  default SqlSingleOperandTypeChecker or(
+      SqlSingleOperandTypeChecker checker) {
+    return OperandTypes.or(this, checker);
+  }
+}

@@ -18,6 +18,7 @@ package org.apache.calcite.sql.test;
 
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.fun.SqlLibrary;
 import org.apache.calcite.sql.fun.SqlLibraryOperatorTableFactory;
@@ -26,10 +27,10 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlAbstractParserImpl;
 import org.apache.calcite.sql.parser.SqlParserTest;
 import org.apache.calcite.test.DiffTestCase;
-import org.apache.calcite.util.Sources;
+import org.apache.calcite.util.TestUtil;
 import org.apache.calcite.util.Util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,7 +38,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.PrintWriter;
-import java.nio.file.Paths;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -49,13 +49,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /** Various automated checks on the documentation. */
-public class DocumentationTest {
+class DocumentationTest {
   /** Generates a copy of {@code reference.md} with the current set of key
    * words. Fails if the copy is different from the original. */
-  @Test public void testGenerateKeyWords() throws IOException {
+  @Test void testGenerateKeyWords() throws IOException {
     final FileFixture f = new FileFixture();
     f.outFile.getParentFile().mkdirs();
     try (BufferedReader r = Util.reader(f.inFile);
@@ -73,7 +73,7 @@ public class DocumentationTest {
         if (line.equals("{% comment %} start {% endcomment %}")) {
           ++stage;
           SqlAbstractParserImpl.Metadata metadata =
-              new SqlParserTest().getSqlParser("").getMetadata();
+              new SqlParserTest().fixture().parser().getMetadata();
           int z = 0;
           for (String s : metadata.getTokens()) {
             if (z++ > 0) {
@@ -100,11 +100,17 @@ public class DocumentationTest {
 
   /** Tests that every function in {@link SqlStdOperatorTable} is documented in
    * reference.md. */
-  @Test public void testAllFunctionsAreDocumented() throws IOException {
+  @Test void testAllFunctionsAreDocumented() throws IOException {
     final FileFixture f = new FileFixture();
     final Map<String, PatternOp> map = new TreeMap<>();
-    addOperators(map, "", SqlStdOperatorTable.instance().getOperatorList());
+
+    final SqlStdOperatorTable standard = SqlStdOperatorTable.instance();
+    addOperators(map, "", standard.getOperatorList());
+
     for (SqlLibrary library : SqlLibrary.values()) {
+      final SqlOperatorTable libraryTable =
+          SqlLibraryOperatorTableFactory.INSTANCE
+              .getOperatorTable(EnumSet.of(library), false);
       switch (library) {
       case STANDARD:
       case SPATIAL:
@@ -117,10 +123,13 @@ public class DocumentationTest {
       case TERADATA:
       case SNOWFLAKE:
         continue;
+      case ALL:
+        addOperators(map, "\\| \\* ", libraryTable.getOperatorList());
+        continue;
+      default:
+        addOperators(map, "\\| [^|]*" + library.abbrev + "[^|]* ",
+            libraryTable.getOperatorList());
       }
-      addOperators(map, "\\| [^|]*" + library.abbrev + "[^|]* ",
-          SqlLibraryOperatorTableFactory.INSTANCE
-              .getOperatorTable(EnumSet.of(library)).getOperatorList());
     }
     final Set<String> regexSeen = new HashSet<>();
     try (LineNumberReader r = new LineNumberReader(Util.reader(f.inFile))) {
@@ -188,24 +197,11 @@ public class DocumentationTest {
     final File outFile;
 
     FileFixture() {
-      // inUrl =
-      // "file:/home/x/calcite/core/target/test-classes/hsqldb-model.json"
-      String path = "hsqldb-model.json";
-      File hsqlDbModel =
-          Sources.of(SqlParserTest.class.getResource("/" + path)).file();
-      assert hsqlDbModel.getAbsolutePath().endsWith(
-          Paths.get("core", "target", "test-classes", "hsqldb-model.json")
-              .toString())
-          : hsqlDbModel.getAbsolutePath()
-          + " should end with core/target/test-classes/hsqldb-model.json";
-      // skip hsqldb-model.json, test-classes, target, core
-      // The assertion above protects us from walking over unrelated paths
-      base = hsqlDbModel.getAbsoluteFile()
-          .getParentFile().getParentFile().getParentFile().getParentFile();
+      base = TestUtil.getBaseDir(DocumentationTest.class);
       inFile = new File(base, "site/_docs/reference.md");
-      outFile = new File(base, "core/target/surefire/reference.md");
+      // TODO: replace with core/build/ when Maven is migrated to Gradle
+      // It does work in Gradle, however, we don't want to create "target" folder in Gradle
+      outFile = new File(base, "core/build/reports/documentationTest/reference.md");
     }
   }
 }
-
-// End DocumentationTest.java

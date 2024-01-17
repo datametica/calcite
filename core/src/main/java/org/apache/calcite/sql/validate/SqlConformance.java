@@ -16,6 +16,9 @@
  */
 package org.apache.calcite.sql.validate;
 
+import org.apache.calcite.linq4j.function.Experimental;
+import org.apache.calcite.sql.fun.SqlLibrary;
+
 /**
  * Enumeration of valid SQL compatibility modes.
  *
@@ -68,11 +71,31 @@ public interface SqlConformance {
   boolean isLiberal();
 
   /**
+   * Whether this dialect allows character literals as column aliases.
+   *
+   * <p>For example,
+   *
+   * <blockquote><pre>
+   *   SELECT empno, sal + comm AS 'remuneration'
+   *   FROM Emp</pre></blockquote>
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#BIG_QUERY},
+   * {@link SqlConformanceEnum#LENIENT},
+   * {@link SqlConformanceEnum#MYSQL_5},
+   * {@link SqlConformanceEnum#SQL_SERVER_2008};
+   * false otherwise.
+   */
+  boolean allowCharLiteralAlias();
+
+  /**
    * Whether to allow aliases from the {@code SELECT} clause to be used as
    * column names in the {@code GROUP BY} clause.
    *
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#BIG_QUERY},
    * {@link SqlConformanceEnum#LENIENT},
    * {@link SqlConformanceEnum#MYSQL_5};
    * false otherwise.
@@ -85,8 +108,10 @@ public interface SqlConformance {
    *
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#BIG_QUERY},
    * {@link SqlConformanceEnum#LENIENT},
-   * {@link SqlConformanceEnum#MYSQL_5};
+   * {@link SqlConformanceEnum#MYSQL_5},
+   * {@link SqlConformanceEnum#PRESTO};
    * false otherwise.
    */
   boolean isGroupByOrdinal();
@@ -97,6 +122,7 @@ public interface SqlConformance {
    *
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#BIG_QUERY},
    * {@link SqlConformanceEnum#LENIENT},
    * {@link SqlConformanceEnum#MYSQL_5};
    * false otherwise.
@@ -114,10 +140,11 @@ public interface SqlConformance {
    * {@link SqlConformanceEnum#MYSQL_5},
    * {@link SqlConformanceEnum#ORACLE_10},
    * {@link SqlConformanceEnum#ORACLE_12},
-   * {@link SqlConformanceEnum#STRICT_92},
    * {@link SqlConformanceEnum#PRAGMATIC_99},
-   * {@link SqlConformanceEnum#PRAGMATIC_2003};
-   * {@link SqlConformanceEnum#SQL_SERVER_2008};
+   * {@link SqlConformanceEnum#PRAGMATIC_2003},
+   * {@link SqlConformanceEnum#PRESTO},
+   * {@link SqlConformanceEnum#SQL_SERVER_2008},
+   * {@link SqlConformanceEnum#STRICT_92};
    * false otherwise.
    */
   boolean isSortByOrdinal();
@@ -129,6 +156,7 @@ public interface SqlConformance {
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#DEFAULT},
    * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#BIG_QUERY},
    * {@link SqlConformanceEnum#LENIENT},
    * {@link SqlConformanceEnum#MYSQL_5},
    * {@link SqlConformanceEnum#ORACLE_10},
@@ -165,6 +193,28 @@ public interface SqlConformance {
   boolean isFromRequired();
 
   /**
+   * Whether to split a quoted table name. If true, {@code `x.y.z`} is parsed as
+   * if the user had written {@code `x`.`y`.`z`}.
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#BIG_QUERY};
+   * false otherwise.
+   */
+  boolean splitQuotedTableName();
+
+  /**
+   * Whether to allow hyphens in an unquoted table name.
+   *
+   * <p>If true, {@code SELECT * FROM foo-bar.baz-buzz} is valid, and is parsed
+   * as if the user had written {@code SELECT * FROM `foo-bar`.`baz-buzz`}.
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#BIG_QUERY};
+   * false otherwise.
+   */
+  boolean allowHyphenInUnquotedTableName();
+
+  /**
    * Whether the bang-equal token != is allowed as an alternative to &lt;&gt; in
    * the parser.
    *
@@ -172,8 +222,9 @@ public interface SqlConformance {
    * {@link SqlConformanceEnum#BABEL},
    * {@link SqlConformanceEnum#LENIENT},
    * {@link SqlConformanceEnum#MYSQL_5},
-   * {@link SqlConformanceEnum#ORACLE_10};
-   * {@link SqlConformanceEnum#ORACLE_12};
+   * {@link SqlConformanceEnum#ORACLE_10},
+   * {@link SqlConformanceEnum#ORACLE_12},
+   * {@link SqlConformanceEnum#PRESTO};
    * false otherwise.
    */
   boolean isBangEqualAllowed();
@@ -185,7 +236,8 @@ public interface SqlConformance {
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#BABEL},
    * {@link SqlConformanceEnum#LENIENT},
-   * {@link SqlConformanceEnum#MYSQL_5};
+   * {@link SqlConformanceEnum#MYSQL_5},
+   * {@link SqlConformanceEnum#PRESTO};
    * false otherwise.
    */
   boolean isPercentRemainderAllowed();
@@ -197,7 +249,7 @@ public interface SqlConformance {
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#BABEL},
    * {@link SqlConformanceEnum#LENIENT},
-   * {@link SqlConformanceEnum#ORACLE_10};
+   * {@link SqlConformanceEnum#ORACLE_10},
    * {@link SqlConformanceEnum#ORACLE_12};
    * false otherwise.
    *
@@ -205,6 +257,22 @@ public interface SqlConformance {
    * version 5.5).
    */
   boolean isMinusAllowed();
+
+  /**
+   * Whether this dialect uses {@code $} (dollar) for indexing capturing groups
+   * in the replacement string of regular expression functions such as
+   * {@code REGEXP_REPLACE}. If false, the dialect uses {@code \\} (backslash)
+   * for indexing capturing groups.
+   *
+   * <p>For example, {@code REGEXP_REPLACE("abc", "a(.)c", "X\\1")} in BigQuery
+   * is equivalent to {@code REGEXP_REPLACE("abc", "a(.)c", "X$1")} in MySQL;
+   * both produce the result "Xb".
+   *
+   * <p>Among the built-in conformance levels, false in
+   * {@link SqlConformanceEnum#BIG_QUERY};
+   * true otherwise.
+   */
+  boolean isRegexReplaceCaptureGroupDollarIndexed();
 
   /**
    * Whether {@code CROSS APPLY} and {@code OUTER APPLY} operators are allowed
@@ -225,8 +293,8 @@ public interface SqlConformance {
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#BABEL},
    * {@link SqlConformanceEnum#LENIENT},
+   * {@link SqlConformanceEnum#ORACLE_12},
    * {@link SqlConformanceEnum#SQL_SERVER_2008};
-   * {@link SqlConformanceEnum#ORACLE_12};
    * false otherwise.
    */
   boolean isApplyAllowed();
@@ -252,6 +320,23 @@ public interface SqlConformance {
    * false otherwise.
    */
   boolean isInsertSubsetColumnsAllowed();
+
+  /**
+   * Whether directly alias array items in UNNEST.
+   *
+   * <p>E.g. in UNNEST(a_array, b_array) AS T(a, b),
+   * a and b will be aliases of elements in a_array and b_array
+   * respectively.
+   *
+   * <p>Without this flag set, T will be the alias
+   * of the element in a_array and a, b will be the top level
+   * fields of T if T is a STRUCT type.
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#PRESTO};
+   * false otherwise.
+   */
+  boolean allowAliasUnnestItems();
 
   /**
    * Whether to allow parentheses to be specified in calls to niladic functions
@@ -281,6 +366,7 @@ public interface SqlConformance {
 
   /**
    * Whether to allow SQL syntax "{@code ROW(expr1, expr2, expr3)}".
+   *
    * <p>The equivalent syntax in standard SQL is
    * "{@code (expr1, expr2, expr3)}".
    *
@@ -292,7 +378,8 @@ public interface SqlConformance {
    *
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#DEFAULT},
-   * {@link SqlConformanceEnum#LENIENT};
+   * {@link SqlConformanceEnum#LENIENT},
+   * {@link SqlConformanceEnum#PRESTO};
    * false otherwise.
    */
   boolean allowExplicitRowValueConstructor();
@@ -336,12 +423,31 @@ public interface SqlConformance {
   boolean isLimitStartCountAllowed();
 
   /**
+   * Whether to allow the SQL syntax "{@code OFFSET start LIMIT count}"
+   * (that is, {@code OFFSET} before {@code LIMIT},
+   * in addition to {@code LIMIT} before {@code OFFSET}
+   * and {@code OFFSET} before {@code FETCH}).
+   *
+   * <p>The equivalent syntax in standard SQL is
+   * "{@code OFFSET start ROW FETCH FIRST count ROWS ONLY}".
+   *
+   * <p>Trino allows this behavior.
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#LENIENT};
+   * false otherwise.
+   */
+  boolean isOffsetLimitAllowed();
+
+  /**
    * Whether to allow geo-spatial extensions, including the GEOMETRY type.
    *
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#BABEL},
    * {@link SqlConformanceEnum#LENIENT},
    * {@link SqlConformanceEnum#MYSQL_5},
+   * {@link SqlConformanceEnum#PRESTO},
    * {@link SqlConformanceEnum#SQL_SERVER_2008};
    * false otherwise.
    */
@@ -367,9 +473,10 @@ public interface SqlConformance {
    * <p>Among the built-in conformance levels, true in
    * {@link SqlConformanceEnum#PRAGMATIC_99},
    * {@link SqlConformanceEnum#PRAGMATIC_2003},
-   * {@link SqlConformanceEnum#MYSQL_5};
-   * {@link SqlConformanceEnum#ORACLE_10};
-   * {@link SqlConformanceEnum#ORACLE_12};
+   * {@link SqlConformanceEnum#MYSQL_5},
+   * {@link SqlConformanceEnum#ORACLE_10},
+   * {@link SqlConformanceEnum#ORACLE_12},
+   * {@link SqlConformanceEnum#PRESTO},
    * {@link SqlConformanceEnum#SQL_SERVER_2008};
    * false otherwise.
    */
@@ -397,10 +504,108 @@ public interface SqlConformance {
   boolean allowExtendedTrim();
 
   /**
+   * Whether interval literals should allow plural time units
+   * such as "YEARS" and "DAYS" in interval literals.
+   *
+   * <p>Under strict behavior, {@code INTERVAL '2' DAY} is valid
+   * and {@code INTERVAL '2' DAYS} is invalid;
+   * PostgreSQL allows both; Oracle only allows singular time units.
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#LENIENT};
+   * false otherwise.
+   */
+  boolean allowPluralTimeUnits();
+
+  /**
+   * Whether to allow a qualified common column in a query that has a
+   * NATURAL join or a join with a USING clause.
+   *
+   * <p>For example, in the query
+   *
+   * <blockquote><pre>SELECT emp.deptno
+   * FROM emp
+   * JOIN dept USING (deptno)</pre></blockquote>
+   *
+   * <p>{@code deptno} is the common column. A qualified common column
+   * such as {@code emp.deptno} is not allowed in Oracle, but is allowed
+   * in PostgreSQL.
+   *
+   * <p>Among the built-in conformance levels, false in
+   * {@link SqlConformanceEnum#ORACLE_10},
+   * {@link SqlConformanceEnum#ORACLE_12},
+   * {@link SqlConformanceEnum#PRESTO},
+   * {@link SqlConformanceEnum#STRICT_92},
+   * {@link SqlConformanceEnum#STRICT_99},
+   * {@link SqlConformanceEnum#STRICT_2003};
+   * true otherwise.
+   */
+  boolean allowQualifyingCommonColumn();
+
+  /**
+   * Whether {@code VALUE} is allowed as an alternative to {@code VALUES} in
+   * the parser.
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#LENIENT},
+   * {@link SqlConformanceEnum#MYSQL_5};
+   * false otherwise.
+   */
+  boolean isValueAllowed();
+
+  /**
    * Whether the Is True is allowed in
    * the parser.
    */
   boolean allowIsTrue();
 }
 
-// End SqlConformance.java
+  /**
+   * Controls the behavior of operators that are part of Standard SQL but
+   * nevertheless have different behavior in different databases.
+   *
+   * <p>Consider the {@code SUBSTRING} operator. In ISO standard SQL, negative
+   * start indexes are converted to 1; in Google BigQuery, negative start
+   * indexes are treated as offsets from the end of the string. For example,
+   * {@code SUBSTRING('abcde' FROM -3 FOR 2)} returns {@code 'ab'} in standard
+   * SQL and 'cd' in BigQuery.
+   *
+   * <p>If you specify {@code conformance=BIG_QUERY} in your connection
+   * parameters, {@code SUBSTRING} will give the BigQuery behavior. Similarly
+   * MySQL and Oracle.
+   *
+   * <p>Among the built-in conformance levels:
+   * <ul>
+   * <li>{@link SqlConformanceEnum#BIG_QUERY} returns
+   *     {@link SqlLibrary#BIG_QUERY};
+   * <li>{@link SqlConformanceEnum#MYSQL_5} returns {@link SqlLibrary#MYSQL};
+   * <li>{@link SqlConformanceEnum#ORACLE_10} and
+   *     {@link SqlConformanceEnum#ORACLE_12} return {@link SqlLibrary#ORACLE};
+   * <li>otherwise returns {@link SqlLibrary#STANDARD}.
+   * </ul>
+   */
+  SqlLibrary semantics();
+
+  /**
+   * Whether to allow lenient type coercions.
+   *
+   * <p>Coercions include:
+   * <ul>
+   *
+   * <li>Coercion of string literal to array literal. For example,
+   * {@code SELECT ARRAY[0,1,2] == '{0,1,2}'}
+   *
+   * <li>Casting {@code BOOLEAN} values to one of the following numeric types:
+   * {@code TINYINT}, {@code SMALLINT}, {@code INTEGER}, {@code BIGINT}.
+   *
+   * </ul>
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#BABEL},
+   * false otherwise.
+   */
+  @Experimental
+  boolean allowLenientCoercion();
+}

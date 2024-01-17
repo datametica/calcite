@@ -28,7 +28,7 @@ public final class KafkaTableOptions {
   private String topicName;
   private KafkaRowConverter rowConverter;
   private Map<String, String> consumerParams;
-  //added to inject MockConsumer for testing.
+  // added to inject MockConsumer for testing.
   private Consumer consumer;
 
   public String getBootstrapServers() {
@@ -77,5 +77,3 @@ public final class KafkaTableOptions {
     return this;
   }
 }
-
-// End KafkaTableOptions.java

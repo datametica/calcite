@@ -36,6 +36,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.util.Util;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.lang.reflect.Method;
@@ -51,7 +52,7 @@ import java.util.Map;
  * instance is one large table. This "table" does not have a fixed set of
  * columns (Splunk calls them "fields") but each query specifies the fields that
  * it wants. It also specifies a search expression, and optionally earliest and
- * latest dates.</p>
+ * latest dates.
  */
 public class SplunkTableScan
     extends TableScan
@@ -73,6 +74,7 @@ public class SplunkTableScan
     super(
         cluster,
         cluster.traitSetOf(EnumerableConvention.INSTANCE),
+        ImmutableList.of(),
         table);
     this.splunkTable = splunkTable;
     this.search = search;
@@ -118,7 +120,7 @@ public class SplunkTableScan
           String.class,
           List.class);
 
-  public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
+  @Override public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
     Map map = ImmutableMap.builder()
         .put("search", search)
         .put("earliest", Util.first(earliest, ""))
@@ -167,5 +169,3 @@ public class SplunkTableScan
             }));
   }
 }
-
-// End SplunkTableScan.java
