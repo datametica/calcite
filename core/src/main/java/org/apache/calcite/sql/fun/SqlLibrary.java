@@ -77,7 +77,7 @@ public enum SqlLibrary {
    * SQL. */
   SPARK("s", "spark"),
   /** A collection of operators that are in BigQuery but not in standard SQL. */
-  BIGQUERY("b", "bigquery"),
+  //BIGQUERY("b", "bigquery"),
   /** A collection of operators that are in Teradata but not in standard SQL. */
   TERADATA("t", "teradata");
   /** A collection of operators that are in Spark but not in standard SQL. */

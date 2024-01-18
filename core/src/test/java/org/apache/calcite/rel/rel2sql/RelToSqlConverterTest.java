@@ -19,13 +19,12 @@ package org.apache.calcite.rel.rel2sql;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
-import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -71,7 +70,7 @@ import org.apache.calcite.util.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -84,26 +83,22 @@ import static org.apache.calcite.test.Matchers.isLinux;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link RelToSqlConverter}.
  */
 public class RelToSqlConverterTest {
   static final SqlToRelConverter.Config DEFAULT_REL_CONFIG =
-      SqlToRelConverter.configBuilder()
-          .withTrimUnusedFields(false)
-          .withConvertTableAccess(false)
-          .build();
+      SqlToRelConverter.config()
+          .withTrimUnusedFields(false);
 
   static final SqlToRelConverter.Config NO_EXPAND_CONFIG =
-      SqlToRelConverter.configBuilder()
+      SqlToRelConverter.config()
           .withTrimUnusedFields(false)
-          .withConvertTableAccess(false)
-          .withExpand(false)
-          .build();
+          .withExpand(false);
 
   /** Initiates a test case with a given SQL query. */
   private Sql sql(String sql) {
@@ -112,17 +107,15 @@ public class RelToSqlConverterTest {
         ImmutableList.of());
   }
 
-  private static Planner getPlanner(List<RelTraitDef> traitDefs,
-      SqlParser.Config parserConfig, SchemaPlus schema,
+  private static Planner getPlanner(SqlParser.Config parserConfig, SchemaPlus schema,
       SqlToRelConverter.Config sqlToRelConf, Program... programs) {
     final MockSqlOperatorTable operatorTable =
             new MockSqlOperatorTable(SqlStdOperatorTable.instance());
-    MockSqlOperatorTable.addRamp(operatorTable);
+    MockSqlOperatorTable.of(operatorTable);
     final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
     final FrameworkConfig config = Frameworks.newConfigBuilder()
         .parserConfig(parserConfig)
         .defaultSchema(schema)
-        .traitDefs(traitDefs)
         .sqlToRelConverterConfig(sqlToRelConf)
         .programs(programs)
         .operatorTable(operatorTable)
@@ -881,13 +874,14 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
 
-  /**  */
   @Test public void testTableFunctionScanWithUnnest() {
     final RelBuilder builder = relBuilder();
     String[] array = {"abc", "bcd", "fdc"};
-    RelNode root = builder.functionScan(SqlStdOperatorTable.UNNEST, 0,
-            builder.literal(Arrays.asList(array))).project(builder.field(0)).build();
-    final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
+    RelNode root =
+            builder.functionScan(SqlStdOperatorTable.UNNEST, 0,
+                    builder.literal(Arrays.asList(array))).project(builder.field(0)).build();
+    final SqlDialect dialect =
+            DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\nFROM UNNEST(ARRAY['abc', 'bcd', 'fdc'])\nAS EXPR$0";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
@@ -1536,8 +1530,7 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test
-  public void testCharLengthFunctionEmulationForHiveAndBigqueryAndSpark() {
+  @Test public void testCharLengthFunctionEmulationForHiveAndBigqueryAndSpark() {
     final String query = "select char_length('xyz') from \"product\"";
     final String expected = "SELECT LENGTH('xyz')\n"
         + "FROM foodmart.product";
@@ -1554,8 +1547,7 @@ public class RelToSqlConverterTest {
       .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testCharacterLengthFunctionEmulationForHiveAndBigqueryAndSpark() {
+  @Test public void testCharacterLengthFunctionEmulationForHiveAndBigqueryAndSpark() {
     final String query = "select character_length('xyz') from \"product\"";
     final String expected = "SELECT LENGTH('xyz')\n"
         + "FROM foodmart.product";
@@ -2239,7 +2231,7 @@ public class RelToSqlConverterTest {
         + "SELECT \"product_class_id\" AS \"PRODUCT_ID\"\n"
         + "FROM \"foodmart\".\"product_class\"";
 
-    final RuleSet rules = RuleSets.ofList(UnionMergeRule.INSTANCE);
+    final RuleSet rules = RuleSets.ofList(CoreRules.UNION_MERGE);
     sql(query)
         .optimize(rules, null)
         .ok(expected);
@@ -2333,9 +2325,9 @@ public class RelToSqlConverterTest {
             + "FROM (VALUES  (" + expected + ")) AS t (EXPR$0)");
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-2625">[CALCITE-2625]
-   * Removing Window Boundaries from SqlWindow of Aggregate Function which do not allow Framing</a>
+  /** Test case for.
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-2625">[CALCITE-2625].
+   * Removing Window Boundaries from SqlWindow of Aggregate Function which do not allow Framing.</a>
    * */
   @Test public void testRowNumberFunctionForPrintingOfFrameBoundary() {
     String query = "SELECT row_number() over (order by \"hire_date\") FROM \"employee\"";
@@ -2399,7 +2391,7 @@ public class RelToSqlConverterTest {
   @Test public void testFloorMssqlWeek() {
     String query = "SELECT floor(\"hire_date\" TO WEEK) FROM \"employee\"";
     String expected = "SELECT CONVERT(DATETIME, CONVERT(VARCHAR(10), "
-        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date] )) % 7, [hire_date] ), 126))\n"
+        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date])) % 7, [hire_date]), 126))\n"
         + "FROM [foodmart].[employee]";
     sql(query)
         .withMssql()
@@ -4267,11 +4259,10 @@ public class RelToSqlConverterTest {
   }
 
 
-  @Test
-  public void testTimestampFunctionRelToSql() {
+  @Test public void testTimestampFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode currentTimestampRexNode = builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP,
-         builder.literal(6));
+    final RexNode currentTimestampRexNode =
+         builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP, builder.literal(6));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(currentTimestampRexNode, "CT"))
@@ -5046,8 +5037,7 @@ public class RelToSqlConverterTest {
     });
   }
 
-  @Test
-  public void testToNumberFunctionHandlingHexaToInt() {
+  @Test public void testToNumberFunctionHandlingHexaToInt() {
     String query = "select TO_NUMBER('03ea02653f6938ba','XXXXXXXXXXXXXXXX')";
     final String expectedBigQuery = "SELECT CAST(CONCAT('0x', '03ea02653f6938ba') AS BIGINT)";
     final String expected = "SELECT CAST(CONV('03ea02653f6938ba', 16, 10) AS BIGINT)";
@@ -5063,8 +5053,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingFloatingPoint() {
+  @Test public void testToNumberFunctionHandlingFloatingPoint() {
     String query = "select TO_NUMBER('-1.7892','9.9999')";
     final String expected = "SELECT CAST('-1.7892' AS FLOAT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.7892', 38, 4)";
@@ -5079,8 +5068,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingFloatingPointWithD() {
+  @Test public void testToNumberFunctionHandlingFloatingPointWithD() {
     String query = "select TO_NUMBER('1.789','9D999')";
     final String expected = "SELECT CAST('1.789' AS FLOAT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1.789', 38, 3)";
@@ -5095,8 +5083,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithSingleFloatingPoint() {
+  @Test public void testToNumberFunctionHandlingWithSingleFloatingPoint() {
     String query = "select TO_NUMBER('1.789')";
     final String expected = "SELECT CAST('1.789' AS FLOAT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1.789', 38, 3)";
@@ -5111,8 +5098,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithComma() {
+  @Test public void testToNumberFunctionHandlingWithComma() {
     String query = "SELECT TO_NUMBER ('1,789', '9,999')";
     final String expected = "SELECT CAST('1789' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1,789', '9,999')";
@@ -5127,8 +5113,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithCurrency() {
+  @Test public void testToNumberFunctionHandlingWithCurrency() {
     String query = "SELECT TO_NUMBER ('$1789', '$9999')";
     final String expected = "SELECT CAST('1789' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('$1789', '$9999')";
@@ -5143,8 +5128,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithCurrencyAndL() {
+  @Test public void testToNumberFunctionHandlingWithCurrencyAndL() {
     String query = "SELECT TO_NUMBER ('$1789', 'L9999')";
     final String expected = "SELECT CAST('1789' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('$1789', '$9999')";
@@ -5159,8 +5143,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithMinus() {
+  @Test public void testToNumberFunctionHandlingWithMinus() {
     String query = "SELECT TO_NUMBER ('-12334', 'S99999')";
     final String expected = "SELECT CAST('-12334' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-12334', 'S99999')";
@@ -5175,8 +5158,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithMinusLast() {
+  @Test public void testToNumberFunctionHandlingWithMinusLast() {
     String query = "SELECT TO_NUMBER ('12334-', '99999S')";
     final String expected = "SELECT CAST('-12334' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('12334-', '99999S')";
@@ -5191,8 +5173,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithE() {
+  @Test public void testToNumberFunctionHandlingWithE() {
     String query = "SELECT TO_NUMBER ('12E3', '99EEEE')";
     final String expected = "SELECT CAST('12E3' AS DECIMAL)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('12E3', '99EEEE')";
@@ -5207,8 +5188,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithCurrencyName() {
+  @Test public void testToNumberFunctionHandlingWithCurrencyName() {
     String query = "SELECT TO_NUMBER('dollar1234','L9999','NLS_CURRENCY=''dollar''')";
     final String expected = "SELECT CAST('1234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234')";
@@ -5223,8 +5203,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithCurrencyNameFloat() {
+  @Test public void testToNumberFunctionHandlingWithCurrencyNameFloat() {
     String query = "SELECT TO_NUMBER('dollar12.34','L99D99','NLS_CURRENCY=''dollar''')";
     final String expected = "SELECT CAST('12.34' AS FLOAT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('12.34', 38, 2)";
@@ -5239,8 +5218,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithCurrencyNameNull() {
+  @Test public void testToNumberFunctionHandlingWithCurrencyNameNull() {
     String query = "SELECT TO_NUMBER('dollar12.34','L99D99',null)";
     final String expected = "SELECT CAST(NULL AS INTEGER)";
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)";
@@ -5255,8 +5233,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithCurrencyNameMinus() {
+  @Test public void testToNumberFunctionHandlingWithCurrencyNameMinus() {
     String query = "SELECT TO_NUMBER('-dollar1234','L9999','NLS_CURRENCY=''dollar''')";
     final String expected = "SELECT CAST('-1234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1234')";
@@ -5271,8 +5248,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithG() {
+  @Test public void testToNumberFunctionHandlingWithG() {
     String query = "SELECT TO_NUMBER ('1,2345', '9G9999')";
     final String expected = "SELECT CAST('12345' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1,2345', '9G9999')";
@@ -5287,8 +5263,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithU() {
+  @Test public void testToNumberFunctionHandlingWithU() {
     String query = "SELECT TO_NUMBER ('$1234', 'U9999')";
     final String expected = "SELECT CAST('1234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('$1234', '$9999')";
@@ -5303,8 +5278,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithPR() {
+  @Test public void testToNumberFunctionHandlingWithPR() {
     String query = "SELECT TO_NUMBER (' 123 ', '999PR')";
     final String expected = "SELECT CAST('123' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('123')";
@@ -5319,8 +5293,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithMI() {
+  @Test public void testToNumberFunctionHandlingWithMI() {
     String query = "SELECT TO_NUMBER ('1234-', '9999MI')";
     final String expected = "SELECT CAST('-1234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234-', '9999MI')";
@@ -5335,8 +5308,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithMIDecimal() {
+  @Test public void testToNumberFunctionHandlingWithMIDecimal() {
     String query = "SELECT TO_NUMBER ('1.234-', '9.999MI')";
     final String expected = "SELECT CAST('-1.234' AS FLOAT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.234', 38, 3)";
@@ -5351,8 +5323,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithZero() {
+  @Test public void testToNumberFunctionHandlingWithZero() {
     String query = "select TO_NUMBER('01234','09999')";
     final String expected = "SELECT CAST('01234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('01234', '09999')";
@@ -5367,8 +5338,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithB() {
+  @Test public void testToNumberFunctionHandlingWithB() {
     String query = "select TO_NUMBER('1234','B9999')";
     final String expected = "SELECT CAST('1234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234', 'B9999')";
@@ -5383,8 +5353,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithC() {
+  @Test public void testToNumberFunctionHandlingWithC() {
     String query = "select TO_NUMBER('USD1234','C9999')";
     final String expected = "SELECT CAST('1234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234')";
@@ -5399,8 +5368,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandling() {
+  @Test public void testToNumberFunctionHandling() {
     final String query = "SELECT TO_NUMBER ('1234', '9999')";
     final String expected = "SELECT CAST('1234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234', '9999')";
@@ -5415,8 +5383,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingSingleArgumentInt() {
+  @Test public void testToNumberFunctionHandlingSingleArgumentInt() {
     final String query = "SELECT TO_NUMBER ('1234')";
     final String expected = "SELECT CAST('1234' AS BIGINT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1234')";
@@ -5431,8 +5398,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingSingleArgumentFloat() {
+  @Test public void testToNumberFunctionHandlingSingleArgumentFloat() {
     final String query = "SELECT TO_NUMBER ('-1.234')";
     final String expected = "SELECT CAST('-1.234' AS FLOAT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.234', 38, 3)";
@@ -5447,8 +5413,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingNull() {
+  @Test public void testToNumberFunctionHandlingNull() {
     final String query = "SELECT TO_NUMBER ('-1.234',null)";
     final String expected = "SELECT CAST(NULL AS INTEGER)";
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)";
@@ -5463,8 +5428,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingNullOperand() {
+  @Test public void testToNumberFunctionHandlingNullOperand() {
     final String query = "SELECT TO_NUMBER (null)";
     final String expected = "SELECT CAST(NULL AS INTEGER)";
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)";
@@ -5479,8 +5443,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingSecoNull() {
+  @Test public void testToNumberFunctionHandlingSecoNull() {
     final String query = "SELECT TO_NUMBER(null,'9D99')";
     final String expected = "SELECT CAST(NULL AS INTEGER)";
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)";
@@ -5495,8 +5458,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingFunctionAsArgument() {
+  @Test public void testToNumberFunctionHandlingFunctionAsArgument() {
     final String query = "SELECT TO_NUMBER(SUBSTRING('12345',2))";
     final String expected = "SELECT CAST(SUBSTR('12345', 2) AS BIGINT)";
     final String expectedSpark = "SELECT CAST(SUBSTRING('12345', 2) AS BIGINT)";
@@ -5512,8 +5474,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithNullArgument() {
+  @Test public void testToNumberFunctionHandlingWithNullArgument() {
     final String query = "SELECT TO_NUMBER (null)";
     final String expected = "SELECT CAST(NULL AS INTEGER)";
     final String expectedSnowFlake = "SELECT TO_NUMBER(NULL)";
@@ -5528,8 +5489,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingCaseWhenThen() {
+  @Test public void testToNumberFunctionHandlingCaseWhenThen() {
     final String query = "select case when TO_NUMBER('12.77') is not null then "
             + "'is_numeric' else 'is not numeric' end";
     final String expected = "SELECT CASE WHEN CAST('12.77' AS FLOAT) IS NOT NULL THEN "
@@ -5547,8 +5507,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingWithGDS() {
+  @Test public void testToNumberFunctionHandlingWithGDS() {
     String query = "SELECT TO_NUMBER ('12,454.8-', '99G999D9S')";
     final String expected = "SELECT CAST('-12454.8' AS FLOAT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-12454.8', 38, 1)";
@@ -5563,8 +5522,7 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testAscii() {
+  @Test public void testAscii() {
     String query = "SELECT ASCII ('ABC')";
     final String expected = "SELECT ASCII('ABC')";
     final String expectedBigQuery = "SELECT TO_CODE_POINTS('ABC') [OFFSET(0)]";
@@ -5577,8 +5535,7 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test
-  public void testAsciiMethodArgument() {
+  @Test public void testAsciiMethodArgument() {
     String query = "SELECT ASCII (SUBSTRING('ABC',1,1))";
     final String expected = "SELECT ASCII(SUBSTR('ABC', 1, 1))";
     final String expectedSpark = "SELECT ASCII(SUBSTRING('ABC', 1, 1))";
@@ -5605,8 +5562,7 @@ public class RelToSqlConverterTest {
         .ok(hiveExpected);
   }
 
-  @Test
-  public void testIf() {
+  @Test public void testIf() {
     String query = "SELECT if ('ABC'='' or 'ABC' is null, null, ASCII('ABC'))";
     final String expected = "SELECT CAST(ASCII('ABC') AS INTEGER)";
     final String expectedBigQuery = "SELECT CAST(TO_CODE_POINTS('ABC') [OFFSET(0)] AS INTEGER)";
@@ -5619,8 +5575,7 @@ public class RelToSqlConverterTest {
         .ok(expected);
   }
 
-  @Test
-  public void testIfMethodArgument() {
+  @Test public void testIfMethodArgument() {
     String query = "SELECT if (SUBSTRING('ABC',1,1)='' or SUBSTRING('ABC',1,1) is null, null, "
         + "ASCII(SUBSTRING('ABC',1,1)))";
     final String expected = "SELECT IF(SUBSTR('ABC', 1, 1) = '' OR SUBSTR('ABC', 1, 1) IS NULL, "
@@ -5656,8 +5611,8 @@ public class RelToSqlConverterTest {
 
   @Test public void testNullIfFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode nullifRexNode = builder.call(SqlStdOperatorTable.NULLIF,
-        builder.scan("EMP").field(0), builder.literal(20));
+    final RexNode nullifRexNode =
+        builder.call(SqlStdOperatorTable.NULLIF, builder.scan("EMP").field(0), builder.literal(20));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(nullifRexNode, "NI"))
@@ -5808,8 +5763,9 @@ public class RelToSqlConverterTest {
 
   @Test public void testFormatDateRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode formatDateRexNode = builder.call(SqlLibraryOperators.FORMAT_DATE,
-        builder.literal("YYYY-MM-DD"), builder.scan("EMP").field(4));
+    final RexNode formatDateRexNode =
+        builder.call(SqlLibraryOperators.FORMAT_DATE,
+                builder.literal("YYYY-MM-DD"), builder.scan("EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatDateRexNode, "FD"))
@@ -5832,8 +5788,9 @@ public class RelToSqlConverterTest {
 
   @Test public void testFormatTimestampRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode formatTimestampRexNode = builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
-        builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"), builder.scan("EMP").field(4));
+    final RexNode formatTimestampRexNode =
+        builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+                builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"), builder.scan("EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatTimestampRexNode, "FD"))
@@ -5854,8 +5811,9 @@ public class RelToSqlConverterTest {
 
   @Test public void testFormatTimeRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode formatTimeRexNode = builder.call(SqlLibraryOperators.FORMAT_TIME,
-        builder.literal("HH:MI:SS"), builder.scan("EMP").field(4));
+    final RexNode formatTimeRexNode =
+        builder.call(SqlLibraryOperators.FORMAT_TIME,
+                builder.literal("HH:MI:SS"), builder.scan("EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatTimeRexNode, "FD"))
@@ -5875,10 +5833,12 @@ public class RelToSqlConverterTest {
 
   @Test public void testStrToDateRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode strToDateNode1 = builder.call(SqlLibraryOperators.STR_TO_DATE,
-        builder.literal("20181106"), builder.literal("YYYYMMDD"));
-    final RexNode strToDateNode2 = builder.call(SqlLibraryOperators.STR_TO_DATE,
-        builder.literal("2018/11/06"), builder.literal("YYYY/MM/DD"));
+    final RexNode strToDateNode1 =
+        builder.call(SqlLibraryOperators.STR_TO_DATE,
+                builder.literal("20181106"), builder.literal("YYYYMMDD"));
+    final RexNode strToDateNode2 =
+        builder.call(SqlLibraryOperators.STR_TO_DATE,
+                builder.literal("2018/11/06"), builder.literal("YYYY/MM/DD"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(strToDateNode1, "date1"), builder.alias(strToDateNode2, "date2"))
@@ -5900,13 +5860,14 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
   }
 
-  @Test
-  public void testFormatDatetimeRelToSql() {
+  @Test public void testFormatDatetimeRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode formatDateNode1 = builder.call(SqlLibraryOperators.FORMAT_DATETIME,
-            builder.literal("DDMMYY"), builder.literal("2008-12-25 15:30:00"));
-    final RexNode formatDateNode2 = builder.call(SqlLibraryOperators.FORMAT_DATETIME,
-            builder.literal("YY/MM/DD"), builder.literal("2012-12-25 12:50:10"));
+    final RexNode formatDateNode1 =
+            builder.call(SqlLibraryOperators.FORMAT_DATETIME,
+                    builder.literal("DDMMYY"), builder.literal("2008-12-25 15:30:00"));
+    final RexNode formatDateNode2 =
+            builder.call(SqlLibraryOperators.FORMAT_DATETIME,
+                    builder.literal("YY/MM/DD"), builder.literal("2012-12-25 12:50:10"));
     final RelNode root = builder
             .scan("EMP")
             .project(builder.alias(formatDateNode1, "date1"),
@@ -6108,7 +6069,7 @@ public class RelToSqlConverterTest {
 
     String exec() {
       final Planner planner =
-          getPlanner(null, SqlParser.Config.DEFAULT, schema, config);
+          getPlanner(SqlParser.Config.DEFAULT, schema, config);
       try {
         SqlNode parse = planner.parse(sql);
         SqlNode validate = planner.validate(parse);
@@ -6230,5 +6191,3 @@ public class RelToSqlConverterTest {
   }
 
 }
-
-// End RelToSqlConverterTest.java
