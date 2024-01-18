@@ -767,8 +767,9 @@ public class BigQuerySqlDialect extends SqlDialect {
         (SqlIntervalLiteral.IntervalValue) literal.getValue();
     switch (literal.getTypeName()) {
     case INTERVAL_HOUR_SECOND:
-      long equivalentSecondValue = SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(),
-              interval.getIntervalQualifier()) / 1000;
+      long equivalentSecondValue =
+              SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(),
+                      interval.getIntervalQualifier()) / 1000;
       SqlIntervalQualifier qualifier =
           new SqlIntervalQualifier(TimeUnit.SECOND, RelDataType.PRECISION_NOT_SPECIFIED,
                   TimeUnit.SECOND, RelDataType.PRECISION_NOT_SPECIFIED, SqlParserPos.ZERO);

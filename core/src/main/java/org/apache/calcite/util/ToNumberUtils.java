@@ -103,8 +103,10 @@ public class ToNumberUtils {
       if (isFirstOperandCurrencyType(call)) {
         String secondOperand = call.operand(1).toString().replaceAll("[UL]", "\\$")
                 .replace("'", "");
-        extractNodeOperands = new SqlNode[]{call.operand(0),
-                SqlLiteral.createCharString(secondOperand.trim(), SqlParserPos.ZERO)};
+        extractNodeOperands =
+                new SqlNode[]{call.operand(0),
+                        SqlLiteral.createCharString(secondOperand.trim(),
+                                SqlParserPos.ZERO)};
         parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
 
       } else if (isOperandNull(call)) {
@@ -122,8 +124,10 @@ public class ToNumberUtils {
 
       } else if (call.operand(0).toString().contains(".")) {
 
-        String firstOperand = removeSignFromLastOfStringAndAddInBeginning(call,
-                call.operand(0).toString().replaceAll("[',]", ""));
+        String firstOperand =
+                removeSignFromLastOfStringAndAddInBeginning(call,
+                        call.operand(0).toString().replaceAll("[',]",
+                                ""));
         int scale = firstOperand.split("\\.")[1].length();
         extractNodeOperands = new SqlNode[]{SqlLiteral
             .createCharString(firstOperand.trim(), SqlParserPos.ZERO),
@@ -156,8 +160,9 @@ public class ToNumberUtils {
       regEx = "[',$A-Za-z]+";
     }
 
-    String firstOperand = removeSignFromLastOfStringAndAddInBeginning(call,
-            call.operand(0).toString().replaceAll(regEx, ""));
+    String firstOperand =
+            removeSignFromLastOfStringAndAddInBeginning(call,
+                    call.operand(0).toString().replaceAll(regEx, ""));
 
     SqlNode[] sqlNode =
             new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO)};
