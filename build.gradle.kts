@@ -22,8 +22,9 @@ import com.github.vlsi.gradle.git.FindGitAttributes
 import com.github.vlsi.gradle.properties.dsl.lastEditYear
 import com.github.vlsi.gradle.properties.dsl.props
 import com.github.vlsi.gradle.release.RepositoryType
-import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
-import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApisExtension
+// import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
+// import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApisExtension
+import java.net.URI
 import net.ltgt.gradle.errorprone.errorprone
 import org.apache.calcite.buildtools.buildext.dsl.ParenthesisBalancer
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
@@ -40,14 +41,14 @@ plugins {
     id("jacoco-report-aggregation")
     id("org.checkerframework") apply false
     id("com.github.autostyle")
-//  id("org.nosphere.apache.rat")
+//    id("org.nosphere.apache.rat")
     id("com.github.spotbugs")
-    id("de.thetaphi.forbiddenapis") apply false
+//    id("de.thetaphi.forbiddenapis") apply false
     id("net.ltgt.errorprone") apply false
     id("com.github.vlsi.jandex") apply false
     id("org.owasp.dependencycheck")
     id("com.github.johnrengelman.shadow") apply false
-    // id("org.sonarqube")
+    id("org.sonarqube")
     // IDE configuration
     id("org.jetbrains.gradle.plugin.idea-ext")
     id("com.github.vlsi.ide")
@@ -64,14 +65,14 @@ repositories {
     mavenCentral()
 }
 
-// tasks.wrapper {
-//    distributionType = Wrapper.DistributionType.BIN
-//    doLast {
-//        val sha256Uri = URI("$distributionUrl.sha256")
-//        val sha256Sum = String(sha256Uri.toURL().readBytes())
-//        propertiesFile.appendText("distributionSha256Sum=${sha256Sum}\n")
-//    }
-// }
+tasks.wrapper {
+    distributionType = Wrapper.DistributionType.BIN
+    doLast {
+        val sha256Uri = URI("$distributionUrl.sha256")
+        val sha256Sum = String(sha256Uri.toURL().readBytes())
+        propertiesFile.appendText("distributionSha256Sum=${sha256Sum}\n")
+    }
+}
 
 fun reportsForHumans() = !(System.getenv()["CI"]?.toBoolean() ?: false)
 
@@ -210,9 +211,8 @@ val javadocAggregateIncludingTests by tasks.registering(Javadoc::class) {
 }
 
 val adaptersForSqlline = listOf(
-    ":babel", ":cassandra", ":druid", ":elasticsearch",
-    ":file", ":geode", ":innodb", ":kafka", ":mongodb",
-    ":pig", ":piglet", ":plus", ":redis", ":spark", ":splunk")
+    ":cassandra",
+    ":pig", ":piglet", ":redis", ":splunk")
 
 val dataSetsForSqlline = listOf(
     "net.hydromatic:foodmart-data-hsqldb",
@@ -313,12 +313,12 @@ fun com.github.autostyle.gradle.BaseFormatExtension.license() {
     endWithNewline()
 }
 
-// sonarqube {
-//    properties {
-//        property("sonar.test.inclusions", "**/*Test*/**")
-//        property("sonar.coverage.jacoco.xmlReportPaths", "$buildDir/reports/jacoco/jacocoAggregateTestReport/jacocoAggregateTestReport.xml")
-//    }
-// }
+sonarqube {
+    properties {
+        property("sonar.test.inclusions", "**/*Test*/**")
+        property("sonar.coverage.jacoco.xmlReportPaths", "$buildDir/reports/jacoco/jacocoAggregateTestReport/jacocoAggregateTestReport.xml")
+    }
+}
 
 allprojects {
     group = "org.apache.calcite"
@@ -534,7 +534,7 @@ allprojects {
         }
         val sourceSets: SourceSetContainer by project
 
-        apply(plugin = "de.thetaphi.forbiddenapis")
+//        apply(plugin = "de.thetaphi.forbiddenapis")
         apply(plugin = "maven-publish")
 
         if (!skipJandex) {
@@ -679,19 +679,19 @@ allprojects {
             }
         }
 
-        configure<CheckForbiddenApisExtension> {
-            failOnUnsupportedJava = false
-            ignoreSignaturesOfMissingClasses = true
-            suppressAnnotations.add("org.immutables.value.Generated")
-            bundledSignatures.addAll(
-                listOf(
-                    "jdk-unsafe",
-                    "jdk-deprecated",
-                    "jdk-non-portable"
-                )
-            )
-            signaturesFiles = files("$rootDir/src/main/config/forbidden-apis/signatures.txt")
-        }
+//        configure<CheckForbiddenApisExtension> {
+//            failOnUnsupportedJava = false
+//            ignoreSignaturesOfMissingClasses = true
+//            suppressAnnotations.add("org.immutables.value.Generated")
+//            bundledSignatures.addAll(
+//                listOf(
+//                    "jdk-unsafe",
+//                    "jdk-deprecated",
+//                    "jdk-non-portable"
+//                )
+//            )
+//            signaturesFiles = files("$rootDir/src/main/config/forbidden-apis/signatures.txt")
+//        }
 
         if (enableErrorprone) {
             apply(plugin = "net.ltgt.errorprone")
@@ -777,17 +777,17 @@ allprojects {
                 }
             }
 
-            configureEach<CheckForbiddenApis> {
-                excludeJavaCcGenerated()
-                exclude(
-                    "**/org/apache/calcite/adapter/os/Processes${'$'}ProcessFactory.class",
-                    "**/org/apache/calcite/adapter/os/OsAdapterTest.class",
-                    "**/org/apache/calcite/runtime/Resources${'$'}Inst.class",
-                    "**/org/apache/calcite/util/TestUnsafe.class",
-                    "**/org/apache/calcite/util/Unsafe.class",
-                    "**/org/apache/calcite/test/Unsafe.class"
-                )
-            }
+//            configureEach<CheckForbiddenApis> {
+//                excludeJavaCcGenerated()
+//                exclude(
+//                    "**/org/apache/calcite/adapter/os/Processes${'$'}ProcessFactory.class",
+//                    "**/org/apache/calcite/adapter/os/OsAdapterTest.class",
+//                    "**/org/apache/calcite/runtime/Resources${'$'}Inst.class",
+//                    "**/org/apache/calcite/util/TestUnsafe.class",
+//                    "**/org/apache/calcite/util/Unsafe.class",
+//                    "**/org/apache/calcite/test/Unsafe.class"
+//                )
+//            }
 
             configureEach<JavaCompile> {
                 inputs.property("java.version", System.getProperty("java.version"))
