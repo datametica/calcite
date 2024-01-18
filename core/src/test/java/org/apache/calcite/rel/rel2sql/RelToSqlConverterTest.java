@@ -879,12 +879,12 @@ public class RelToSqlConverterTest {
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
 
-  /**  */
   @Test public void testTableFunctionScanWithUnnest() {
     final RelBuilder builder = relBuilder();
     String[] array = {"abc", "bcd", "fdc"};
     RelNode root =
-            builder.functionScan(SqlStdOperatorTable.UNNEST, 0, builder.literal(Arrays.asList(array))).project(builder.field(0)).build();
+        builder.functionScan(SqlStdOperatorTable.UNNEST, 0,
+            builder.literal(Arrays.asList(array))).project(builder.field(0)).build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\nFROM UNNEST(ARRAY['abc', 'bcd', 'fdc'])\nAS EXPR$0";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
@@ -2331,8 +2331,8 @@ public class RelToSqlConverterTest {
 
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-2625">[CALCITE-2625]
-   * Removing Window Boundaries from SqlWindow of Aggregate Function which do not allow Framing</a>
-   * */
+   * Removing Window Boundaries from SqlWindow of Aggregate Function which do
+   * not allow Framing</a>. */
   @Test public void testRowNumberFunctionForPrintingOfFrameBoundary() {
     String query = "SELECT row_number() over (order by \"hire_date\") FROM \"employee\"";
     String expected = "SELECT ROW_NUMBER() OVER (ORDER BY \"hire_date\")\n"
@@ -5781,7 +5781,8 @@ public class RelToSqlConverterTest {
   @Test public void testFormatDateRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode formatDateRexNode =
-        builder.call(SqlLibraryOperators.FORMAT_DATE, builder.literal("YYYY-MM-DD"), builder.scan("EMP").field(4));
+        builder.call(SqlLibraryOperators.FORMAT_DATE, builder.literal("YYYY-MM-DD"),
+            builder.scan("EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatDateRexNode, "FD"))
@@ -5793,7 +5794,7 @@ public class RelToSqlConverterTest {
     final String expectedHive = "SELECT DATE_FORMAT(HIREDATE, 'yyyy-MM-dd') FD\n"
         + "FROM scott.EMP";
     final String expectedSnowFlake = "SELECT TO_VARCHAR(\"HIREDATE\", 'YYYY-MM-DD') AS \"FD\"\n"
-            + "FROM \"scott\".\"EMP\"";
+        + "FROM \"scott\".\"EMP\"";
     final String expectedSpark = expectedHive;
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -5805,7 +5806,8 @@ public class RelToSqlConverterTest {
   @Test public void testFormatTimestampRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode formatTimestampRexNode =
-        builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP, builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"), builder.scan("EMP").field(4));
+        builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP, builder.literal("YYYY-MM-DD HH:MI:SS.S"
+            + "(5)"), builder.scan("EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatTimestampRexNode, "FD"))
@@ -5827,7 +5829,8 @@ public class RelToSqlConverterTest {
   @Test public void testFormatTimeRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode formatTimeRexNode =
-        builder.call(SqlLibraryOperators.FORMAT_TIME, builder.literal("HH:MI:SS"), builder.scan("EMP").field(4));
+        builder.call(SqlLibraryOperators.FORMAT_TIME, builder.literal("HH:MI:SS"), builder.scan(
+            "EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatTimeRexNode, "FD"))
@@ -5848,9 +5851,11 @@ public class RelToSqlConverterTest {
   @Test public void testStrToDateRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode strToDateNode1 =
-        builder.call(SqlLibraryOperators.STR_TO_DATE, builder.literal("20181106"), builder.literal("YYYYMMDD"));
+        builder.call(SqlLibraryOperators.STR_TO_DATE, builder.literal("20181106"),
+            builder.literal("YYYYMMDD"));
     final RexNode strToDateNode2 =
-        builder.call(SqlLibraryOperators.STR_TO_DATE, builder.literal("2018/11/06"), builder.literal("YYYY/MM/DD"));
+        builder.call(SqlLibraryOperators.STR_TO_DATE, builder.literal("2018/11/06"),
+        builder.literal("YYYY/MM/DD"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(strToDateNode1, "date1"), builder.alias(strToDateNode2, "date2"))
@@ -5863,13 +5868,14 @@ public class RelToSqlConverterTest {
         + "FROM scott.EMP";
     final String expectedHive = "SELECT CAST(FROM_UNIXTIME("
         + "UNIX_TIMESTAMP('20181106', 'yyyyMMdd'), 'yyyy-MM-dd') AS DATE) date1, "
-        + "CAST(FROM_UNIXTIME(UNIX_TIMESTAMP('2018/11/06', 'yyyy/MM/dd'), 'yyyy-MM-dd') AS DATE) date2\n"
+        + "CAST(FROM_UNIXTIME(UNIX_TIMESTAMP('2018/11/06', 'yyyy/MM/dd'), 'yyyy-MM-dd') AS DATE) "
+        + "date2\n"
         + "FROM scott.EMP";
     final String expectedSpark = expectedHive;
     final String expectedSnowflake =
         "SELECT TO_DATE('20181106', 'YYYYMMDD') AS \"date1\", "
-        + "TO_DATE('2018/11/06', 'YYYY/MM/DD') AS \"date2\"\n"
-        + "FROM \"scott\".\"EMP\"";
+            + "TO_DATE('2018/11/06', 'YYYY/MM/DD') AS \"date2\"\n"
+            + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
@@ -5880,23 +5886,25 @@ public class RelToSqlConverterTest {
   @Test public void testFormatDatetimeRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode formatDateNode1 =
-            builder.call(SqlLibraryOperators.FORMAT_DATETIME, builder.literal("DDMMYY"), builder.literal("2008-12-25 15:30:00"));
+        builder.call(SqlLibraryOperators.FORMAT_DATETIME, builder.literal("DDMMYY"),
+            builder.literal("2008-12-25 15:30:00"));
     final RexNode formatDateNode2 =
-            builder.call(SqlLibraryOperators.FORMAT_DATETIME, builder.literal("YY/MM/DD"), builder.literal("2012-12-25 12:50:10"));
+        builder.call(SqlLibraryOperators.FORMAT_DATETIME, builder.literal("YY/MM/DD"),
+            builder.literal("2012-12-25 12:50:10"));
     final RelNode root = builder
-            .scan("EMP")
-            .project(builder.alias(formatDateNode1, "date1"),
-                    builder.alias(formatDateNode2, "date2"))
-            .build();
+        .scan("EMP")
+        .project(builder.alias(formatDateNode1, "date1"),
+            builder.alias(formatDateNode2, "date2"))
+        .build();
     final String expectedSql = "SELECT FORMAT_DATETIME('DDMMYY', '2008-12-25 15:30:00') AS "
-            + "\"date1\", FORMAT_DATETIME('YY/MM/DD', '2012-12-25 12:50:10') AS \"date2\"\n"
-            + "FROM \"scott\".\"EMP\"";
+        + "\"date1\", FORMAT_DATETIME('YY/MM/DD', '2012-12-25 12:50:10') AS \"date2\"\n"
+        + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT FORMAT_DATETIME('%d%m%y', '2008-12-25 15:30:00') "
-            + "AS date1, FORMAT_DATETIME('%y/%m/%d', '2012-12-25 12:50:10') AS date2\n"
-            + "FROM scott.EMP";
+        + "AS date1, FORMAT_DATETIME('%y/%m/%d', '2012-12-25 12:50:10') AS date2\n"
+        + "FROM scott.EMP";
     final String expectedSpark = "SELECT DATE_FORMAT('2008-12-25 15:30:00', 'ddMMyy') date1, "
-            + "DATE_FORMAT('2012-12-25 12:50:10', 'yy/MM/dd') date2\n"
-            + "FROM scott.EMP";
+        + "DATE_FORMAT('2012-12-25 12:50:10', 'yy/MM/dd') date2\n"
+        + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
@@ -6224,7 +6232,7 @@ public class RelToSqlConverterTest {
   @Test public void testLog10ForColumn() {
     final String query = "SELECT LOG10(\"product_id\") as dd from \"product\"";
     final String expectedSnowFlake = "SELECT LOG(10, \"product_id\") AS \"DD\"\n"
-                      + "FROM \"foodmart\".\"product\"";
+        + "FROM \"foodmart\".\"product\"";
     sql(query)
         .withSnowflake()
         .ok(expectedSnowFlake);
@@ -6233,15 +6241,16 @@ public class RelToSqlConverterTest {
   @Test public void testDivideIntegerSnowflake() {
     final RelBuilder builder = relBuilder();
     final RexNode intdivideRexNode =
-            builder.call(SqlStdOperatorTable.DIVIDE_INTEGER, builder.scan("EMP").field(0), builder.scan("EMP").field(3));
+        builder.call(SqlStdOperatorTable.DIVIDE_INTEGER, builder.scan("EMP").field(0),
+            builder.scan("EMP").field(3));
     final RelNode root = builder
-            .scan("EMP")
-            .project(builder.alias(intdivideRexNode, "a"))
-            .build();
+        .scan("EMP")
+        .project(builder.alias(intdivideRexNode, "a"))
+        .build();
     final String expectedSql = "SELECT \"EMPNO\" /INT \"MGR\" AS \"a\"\n"
-            + "FROM \"scott\".\"EMP\"";
+        + "FROM \"scott\".\"EMP\"";
     final String expectedSF = "SELECT FLOOR(\"EMPNO\" / \"MGR\") AS \"a\"\n"
-            + "FROM \"scott\".\"EMP\"";
+        + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSF));
   }

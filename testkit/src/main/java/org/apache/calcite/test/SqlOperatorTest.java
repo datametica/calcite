@@ -9632,6 +9632,39 @@ public class SqlOperatorTest {
     f.setFor(SqlLibraryOperators.IFNULL, VmName.EXPAND);
     checkNvl(f, FunctionAlias.of(SqlLibraryOperators.IFNULL));
   }
+//
+//  protected SqlTester bigQueryTester() {
+//    return tester.withOperatorTable(
+//            SqlLibraryOperatorTableFactory.INSTANCE
+//                .getOperatorTable(SqlLibrary.STANDARD, SqlLibrary.BIGQUERY))
+//        .withConnectionFactory(
+//            CalciteAssert.EMPTY_CONNECTION_FACTORY
+//                .with(new CalciteAssert
+//                    .AddSchemaSpecPostProcessor(CalciteAssert.SchemaSpec.HR))
+//                .with(CalciteConnectionProperty.FUN, "bigquery"));
+//  }
+//
+//  protected SqlTester hiveTester() {
+//    return tester.withOperatorTable(
+//            SqlLibraryOperatorTableFactory.INSTANCE
+//                .getOperatorTable(SqlLibrary.STANDARD, SqlLibrary.HIVE))
+//        .withConnectionFactory(
+//            CalciteAssert.EMPTY_CONNECTION_FACTORY
+//                .with(new CalciteAssert
+//                    .AddSchemaSpecPostProcessor(CalciteAssert.SchemaSpec.HR))
+//                .with(CalciteConnectionProperty.FUN, "hive"));
+//  }
+//
+//  protected SqlTester sparkTester() {
+//    return tester.withOperatorTable(
+//            SqlLibraryOperatorTableFactory.INSTANCE
+//                .getOperatorTable(SqlLibrary.STANDARD, SqlLibrary.SPARK))
+//        .withConnectionFactory(
+//            CalciteAssert.EMPTY_CONNECTION_FACTORY
+//                .with(new CalciteAssert
+//                    .AddSchemaSpecPostProcessor(CalciteAssert.SchemaSpec.HR))
+//                .with(CalciteConnectionProperty.FUN, "spark"));
+//  }
 
   @Test void testNvlFunc() {
     final SqlOperatorFixture f = fixture();
@@ -9647,7 +9680,29 @@ public class SqlOperatorTest {
         "VARCHAR(20) NOT NULL");
     f12.checkNull("nvl(CAST(NULL AS VARCHAR(6)), cast(NULL AS VARCHAR(4)))");
     checkNvl(f, FunctionAlias.of(SqlLibraryOperators.NVL));
+//
+//    final SqlTester tester3 = hiveTester();
+//    tester3.checkString("nvl(1, 2)", "1", "INTEGER NOT NULL");
+//    tester3.checkString("nvl(null,'abc')", "abc", "CHAR(3) NOT NULL");
+//    tester3.checkString("nvl('xyz','abc')", "xyz", "CHAR(3) NOT NULL");
+//    tester3.checkString("nvl(SUBSTRING('xyz',1,7),'abc')", "xyz", "VARCHAR(3) NOT NULL");
+//
+//    final SqlTester tester4 = sparkTester();
+//    tester4.checkString("nvl(1, 2)", "1", "INTEGER NOT NULL");
+//    tester4.checkString("nvl(null,'abc')", "abc", "CHAR(3) NOT NULL");
+//    tester4.checkString("nvl('xyz','abc')", "xyz", "CHAR(3) NOT NULL");
+//    tester4.checkString("nvl(SUBSTRING('xyz',1,7),'abc')", "xyz", "VARCHAR(3) NOT NULL");
   }
+
+//  @Test public void testIfNullFunc() {
+//    final SqlTester tester = bigQueryTester();
+//    tester.setFor(SqlLibraryOperators.IFNULL);
+//    tester.checkString("ifnull(1, 2)", "1", "INTEGER NOT NULL");
+//    tester.checkString("ifnull(null,'abc')", "abc", "CHAR(3) NOT NULL");
+//    tester.checkString("ifnull('xyz','abc')", "xyz", "CHAR(3) NOT NULL");
+//    tester.checkString("ifnull(SUBSTRING('xyz',1,7),'abc')", "xyz", "VARCHAR(3) NOT NULL");
+//  }
+
 
   /** Tests the {@code NVL} and {@code IFNULL} operators. */
   void checkNvl(SqlOperatorFixture f0, FunctionAlias functionAlias) {
