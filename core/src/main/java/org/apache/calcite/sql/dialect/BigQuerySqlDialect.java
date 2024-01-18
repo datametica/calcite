@@ -767,11 +767,11 @@ public class BigQuerySqlDialect extends SqlDialect {
         (SqlIntervalLiteral.IntervalValue) literal.getValue();
     switch (literal.getTypeName()) {
     case INTERVAL_HOUR_SECOND:
-      long equivalentSecondValue =
-          SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(), interval.getIntervalQualifier()) / 1000;
+      long equivalentSecondValue = SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(),
+              interval.getIntervalQualifier()) / 1000;
       SqlIntervalQualifier qualifier =
-          new SqlIntervalQualifier(TimeUnit.SECOND, RelDataType.PRECISION_NOT_SPECIFIED, TimeUnit.SECOND,
-          RelDataType.PRECISION_NOT_SPECIFIED, SqlParserPos.ZERO);
+          new SqlIntervalQualifier(TimeUnit.SECOND, RelDataType.PRECISION_NOT_SPECIFIED,
+                  TimeUnit.SECOND, RelDataType.PRECISION_NOT_SPECIFIED, SqlParserPos.ZERO);
       return SqlLiteral.createInterval(interval.getSign(), Long.toString(equivalentSecondValue),
           qualifier, literal.getParserPosition());
     default:
@@ -860,12 +860,14 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "FORMAT_DATE":
     case "FORMAT_DATETIME":
       SqlCall formatCall =
-          call.getOperator().createCall(SqlParserPos.ZERO, creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()), call.operand(1));
+          call.getOperator().createCall(SqlParserPos.ZERO,
+                  creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()), call.operand(1));
       super.unparseCall(writer, formatCall, leftPrec, rightPrec);
       break;
     case "STR_TO_DATE":
       SqlCall parseDateCall =
-          PARSE_DATE.createCall(SqlParserPos.ZERO, creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
+          PARSE_DATE.createCall(SqlParserPos.ZERO,
+                  creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
       unparseCall(writer, parseDateCall, leftPrec, rightPrec);
       break;
     default:

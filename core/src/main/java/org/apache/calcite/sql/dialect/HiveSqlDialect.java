@@ -609,7 +609,8 @@ public class HiveSqlDialect extends SqlDialect {
     call.getOperandList().toArray(operands);
     SqlParserPos pos = call.getParserPosition();
     SqlNode[] ifOperands =
-        new SqlNode[]{new SqlBasicCall(EQUALS, operands, pos), SqlLiteral.createNull(SqlParserPos.ZERO), operands[0]};
+        new SqlNode[]{new SqlBasicCall(EQUALS, operands, pos),
+                SqlLiteral.createNull(SqlParserPos.ZERO), operands[0]};
     SqlCall ifCall = new SqlBasicCall(IF, ifOperands, pos);
     unparseCall(writer, ifCall, leftPrec, rightPrec);
   }
@@ -636,7 +637,8 @@ public class HiveSqlDialect extends SqlDialect {
     case "FORMAT_TIME":
     case "FORMAT_DATE":
       SqlCall dateFormatCall =
-          DATE_FORMAT.createCall(SqlParserPos.ZERO, call.operand(1), creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()));
+          DATE_FORMAT.createCall(SqlParserPos.ZERO, call.operand(1),
+                  creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()));
       unparseCall(writer, dateFormatCall, leftPrec, rightPrec);
       break;
     case "STR_TO_DATE":
@@ -653,11 +655,14 @@ public class HiveSqlDialect extends SqlDialect {
 
   private void unparseStrToDate(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     SqlCall unixTimestampCall =
-        UNIX_TIMESTAMP.createCall(SqlParserPos.ZERO, call.operand(0), creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()));
+        UNIX_TIMESTAMP.createCall(SqlParserPos.ZERO, call.operand(0),
+                creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()));
     SqlCall fromUnixTimeCall =
-        FROM_UNIXTIME.createCall(SqlParserPos.ZERO, unixTimestampCall, SqlLiteral.createCharString("yyyy-MM-dd", SqlParserPos.ZERO));
+        FROM_UNIXTIME.createCall(SqlParserPos.ZERO, unixTimestampCall,
+                SqlLiteral.createCharString("yyyy-MM-dd", SqlParserPos.ZERO));
     SqlCall castToDateCall =
-        CAST.createCall(SqlParserPos.ZERO, fromUnixTimeCall, getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.DATE)));
+        CAST.createCall(SqlParserPos.ZERO, fromUnixTimeCall,
+                getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.DATE)));
     unparseCall(writer, castToDateCall, leftPrec, rightPrec);
   }
 
