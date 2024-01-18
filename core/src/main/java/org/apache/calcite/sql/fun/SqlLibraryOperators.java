@@ -894,7 +894,8 @@ public abstract class SqlLibraryOperators {
 //          OperandTypes.family(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.DATETIME_INTERVAL),
 //          SqlFunctionCategory.TIMEDATE) {
 //
-//        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+//        @Override public void unparse(SqlWriter writer, SqlCall call,
+//                    int leftPrec, int rightPrec) {
 //          writer.getDialect().unparseIntervalOperandsBasedFunctions(
 //              writer, call, leftPrec, rightPrec);
 //        }

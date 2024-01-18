@@ -5937,8 +5937,8 @@ public class SqlFunctions {
   }
 
   /***
-   * If size is less than the str, then return substring of str
-   * Append whitespace at the beginning of the str
+   * If size is less than the str, then return substring of str.
+   * Append whitespace at the beginning of the str.
    *
    * @return String
    */
@@ -5947,8 +5947,8 @@ public class SqlFunctions {
   }
 
   /***
-   * If size is less than the str, then return substring of str
-   * Append padStr at the beginning of the str
+   * If size is less than the str, then return substring of str.
+   * Append padStr at the beginning of the str.
    *
    * @return String
    */
@@ -5962,8 +5962,8 @@ public class SqlFunctions {
 
 
   /***
-   * If size is less than the str, then return substring of str
-   * Append whitespace at the end of the str
+   * If size is less than the str, then return substring of str.
+   * Append whitespace at the end of the str.
    *
    * @return String
    */
@@ -5972,8 +5972,8 @@ public class SqlFunctions {
   }
 
   /***
-   * If size is less than the str, then return substring of str
-   * Append padStr at the end of the str
+   * If size is less than the str, then return substring of str.
+   * Append padStr at the end of the str.
    *
    * @return String
    */
@@ -5986,7 +5986,7 @@ public class SqlFunctions {
   }
 
   /***
-   * Format string as per the {format} defined
+   * Format string as per the {format} defined.
    * @param format operand
    * @param value operand
    * @return Object
@@ -5996,7 +5996,7 @@ public class SqlFunctions {
   }
 
   /***
-   * Format string as per the {format} defined
+   * Format string as per the {format} defined.
    * @param value operand
    * @param format operand
    * @return Object
@@ -6019,7 +6019,7 @@ public class SqlFunctions {
     return String.format(Locale.ENGLISH, pattern.toString(), value);
   }
 
-  /** Return date value from Timestamp */
+  /** Return date value from Timestamp. */
   public static java.sql.Date timestampToDate(Object obj) {
     long timestamp = 0;
     if (obj instanceof String) {

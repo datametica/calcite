@@ -2170,7 +2170,7 @@ public class RelBuilder {
    *                    projections are trivial
    */
   public RelBuilder projectNamed(Iterable<? extends RexNode> nodes,
-                                 @Nullable Iterable<? extends @Nullable String> fieldNames, boolean force) {
+               @Nullable Iterable<? extends @Nullable String> fieldNames, boolean force) {
     return projectNamed(nodes, fieldNames, force, ImmutableSet.of());
   }
 

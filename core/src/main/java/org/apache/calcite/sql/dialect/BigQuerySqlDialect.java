@@ -413,78 +413,78 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.keyword("OVER");
       call.operand(1).unparse(writer, leftPrec, rightPrec);
       break;
-      case CHARACTER_LENGTH:
-      case CHAR_LENGTH:
-        final SqlWriter.Frame lengthFrame = writer.startFunCall("LENGTH");
-        call.operand(0).unparse(writer, leftPrec, rightPrec);
-        writer.endFunCall(lengthFrame);
-        break;
-      case SUBSTRING:
-        final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTR");
-        for (SqlNode operand : call.getOperandList()) {
-          writer.sep(",");
-          operand.unparse(writer, leftPrec, rightPrec);
-        }
-        writer.endFunCall(substringFrame);
-        break;
-      case TRUNCATE:
-        final SqlWriter.Frame truncateFrame = writer.startFunCall("TRUNC");
-        for (SqlNode operand : call.getOperandList()) {
-          writer.sep(",");
-          operand.unparse(writer, leftPrec, rightPrec);
-        }
-        writer.endFunCall(truncateFrame);
-        break;
-      case CONCAT:
-        final SqlWriter.Frame concatFrame = writer.startFunCall("CONCAT");
-        for (SqlNode operand : call.getOperandList()) {
-          writer.sep(",");
-          operand.unparse(writer, leftPrec, rightPrec);
-        }
-        writer.endFunCall(concatFrame);
-        break;
-      case DIVIDE_INTEGER:
-        final SqlWriter.Frame castFrame = writer.startFunCall("CAST");
-        unparseDivideInteger(writer, call, leftPrec, rightPrec);
-        writer.sep("AS");
-        writer.literal("INT64");
-        writer.endFunCall(castFrame);
-        break;
-      case REGEXP_SUBSTR:
-        unparseRegexSubstr(writer, call, leftPrec, rightPrec);
-        break;
-      case TO_NUMBER:
-        ToNumberUtils.unparseToNumber(writer, call, leftPrec, rightPrec);
-        break;
-      case ASCII:
-        SqlWriter.Frame toCodePointsFrame = writer.startFunCall("TO_CODE_POINTS");
-        for (SqlNode operand : call.getOperandList()) {
-          writer.sep(",");
-          operand.unparse(writer, leftPrec, rightPrec);
-        }
-        writer.endFunCall(toCodePointsFrame);
-        writer.literal("[OFFSET(0)]");
-        break;
-      case NVL:
-        SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
-        SqlCall sqlCall =
-                new SqlBasicCall(IFNULL, extractNodeOperands, SqlParserPos.ZERO);
-        unparseCall(writer, sqlCall, leftPrec, rightPrec);
-        break;
-      case OTHER_FUNCTION:
-        unparseOtherFunction(writer, call, leftPrec, rightPrec);
-        break;
-      case COLLECTION_TABLE:
-        if (call.operandCount() > 1) {
-          throw new RuntimeException("Table function supports only one argument in Big Query");
-        }
-        call.operand(0).unparse(writer, leftPrec, rightPrec);
-        SqlCollectionTableOperator operator = (SqlCollectionTableOperator) call.getOperator();
-        if (operator.getAliasName() == null) {
-          throw new RuntimeException("Table function must have alias in Big Query");
-        }
-        writer.sep("as " + operator.getAliasName());
-        break;
+    case CHARACTER_LENGTH:
+    case CHAR_LENGTH:
+      final SqlWriter.Frame lengthFrame = writer.startFunCall("LENGTH");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(lengthFrame);
+      break;
+    case SUBSTRING:
+      final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTR");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(substringFrame);
+      break;
+    case TRUNCATE:
+      final SqlWriter.Frame truncateFrame = writer.startFunCall("TRUNC");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(truncateFrame);
+      break;
+    case CONCAT:
+      final SqlWriter.Frame concatFrame = writer.startFunCall("CONCAT");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(concatFrame);
+      break;
+    case DIVIDE_INTEGER:
+      final SqlWriter.Frame castFrame = writer.startFunCall("CAST");
+      unparseDivideInteger(writer, call, leftPrec, rightPrec);
+      writer.sep("AS");
+      writer.literal("INT64");
+      writer.endFunCall(castFrame);
+      break;
+    case REGEXP_SUBSTR:
+      unparseRegexSubstr(writer, call, leftPrec, rightPrec);
+      break;
+    case TO_NUMBER:
+      ToNumberUtils.unparseToNumber(writer, call, leftPrec, rightPrec);
+      break;
+    case ASCII:
+      SqlWriter.Frame toCodePointsFrame = writer.startFunCall("TO_CODE_POINTS");
+      for (SqlNode operand : call.getOperandList()) {
+        writer.sep(",");
+        operand.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endFunCall(toCodePointsFrame);
+      writer.literal("[OFFSET(0)]");
+      break;
+    case NVL:
+      SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
+      SqlCall sqlCall =
+              new SqlBasicCall(IFNULL, extractNodeOperands, SqlParserPos.ZERO);
+      unparseCall(writer, sqlCall, leftPrec, rightPrec);
+      break;
+    case OTHER_FUNCTION:
+      unparseOtherFunction(writer, call, leftPrec, rightPrec);
+      break;
+    case COLLECTION_TABLE:
+      if (call.operandCount() > 1) {
+        throw new RuntimeException("Table function supports only one argument in Big Query");
+      }
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      SqlCollectionTableOperator operator = (SqlCollectionTableOperator) call.getOperator();
+      if (operator.getAliasName() == null) {
+        throw new RuntimeException("Table function must have alias in Big Query");
+      }
+      writer.sep("as " + operator.getAliasName());
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }

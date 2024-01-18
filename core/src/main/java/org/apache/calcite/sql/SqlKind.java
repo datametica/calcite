@@ -154,12 +154,12 @@ public enum SqlKind {
   POSITION,
 
   /**
-   * CHARACTER_LENGTH Function
+   * CHARACTER_LENGTH Function.
    * */
   CHARACTER_LENGTH,
 
   /**
-   * SUBSTRING Function
+   * SUBSTRING Function.
    * */
   SUBSTRING,
 
@@ -1290,7 +1290,7 @@ public enum SqlKind {
   OTHER_DDL,
 
   /**
-   * CONCAT Function
+   * CONCAT Function.
    */
   CONCAT,
 

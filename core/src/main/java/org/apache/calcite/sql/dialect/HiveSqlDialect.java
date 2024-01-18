@@ -328,7 +328,7 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   /**
-   * This method will handle the TRIM function if the value to be trimmed is space
+   * This method will handle the TRIM function if the value to be trimmed is space.
    * Below is an example :
    * INPUT : SELECT TRIM(both ' ' from "ABC")
    * OUPUT : SELECT TRIM(ABC)
@@ -358,7 +358,7 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   /**
-   * This method will handle the TRIM function if the value to be trimmed is not space
+   * This method will handle the TRIM function if the value to be trimmed is not space.
    * Below is an example :
    * INPUT : SELECT TRIM(both 'A' from "ABC")
    * OUPUT : SELECT REGEXP_REPLACE("ABC", '^(A)*', '')
@@ -395,13 +395,13 @@ public class HiveSqlDialect extends SqlDialect {
   @Override public @Nullable SqlNode getCastSpec(final RelDataType type) {
     if (type instanceof BasicSqlType) {
       switch (type.getSqlTypeName()) {
-        case INTEGER:
-          SqlAlienSystemTypeNameSpec typeNameSpec =
-                  new SqlAlienSystemTypeNameSpec("INT", type.getSqlTypeName(),
-                          SqlParserPos.ZERO);
-          return new SqlDataTypeSpec(typeNameSpec, SqlParserPos.ZERO);
-        default:
-          break;
+      case INTEGER:
+        SqlAlienSystemTypeNameSpec typeNameSpec =
+                new SqlAlienSystemTypeNameSpec("INT", type.getSqlTypeName(),
+                        SqlParserPos.ZERO);
+        return new SqlDataTypeSpec(typeNameSpec, SqlParserPos.ZERO);
+      default:
+        break;
       }
     }
     return super.getCastSpec(type);

@@ -473,17 +473,17 @@ public class RelToSqlConverter extends SqlImplementor
       addSelect(selectList, sqlExpr, e.getRowType());
     }
 
-      final SqlNodeList selectNodeList = new SqlNodeList(selectList, POS);
-      if (builder.select.getGroup() == null
+    final SqlNodeList selectNodeList = new SqlNodeList(selectList, POS);
+    if (builder.select.getGroup() == null
           && builder.select.getHaving() == null
           && SqlUtil.containsAgg(builder.select.getSelectList())
           && !SqlUtil.containsAgg(selectNodeList)) {
         // We are just about to remove the last aggregate function from the
         // SELECT clause. The "GROUP BY ()" was implicit, but we now need to
         // make it explicit.
-        builder.setGroupBy(SqlNodeList.EMPTY);
-      }
-      builder.setSelect(selectNodeList);
+      builder.setGroupBy(SqlNodeList.EMPTY);
+    }
+    builder.setSelect(selectNodeList);
     return builder.result();
   }
 

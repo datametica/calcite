@@ -49,8 +49,8 @@ public class ToNumberUtils {
       } else {
         if (call.operand(0) instanceof SqlCharStringLiteral) {
           String firstOperand = call.operand(0).toString().replaceAll(regExRemove, "");
-          SqlNode[] sqlNode =
-                  new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO)};
+          SqlNode[] sqlNode = new SqlNode[]{SqlLiteral.createCharString(
+                  firstOperand.trim(), SqlParserPos.ZERO)};
           call.setOperand(0, sqlNode[0]);
         }
 
