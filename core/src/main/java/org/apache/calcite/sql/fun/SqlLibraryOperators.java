@@ -45,7 +45,6 @@ import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
-import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Optionality;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Static;
@@ -55,34 +54,27 @@ import com.google.common.collect.ImmutableList;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.google.common.collect.ImmutableList;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.apache.calcite.sql.fun.SqlLibrary.ALL;
+import static org.apache.calcite.sql.fun.SqlLibrary.BIGQUERY;
 import static org.apache.calcite.sql.fun.SqlLibrary.BIG_QUERY;
 import static org.apache.calcite.sql.fun.SqlLibrary.CALCITE;
 import static org.apache.calcite.sql.fun.SqlLibrary.HIVE;
 import static org.apache.calcite.sql.fun.SqlLibrary.MSSQL;
-import static org.apache.calcite.sql.fun.SqlLibrary.BIGQUERY;
 import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.ORACLE;
 import static org.apache.calcite.sql.fun.SqlLibrary.POSTGRESQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
+import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
+import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
 import static org.apache.calcite.util.Static.RESOURCE;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
-import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
-import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
-import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
-import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
-import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
-
 
 /**
  * Defines functions and operators that are not part of standard SQL but
@@ -337,12 +329,12 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIG_QUERY, MYSQL, ORACLE})
   public static final SqlFunction INSTR = new SqlPositionFunction("INSTR");
 
+
   /** Generic "SUBSTR(string, position [, substringLength ])" function. */
   private static final SqlBasicFunction SUBSTR =
-      SqlBasicFunction.create("SUBSTR", ReturnTypes.ARG0_NULLABLE_VARYING,
-          OperandTypes.STRING_INTEGER_OPTIONAL_INTEGER,
-          SqlFunctionCategory.STRING);
-
+          SqlBasicFunction.create("SUBSTR", ReturnTypes.ARG0_NULLABLE_VARYING,
+                  OperandTypes.STRING_INTEGER_OPTIONAL_INTEGER,
+                  SqlFunctionCategory.STRING);
   /** The "ENDS_WITH(value1, value2)" function (BigQuery, PostgreSQL). */
   @LibraryOperator(libraries = {BIG_QUERY, POSTGRESQL})
   public static final SqlBasicFunction ENDS_WITH =
@@ -858,12 +850,12 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIGQUERY, HIVE, SPARK})
-  public static final SqlFunction CURRENT_TIMESTAMP = new SqlCurrentTimestampFunction(
-          "CURRENT_TIMESTAMP", SqlTypeName.TIMESTAMP);
+  public static final SqlFunction CURRENT_TIMESTAMP =
+          new SqlCurrentTimestampFunction("CURRENT_TIMESTAMP", SqlTypeName.TIMESTAMP);
 
   @LibraryOperator(libraries = {HIVE, SPARK})
-  public static final SqlFunction DATE_FORMAT = new SqlFunction("DATE_FORMAT",
-      SqlKind.OTHER_FUNCTION,
+  public static final SqlFunction DATE_FORMAT =
+      new SqlFunction("DATE_FORMAT", SqlKind.OTHER_FUNCTION,
       ReturnTypes.VARCHAR_2000_NULLABLE, null,
       OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
       SqlFunctionCategory.TIMEDATE);
@@ -2294,8 +2286,8 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {STANDARD})
-  public static final SqlFunction STR_TO_DATE = new SqlFunction(
-      "STR_TO_DATE",
+  public static final SqlFunction STR_TO_DATE =
+      new SqlFunction("STR_TO_DATE",
       SqlKind.OTHER_FUNCTION,
       ReturnTypes.DATE_NULLABLE,
       null,
@@ -2325,8 +2317,8 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {STANDARD})
-  public static final SqlFunction STRING_SPLIT = new SqlFunction(
-      "STRING_SPLIT",
+  public static final SqlFunction STRING_SPLIT =
+      new SqlFunction("STRING_SPLIT",
       SqlKind.OTHER_FUNCTION,
       ReturnTypes.MULTISET_NULLABLE,
       null,
@@ -2379,8 +2371,8 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIGQUERY})
-  public static final SqlFunction TIMESTAMP_TO_DATE = new SqlFunction(
-      "DATE",
+  public static final SqlFunction TIMESTAMP_TO_DATE =
+      new SqlFunction("DATE",
       SqlKind.OTHER_FUNCTION,
       ReturnTypes.ARG0_NULLABLE,
       null,
@@ -2388,4 +2380,3 @@ public abstract class SqlLibraryOperators {
       SqlFunctionCategory.TIMEDATE);
 
 }
-// End SqlLibraryOperators.java

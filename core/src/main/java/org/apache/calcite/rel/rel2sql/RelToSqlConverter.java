@@ -78,18 +78,14 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSampleSpec;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTableRef;
-import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
-import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
-import org.apache.calcite.sql.fun.SqlRowOperator;
 import org.apache.calcite.sql.fun.SqlSingleValueAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.validate.SqlModality;
+import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
@@ -112,8 +108,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -458,23 +452,23 @@ public class RelToSqlConverter extends SqlImplementor
       x = visitInput(e, 0, Clause.SELECT);
     }
     parseCorrelTable(e, x);
-    if (isStar(e.getChildExps(), e.getInput().getRowType(), e.getRowType())) {
+    if (isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())) {
       return x;
     }
     final Builder builder =
         x.builder(e, Clause.SELECT);
     final List<SqlNode> selectList = new ArrayList<>();
-    for (RexNode ref : e.getChildExps()) {
+    for (RexNode ref : e.getProjects()) {
       SqlNode sqlExpr = builder.context.toSql(null, ref);
       RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
       if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
-        sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
+        sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr, targetField.getType());
       }
 
       if (SqlUtil.isNullLiteral(sqlExpr, false)
           && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
-        sqlExpr = castNullType(sqlExpr, targetField);
+        sqlExpr = castNullType(sqlExpr, targetField.getType());
       }
       addSelect(selectList, sqlExpr, e.getRowType());
     }
@@ -490,7 +484,6 @@ public class RelToSqlConverter extends SqlImplementor
         builder.setGroupBy(SqlNodeList.EMPTY);
       }
       builder.setSelect(selectNodeList);
-    }
     return builder.result();
   }
 
@@ -1068,38 +1061,6 @@ public class RelToSqlConverter extends SqlImplementor
     }
     offsetFetch(e, builder);
     return builder.result();
-  }
-
-  public Result visit(TableFunctionScan e) {
-    List<RelDataTypeField> fieldList = e.getRowType().getFieldList();
-    if (fieldList == null || fieldList.size() > 1) {
-      throw new RuntimeException("Table function supports only one argument");
-    }
-    final List<SqlNode> inputSqlNodes = new ArrayList<>();
-    final int inputSize = e.getInputs().size();
-    for (int i = 0; i < inputSize; i++) {
-      Result child = visitChild(i, e.getInput(i));
-      inputSqlNodes.add(child.asStatement());
-    }
-    final Context context = tableFunctionScanContext(inputSqlNodes);
-    SqlNode callNode = context.toSql(null, e.getCall());
-    // Convert to table function call, "TABLE($function_name(xxx))"
-    SqlSpecialOperator collectionTable = new SqlCollectionTableOperator("TABLE",
-            SqlModality.RELATION, e.getRowType().getFieldNames().get(0));
-    SqlNode tableCall = new SqlBasicCall(
-            collectionTable,
-            new SqlNode[]{callNode},
-            SqlParserPos.ZERO);
-    SqlNode select = new SqlSelect(
-            SqlParserPos.ZERO, null, null, tableCall,
-            null, null, null, null, null, null, null);
-    Map<String, RelDataType> aliasesMap = new HashMap<>();
-    RelDataTypeField relDataTypeField = fieldList.get(0);
-    aliasesMap.put(relDataTypeField.getName(), e.getRowType());
-    Result x = new Result(select,
-            ImmutableList.of(Clause.SELECT),
-            relDataTypeField.getName(), e.getRowType(), aliasesMap);
-    return x;
   }
 
   /** Adds OFFSET and FETCH to a builder, if applicable.

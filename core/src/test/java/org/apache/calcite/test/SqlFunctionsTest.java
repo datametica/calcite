@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -44,11 +43,11 @@ import static org.apache.calcite.avatica.util.DateTimeUtils.timestampStringToUni
 import static org.apache.calcite.runtime.SqlFunctions.arraysOverlap;
 import static org.apache.calcite.runtime.SqlFunctions.charLength;
 import static org.apache.calcite.runtime.SqlFunctions.concat;
-import static org.apache.calcite.runtime.SqlFunctions.format;
 import static org.apache.calcite.runtime.SqlFunctions.concatMulti;
 import static org.apache.calcite.runtime.SqlFunctions.concatMultiWithNull;
 import static org.apache.calcite.runtime.SqlFunctions.concatMultiWithSeparator;
 import static org.apache.calcite.runtime.SqlFunctions.concatWithNull;
+import static org.apache.calcite.runtime.SqlFunctions.format;
 import static org.apache.calcite.runtime.SqlFunctions.fromBase64;
 import static org.apache.calcite.runtime.SqlFunctions.greater;
 import static org.apache.calcite.runtime.SqlFunctions.ifNull;
@@ -62,16 +61,13 @@ import static org.apache.calcite.runtime.SqlFunctions.lpad;
 import static org.apache.calcite.runtime.SqlFunctions.ltrim;
 import static org.apache.calcite.runtime.SqlFunctions.md5;
 import static org.apache.calcite.runtime.SqlFunctions.nvl;
-import static org.apache.calcite.runtime.SqlFunctions.posixRegex;
-import static org.apache.calcite.runtime.SqlFunctions.regexpReplace;
-import static org.apache.calcite.runtime.SqlFunctions.rpad;
 import static org.apache.calcite.runtime.SqlFunctions.position;
+import static org.apache.calcite.runtime.SqlFunctions.rpad;
 import static org.apache.calcite.runtime.SqlFunctions.rtrim;
 import static org.apache.calcite.runtime.SqlFunctions.sha1;
 import static org.apache.calcite.runtime.SqlFunctions.sha256;
 import static org.apache.calcite.runtime.SqlFunctions.sha512;
 import static org.apache.calcite.runtime.SqlFunctions.substring;
-import static org.apache.calcite.runtime.SqlFunctions.subtractMonths;
 import static org.apache.calcite.runtime.SqlFunctions.timestampToDate;
 import static org.apache.calcite.runtime.SqlFunctions.toBase64;
 import static org.apache.calcite.runtime.SqlFunctions.toInt;
@@ -1531,8 +1527,6 @@ class SqlFunctionsTest {
     assertThat(timestampToDate("2020-12-12 12:12:12").toString(), is("2020-12-12"));
     assertThat(timestampToDate(new Timestamp(1607731932)).toString(), is("1970-01-19"));
   }
-}
-
 
   /**
    * Tests that a date in the local time zone converts to a Unix timestamp in

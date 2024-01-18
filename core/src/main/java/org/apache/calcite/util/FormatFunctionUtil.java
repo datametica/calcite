@@ -174,5 +174,3 @@ public class FormatFunctionUtil {
     return modifiedOperand;
   }
 }
-
-// End FormatFunctionUtil.java

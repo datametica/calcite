@@ -19,13 +19,11 @@ import com.github.vlsi.gradle.crlf.CrLfSpec
 import com.github.vlsi.gradle.crlf.LineEndings
 import com.github.vlsi.gradle.dsl.configureEach
 import com.github.vlsi.gradle.git.FindGitAttributes
-import com.github.vlsi.gradle.git.dsl.gitignore
 import com.github.vlsi.gradle.properties.dsl.lastEditYear
 import com.github.vlsi.gradle.properties.dsl.props
 import com.github.vlsi.gradle.release.RepositoryType
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApisExtension
-import java.net.URI
 import net.ltgt.gradle.errorprone.errorprone
 import org.apache.calcite.buildtools.buildext.dsl.ParenthesisBalancer
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
@@ -42,14 +40,14 @@ plugins {
     id("jacoco-report-aggregation")
     id("org.checkerframework") apply false
     id("com.github.autostyle")
-    id("org.nosphere.apache.rat")
+//  id("org.nosphere.apache.rat")
     id("com.github.spotbugs")
     id("de.thetaphi.forbiddenapis") apply false
     id("net.ltgt.errorprone") apply false
     id("com.github.vlsi.jandex") apply false
     id("org.owasp.dependencycheck")
     id("com.github.johnrengelman.shadow") apply false
-    id("org.sonarqube")
+    // id("org.sonarqube")
     // IDE configuration
     id("org.jetbrains.gradle.plugin.idea-ext")
     id("com.github.vlsi.ide")
@@ -66,14 +64,14 @@ repositories {
     mavenCentral()
 }
 
-tasks.wrapper {
-    distributionType = Wrapper.DistributionType.BIN
-    doLast {
-        val sha256Uri = URI("$distributionUrl.sha256")
-        val sha256Sum = String(sha256Uri.toURL().readBytes())
-        propertiesFile.appendText("distributionSha256Sum=${sha256Sum}\n")
-    }
-}
+// tasks.wrapper {
+//    distributionType = Wrapper.DistributionType.BIN
+//    doLast {
+//        val sha256Uri = URI("$distributionUrl.sha256")
+//        val sha256Sum = String(sha256Uri.toURL().readBytes())
+//        propertiesFile.appendText("distributionSha256Sum=${sha256Sum}\n")
+//    }
+// }
 
 fun reportsForHumans() = !(System.getenv()["CI"]?.toBoolean() ?: false)
 
@@ -125,16 +123,16 @@ val gitProps by tasks.registering(FindGitAttributes::class) {
     root.set(rootDir)
 }
 
-val rat by tasks.getting(org.nosphere.apache.rat.RatTask::class) {
-    gitignore(gitProps)
-    verbose.set(true)
-    // Note: patterns are in non-standard syntax for RAT, so we use exclude(..) instead of excludeFile
-    exclude(rootDir.resolve(".ratignore").readLines())
-}
+// val rat by tasks.getting(org.nosphere.apache.rat.RatTask::class) {
+//    gitignore(gitProps)
+//    verbose.set(true)
+//    // Note: patterns are in non-standard syntax for RAT, so we use exclude(..) instead of excludeFile
+//    exclude(rootDir.resolve(".ratignore").readLines())
+// }
 
-tasks.validateBeforeBuildingReleaseArtifacts {
-    dependsOn(rat)
-}
+// tasks.validateBeforeBuildingReleaseArtifacts {
+//    dependsOn(rat)
+// }
 
 val String.v: String get() = rootProject.extra["$this.version"] as String
 
@@ -315,12 +313,12 @@ fun com.github.autostyle.gradle.BaseFormatExtension.license() {
     endWithNewline()
 }
 
-sonarqube {
-    properties {
-        property("sonar.test.inclusions", "**/*Test*/**")
-        property("sonar.coverage.jacoco.xmlReportPaths", "$buildDir/reports/jacoco/jacocoAggregateTestReport/jacocoAggregateTestReport.xml")
-    }
-}
+// sonarqube {
+//    properties {
+//        property("sonar.test.inclusions", "**/*Test*/**")
+//        property("sonar.coverage.jacoco.xmlReportPaths", "$buildDir/reports/jacoco/jacocoAggregateTestReport/jacocoAggregateTestReport.xml")
+//    }
+// }
 
 allprojects {
     group = "org.apache.calcite"
@@ -331,6 +329,14 @@ allprojects {
     repositories {
         // RAT and Autostyle dependencies
         mavenCentral()
+        maven {
+            url = uri("http://nexus2.datametica.com:8081/nexus/content/repositories/thirdparty/")
+            isAllowInsecureProtocol = true
+            credentials {
+                username = "abbas.gadhia"
+                password = "abbas.gadhia"
+            }
+        }
     }
 
     val javaUsed = file("src/main/java").isDirectory

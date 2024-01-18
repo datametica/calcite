@@ -80,5 +80,3 @@ public enum SqlDateTimeFormat {
   }
 
 }
-
-// End SqlDateTimeFormat.java

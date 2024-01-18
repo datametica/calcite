@@ -30,8 +30,8 @@ import org.apache.calcite.util.Util;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.ArrayList;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;

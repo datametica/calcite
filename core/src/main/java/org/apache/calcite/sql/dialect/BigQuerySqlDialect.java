@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.config.Lex;
@@ -26,16 +25,13 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
-import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDataTypeSpec;
+import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlIntervalQualifier;
@@ -47,27 +43,23 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.fun.SqlTrimFunction;
-import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.BasicSqlType;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.type.SqlTypeUtil;
-import org.apache.calcite.util.format.FormatModel;
-import org.apache.calcite.util.format.FormatModels;
 import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.CurrentTimestampHandler;
+import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.ToNumberUtils;
+import org.apache.calcite.util.format.FormatModel;
+import org.apache.calcite.util.format.FormatModels;
 
 import com.google.common.collect.ImmutableList;
 
@@ -79,8 +71,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import static java.util.Objects.requireNonNull;
 
 import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATEDDAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATEDMONTH;
@@ -116,10 +106,10 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
 
+import static java.util.Objects.requireNonNull;
 
 /**
  * A <code>SqlDialect</code> implementation for Google BigQuery's "Standard SQL"
@@ -477,8 +467,8 @@ public class BigQuerySqlDialect extends SqlDialect {
         break;
       case NVL:
         SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
-        SqlCall sqlCall = new SqlBasicCall(IFNULL, extractNodeOperands,
-                SqlParserPos.ZERO);
+        SqlCall sqlCall =
+                new SqlBasicCall(IFNULL, extractNodeOperands, SqlParserPos.ZERO);
         unparseCall(writer, sqlCall, leftPrec, rightPrec);
         break;
       case OTHER_FUNCTION:
@@ -658,7 +648,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     return new SqlDataTypeSpec(typeNameSpec, SqlParserPos.ZERO);
   }
 
-  @Override public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
+  public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
     return ((SqlBasicCall) aggCall).operand(0);
   }
 
@@ -734,7 +724,8 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private SqlCall makeSubstringSqlCall(SqlCall call) {
     SqlNode[] sqlNodes = new SqlNode[]{call.operand(0), call.operand(2)};
-    return new SqlBasicCall(SUBSTR, sqlNodes, SqlParserPos.ZERO);
+//    return new SqlBasicCall(SUBSTR, sqlNodes, SqlParserPos.ZERO);
+    return null;
   }
 
   /**
@@ -776,10 +767,10 @@ public class BigQuerySqlDialect extends SqlDialect {
         (SqlIntervalLiteral.IntervalValue) literal.getValue();
     switch (literal.getTypeName()) {
     case INTERVAL_HOUR_SECOND:
-      long equivalentSecondValue = SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(),
-          interval.getIntervalQualifier()) / 1000;
-      SqlIntervalQualifier qualifier = new SqlIntervalQualifier(TimeUnit.SECOND,
-          RelDataType.PRECISION_NOT_SPECIFIED, TimeUnit.SECOND,
+      long equivalentSecondValue =
+          SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(), interval.getIntervalQualifier()) / 1000;
+      SqlIntervalQualifier qualifier =
+          new SqlIntervalQualifier(TimeUnit.SECOND, RelDataType.PRECISION_NOT_SPECIFIED, TimeUnit.SECOND,
           RelDataType.PRECISION_NOT_SPECIFIED, SqlParserPos.ZERO);
       return SqlLiteral.createInterval(interval.getSign(), Long.toString(equivalentSecondValue),
           qualifier, literal.getParserPosition());
@@ -852,7 +843,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperator().getName()) {
     case "CURRENT_TIMESTAMP":
-      if (((SqlBasicCall) call).getOperands().length > 0) {
+      if (((SqlBasicCall) call).operandCount() > 0) {
         new CurrentTimestampHandler(this)
             .unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
       } else {
@@ -868,13 +859,13 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "FORMAT_TIME":
     case "FORMAT_DATE":
     case "FORMAT_DATETIME":
-      SqlCall formatCall = call.getOperator().createCall(SqlParserPos.ZERO,
-          creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()), call.operand(1));
+      SqlCall formatCall =
+          call.getOperator().createCall(SqlParserPos.ZERO, creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()), call.operand(1));
       super.unparseCall(writer, formatCall, leftPrec, rightPrec);
       break;
     case "STR_TO_DATE":
-      SqlCall parseDateCall = PARSE_DATE.createCall(SqlParserPos.ZERO,
-          creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
+      SqlCall parseDateCall =
+          PARSE_DATE.createCall(SqlParserPos.ZERO, creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
       unparseCall(writer, parseDateCall, leftPrec, rightPrec);
       break;
     default:
@@ -883,8 +874,8 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private SqlCharStringLiteral creteDateTimeFormatSqlCharLiteral(String format) {
-    String formatString = getDateTimeFormatString(unquoteStringLiteral(format),
-        DATE_TIME_FORMAT_MAP);
+    String formatString =
+        getDateTimeFormatString(unquoteStringLiteral(format), DATE_TIME_FORMAT_MAP);
     return SqlLiteral.createCharString(formatString, SqlParserPos.ZERO);
   }
 

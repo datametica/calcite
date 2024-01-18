@@ -40,15 +40,14 @@ public class PaddingFunctionUtil {
   public static void unparseCall(SqlWriter writer, SqlCall call,
       int leftPrec, int rightPrec) {
     SqlFunction sqlFunction = call.getOperator().getName().equals(RPAD.getName()) ? RPAD : LPAD;
-    if (((SqlBasicCall) call).operands.length == 2) {
-      SqlCharStringLiteral blankLiteral = SqlLiteral.createCharString(StringUtils.SPACE,
-          SqlParserPos.ZERO);
-      SqlCall paddingFunctionCall = sqlFunction.createCall(SqlParserPos.ZERO, call.operand(0),
-          call.operand(1), blankLiteral);
+    if (((SqlBasicCall) call).operandCount() == 2) {
+      SqlCharStringLiteral blankLiteral =
+          SqlLiteral.createCharString(StringUtils.SPACE, SqlParserPos.ZERO);
+      SqlCall paddingFunctionCall =
+          sqlFunction.createCall(SqlParserPos.ZERO, call.operand(0), call.operand(1), blankLiteral);
       sqlFunction.unparse(writer, paddingFunctionCall, leftPrec, rightPrec);
     } else {
       sqlFunction.unparse(writer, call, leftPrec, rightPrec);
     }
   }
 }
-// End PaddingFunctionUtil.java

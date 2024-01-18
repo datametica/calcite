@@ -29,25 +29,20 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.dialect.AnsiSqlDialect;
-import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.AbstractSqlType;
-import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
-import org.apache.calcite.util.format.FormatModel;
-import org.apache.calcite.util.format.FormatModels;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.TimeString;
+import org.apache.calcite.util.format.FormatModel;
+import org.apache.calcite.util.format.FormatModels;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
@@ -66,16 +61,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
 import static org.apache.calcite.util.DateTimeStringUtils.getDateFormatter;
 
 import static java.util.Objects.requireNonNull;
-
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
 
 /**
  * <code>SqlDialect</code> encapsulates the differences between dialects of SQL.

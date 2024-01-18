@@ -237,8 +237,8 @@ public class SqlSelectOperator extends SqlOperator {
                         if (literalNode == groupKey
                             && !visitedLiteralNodeList.contains(literalNode)) {
                           writer.sep(",");
-                          String ordinal = String.valueOf(
-                              select.selectList.getList().indexOf(selectSqlNode) + 1);
+                          String ordinal =
+                              String.valueOf(select.selectList.getList().indexOf(selectSqlNode) + 1);
                           SqlLiteral.createExactNumeric(ordinal,
                               SqlParserPos.ZERO).unparse(writer, 2, 3);
                           visitedLiteralNodeList.add(literalNode);
@@ -255,8 +255,6 @@ public class SqlSelectOperator extends SqlOperator {
           unparseListClause(writer, select.groupBy);
         }
       }
-      writer.list(SqlWriter.FrameTypeEnum.GROUP_BY_LIST, SqlWriter.COMMA,
-          groupBy);
     }
     if (select.having != null) {
       writer.sep("HAVING");

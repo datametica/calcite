@@ -18,14 +18,13 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlCharStringLiteral;
+import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -39,22 +38,18 @@ import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.BasicSqlType;
-import org.apache.calcite.util.RelToSqlConverterUtil;
-
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.ToNumberUtils;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -377,8 +372,8 @@ public class HiveSqlDialect extends SqlDialect {
     SqlLiteral trimFlag = call.operand(0);
     SqlCharStringLiteral regexNode =
         RelToSqlConverterUtil.makeRegexNodeFromCall(call.operand(1), trimFlag);
-    SqlCharStringLiteral blankLiteral = SqlLiteral.createCharString("",
-        call.getParserPosition());
+    SqlCharStringLiteral blankLiteral =
+        SqlLiteral.createCharString("", call.getParserPosition());
     SqlNode[] trimOperands = new SqlNode[]{call.operand(2), regexNode, blankLiteral};
     SqlCall regexReplaceCall = new SqlBasicCall(REGEXP_REPLACE, trimOperands, SqlParserPos.ZERO);
     REGEXP_REPLACE.unparse(writer, regexReplaceCall, leftPrec, rightPrec);
@@ -566,8 +561,8 @@ public class HiveSqlDialect extends SqlDialect {
     if (literalValue.getIntervalLiteral().equals("1")) {
       return identifier;
     }
-    SqlNode intervalValue = new SqlIdentifier(literalValue.toString(),
-        intervalOperand.getParserPosition());
+    SqlNode intervalValue =
+        new SqlIdentifier(literalValue.toString(), intervalOperand.getParserPosition());
     SqlNode[] sqlNodes = new SqlNode[]{identifier,
         intervalValue};
     return new SqlBasicCall(SqlStdOperatorTable.MULTIPLY, sqlNodes, SqlParserPos.ZERO);
@@ -613,8 +608,8 @@ public class HiveSqlDialect extends SqlDialect {
     SqlNode[] operands = new SqlNode[call.getOperandList().size()];
     call.getOperandList().toArray(operands);
     SqlParserPos pos = call.getParserPosition();
-    SqlNode[] ifOperands = new SqlNode[]{new SqlBasicCall(EQUALS, operands, pos),
-        SqlLiteral.createNull(SqlParserPos.ZERO), operands[0]};
+    SqlNode[] ifOperands =
+        new SqlNode[]{new SqlBasicCall(EQUALS, operands, pos), SqlLiteral.createNull(SqlParserPos.ZERO), operands[0]};
     SqlCall ifCall = new SqlBasicCall(IF, ifOperands, pos);
     unparseCall(writer, ifCall, leftPrec, rightPrec);
   }
@@ -622,7 +617,7 @@ public class HiveSqlDialect extends SqlDialect {
   private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperator().getName()) {
     case "CURRENT_TIMESTAMP":
-      if (((SqlBasicCall) call).getOperands().length > 0) {
+      if (((SqlBasicCall) call).operandCount() > 0) {
         new CurrentTimestampHandler(this)
             .unparseCurrentTimestamp(writer, call, leftPrec, rightPrec);
       } else {
@@ -640,8 +635,8 @@ public class HiveSqlDialect extends SqlDialect {
     case "FORMAT_TIMESTAMP":
     case "FORMAT_TIME":
     case "FORMAT_DATE":
-      SqlCall dateFormatCall = DATE_FORMAT.createCall(SqlParserPos.ZERO, call.operand(1),
-          creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()));
+      SqlCall dateFormatCall =
+          DATE_FORMAT.createCall(SqlParserPos.ZERO, call.operand(1), creteDateTimeFormatSqlCharLiteral(call.operand(0).toString()));
       unparseCall(writer, dateFormatCall, leftPrec, rightPrec);
       break;
     case "STR_TO_DATE":
@@ -657,18 +652,18 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   private void unparseStrToDate(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    SqlCall unixTimestampCall = UNIX_TIMESTAMP.createCall(SqlParserPos.ZERO, call.operand(0),
-        creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()));
-    SqlCall fromUnixTimeCall = FROM_UNIXTIME.createCall(SqlParserPos.ZERO, unixTimestampCall,
-        SqlLiteral.createCharString("yyyy-MM-dd", SqlParserPos.ZERO));
-    SqlCall castToDateCall = CAST.createCall(SqlParserPos.ZERO, fromUnixTimeCall,
-        getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.DATE)));
+    SqlCall unixTimestampCall =
+        UNIX_TIMESTAMP.createCall(SqlParserPos.ZERO, call.operand(0), creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()));
+    SqlCall fromUnixTimeCall =
+        FROM_UNIXTIME.createCall(SqlParserPos.ZERO, unixTimestampCall, SqlLiteral.createCharString("yyyy-MM-dd", SqlParserPos.ZERO));
+    SqlCall castToDateCall =
+        CAST.createCall(SqlParserPos.ZERO, fromUnixTimeCall, getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.DATE)));
     unparseCall(writer, castToDateCall, leftPrec, rightPrec);
   }
 
   private SqlCharStringLiteral creteDateTimeFormatSqlCharLiteral(String format) {
-    String formatString = getDateTimeFormatString(unquoteStringLiteral(format),
-        DATE_TIME_FORMAT_MAP);
+    String formatString =
+        getDateTimeFormatString(unquoteStringLiteral(format), DATE_TIME_FORMAT_MAP);
     return SqlLiteral.createCharString(formatString, SqlParserPos.ZERO);
   }
 
@@ -678,4 +673,3 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
 }
-// End HiveSqlDialect.java

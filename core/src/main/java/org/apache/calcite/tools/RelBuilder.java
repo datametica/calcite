@@ -106,7 +106,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.TableFunctionReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
-import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
@@ -486,9 +485,6 @@ public class RelBuilder {
     } else if (value instanceof Enum) {
       return rexBuilder.makeLiteral(value,
           getTypeFactory().createSqlType(SqlTypeName.SYMBOL));
-    } else if (value instanceof DateString) {
-      return rexBuilder.makeDateLiteral((DateString) value);
-          getTypeFactory().createSqlType(SqlTypeName.SYMBOL), false);
     } else if (value instanceof List) {
       RelDataType arrayDataType = getTypeFactory().
               createArrayType(getTypeFactory().createSqlType(SqlTypeName.ANY), -1);
@@ -2198,7 +2194,7 @@ public class RelBuilder {
       return false;
     }
     Project projectRel = (Project) stack.peek().rel;
-    List<RexNode> previousRelNodeList = projectRel.getChildExps();
+    List<RexNode> previousRelNodeList = projectRel.getProjects();
     for (RexInputRef rexInputRef : rexInputRefsInAnalytical) {
       RexNode rexNode = previousRelNodeList.get(rexInputRef.getIndex());
       if (isAnalyticalRex(rexNode)) {

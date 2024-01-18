@@ -33,8 +33,6 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.rules.AggregateProjectConstantToDummyJoinRule;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -88,7 +86,6 @@ import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
-import org.apache.calcite.sql.fun.SqlCaseOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -102,7 +99,6 @@ import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.RangeSets;
 import org.apache.calcite.util.Sarg;
-import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.Util;
@@ -752,15 +748,6 @@ public abstract class SqlImplementor {
           op0 = new SqlNodeList(cols, POS);
         }
         return subQuery.getOperator().createCall(POS, op0, sqlSubQuery);
-
-      case SEARCH:
-        final RexCall search = (RexCall) rex;
-        if (search.operands.get(1).getKind() == SqlKind.LITERAL) {
-          literal = (RexLiteral) search.operands.get(1);
-          final Sarg sarg = castNonNull(literal.getValueAs(Sarg.class));
-          //noinspection unchecked
-          return toSql(program, search.operands.get(0), literal.getType(), sarg);
-        }
 
       case SEARCH:
         final RexCall search = (RexCall) rex;
@@ -1770,10 +1757,10 @@ public abstract class SqlImplementor {
     }
 
     // CHECKSTYLE: IGNORE 3
-    /** @deprecated Provide the expected clauses up-front, when you call
+    /** deprecated Provide the expected clauses up-front, when you call
      * {@link #visitInput(RelNode, int, Set)}, then create a builder using
      * {@link #builder(RelNode)}. */
-    @Deprecated // to be removed before 2.0
+    //@Deprecated // to be removed before 2.0
     public Builder builder(RelNode rel, Clause clause, Clause... clauses) {
       return builder(rel, ImmutableSet.copyOf(Lists.asList(clause, clauses)));
     }
@@ -1841,6 +1828,10 @@ public abstract class SqlImplementor {
               break;
             }
             return selectItem;
+          }
+
+          @Override public SqlNode field(int ordinal, boolean useAlias) {
+            throw new IllegalStateException("SHouldn't be here");
           }
 
           @Override public SqlNode orderField(int ordinal) {
@@ -2075,35 +2066,35 @@ public abstract class SqlImplementor {
       return false;
     }
 
-    private boolean hasNestedAnalyticalFunctions(Project rel) {
-      if (!(node instanceof SqlSelect)) {
-        return false;
-      }
-      final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
-      if (selectList == null) {
-        return false;
-      }
-      List<RexInputRef> rexInputRefsInAnalytical = new ArrayList<>();
-      for (RexNode rexNode : rel.getChildExps()) {
-        if (isAnalyticalRex(rexNode)) {
-          rexInputRefsInAnalytical.addAll(getIdentifiers(rexNode));
-        }
-      }
-      if (rexInputRefsInAnalytical.isEmpty()) {
-        return false;
-      }
-      for (RexInputRef rexInputRef : rexInputRefsInAnalytical) {
-        SqlNode sqlNode = selectList.get(rexInputRef.getIndex());
-        boolean hasAnalyticalFunction = false;
-        if (sqlNode instanceof SqlCall) {
-          hasAnalyticalFunction = hasSpecifiedFunction((SqlCall) sqlNode, SqlOverOperator.class);
-        }
-        if (hasAnalyticalFunction) {
-          return true;
-        }
-      }
-      return false;
-    }
+//    private boolean hasNestedAnalyticalFunctions(Project rel) {
+//      if (!(node instanceof SqlSelect)) {
+//        return false;
+//      }
+//      final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
+//      if (selectList == null) {
+//        return false;
+//      }
+//      List<RexInputRef> rexInputRefsInAnalytical = new ArrayList<>();
+//      for (RexNode rexNode : rel.getProjects()) {
+//        if (isAnalyticalRex(rexNode)) {
+//          rexInputRefsInAnalytical.addAll(getIdentifiers(rexNode));
+//        }
+//      }
+//      if (rexInputRefsInAnalytical.isEmpty()) {
+//        return false;
+//      }
+//      for (RexInputRef rexInputRef : rexInputRefsInAnalytical) {
+//        SqlNode sqlNode = selectList.get(rexInputRef.getIndex());
+//        boolean hasAnalyticalFunction = false;
+//        if (sqlNode instanceof SqlCall) {
+//          hasAnalyticalFunction = hasSpecifiedFunction((SqlCall) sqlNode, SqlOverOperator.class);
+//        }
+//        if (hasAnalyticalFunction) {
+//          return true;
+//        }
+//      }
+//      return false;
+//    }
 
     /** Returns the highest clause that is in use. */
     @Deprecated
