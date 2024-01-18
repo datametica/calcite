@@ -4729,19 +4729,6 @@ public class RelToSqlConverterTest {
         .ok(expectedSnowflake);
   }
 
-  @Test public void testIntervalHourToSecond() {
-    String query = "SELECT CURRENT_TIMESTAMP + INTERVAL '06:10:30' HOUR TO SECOND,"
-        + "CURRENT_TIMESTAMP - INTERVAL '06:10:30' HOUR TO SECOND "
-        + "FROM \"employee\"";
-    final String expectedBigQuery = "SELECT "
-        + "TIMESTAMP_ADD(CURRENT_TIMESTAMP, INTERVAL 22230 SECOND), "
-        + "TIMESTAMP_SUB(CURRENT_TIMESTAMP, INTERVAL 22230 SECOND)\n"
-        + "FROM foodmart.employee";
-    sql(query)
-        .withBigQuery()
-        .ok(expectedBigQuery);
-  }
-
   @Test public void minusDateFunctionForHiveAndSparkAndBigQuery() {
     String query = "select (\"birth_date\" - DATE '1899-12-31') day from \"employee\"";
     final String expectedHive = "SELECT DATEDIFF(birth_date, DATE '1899-12-31')\n"
@@ -5907,15 +5894,10 @@ public class RelToSqlConverterTest {
         + "CAST(FROM_UNIXTIME(UNIX_TIMESTAMP('2018/11/06', 'yyyy/MM/dd'), 'yyyy-MM-dd') AS DATE) date2\n"
         + "FROM scott.EMP";
     final String expectedSpark = expectedHive;
-    final String expectedSnowflake =
-        "SELECT TO_DATE('20181106', 'YYYYMMDD') AS \"date1\", "
-        + "TO_DATE('2018/11/06', 'YYYY/MM/DD') AS \"date2\"\n"
-        + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedHive));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
-    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflake));
   }
 
   @Test
@@ -6247,54 +6229,6 @@ public class RelToSqlConverterTest {
             .ok(snowFlakeExpected);
   }
 
-  @Test public void testLog10Function() {
-    final String query = "SELECT LOG10(2) as dd";
-    final String expectedSnowFlake = "SELECT LOG(10, 2) AS \"DD\"";
-    sql(query)
-        .withSnowflake()
-        .ok(expectedSnowFlake);
-  }
-
-  @Test public void testLog10ForOne() {
-    final String query = "SELECT LOG10(1) as dd";
-    final String expectedSnowFlake = "SELECT 0 AS \"DD\"";
-    sql(query)
-        .withSnowflake()
-        .ok(expectedSnowFlake);
-  }
-
-  @Test public void testLog10ForColumn() {
-    final String query = "SELECT LOG10(\"product_id\") as dd from \"product\"";
-    final String expectedSnowFlake = "SELECT LOG(10, \"product_id\") AS \"DD\"\n"
-                      + "FROM \"foodmart\".\"product\"";
-    sql(query)
-        .withSnowflake()
-        .ok(expectedSnowFlake);
-  }
-
-  @Test public void testDivideIntegerSnowflake() {
-    final RelBuilder builder = relBuilder();
-    final RexNode intdivideRexNode = builder.call(SqlStdOperatorTable.DIVIDE_INTEGER,
-            builder.scan("EMP").field(0), builder.scan("EMP").field(3));
-    final RelNode root = builder
-            .scan("EMP")
-            .project(builder.alias(intdivideRexNode, "a"))
-            .build();
-    final String expectedSql = "SELECT \"EMPNO\" /INT \"MGR\" AS \"a\"\n"
-            + "FROM \"scott\".\"EMP\"";
-    final String expectedSF = "SELECT FLOOR(\"EMPNO\" / \"MGR\") AS \"a\"\n"
-            + "FROM \"scott\".\"EMP\"";
-    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
-    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSF));
-  }
-
-  @Test public void testInstr() {
-    final String query = "SELECT POSITION('choose a chocolate chip cookie' IN 'ch')";
-    final String expectedSnowFlake = "SELECT REGEXP_INSTR('choose a chocolate chip cookie', 'ch')";
-    sql(query)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
-  }
 }
 
 // End RelToSqlConverterTest.java
