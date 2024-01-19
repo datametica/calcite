@@ -328,12 +328,13 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIG_QUERY, MYSQL, ORACLE})
   public static final SqlFunction INSTR = new SqlPositionFunction("INSTR");
 
-
   /** Generic "SUBSTR(string, position [, substringLength ])" function. */
-  private static final SqlBasicFunction SUBSTR =
+  @LibraryOperator(libraries = {BIG_QUERY, MYSQL, ORACLE})
+  public static final SqlBasicFunction SUBSTR =
           SqlBasicFunction.create("SUBSTR", ReturnTypes.ARG0_NULLABLE_VARYING,
                   OperandTypes.STRING_INTEGER_OPTIONAL_INTEGER,
                   SqlFunctionCategory.STRING);
+
   /** The "ENDS_WITH(value1, value2)" function (BIG_QUERY, PostgreSQL). */
   @LibraryOperator(libraries = {BIG_QUERY, POSTGRESQL})
   public static final SqlBasicFunction ENDS_WITH =

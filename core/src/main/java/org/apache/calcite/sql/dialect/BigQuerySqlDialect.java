@@ -106,6 +106,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PARSE_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.REGEXP_EXTRACT_ALL;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.SUBSTR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
 
@@ -724,8 +725,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private SqlCall makeSubstringSqlCall(SqlCall call) {
     SqlNode[] sqlNodes = new SqlNode[]{call.operand(0), call.operand(2)};
-//    return new SqlBasicCall(SUBSTR, sqlNodes, SqlParserPos.ZERO);
-    return null;
+    return new SqlBasicCall(SUBSTR, sqlNodes, SqlParserPos.ZERO);
   }
 
   /**
