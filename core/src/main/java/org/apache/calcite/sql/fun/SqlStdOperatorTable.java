@@ -166,14 +166,6 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlMultisetSetOperator MULTISET_INTERSECT =
       new SqlMultisetSetOperator("MULTISET INTERSECT ALL", 14, true);
 
-  /** Converts string_expr to a NUMBER data type. */
-  public static final SqlFunction TO_NUMBER = SqlLibraryOperators.TO_NUMBER;
-
-  /** CONV function converts the given number n from one base to another base. */
-  public static final SqlFunction CONV = SqlLibraryOperators.CONV;
-
-  public static final SqlFunction IF = SqlLibraryOperators.IF;
-
   //-------------------------------------------------------------
   //                   BINARY OPERATORS
   //-------------------------------------------------------------
@@ -2550,6 +2542,14 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
 
   /** SetSemanticsTable represents as an input table with set semantics. */
   public static final SqlInternalOperator SET_SEMANTICS_TABLE = new SqlSetSemanticsTableOperator();
+
+  /** Converts string_expr to a NUMBER data type. */
+  public static final SqlFunction TO_NUMBER = SqlLibraryOperators.TO_NUMBER;
+
+  /** CONV function converts the given number n from one base to another base. */
+  public static final SqlFunction CONV = SqlLibraryOperators.CONV;
+
+  public static final SqlFunction IF = SqlLibraryOperators.IF;
 
   //~ Methods ----------------------------------------------------------------
 
