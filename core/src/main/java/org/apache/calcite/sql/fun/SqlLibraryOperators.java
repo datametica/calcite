@@ -45,10 +45,7 @@ import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
-import org.apache.calcite.util.Optionality;
-import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.Static;
-import org.apache.calcite.util.Util;
+import org.apache.calcite.util.*;
 
 import com.google.common.collect.ImmutableList;
 
@@ -2272,18 +2269,22 @@ public abstract class SqlLibraryOperators {
               }),
           SqlFunctionCategory.SYSTEM);
 
-  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
+  /** The "RPAD(original_value, return_length[, pattern])" function. */
+  @LibraryOperator(libraries = {BIG_QUERY, ORACLE, SPARK, HIVE})
   public static final SqlFunction RPAD =
-      new SqlFunction("RPAD", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.VARCHAR_2000_NULLABLE, null,
-          OperandTypes.STRING_INTEGER_OPTIONAL_STRING,
+      SqlBasicFunction.create(
+          "RPAD",
+          ReturnTypes.ARG0.andThen(SqlLibraryOperators::deriveTypePad),
+          OperandTypes.STRING_NUMERIC_OPTIONAL_STRING,
           SqlFunctionCategory.STRING);
 
-  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
+  /** The "LPAD(original_value, return_length[, pattern])" function. */
+  @LibraryOperator(libraries = {BIG_QUERY, ORACLE, SPARK, HIVE})
   public static final SqlFunction LPAD =
-      new SqlFunction("LPAD", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.VARCHAR_2000_NULLABLE, null,
-          OperandTypes.STRING_INTEGER_OPTIONAL_STRING,
+      SqlBasicFunction.create(
+          "LPAD",
+          ReturnTypes.ARG0.andThen(SqlLibraryOperators::deriveTypePad),
+          OperandTypes.STRING_NUMERIC_OPTIONAL_STRING,
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {STANDARD})

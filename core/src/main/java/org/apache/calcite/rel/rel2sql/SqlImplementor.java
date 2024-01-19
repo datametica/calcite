@@ -610,8 +610,6 @@ public abstract class SqlImplementor {
 
     public abstract SqlNode field(int ordinal);
 
-    public abstract SqlNode field(int ordinal, boolean useAlias);
-
     /** Creates a reference to a field to be used in an ORDER BY clause.
      *
      * <p>By default, it returns the same result as {@link #field}.
@@ -1529,11 +1527,6 @@ public abstract class SqlImplementor {
     @Override public SqlNode field(int ordinal) {
       return field.apply(ordinal);
     }
-
-    public SqlNode field(int ordinal, boolean useAlias) {
-      throw new IllegalStateException("SHouldn't be here");
-    }
-
   }
 
   /** Implementation of {@link Context} that has an enclosing
@@ -1612,13 +1605,7 @@ public abstract class SqlImplementor {
       this.qualified = qualified;
     }
 
-    public SqlNode field(int ordinal, boolean useAlias) {
-      //Falling back to default behaviour & ignoring useAlias.
-      // We can handle this as & when use cases arise.
-      return field(ordinal);
-    }
-
-    public SqlNode field(int ordinal) {
+    @Override public SqlNode field(int ordinal) {
       for (Map.Entry<String, RelDataType> alias : aliases.entrySet()) {
         final List<RelDataTypeField> fields = alias.getValue().getFieldList();
         if (ordinal < fields.size()) {
@@ -1649,11 +1636,7 @@ public abstract class SqlImplementor {
       this.rightContext = rightContext;
     }
 
-    public SqlNode field(int ordinal, boolean useAlias) {
-      throw new IllegalStateException("SHouldn't be here");
-    }
-
-    public SqlNode field(int ordinal) {
+    @Override public SqlNode field(int ordinal) {
       if (ordinal < leftContext.fieldCount) {
         return leftContext.field(ordinal);
       } else {
@@ -1700,10 +1683,6 @@ public abstract class SqlImplementor {
 
     @Override public SqlNode field(int ordinal) {
       return inputSqlNodes.get(ordinal);
-    }
-
-    public SqlNode field(int ordinal, boolean useAlias) {
-      throw new IllegalStateException("Shouldn't be here");
     }
   }
 
@@ -1828,10 +1807,6 @@ public abstract class SqlImplementor {
               break;
             }
             return selectItem;
-          }
-
-          @Override public SqlNode field(int ordinal, boolean useAlias) {
-            throw new IllegalStateException("SHouldn't be here");
           }
 
           @Override public SqlNode orderField(int ordinal) {

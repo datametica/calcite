@@ -641,11 +641,11 @@ public class RelToSqlConverter extends SqlImplementor
         extractSqlIdentifiers(identifierList, node);
         isGroupByAlias = !checkIfAliasMatchesIdentifier(identifierList, alias);
       }*/
-      SqlNode field = builder.context.field(key, isGroupByAlias);
+      SqlNode field = builder.context.field(key);
       groupKeys.add(field);
     }
     for (int key : sortedGroupList) {
-      final SqlNode field = builder.context.field(key, false);
+      final SqlNode field = builder.context.field(key);
       addSelect(selectList, field, aggregate.getRowType());
     }
     switch (aggregate.getGroupType()) {
