@@ -207,14 +207,14 @@ public class SqlSelectOperator extends SqlOperator {
     }
     if (select.groupBy != null) {
       writer.sep("GROUP BY");
-      final SqlWriter.Frame groupFrame =
-          writer.startList(SqlWriter.FrameTypeEnum.GROUP_BY_LIST);
       if (select.groupBy.getList().isEmpty()) {
         final SqlWriter.Frame frame =
             writer.startList(SqlWriter.FrameTypeEnum.SIMPLE, "(", ")");
         writer.endList(frame);
       } else {
         if (writer.getDialect().getConformance().isGroupByOrdinal()) {
+          final SqlWriter.Frame groupFrame =
+              writer.startList(SqlWriter.FrameTypeEnum.GROUP_BY_LIST);
           List<SqlNode> visitedLiteralNodeList = new ArrayList<>();
           for (SqlNode groupKey : select.groupBy.getList()) {
             if (!groupKey.toString().equalsIgnoreCase("NULL")) {
@@ -251,8 +251,9 @@ public class SqlSelectOperator extends SqlOperator {
               }
             }
           }
+          writer.endList(groupFrame);
         } else {
-          unparseListClause(writer, select.groupBy);
+          writer.list(SqlWriter.FrameTypeEnum.GROUP_BY_LIST, SqlWriter.COMMA, select.groupBy);
         }
       }
     }
