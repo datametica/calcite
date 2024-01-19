@@ -2258,7 +2258,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "IF",
           SqlKind.IF,
-          ReturnTypes.ARG2_NULLABLE,
+          SqlLibraryOperators::inferIfReturnType,
           null,
           OperandTypes.and(
               OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY,
