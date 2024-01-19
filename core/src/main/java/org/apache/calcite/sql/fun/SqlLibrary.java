@@ -105,7 +105,7 @@ public enum SqlLibrary {
     switch (this) {
     case ALL:
       return ImmutableList.of(BIG_QUERY, CALCITE, HIVE, MSSQL, MYSQL, ORACLE,
-          POSTGRESQL, SNOWFLAKE, SPARK);
+          POSTGRESQL, SNOWFLAKE, SPARK, TERADATA);
     default:
       return ImmutableList.of();
     }
