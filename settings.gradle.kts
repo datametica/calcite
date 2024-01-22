@@ -57,7 +57,7 @@ pluginManagement {
 plugins {
     id("com.gradle.enterprise")
     id("com.gradle.common-custom-user-data-gradle-plugin")
-    id("com.github.burrunan.s3-build-cache")
+//    id("com.github.burrunan.s3-build-cache")
 }
 
 // This is the name of a current project
@@ -67,9 +67,11 @@ rootProject.name = "calcite"
 include(
     "bom",
     "release",
+    "babel",
     "cassandra",
     "core",
     "druid",
+    "elasticsearch",
     "example:csv",
     "example:function",
     "file",
@@ -80,7 +82,10 @@ include(
     "mongodb",
     "pig",
     "piglet",
+    "plus",
     "redis",
+    "server",
+    "spark",
     "splunk",
     "testkit",
     "ubenchmark"
@@ -100,21 +105,31 @@ fun property(name: String) =
 
 val isCiServer = System.getenv().containsKey("CI")
 
-gradleEnterprise {
-    server = "https://ge.apache.org"
-    allowUntrustedServer = false
-
-    buildScan {
-        capture { isTaskInputFiles = true }
-        isUploadInBackground = !isCiServer
-        publishAlways()
-        this as BuildScanExtensionWithHiddenFeatures
-        publishIfAuthenticated()
-        obfuscation {
-            ipAddresses { addresses -> addresses.map { "0.0.0.0" } }
+if (isCiServer) {
+    gradleEnterprise {
+        buildScan {
+            termsOfServiceUrl = "https://gradle.com/terms-of-service"
+            termsOfServiceAgree = "yes"
+            tag("CI")
         }
     }
 }
+
+//gradleEnterprise {
+//    server = "https://ge.apache.org"
+//    allowUntrustedServer = false
+//
+//    buildScan {
+//        capture { isTaskInputFiles = true }
+//        isUploadInBackground = !isCiServer
+//        publishAlways()
+//        this as BuildScanExtensionWithHiddenFeatures
+//        publishIfAuthenticated()
+//        obfuscation {
+//            ipAddresses { addresses -> addresses.map { "0.0.0.0" } }
+//        }
+//    }
+//}
 
 // Cache build artifacts, so expensive operations do not need to be re-computed
 // The logic is as follows:
@@ -125,15 +140,15 @@ buildCache {
     local {
         isEnabled = !isCiServer
     }
-    if (property("s3.build.cache")?.ifBlank { "true" }?.toBoolean() == true) {
-        val pushAllowed = property("s3.build.cache.push")?.ifBlank { "true" }?.toBoolean() ?: true
-        remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
-            region = "us-east-2"
-            bucket = "calcite-gradle-cache"
-            endpoint = "s3.us-east-2.wasabisys.com"
-            isPush = isCiServer && pushAllowed && !awsAccessKeyId.isNullOrBlank()
-        }
-    }
+//    if (property("s3.build.cache")?.ifBlank { "true" }?.toBoolean() == true) {
+//        val pushAllowed = property("s3.build.cache.push")?.ifBlank { "true" }?.toBoolean() ?: true
+//        remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
+//            region = "us-east-2"
+//            bucket = "calcite-gradle-cache"
+//            endpoint = "s3.us-east-2.wasabisys.com"
+//            isPush = isCiServer && pushAllowed && !awsAccessKeyId.isNullOrBlank()
+//        }
+//    }
 }
 
 // This enables to use local clone of vlsi-release-plugins for debugging purposes

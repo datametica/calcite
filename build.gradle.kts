@@ -24,7 +24,7 @@ import com.github.vlsi.gradle.properties.dsl.props
 import com.github.vlsi.gradle.release.RepositoryType
 // import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 // import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApisExtension
-import java.net.URI
+// import java.net.URI
 import net.ltgt.gradle.errorprone.errorprone
 import org.apache.calcite.buildtools.buildext.dsl.ParenthesisBalancer
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
@@ -60,19 +60,14 @@ plugins {
     id("com.autonomousapps.dependency-analysis") apply false
 }
 
-repositories {
-    // At least for RAT
-    mavenCentral()
-}
-
-tasks.wrapper {
-    distributionType = Wrapper.DistributionType.BIN
-    doLast {
-        val sha256Uri = URI("$distributionUrl.sha256")
-        val sha256Sum = String(sha256Uri.toURL().readBytes())
-        propertiesFile.appendText("distributionSha256Sum=${sha256Sum}\n")
-    }
-}
+//tasks.wrapper {
+//    distributionType = Wrapper.DistributionType.BIN
+//    doLast {
+//        val sha256Uri = URI("$distributionUrl.sha256")
+//        val sha256Sum = String(sha256Uri.toURL().readBytes())
+//        propertiesFile.appendText("distributionSha256Sum=${sha256Sum}\n")
+//    }
+//}
 
 fun reportsForHumans() = !(System.getenv()["CI"]?.toBoolean() ?: false)
 
