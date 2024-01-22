@@ -106,6 +106,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.TableFunctionReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
+import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
@@ -489,6 +490,8 @@ public class RelBuilder {
       RelDataType arrayDataType = getTypeFactory().
               createArrayType(getTypeFactory().createSqlType(SqlTypeName.ANY), -1);
       return rexBuilder.makeLiteral(value, arrayDataType);
+    }  else if (value instanceof DateString) {
+      return rexBuilder.makeDateLiteral((DateString) value);
     } else {
       throw new IllegalArgumentException("cannot convert " + value
           + " (" + value.getClass() + ") to a constant");
