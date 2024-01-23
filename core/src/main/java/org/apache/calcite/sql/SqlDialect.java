@@ -150,6 +150,8 @@ public class SqlDialect {
   private static final List<Character> DATE_FORMAT_SEPARATORS = new ArrayList<Character>() {{
       add('-');
       add('/');
+      add('B');
+      add('b');
       add(',');
       add('.');
       add(':');
@@ -522,7 +524,7 @@ public class SqlDialect {
 
   public void unparseIntervalOperandsBasedFunctions(SqlWriter writer,
       SqlCall call, int leftPrec, int rightPrec) {
-    SqlUtil.unparseFunctionSyntax(call.getOperator(), writer, call);
+    SqlUtil.unparseFunctionSyntax(call.getOperator(), writer, call, false);
   }
 
   /** Converts an interval qualifier to a SQL string. The default implementation
