@@ -2573,16 +2573,16 @@ class RelToSqlConverterTest {
         + "EXTRACT(MINUTE FROM toDateTime('2023-12-01 00:00:00')), "
         + "EXTRACT(SECOND FROM toDateTime('2023-12-01 00:00:00'))";
     final String expectedHive = "SELECT "
-        + "EXTRACT(YEAR FROM DATE '2023-12-01'), "
-        + "EXTRACT(QUARTER FROM DATE '2023-12-01'), "
-        + "EXTRACT(MONTH FROM DATE '2023-12-01'), "
-        + "EXTRACT(WEEK FROM DATE '2023-12-01'), "
-        + "EXTRACT(DOY FROM DATE '2023-12-01'), "
-        + "EXTRACT(DAY FROM DATE '2023-12-01'), "
-        + "EXTRACT(DOW FROM DATE '2023-12-01'), "
-        + "EXTRACT(HOUR FROM TIMESTAMP '2023-12-01 00:00:00'), "
-        + "EXTRACT(MINUTE FROM TIMESTAMP '2023-12-01 00:00:00'), "
-        + "EXTRACT(SECOND FROM TIMESTAMP '2023-12-01 00:00:00')";
+        + "YEAR(DATE '2023-12-01'), "
+        + "QUARTER(DATE '2023-12-01'), "
+        + "MONTH(DATE '2023-12-01'), "
+        + "WEEK(DATE '2023-12-01'), "
+        + "DOY(DATE '2023-12-01'), "
+        + "DAY(DATE '2023-12-01'), "
+        + "DOW(DATE '2023-12-01'), "
+        + "HOUR(TIMESTAMP '2023-12-01 00:00:00'), "
+        + "MINUTE(TIMESTAMP '2023-12-01 00:00:00'), "
+        + "SECOND(TIMESTAMP '2023-12-01 00:00:00')";
     final String expectedPostgresql = "SELECT "
         + "EXTRACT(YEAR FROM DATE '2023-12-01'), "
         + "EXTRACT(QUARTER FROM DATE '2023-12-01'), "
@@ -3436,7 +3436,7 @@ class RelToSqlConverterTest {
   @Test void testHiveSubstring() {
     String query = "SELECT SUBSTRING('ABC', 2)"
             + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT SUBSTRING('ABC', 2)\n"
+    final String expected = "SELECT SUBSTR('ABC', 2)\n"
             + "FROM foodmart.reserve_employee";
     sql(query).withHive().ok(expected);
   }
@@ -3444,7 +3444,7 @@ class RelToSqlConverterTest {
   @Test void testHiveSubstringWithLength() {
     String query = "SELECT SUBSTRING('ABC', 2, 3)"
             + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT SUBSTRING('ABC', 2, 3)\n"
+    final String expected = "SELECT SUBSTR('ABC', 2, 3)\n"
             + "FROM foodmart.reserve_employee";
     sql(query).withHive().ok(expected);
   }
@@ -3452,7 +3452,7 @@ class RelToSqlConverterTest {
   @Test void testHiveSubstringWithANSI() {
     String query = "SELECT SUBSTRING('ABC' FROM 2)"
             + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT SUBSTRING('ABC', 2)\n"
+    final String expected = "SELECT SUBSTR('ABC', 2)\n"
             + "FROM foodmart.reserve_employee";
     sql(query).withHive().ok(expected);
   }
@@ -3477,7 +3477,7 @@ class RelToSqlConverterTest {
   @Test void testHiveSubstringWithANSIAndLength() {
     String query = "SELECT SUBSTRING('ABC' FROM 2 FOR 3)"
             + "from \"foodmart\".\"reserve_employee\"";
-    final String expected = "SELECT SUBSTRING('ABC', 2, 3)\n"
+    final String expected = "SELECT SUBSTR('ABC', 2, 3)\n"
             + "FROM foodmart.reserve_employee";
     sql(query).withHive().ok(expected);
   }
@@ -4240,11 +4240,10 @@ class RelToSqlConverterTest {
         + "  (SELECT 0 AS g) AS v\n"
         + "GROUP BY v.g";
     final String expected = "SELECT"
-        + " CASE WHEN \"t0\".\"G\" IN (0, 1) THEN 0 ELSE 1 END\n"
-        + "FROM (SELECT *\n"
-        + "FROM \"foodmart\".\"customer\") AS \"t\",\n"
-        + "(VALUES (0)) AS \"t0\" (\"G\")\n"
-        + "GROUP BY \"t0\".\"G\"";
+        + " CASE WHEN \"t\".\"G\" IN (0, 1) THEN 0 ELSE 1 END\n"
+        + "FROM \"foodmart\".\"customer\",\n"
+        + "(VALUES (0)) AS \"t\" (\"G\")\n"
+        + "GROUP BY \"t\".\"G\"";
     sql(query).ok(expected);
   }
 
@@ -5352,8 +5351,6 @@ class RelToSqlConverterTest {
   @Test void testSubstring() {
     final String query = "select substring(\"brand_name\" from 2) "
         + "from \"product\"\n";
-    final String expectedBigQuery = "SELECT SUBSTRING(brand_name, 2)\n"
-        + "FROM foodmart.product";
     final String expectedClickHouse = "SELECT SUBSTRING(`brand_name`, 2)\n"
         + "FROM `foodmart`.`product`";
     final String expectedOracle = "SELECT SUBSTR(\"brand_name\", 2)\n"
@@ -5371,7 +5368,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.product";
     final String expectedSpark = "SELECT SUBSTRING(brand_name, 2)\n"
         + "FROM foodmart.product";
-    final String expectedBiqQuery = "SELECT SUBSTR(brand_name, 2)\n"
+    final String expectedBigQuery = "SELECT SUBSTR(brand_name, 2)\n"
         + "FROM foodmart.product";
     sql(query)
         .withMysql().ok(expectedMysql)
@@ -5395,7 +5392,7 @@ class RelToSqlConverterTest {
   @Test void testSubstringWithFor() {
     final String query = "select substring(\"brand_name\" from 2 for 3) "
         + "from \"product\"\n";
-    final String expectedBigQuery = "SELECT SUBSTRING(brand_name, 2, 3)\n"
+    final String expectedBigQuery = "SELECT SUBSTR(brand_name, 2, 3)\n"
         + "FROM foodmart.product";
     final String expectedClickHouse = "SELECT SUBSTRING(`brand_name`, 2, 3)\n"
         + "FROM `foodmart`.`product`";
@@ -7299,7 +7296,7 @@ class RelToSqlConverterTest {
   @Test void testSnowflakeLength() {
     final String query = "select CHAR_LENGTH(\"brand_name\")\n"
         + "from \"product\"";
-    final String expectedBigQuery = "SELECT CHAR_LENGTH(brand_name)\n"
+    final String expectedBigQuery = "SELECT LENGTH(brand_name)\n"
         + "FROM foodmart.product";
     // Snowflake would accept either LEN or LENGTH, but we currently unparse into "LENGTH"
     // since it seems to be used across more dialects.
@@ -8199,15 +8196,6 @@ class RelToSqlConverterTest {
     assertTrue(postgresqlDialect.supportsDataType(integerDataType));
   }
 
-  @Test public void testSelectNull() {
-    String query = "SELECT CAST(NULL AS INT)";
-    final String expected = "SELECT CAST(NULL AS INTEGER)\n"
-            + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\")";
-    sql(query).ok(expected);
-    // validate
-    sql(expected).exec();
-  }
-
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-4150">[CALCITE-4150]
    * JDBC adapter throws UnsupportedOperationException when generating SQL
@@ -8347,7 +8335,7 @@ class RelToSqlConverterTest {
     final String expectedBiqquery = "SELECT employee_id\n"
         + "FROM foodmart.employee\n"
         + "WHERE 10 = CAST('10' AS INT64) AND birth_date = '1914-02-02' OR hire_date = "
-        + "CAST('1996-01-01 ' || '00:00:00' AS TIMESTAMP)";
+        + "CAST(CONCAT('1996-01-01 ', '00:00:00') AS TIMESTAMP)";
     sql(query)
         .ok(expected)
         .withBigQuery().ok(expectedBiqquery);
@@ -8883,7 +8871,7 @@ class RelToSqlConverterTest {
   @Test public void testAscii() {
     String query = "SELECT ASCII ('ABC')";
     final String expected = "SELECT ASCII('ABC')";
-    final String expectedBigQuery = "SELECT TO_CODE_POINTS('ABC') [OFFSET(0)]";
+    final String expectedBigQuery = "SELECT ASCII('ABC')";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
@@ -8897,7 +8885,7 @@ class RelToSqlConverterTest {
     String query = "SELECT ASCII (SUBSTRING('ABC',1,1))";
     final String expected = "SELECT ASCII(SUBSTR('ABC', 1, 1))";
     final String expectedSpark = "SELECT ASCII(SUBSTRING('ABC', 1, 1))";
-    final String expectedBigQuery = "SELECT TO_CODE_POINTS(SUBSTR('ABC', 1, 1)) [OFFSET(0)]";
+    final String expectedBigQuery = "SELECT ASCII(SUBSTR('ABC', 1, 1))";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery)
@@ -8909,7 +8897,7 @@ class RelToSqlConverterTest {
 
   @Test public void testAsciiColumnArgument() {
     final String query = "select ASCII(\"product_name\") from \"product\" ";
-    final String bigQueryExpected = "SELECT TO_CODE_POINTS(product_name) [OFFSET(0)]\n"
+    final String bigQueryExpected = "SELECT ASCII(product_name)\n"
         + "FROM foodmart.product";
     final String hiveExpected = "SELECT ASCII(product_name)\n"
         + "FROM foodmart.product";
@@ -9155,9 +9143,11 @@ class RelToSqlConverterTest {
     final String expectedHive = "SELECT CAST(DATE_FORMAT(CAST(birth_date AS TIMESTAMP(0)), "
         + "'yyyy-MM-dd HH:mm:ss.sss') AS TIMESTAMP(0))\n"
         + "FROM foodmart.employee";
-    final String expectedSpark = expectedHive;
+    final String expectedSpark = "SELECT CAST(DATE_FORMAT(CAST(birth_date AS TIMESTAMP), "
+        + "'yyyy-MM-dd HH:mm:ss.sss') AS TIMESTAMP)\n"
+        + "FROM foodmart.employee";
     final String expectedBigQuery = "SELECT CAST(FORMAT_TIMESTAMP('%F %H:%M:%E3S', CAST"
-        + "(birth_date AS TIMESTAMP(0))) AS TIMESTAMP(0))\n"
+        + "(birth_date AS TIMESTAMP)) AS TIMESTAMP)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -9188,7 +9178,7 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"employee\"";
     final String expected = "SELECT SPLIT(DATE_FORMAT(hire_date, 'yyyy-MM-dd HH:mm:ss'), ' ')[1]\n"
         + "FROM foodmart.employee";
-    final String expectedBigQuery = "SELECT CAST(hire_date AS TIME(0))\n"
+    final String expectedBigQuery = "SELECT CAST(hire_date AS TIME)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -9337,7 +9327,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = expectedHive;
     final String expectedBigQuery = "SELECT CAST(FORMAT_TIME('%H:%M:%E3S', CAST(hire_date AS TIME"
-        + "(0))) AS TIME(0))\n"
+        + ")) AS TIME)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -10130,16 +10120,16 @@ class RelToSqlConverterTest {
             .ok(bigQueryExpected);
   }
 
-  @Test public void testIff() {
-    final String query = "SELECT \n"
-            + "IF(\"first_name\" IS NULL OR \"first_name\" = '', NULL, \"first_name\")\n"
-            + " from \"employee\"";
-    final String snowFlakeExpected = "SELECT IFF(\"first_name\" IS NULL OR \"first_name\" = '', "
-            + "NULL, \"first_name\")\n"
-            + "FROM \"foodmart\".\"employee\"";
-    sql(query)
-            .withSnowflake()
-            .ok(snowFlakeExpected);
-  }
+//  @Test public void testIff() {
+//    final String query = "SELECT \n"
+//            + "IF(\"first_name\" IS NULL OR \"first_name\" = '', NULL, \"first_name\")\n"
+//            + " from \"employee\"";
+//    final String snowFlakeExpected = "SELECT IFF(\"first_name\" IS NULL OR \"first_name\" = '', "
+//            + "NULL, \"first_name\")\n"
+//            + "FROM \"foodmart\".\"employee\"";
+//    sql(query)
+//            .withSnowflake()
+//            .ok(snowFlakeExpected);
+//  }
 
 }

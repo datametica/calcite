@@ -18,6 +18,7 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
@@ -47,9 +48,11 @@ import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
 import org.apache.calcite.util.ToNumberUtils;
+import org.apache.calcite.util.TimeString;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -594,5 +597,25 @@ public class SparkSqlDialect extends SqlDialect {
   @Override protected String getDateTimeFormatString(
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     return super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
+  }
+
+  @Override public SqlNode getCastCall(
+      SqlNode operandToCast, RelDataType castFrom, RelDataType castTo) {
+    if (castTo.getSqlTypeName() == SqlTypeName.TIMESTAMP && castTo.getPrecision() > 0) {
+      return new CastCallBuilder(this).makCastCallForTimestampWithPrecision(operandToCast,
+          castTo.getPrecision());
+    } else if (castTo.getSqlTypeName() == SqlTypeName.TIME) {
+      if (castFrom.getSqlTypeName() == SqlTypeName.TIMESTAMP) {
+        return new CastCallBuilder(this)
+            .makCastCallForTimeWithPrecision(operandToCast, castTo.getPrecision());
+      }
+      return operandToCast;
+    }
+    return super.getCastCall(operandToCast, castFrom, castTo);
+  }
+
+  @Override public SqlNode getTimeLiteral(
+      TimeString timeString, int precision, SqlParserPos pos) {
+    return SqlLiteral.createCharString(timeString.toString(), SqlParserPos.ZERO);
   }
 }
