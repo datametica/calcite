@@ -17,6 +17,7 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.Casing;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
@@ -336,7 +337,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
     return true;
   }
 
-  public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
+  @Override public SqlNode rewriteSingleValueExpr(SqlNode aggCall, RelDataType relDataType) {
     return ((SqlBasicCall) aggCall).operand(0);
   }
 

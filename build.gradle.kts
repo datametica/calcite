@@ -60,14 +60,14 @@ plugins {
     id("com.autonomousapps.dependency-analysis") apply false
 }
 
-//tasks.wrapper {
+// tasks.wrapper {
 //    distributionType = Wrapper.DistributionType.BIN
 //    doLast {
 //        val sha256Uri = URI("$distributionUrl.sha256")
 //        val sha256Sum = String(sha256Uri.toURL().readBytes())
 //        propertiesFile.appendText("distributionSha256Sum=${sha256Sum}\n")
 //    }
-//}
+// }
 
 fun reportsForHumans() = !(System.getenv()["CI"]?.toBoolean() ?: false)
 

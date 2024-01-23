@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import com.gradle.enterprise.gradleplugin.internal.extension.BuildScanExtensionWithHiddenFeatures
-
 pluginManagement {
     plugins {
         fun String.v() = extra["$this.version"].toString()
@@ -115,7 +113,7 @@ if (isCiServer) {
     }
 }
 
-//gradleEnterprise {
+// gradleEnterprise {
 //    server = "https://ge.apache.org"
 //    allowUntrustedServer = false
 //
@@ -129,7 +127,7 @@ if (isCiServer) {
 //            ipAddresses { addresses -> addresses.map { "0.0.0.0" } }
 //        }
 //    }
-//}
+// }
 
 // Cache build artifacts, so expensive operations do not need to be re-computed
 // The logic is as follows:

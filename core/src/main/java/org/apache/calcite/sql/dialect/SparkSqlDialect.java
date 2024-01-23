@@ -51,8 +51,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
-import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.TimeString;
+import org.apache.calcite.util.ToNumberUtils;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
