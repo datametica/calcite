@@ -9624,7 +9624,8 @@ class RelToSqlConverterTest {
   @Test public void testFormatTimestampRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode formatTimestampRexNode =
-        builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP, builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"),
+        builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+                builder.literal("YYYY-MM-DD HH:MI:SS.S(5)"),
                 builder.scan("EMP").field(4));
     final RelNode root = builder
         .scan("EMP")
@@ -10253,7 +10254,8 @@ class RelToSqlConverterTest {
   @Test public void testDivideIntegerSnowflake() {
     final RelBuilder builder = relBuilder();
     final RexNode intdivideRexNode =
-            builder.call(SqlStdOperatorTable.DIVIDE_INTEGER, builder.scan("EMP").field(0), builder.scan("EMP").field(3));
+            builder.call(SqlStdOperatorTable.DIVIDE_INTEGER, builder.scan("EMP")
+                    .field(0), builder.scan("EMP").field(3));
     final RelNode root = builder
             .scan("EMP")
             .project(builder.alias(intdivideRexNode, "a"))

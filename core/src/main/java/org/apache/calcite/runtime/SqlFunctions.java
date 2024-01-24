@@ -6030,7 +6030,7 @@ public class SqlFunctions {
     return new java.sql.Date(timestamp);
   }
 
-  /**Return match index value*/
+  /**Return match index value.*/
   public static Integer instr(String str, String substr, Integer start, Integer occurance) {
     if (null == str || null == substr) {
       return 0;

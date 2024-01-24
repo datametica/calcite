@@ -627,7 +627,7 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   /**
-   * unparse method for Random function
+   * unparse method for Random function.
    */
   private void unparseRandomfunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     SqlCall randCall = RAND.createCall(SqlParserPos.ZERO);

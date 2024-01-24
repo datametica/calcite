@@ -243,7 +243,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
   }
 
   /**
-   * unparse method for round function
+   * unparse method for round function.
    */
   private void unparseRoundfunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     final SqlWriter.Frame castFrame = writer.startFunCall("TO_DECIMAL");
@@ -253,8 +253,8 @@ public class SnowflakeSqlDialect extends SqlDialect {
   }
 
   /**
-   * unparse method for random funtion
-   * within the range of specific values
+   * unparse method for random function
+   * within the range of specific values.
    */
   private void unparseRandom(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     final SqlWriter.Frame randFrame = writer.startFunCall("UNIFORM");
@@ -270,7 +270,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
   /**
    * unparse function for math functions
    * SF can support precision and scale within specific range
-   * handled precision range using 'case', 'when', 'then'
+   * handled precision range using 'case', 'when', 'then'.
    */
   private void handleMathFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     final SqlWriter.Frame mathFun = writer.startFunCall(call.getOperator().getName());
