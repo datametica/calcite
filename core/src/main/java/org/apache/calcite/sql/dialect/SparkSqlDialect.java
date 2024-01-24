@@ -311,8 +311,7 @@ public class SparkSqlDialect extends SqlDialect {
     return;
   }
 
-  @Override
-  public SqlOperator getTargetFunc(RexCall call) {
+  @Override public SqlOperator getTargetFunc(RexCall call) {
     switch (call.type.getSqlTypeName()) {
     case DATE:
       switch (call.getOperands().get(1).getType().getSqlTypeName()) {

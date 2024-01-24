@@ -128,8 +128,7 @@ public abstract class SqlLibraryOperators {
                   OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
                   SqlFunctionCategory.TIMEDATE) {
 
-        @Override
-        public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
           writer.getDialect().unparseIntervalOperandsBasedFunctions(
                   writer, call, leftPrec, rightPrec);
         }
@@ -233,8 +232,7 @@ public abstract class SqlLibraryOperators {
                   OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
                   SqlFunctionCategory.TIMEDATE) {
 
-        @Override
-        public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
           writer.getDialect().unparseIntervalOperandsBasedFunctions(
                 writer, call, leftPrec, rightPrec);
         }

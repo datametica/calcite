@@ -10149,8 +10149,8 @@ class RelToSqlConverterTest {
     final String expectedBq = "SELECT ROUND(123.41445, product_id) AS a\nFROM foodmart.product";
     final String expected = "SELECT ROUND(123.41445, product_id) a\n"
             + "FROM foodmart.product";
-    final String expectedSnowFlake = "SELECT ROUND(123.41445, CASE WHEN \"product_id\" ELSE \"product_id\" END)" +
-            " AS \"a\"\nFROM \"foodmart\".\"product\"";
+    final String expectedSnowFlake = "SELECT ROUND(123.41445, CASE WHEN \"product_id\" "
+            + "ELSE \"product_id\" END) AS \"a\"\nFROM \"foodmart\".\"product\"";
     sql(query)
             .withBigQuery()
             .ok(expectedBq)
