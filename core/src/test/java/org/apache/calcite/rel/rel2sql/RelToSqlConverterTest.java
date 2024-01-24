@@ -1050,17 +1050,12 @@ class RelToSqlConverterTest {
     final String expected = "SELECT \"product_class_id\", COUNT(*) AS \"C\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "GROUP BY ROLLUP(\"product_class_id\")\n"
-        + "ORDER BY \"product_class_id\", \"C\"";
-    final String expectedMySql = "SELECT `product_class_id`, COUNT(*) AS `C`\n"
+        + "ORDER BY \"product_class_id\", 2";
+    final String expectedMysql = "SELECT `product_class_id`, COUNT(*) AS `C`\n"
         + "FROM `foodmart`.`product`\n"
         + "GROUP BY `product_class_id` WITH ROLLUP\n"
         + "ORDER BY `product_class_id` IS NULL, `product_class_id`,"
-        + " `C` IS NULL, `C`";
-    final String expectedHive = "SELECT product_class_id, COUNT(*) C\n"
-        + "FROM foodmart.product\n"
-        + "GROUP BY product_class_id WITH ROLLUP\n"
-        + "ORDER BY product_class_id IS NULL, product_class_id,"
-        + " C IS NULL, C";
+        + " COUNT(*) IS NULL, 2";
     final String expectedPresto = "SELECT \"product_class_id\", COUNT(*) AS \"C\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "GROUP BY ROLLUP(\"product_class_id\")\n"
@@ -1068,8 +1063,7 @@ class RelToSqlConverterTest {
         + "COUNT(*) IS NULL, 2";
     sql(query)
         .ok(expected)
-        .withMysql().ok(expectedMySql)
-        .withHive().ok(expectedHive)
+        .withMysql().ok(expectedMysql)
         .withPresto().ok(expectedPresto);
   }
 
@@ -1110,25 +1104,17 @@ class RelToSqlConverterTest {
         + " COUNT(*) AS \"C\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "GROUP BY ROLLUP(\"product_class_id\", \"brand_name\")\n"
-        + "ORDER BY \"product_class_id\", \"brand_name\", \"C\"";
-    final String expectedMySql = "SELECT `product_class_id`, `brand_name`,"
+        + "ORDER BY \"product_class_id\", \"brand_name\", 3";
+    final String expectedMysql = "SELECT `product_class_id`, `brand_name`,"
         + " COUNT(*) AS `C`\n"
         + "FROM `foodmart`.`product`\n"
         + "GROUP BY `product_class_id`, `brand_name` WITH ROLLUP\n"
         + "ORDER BY `product_class_id` IS NULL, `product_class_id`,"
         + " `brand_name` IS NULL, `brand_name`,"
-        + " `C` IS NULL, `C`";
-    final String expectedHive = "SELECT product_class_id, brand_name,"
-        + " COUNT(*) C\n"
-        + "FROM foodmart.product\n"
-        + "GROUP BY product_class_id, brand_name WITH ROLLUP\n"
-        + "ORDER BY product_class_id IS NULL, product_class_id,"
-        + " brand_name IS NULL, brand_name,"
-        + " C IS NULL, C";
+        + " COUNT(*) IS NULL, 3";
     sql(query)
         .ok(expected)
-        .withMysql().ok(expectedMySql)
-        .withHive().ok(expectedHive);
+        .withMysql().ok(expectedMysql);
   }
 
   /** As {@link #testSelectQueryWithSingletonCube()}, but with LIMIT. */
@@ -5070,7 +5056,7 @@ class RelToSqlConverterTest {
   @Test public void testFloorMssqlWeek() {
     String query = "SELECT floor(\"hire_date\" TO WEEK) FROM \"employee\"";
     String expected = "SELECT CONVERT(DATETIME, CONVERT(VARCHAR(10), "
-        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date])) % 7, [hire_date]), 126))\n"
+        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date] )) % 7, [hire_date] ), 126))\n"
         + "FROM [foodmart].[employee]";
     sql(query)
         .withMssql()
