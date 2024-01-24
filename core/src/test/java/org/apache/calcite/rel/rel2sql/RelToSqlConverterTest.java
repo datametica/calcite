@@ -10141,8 +10141,7 @@ class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testRoundFunctionWithColumnPlaceHandling() {
+  @Test public void testRoundFunctionWithColumnPlaceHandling() {
     final String query = "SELECT ROUND(123.41445, \"product_id\") AS \"a\"\n"
             + "FROM \"foodmart\".\"product\"";
     final String expectedBq = "SELECT ROUND(123.41445, product_id) AS a\nFROM foodmart.product";
