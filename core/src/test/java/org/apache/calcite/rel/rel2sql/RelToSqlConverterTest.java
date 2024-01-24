@@ -2539,7 +2539,7 @@ class RelToSqlConverterTest {
   @Test void testBigQuerySafeCast() {
     final String query = "select safe_cast(\"product_name\" as date) "
         + "from \"foodmart\".\"product\"";
-    final String expected = "SELECT SAFE_CAST(\"product_name\" AS DATE)\n"
+    final String expected = "SELECT CAST(\"product_name\" AS DATE)\n"
         + "FROM \"foodmart\".\"product\"";
 
     sql(query).withLibrary(SqlLibrary.BIG_QUERY).ok(expected);
@@ -5359,7 +5359,7 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"";
     final String expectedPresto = "SELECT SUBSTR(\"brand_name\", 2)\n"
         + "FROM \"foodmart\".\"product\"";
-    final String expectedSnowflake = expectedPostgresql;
+    final String expectedSnowflake = expectedOracle;
     final String expectedRedshift = expectedPostgresql;
     final String expectedFirebolt = expectedPresto;
     final String expectedMysql = "SELECT SUBSTRING(`brand_name`, 2)\n"
@@ -5402,7 +5402,7 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"";
     final String expectedPresto = "SELECT SUBSTR(\"brand_name\", 2, 3)\n"
         + "FROM \"foodmart\".\"product\"";
-    final String expectedSnowflake = expectedPostgresql;
+    final String expectedSnowflake = expectedOracle;
     final String expectedRedshift = expectedPostgresql;
     final String expectedFirebolt = expectedPresto;
     final String expectedMysql = "SELECT SUBSTRING(`brand_name`, 2, 3)\n"
@@ -6706,12 +6706,11 @@ class RelToSqlConverterTest {
   @Test void testThreeValues() {
     final String sql = "select * from (values (1), (2), (3)) as t(\"a\")\n";
     sql(sql)
-        .withRedshift().ok("SELECT *\n"
-            + "FROM (SELECT 1 AS \"a\"\n"
+        .withRedshift().ok("SELECT 1 AS \"a\"\n"
             + "UNION ALL\n"
             + "SELECT 2 AS \"a\"\n"
             + "UNION ALL\n"
-            + "SELECT 3 AS \"a\")");
+            + "SELECT 3 AS \"a\"");
   }
 
   @Test void testValuesEmpty() {
@@ -7469,10 +7468,10 @@ class RelToSqlConverterTest {
     final String expectedSql = "SELECT CURRENT_TIMESTAMP(6) AS \"CT\"\n"
         + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT CAST(FORMAT_TIMESTAMP('%F %H:%M:%E6S', "
-        + "CURRENT_TIMESTAMP) AS TIMESTAMP(0)) AS CT\n"
+        + "CURRENT_TIMESTAMP) AS TIMESTAMP) AS CT\n"
         + "FROM scott.EMP";
     final String expectedSpark = "SELECT CAST(DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss"
-        + ".ssssss') AS TIMESTAMP(0)) CT\n"
+        + ".ssssss') AS TIMESTAMP) CT\n"
         + "FROM scott.EMP";
     final String expectedHive = "SELECT CAST(DATE_FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd HH:mm:ss"
         + ".ssssss') AS TIMESTAMP(0)) CT\n"
@@ -9007,11 +9006,13 @@ class RelToSqlConverterTest {
   @Test public void testCastToTimestamp() {
     String query = "SELECT cast(\"birth_date\" as TIMESTAMP) "
         + "FROM \"foodmart\".\"employee\"";
-    final String expected = "SELECT CAST(birth_date AS TIMESTAMP(0))\n"
+    final String expected = "SELECT CAST(birth_date AS TIMESTAMP)\n"
+        + "FROM foodmart.employee";
+    final String expectedHive = "SELECT CAST(birth_date AS TIMESTAMP(0))\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
-        .ok(expected)
+        .ok(expectedHive)
         .withSpark()
         .ok(expected)
         .withBigQuery()
@@ -9286,12 +9287,12 @@ class RelToSqlConverterTest {
     final String expected6 = "MERGE INTO \"SCOTT\".\"DEPT\" AS \"DEPT0\"\n"
         + "USING (SELECT *\n"
         + "FROM \"SCOTT\".\"DEPT\"\n"
-        + "WHERE CAST(\"DEPTNO\" AS INTEGER) <> 5) AS \"t0\"\n"
-        + "ON \"t0\".\"DEPTNO\" = \"DEPT0\".\"DEPTNO\"\n"
+        + "WHERE CAST(\"DEPTNO\" AS INTEGER) <> 5) AS \"t\"\n"
+        + "ON \"t\".\"DEPTNO\" = \"DEPT0\".\"DEPTNO\"\n"
         + "WHEN NOT MATCHED THEN INSERT (\"DEPTNO\", \"DNAME\", \"LOC\") "
-        + "VALUES CAST(\"t0\".\"DEPTNO\" + 1 AS TINYINT),\n"
-        + "LOWER(\"t0\".\"DNAME\"),\n"
-        + "UPPER(\"t0\".\"LOC\")";
+        + "VALUES CAST(\"t\".\"DEPTNO\" + 1 AS TINYINT),\n"
+        + "LOWER(\"t\".\"DNAME\"),\n"
+        + "UPPER(\"t\".\"LOC\")";
     sql(sql6)
         .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
         .ok(expected6);
@@ -9304,16 +9305,15 @@ class RelToSqlConverterTest {
         + "when not matched then\n"
         + "insert (DEPTNO, DNAME, LOC)\n"
         + "values (\"s\".\"a\" + 1, lower(\"s\".\"b\"), upper(\"s\".\"c\"))";
-    final String expected7 = "MERGE INTO \"SCOTT\".\"DEPT\" AS \"t1\"\n"
-        + "USING (SELECT *\n"
-        + "FROM (VALUES (1, 'name', 'loc')) "
-        + "AS \"t\" (\"EXPR$0\", \"EXPR$1\", \"EXPR$2\")) AS \"t0\"\n"
-        + "ON \"t0\".\"EXPR$0\" = \"t1\".\"DEPTNO0\"\n"
+    final String expected7 = "MERGE INTO \"SCOTT\".\"DEPT\" AS \"t0\"\n"
+        + "USING (VALUES (1, 'name', 'loc')) AS \"t\" (\"EXPR$0\", \"EXPR$1\", "
+        + "\"EXPR$2\")\n"
+        + "ON \"t\".\"EXPR$0\" = \"t0\".\"DEPTNO0\"\n"
         + "WHEN MATCHED THEN UPDATE SET \"DNAME\" = 'abc'\n"
         + "WHEN NOT MATCHED THEN INSERT (\"DEPTNO\", \"DNAME\", \"LOC\") "
-        + "VALUES CAST(\"t0\".\"EXPR$0\" + 1 AS TINYINT),\n"
-        + "LOWER(\"t0\".\"EXPR$1\"),\n"
-        + "UPPER(\"t0\".\"EXPR$2\")";
+        + "VALUES CAST(\"t\".\"EXPR$0\" + 1 AS TINYINT),\n"
+        + "LOWER(\"t\".\"EXPR$1\"),\n"
+        + "UPPER(\"t\".\"EXPR$2\")";
     sql(sql7)
         .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
         .ok(expected7);
@@ -9345,7 +9345,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee";
     final String expectedSpark = expectedHive;
     final String expectedBigQuery = "SELECT CAST(FORMAT_TIME('%H:%M:%E3S', CAST(CONCAT('12:00', "
-        + "':05') AS TIME(0))) AS TIME(0))\n"
+        + "':05') AS TIME)) AS TIME)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -10131,5 +10131,33 @@ class RelToSqlConverterTest {
 //            .withSnowflake()
 //            .ok(snowFlakeExpected);
 //  }
+
+  @Test public void testLog10ForColumn() {
+    final String query = "SELECT LOG10(\"product_id\") as dd from \"product\"";
+    final String expectedSnowFlake = "SELECT LOG(10, \"product_id\") AS \"DD\"\n"
+                      + "FROM \"foodmart\".\"product\"";
+    sql(query)
+        .withSnowflake()
+        .ok(expectedSnowFlake);
+  }
+
+  @Test public void testRoundFunctionWithColumnPlaceHandling() {
+    final String query = "SELECT ROUND(123.41445, \"product_id\") AS \"a\"\n"
+            + "FROM \"foodmart\".\"product\"";
+    final String expectedBq = "SELECT ROUND(123.41445, product_id) AS a\nFROM foodmart.product";
+    final String expected = "SELECT ROUND(123.41445, product_id) a\n"
+            + "FROM foodmart.product";
+    final String expectedSnowFlake = "SELECT ROUND(123.41445, CASE WHEN \"product_id\" ELSE \"product_id\" END)" +
+            " AS \"a\"\nFROM \"foodmart\".\"product\"";
+    sql(query)
+            .withBigQuery()
+            .ok(expectedBq)
+            .withHive()
+            .ok(expected)
+            .withSpark()
+            .ok(expected)
+            .withSnowflake()
+            .ok(expectedSnowFlake);
+  }
 
 }

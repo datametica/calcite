@@ -1804,10 +1804,11 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
 
   /** The {@code TRUNCATE(numeric [, numeric])} function. */
   public static final SqlBasicFunction TRUNCATE =
-      SqlBasicFunction.create("TRUNCATE",
-          ReturnTypes.ARG0_NULLABLE,
-          OperandTypes.NUMERIC_OPTIONAL_INTEGER,
-          SqlFunctionCategory.NUMERIC);
+      SqlBasicFunction.create(
+              SqlKind.TRUNCATE,
+              ReturnTypes.ARG0_NULLABLE,
+              OperandTypes.NUMERIC_OPTIONAL_INTEGER)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
 
   /** The {@code PI} function. */
   public static final SqlFunction PI =

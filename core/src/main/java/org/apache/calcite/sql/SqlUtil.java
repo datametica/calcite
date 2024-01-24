@@ -297,7 +297,7 @@ public abstract class SqlUtil {
     }
   }
 
-  //@Deprecated // to be removed before 2.0
+  @Deprecated // to be removed before 2.0
   public static void unparseFunctionSyntax(
       SqlOperator operator,
       SqlWriter writer,
