@@ -110,13 +110,14 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.DATE_NULLABLE, OperandTypes.CHARACTER_CHARACTER_DATETIME,
           SqlFunctionCategory.TIMEDATE);
 
-  /** THE "DATE_ADD(date, interval)" function
-   * (BIG_QUERY) adds the interval to the date. */
+//  /** THE "DATE_ADD(date, interval)" function
+//   * (BIG_QUERY) adds the interval to the date. */
 //  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
 //  public static final SqlFunction DATE_ADD =
 //      SqlBasicFunction.create(SqlKind.DATE_ADD, ReturnTypes.ARG0_NULLABLE,
 //              OperandTypes.DATE_INTERVAL)
 //          .withFunctionType(SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
   public static final SqlFunction DATE_ADD =
           new SqlFunction(
@@ -127,11 +128,12 @@ public abstract class SqlLibraryOperators {
                   OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
                   SqlFunctionCategory.TIMEDATE) {
 
-            @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-              writer.getDialect().unparseIntervalOperandsBasedFunctions(
-                      writer, call, leftPrec, rightPrec);
-            }
-          };
+        @Override
+        public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          writer.getDialect().unparseIntervalOperandsBasedFunctions(
+                  writer, call, leftPrec, rightPrec);
+        }
+    };
 
   /** THE "DATE_DIFF(date, date2, timeUnit)" function
    * (BIG_QUERY) returns the number of timeUnit in (date - date2). */
@@ -213,8 +215,8 @@ public abstract class SqlLibraryOperators {
         }
       };
 
-  /** The "DATE_SUB(date, interval)" function (BIG_QUERY);
-   * subtracts interval from the date, independent of any time zone. */
+//  /** The "DATE_SUB(date, interval)" function (BIG_QUERY);
+//   * subtracts interval from the date, independent of any time zone. */
 //  @LibraryOperator(libraries = {BIG_QUERY})
 //  public static final SqlFunction DATE_SUB =
 //      SqlBasicFunction.create(SqlKind.DATE_SUB, ReturnTypes.ARG0_NULLABLE,
@@ -231,11 +233,12 @@ public abstract class SqlLibraryOperators {
                   OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
                   SqlFunctionCategory.TIMEDATE) {
 
-            @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-              writer.getDialect().unparseIntervalOperandsBasedFunctions(
-                      writer, call, leftPrec, rightPrec);
-            }
-          };
+        @Override
+        public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          writer.getDialect().unparseIntervalOperandsBasedFunctions(
+                writer, call, leftPrec, rightPrec);
+        }
+      };
 
   /** The "DATEPART(timeUnit, datetime)" function
    * (Microsoft SQL Server). */

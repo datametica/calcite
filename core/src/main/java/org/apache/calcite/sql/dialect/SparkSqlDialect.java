@@ -311,20 +311,21 @@ public class SparkSqlDialect extends SqlDialect {
     return;
   }
 
-  @Override public SqlOperator getTargetFunc(RexCall call) {
+  @Override
+  public SqlOperator getTargetFunc(RexCall call) {
     switch (call.type.getSqlTypeName()) {
-      case DATE:
-        switch (call.getOperands().get(1).getType().getSqlTypeName()) {
-          case INTERVAL_DAY:
-            if (call.op.kind == SqlKind.MINUS) {
-              return SqlLibraryOperators.DATE_SUB;
-            }
-            return SqlLibraryOperators.DATE_ADD;
-          case INTERVAL_MONTH:
-            return SqlLibraryOperators.ADD_MONTHS;
+    case DATE:
+      switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+      case INTERVAL_DAY:
+        if (call.op.kind == SqlKind.MINUS) {
+          return SqlLibraryOperators.DATE_SUB;
         }
-      default:
-        return super.getTargetFunc(call);
+        return SqlLibraryOperators.DATE_ADD;
+      case INTERVAL_MONTH:
+        return SqlLibraryOperators.ADD_MONTHS;
+      }
+    default:
+      return super.getTargetFunc(call);
     }
   }
 
