@@ -5056,7 +5056,7 @@ class RelToSqlConverterTest {
   @Test public void testFloorMssqlWeek() {
     String query = "SELECT floor(\"hire_date\" TO WEEK) FROM \"employee\"";
     String expected = "SELECT CONVERT(DATETIME, CONVERT(VARCHAR(10), "
-        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date] )) % 7, [hire_date] ), 126))\n"
+        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date])) % 7, [hire_date]), 126))\n"
         + "FROM [foodmart].[employee]";
     sql(query)
         .withMssql()
@@ -8389,8 +8389,7 @@ class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testOver() {
+  @Test public void testOver() {
     String query = "SELECT distinct \"product_id\", MAX(\"product_id\") \n"
         + "OVER(PARTITION BY \"product_id\") AS abc\n"
         + "FROM \"product\"";
@@ -8422,8 +8421,7 @@ class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testCountWithWindowFunction() {
+  @Test public void testCountWithWindowFunction() {
     String query = "Select count(*) over() from \"product\"";
     String expected = "SELECT COUNT(*) OVER (RANGE BETWEEN UNBOUNDED PRECEDING "
         + "AND UNBOUNDED FOLLOWING)\n"
@@ -8445,8 +8443,7 @@ class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testOrderByInWindowFunction() {
+  @Test public void testOrderByInWindowFunction() {
     String query = "select \"first_name\", COUNT(\"department_id\") as "
         + "\"department_id_number\", ROW_NUMBER() OVER (ORDER BY "
         + "\"department_id\" ASC), SUM(\"department_id\") OVER "
@@ -8480,8 +8477,7 @@ class RelToSqlConverterTest {
         .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testToNumberFunctionHandlingFloatingPoint() {
+  @Test public void testToNumberFunctionHandlingFloatingPoint() {
     String query = "select TO_NUMBER('-1.7892','9.9999')";
     final String expected = "SELECT CAST('-1.7892' AS FLOAT)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.7892', 38, 4)";
@@ -10229,25 +10225,6 @@ class RelToSqlConverterTest {
 //            .ok(snowFlakeExpected);
 //  }
 
-  @Test public void testRoundFunctionWithColumnPlaceHandling() {
-    final String query = "SELECT ROUND(123.41445, \"product_id\") AS \"a\"\n"
-            + "FROM \"foodmart\".\"product\"";
-    final String expectedBq = "SELECT ROUND(123.41445, product_id) AS a\nFROM foodmart.product";
-    final String expected = "SELECT ROUND(123.41445, product_id) a\n"
-            + "FROM foodmart.product";
-    final String expectedSnowFlake = "SELECT ROUND(123.41445, CASE WHEN \"product_id\" "
-            + "ELSE \"product_id\" END) AS \"a\"\nFROM \"foodmart\".\"product\"";
-    sql(query)
-            .withBigQuery()
-            .ok(expectedBq)
-            .withHive()
-            .ok(expected)
-            .withSpark()
-            .ok(expected)
-            .withSnowflake()
-            .ok(expectedSnowFlake);
-  }
-
   @Test public void testLog10Function() {
     final String query = "SELECT LOG10(2) as dd";
     final String expectedSnowFlake = "SELECT LOG(10, 2) AS \"DD\"";
@@ -10275,8 +10252,8 @@ class RelToSqlConverterTest {
 
   @Test public void testDivideIntegerSnowflake() {
     final RelBuilder builder = relBuilder();
-    final RexNode intdivideRexNode = builder.call(SqlStdOperatorTable.DIVIDE_INTEGER,
-            builder.scan("EMP").field(0), builder.scan("EMP").field(3));
+    final RexNode intdivideRexNode =
+            builder.call(SqlStdOperatorTable.DIVIDE_INTEGER, builder.scan("EMP").field(0), builder.scan("EMP").field(3));
     final RelNode root = builder
             .scan("EMP")
             .project(builder.alias(intdivideRexNode, "a"))
@@ -10289,8 +10266,7 @@ class RelToSqlConverterTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSF));
   }
 
-  @Test
-  public void testRoundFunctionWithColumnPlaceHandling() {
+  @Test public void testRoundFunctionWithColumnPlaceHandling() {
     final String query = "SELECT ROUND(123.41445, \"product_id\") AS \"a\"\n"
             + "FROM \"foodmart\".\"product\"";
     final String expectedBq = "SELECT ROUND(123.41445, product_id) AS a\nFROM foodmart.product";
@@ -10311,8 +10287,7 @@ class RelToSqlConverterTest {
             .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testTruncateFunctionWithColumnPlaceHandling() {
+  @Test public void testTruncateFunctionWithColumnPlaceHandling() {
     String query = "select truncate(2.30259, \"employee_id\") from \"employee\"";
     final String expectedBigQuery = "SELECT TRUNC(2.30259, employee_id)\n"
             + "FROM foodmart.employee";
@@ -10326,8 +10301,7 @@ class RelToSqlConverterTest {
             .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testWindowFunctionWithOrderByWithoutcolumn() {
+  @Test public void testWindowFunctionWithOrderByWithoutcolumn() {
     String query = "Select count(*) over() from \"employee\"";
     final String expectedSnowflake = "SELECT COUNT(*) OVER (ORDER BY 0 ROWS BETWEEN UNBOUNDED "
             + "PRECEDING AND UNBOUNDED FOLLOWING)\n"
@@ -10337,8 +10311,7 @@ class RelToSqlConverterTest {
             .ok(expectedSnowflake);
   }
 
-  @Test
-  public void testWindowFunctionWithOrderByWithcolumn() {
+  @Test public void testWindowFunctionWithOrderByWithcolumn() {
     String query = "select count(\"employee_id\") over () as a from \"employee\"";
     final String expectedSnowflake = "SELECT COUNT(\"employee_id\") OVER (ORDER BY \"employee_id\" "
             + "ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS \"A\"\n"
@@ -10348,8 +10321,7 @@ class RelToSqlConverterTest {
             .ok(expectedSnowflake);
   }
 
-  @Test
-  public void testRoundFunction() {
+  @Test public void testRoundFunction() {
     final String query = "SELECT ROUND(123.41445, \"product_id\") AS \"a\"\n"
             + "FROM \"foodmart\".\"product\"";
     final String expectedSnowFlake = "SELECT TO_DECIMAL(ROUND(123.41445, CASE "
@@ -10361,8 +10333,7 @@ class RelToSqlConverterTest {
             .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testRandomFunction() {
+  @Test public void testRandomFunction() {
     String query = "select rand_integer(1,3) from \"employee\"";
     final String expectedSnowFlake = "SELECT UNIFORM(1, 3, RANDOM())\n"
             + "FROM \"foodmart\".\"employee\"";
@@ -10384,4 +10355,3 @@ class RelToSqlConverterTest {
   }
 
 }
-
