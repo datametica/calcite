@@ -84,7 +84,6 @@ import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlSingleValueAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -452,38 +451,36 @@ public class RelToSqlConverter extends SqlImplementor
       x = visitInput(e, 0, Clause.SELECT);
     }
     parseCorrelTable(e, x);
-    if (isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())) {
-      return x;
-    }
-    final Builder builder =
-        x.builder(e, Clause.SELECT);
-    final List<SqlNode> selectList = new ArrayList<>();
-    for (RexNode ref : e.getProjects()) {
-      SqlNode sqlExpr = builder.context.toSql(null, ref);
-      RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
+    final Builder builder = x.builder(e);
+    if (!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())) {
+      final List<SqlNode> selectList = new ArrayList<>();
+      for (RexNode ref : e.getProjects()) {
+        SqlNode sqlExpr = builder.context.toSql(null, ref);
+        RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
-      if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
-        sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr, targetField.getType());
+        if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
+          sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr, targetField.getType());
+        }
+        if (SqlUtil.isNullLiteral(sqlExpr, false)) {
+          final RelDataTypeField field =
+              e.getRowType().getFieldList().get(selectList.size());
+          sqlExpr = castNullType(sqlExpr, field.getType());
+        }
+        addSelect(selectList, sqlExpr, e.getRowType());
       }
 
-      if (SqlUtil.isNullLiteral(sqlExpr, false)
-          && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
-        sqlExpr = castNullType(sqlExpr, targetField.getType());
-      }
-      addSelect(selectList, sqlExpr, e.getRowType());
-    }
-
-    final SqlNodeList selectNodeList = new SqlNodeList(selectList, POS);
-    if (builder.select.getGroup() == null
+      final SqlNodeList selectNodeList = new SqlNodeList(selectList, POS);
+      if (builder.select.getGroup() == null
           && builder.select.getHaving() == null
           && SqlUtil.containsAgg(builder.select.getSelectList())
           && !SqlUtil.containsAgg(selectNodeList)) {
         // We are just about to remove the last aggregate function from the
         // SELECT clause. The "GROUP BY ()" was implicit, but we now need to
         // make it explicit.
-      builder.setGroupBy(SqlNodeList.EMPTY);
+        builder.setGroupBy(SqlNodeList.EMPTY);
+      }
+      builder.setSelect(selectNodeList);
     }
-    builder.setSelect(selectNodeList);
     return builder.result();
   }
 

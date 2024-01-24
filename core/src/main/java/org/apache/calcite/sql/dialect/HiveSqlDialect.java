@@ -272,7 +272,7 @@ public class HiveSqlDialect extends SqlDialect {
       break;
     case ARRAY_VALUE_CONSTRUCTOR:
       writer.keyword(call.getOperator().getName());
-      final SqlWriter.Frame arrayFrame = writer.startList("(", ")");
+      final SqlWriter.Frame arrayFrame = writer.startList("[", "]");
       for (SqlNode operand : call.getOperandList()) {
         writer.sep(",");
         operand.unparse(writer, leftPrec, rightPrec);

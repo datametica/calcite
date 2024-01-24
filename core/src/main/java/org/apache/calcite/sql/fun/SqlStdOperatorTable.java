@@ -1646,10 +1646,11 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           SqlFunctionCategory.STRING);
 
   public static final SqlFunction ASCII =
-      SqlBasicFunction.create("ASCII",
-          ReturnTypes.INTEGER_NULLABLE,
-          OperandTypes.CHARACTER,
-          SqlFunctionCategory.STRING);
+      SqlBasicFunction.create(
+              SqlKind.ASCII,
+              ReturnTypes.INTEGER_NULLABLE,
+              OperandTypes.CHARACTER)
+          .withFunctionType(SqlFunctionCategory.STRING);
 
   /** The {@code POWER(numeric, numeric)} function.
    *

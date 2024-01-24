@@ -202,7 +202,7 @@ public abstract class SqlImplementor {
   // CHECKSTYLE: IGNORE 1
   /** deprecated Use either {@link #visitRoot(RelNode)} or
    * {@link #visitInput(RelNode, int)}. */
-  //@Deprecated // to be removed before 2.0
+  @Deprecated // to be removed before 2.0
   public final Result visitChild(int i, RelNode e) {
     throw new UnsupportedOperationException();
   }
@@ -1746,7 +1746,7 @@ public abstract class SqlImplementor {
     /** deprecated Provide the expected clauses up-front, when you call
      * {@link #visitInput(RelNode, int, Set)}, then create a builder using
      * {@link #builder(RelNode)}. */
-    //@Deprecated // to be removed before 2.0
+    @Deprecated // to be removed before 2.0
     public Builder builder(RelNode rel, Clause clause, Clause... clauses) {
       return builder(rel, ImmutableSet.copyOf(Lists.asList(clause, clauses)));
     }
