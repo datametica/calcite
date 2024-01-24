@@ -866,6 +866,13 @@ public abstract class SqlImplementor {
           RelDataType castTo = call.getType();
           return dialect.getCastCall(nodeList.get(0), castFrom, castTo);
         }
+      case PLUS:
+      case MINUS:
+        op = dialect.getTargetFunc(call);
+        break;
+      case OTHER_FUNCTION:
+        op = dialect.getOperatorForOtherFunc(call);
+        break;
       default:
         break;
       }

@@ -71,6 +71,8 @@ import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
+import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
+import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
 import static org.apache.calcite.util.Static.RESOURCE;
 
 import static java.util.Objects.requireNonNull;
@@ -110,11 +112,26 @@ public abstract class SqlLibraryOperators {
 
   /** THE "DATE_ADD(date, interval)" function
    * (BIG_QUERY) adds the interval to the date. */
-  @LibraryOperator(libraries = {BIG_QUERY})
+//  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
+//  public static final SqlFunction DATE_ADD =
+//      SqlBasicFunction.create(SqlKind.DATE_ADD, ReturnTypes.ARG0_NULLABLE,
+//              OperandTypes.DATE_INTERVAL)
+//          .withFunctionType(SqlFunctionCategory.TIMEDATE);
+  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
   public static final SqlFunction DATE_ADD =
-      SqlBasicFunction.create(SqlKind.DATE_ADD, ReturnTypes.ARG0_NULLABLE,
-              OperandTypes.DATE_INTERVAL)
-          .withFunctionType(SqlFunctionCategory.TIMEDATE);
+          new SqlFunction(
+                  "DATE_ADD",
+                  SqlKind.PLUS,
+                  ReturnTypes.DATE,
+                  null,
+                  OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
+                  SqlFunctionCategory.TIMEDATE) {
+
+            @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+              writer.getDialect().unparseIntervalOperandsBasedFunctions(
+                      writer, call, leftPrec, rightPrec);
+            }
+          };
 
   /** THE "DATE_DIFF(date, date2, timeUnit)" function
    * (BIG_QUERY) returns the number of timeUnit in (date - date2). */
@@ -198,11 +215,27 @@ public abstract class SqlLibraryOperators {
 
   /** The "DATE_SUB(date, interval)" function (BIG_QUERY);
    * subtracts interval from the date, independent of any time zone. */
-  @LibraryOperator(libraries = {BIG_QUERY})
+//  @LibraryOperator(libraries = {BIG_QUERY})
+//  public static final SqlFunction DATE_SUB =
+//      SqlBasicFunction.create(SqlKind.DATE_SUB, ReturnTypes.ARG0_NULLABLE,
+//           OperandTypes.DATE_INTERVAL)
+//          .withFunctionType(SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK})
   public static final SqlFunction DATE_SUB =
-      SqlBasicFunction.create(SqlKind.DATE_SUB, ReturnTypes.ARG0_NULLABLE,
-           OperandTypes.DATE_INTERVAL)
-          .withFunctionType(SqlFunctionCategory.TIMEDATE);
+          new SqlFunction(
+                  "DATE_SUB",
+                  SqlKind.MINUS,
+                  ReturnTypes.DATE,
+                  null,
+                  OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
+                  SqlFunctionCategory.TIMEDATE) {
+
+            @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+              writer.getDialect().unparseIntervalOperandsBasedFunctions(
+                      writer, call, leftPrec, rightPrec);
+            }
+          };
 
   /** The "DATEPART(timeUnit, datetime)" function
    * (Microsoft SQL Server). */

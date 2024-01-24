@@ -20,6 +20,7 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBasicFunction;
@@ -40,6 +41,7 @@ import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.CurrentTimestampHandler;
@@ -51,8 +53,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
-import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.TimeString;
+import org.apache.calcite.util.ToNumberUtils;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -307,6 +309,23 @@ public class SparkSqlDialect extends SqlDialect {
       }
     }
     return;
+  }
+
+  @Override public SqlOperator getTargetFunc(RexCall call) {
+    switch (call.type.getSqlTypeName()) {
+      case DATE:
+        switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+          case INTERVAL_DAY:
+            if (call.op.kind == SqlKind.MINUS) {
+              return SqlLibraryOperators.DATE_SUB;
+            }
+            return SqlLibraryOperators.DATE_ADD;
+          case INTERVAL_MONTH:
+            return SqlLibraryOperators.ADD_MONTHS;
+        }
+      default:
+        return super.getTargetFunc(call);
+    }
   }
 
   @Override public void unparseSqlDatetimeArithmetic(SqlWriter writer,
