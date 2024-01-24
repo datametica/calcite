@@ -81,7 +81,13 @@ public class FormatFunctionUtil {
     } else {
       int firstOperand = Integer.valueOf(call.operand(0).toString()
           .replaceAll("[^0-9]", "")) - 1;
-      modifiedOperand = StringUtils.repeat("9", firstOperand);
+      String modifiedString = call.operand(0).toString()
+              .replaceAll("[^0-9]", "");
+      if (modifiedString.charAt(0) == '0') {
+        modifiedOperand = "FM" + StringUtils.repeat("0", firstOperand + 1);
+      } else {
+        modifiedOperand = StringUtils.repeat("9", firstOperand);
+      }
     }
     sqlNode = new SqlNode[]{
         SqlLiteral.createExactNumeric(
