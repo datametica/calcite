@@ -1860,7 +1860,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee) AS t";
     sql(query)
       .ok(expectedSql)
-      .withHive()
+      .withHive2()
       .ok(expectedHive)
       .withSpark()
       .ok(expectedSpark)
@@ -1892,7 +1892,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.employee) AS t";
     sql(query)
       .ok(expectedSql)
-      .withHive()
+      .withHive2()
       .ok(expectedHive)
       .withSpark()
       .ok(expectedSpark)
@@ -5214,7 +5214,7 @@ class RelToSqlConverterTest {
             + "INTERVAL '19800' SECOND(5) > TIMESTAMP '2005-10-17 00:00:00' ";
     final String expect0 = "SELECT *\n"
             + "FROM foodmart.employee\n"
-            + "WHERE (hire_date - INTERVAL 19800 SECOND)"
+            + "WHERE TIMESTAMP_SUB(hire_date, INTERVAL 19800 SECOND)"
             + " > TIMESTAMP '2005-10-17 00:00:00'";
     sql(sql0).withBigQuery().ok(expect0);
 
@@ -5222,7 +5222,7 @@ class RelToSqlConverterTest {
             + "INTERVAL '10' HOUR > TIMESTAMP '2005-10-17 00:00:00' ";
     final String expect1 = "SELECT *\n"
             + "FROM foodmart.employee\n"
-            + "WHERE (hire_date + INTERVAL 10 HOUR)"
+            + "WHERE TIMESTAMP_ADD(hire_date, INTERVAL 10 HOUR)"
             + " > TIMESTAMP '2005-10-17 00:00:00'";
     sql(sql1).withBigQuery().ok(expect1);
 
@@ -9791,6 +9791,15 @@ class RelToSqlConverterTest {
     Sql withHive() {
       return dialect(DatabaseProduct.HIVE.getDialect());
     }
+
+    Sql withHive2() {
+      return dialect(
+          new HiveSqlDialect(HiveSqlDialect.DEFAULT_CONTEXT
+              .withDatabaseMajorVersion(2)
+              .withDatabaseMinorVersion(1)
+              .withNullCollation(NullCollation.LOW)));
+    }
+
 
     Sql withHsqldb() {
       return dialect(DatabaseProduct.HSQLDB.getDialect());
