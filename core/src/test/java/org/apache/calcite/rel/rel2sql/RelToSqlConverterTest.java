@@ -9800,7 +9800,6 @@ class RelToSqlConverterTest {
               .withNullCollation(NullCollation.LOW)));
     }
 
-
     Sql withHsqldb() {
       return dialect(DatabaseProduct.HSQLDB.getDialect());
     }
