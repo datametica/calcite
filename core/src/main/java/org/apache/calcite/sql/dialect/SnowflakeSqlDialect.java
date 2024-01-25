@@ -55,6 +55,10 @@ public class SnowflakeSqlDialect extends SqlDialect {
     super(context);
   }
 
+  @Override public boolean supportsAliasedValues() {
+    return false;
+  }
+
   @Override public boolean supportsCharSet() {
     return false;
   }
