@@ -608,6 +608,8 @@ public abstract class SqlImplementor {
 
     public abstract SqlNode field(int ordinal);
 
+    public abstract SqlNode field(int ordinal, boolean useAlias);
+
     /** Creates a reference to a field to be used in an ORDER BY clause.
      *
      * <p>By default, it returns the same result as {@link #field}.
@@ -1527,6 +1529,10 @@ public abstract class SqlImplementor {
       this.field = field;
     }
 
+    public SqlNode field(int ordinal, boolean useAlias) {
+      throw new IllegalStateException("SHouldn't be here");
+    }
+
     @Override public SqlImplementor implementor() {
       throw new UnsupportedOperationException();
     }
@@ -1612,6 +1618,12 @@ public abstract class SqlImplementor {
       this.qualified = qualified;
     }
 
+    public SqlNode field(int ordinal, boolean useAlias) {
+      //Falling back to default behaviour & ignoring useAlias.
+      // We can handle this as & when use cases arise.
+      return field(ordinal);
+    }
+
     @Override public SqlNode field(int ordinal) {
       for (Map.Entry<String, RelDataType> alias : aliases.entrySet()) {
         final List<RelDataTypeField> fields = alias.getValue().getFieldList();
@@ -1641,6 +1653,10 @@ public abstract class SqlImplementor {
       super(dialect, leftContext.fieldCount + rightContext.fieldCount);
       this.leftContext = leftContext;
       this.rightContext = rightContext;
+    }
+
+    public SqlNode field(int ordinal, boolean useAlias) {
+      throw new IllegalStateException("SHouldn't be here");
     }
 
     @Override public SqlNode field(int ordinal) {
@@ -1690,6 +1706,11 @@ public abstract class SqlImplementor {
 
     @Override public SqlNode field(int ordinal) {
       return inputSqlNodes.get(ordinal);
+    }
+
+    @Override
+    public SqlNode field(int ordinal, boolean useAlias) {
+      throw new IllegalStateException("SHouldn't be here");
     }
   }
 
@@ -1812,6 +1833,18 @@ public abstract class SqlImplementor {
               return asCall.operand(0);
             default:
               break;
+            }
+            return selectItem;
+          }
+
+          public SqlNode field(int ordinal, boolean useAlias) {
+            final SqlNode selectItem = selectList.get(ordinal);
+            switch (selectItem.getKind()) {
+              case AS:
+                if (useAlias) {
+                  return ((SqlCall) selectItem).operand(1);
+                }
+                return ((SqlCall) selectItem).operand(0);
             }
             return selectItem;
           }

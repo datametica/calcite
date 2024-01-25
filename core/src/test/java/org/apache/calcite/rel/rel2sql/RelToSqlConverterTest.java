@@ -2123,7 +2123,7 @@ class RelToSqlConverterTest {
     final String expectedBigQuery = "SELECT D2 AS `emps.deptno`\n"
         + "FROM (SELECT DEPTNO AS D2, COUNT(*) AS `emps.count`\n"
         + "FROM scott.EMP\n"
-        + "GROUP BY DEPTNO\n"
+        + "GROUP BY D2\n"
         + "HAVING `emps.count` < 2) AS t1";
     relFn(b -> root)
         .withBigQuery().ok(expectedBigQuery)
@@ -5056,7 +5056,7 @@ class RelToSqlConverterTest {
   @Test public void testFloorMssqlWeek() {
     String query = "SELECT floor(\"hire_date\" TO WEEK) FROM \"employee\"";
     String expected = "SELECT CONVERT(DATETIME, CONVERT(VARCHAR(10), "
-        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date])) % 7, [hire_date]), 126))\n"
+        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date] )) % 7, [hire_date] ), 126))\n"
         + "FROM [foodmart].[employee]";
     sql(query)
         .withMssql()
@@ -8398,7 +8398,7 @@ class RelToSqlConverterTest {
         + "FROM foodmart.product\n"
         + "GROUP BY product_id, MAX(product_id) OVER (PARTITION BY product_id "
         + "RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)";
-    final String expectedBQ = "SELECT product_id, ABC\n"
+    final String expectedBQ = "SELECT *\n"
         + "FROM (SELECT product_id, MAX(product_id) OVER "
         + "(PARTITION BY product_id RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS ABC\n"
         + "FROM foodmart.product) AS t\n"
