@@ -5056,7 +5056,7 @@ class RelToSqlConverterTest {
   @Test public void testFloorMssqlWeek() {
     String query = "SELECT floor(\"hire_date\" TO WEEK) FROM \"employee\"";
     String expected = "SELECT CONVERT(DATETIME, CONVERT(VARCHAR(10), "
-        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date] )) % 7, [hire_date] ), 126))\n"
+        + "DATEADD(day, - (6 + DATEPART(weekday, [hire_date])) % 7, [hire_date]), 126))\n"
         + "FROM [foodmart].[employee]";
     sql(query)
         .withMssql()

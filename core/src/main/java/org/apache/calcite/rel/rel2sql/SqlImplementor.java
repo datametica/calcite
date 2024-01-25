@@ -1708,8 +1708,7 @@ public abstract class SqlImplementor {
       return inputSqlNodes.get(ordinal);
     }
 
-    @Override
-    public SqlNode field(int ordinal, boolean useAlias) {
+    @Override public SqlNode field(int ordinal, boolean useAlias) {
       throw new IllegalStateException("SHouldn't be here");
     }
   }
