@@ -925,8 +925,8 @@ public class BigQuerySqlDialect extends SqlDialect {
         unparseCall(writer, timestampSecondsCall, leftPrec, rightPrec);
         break;
       }
-      SqlCall parseTimestampCall = PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
-              creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
+      SqlCall parseTimestampCall =
+              PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO, creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
       unparseCall(writer, parseTimestampCall, leftPrec, rightPrec);
       break;
     case "INSTR":
