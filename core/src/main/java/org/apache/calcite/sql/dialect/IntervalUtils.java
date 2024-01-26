@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
@@ -67,8 +66,8 @@ public class IntervalUtils {
       if (sqlIntervalLiteral.getTypeName() == SqlTypeName.INTERVAL_HOUR_SECOND) {
         SqlIntervalLiteral.IntervalValue interval =
             (SqlIntervalLiteral.IntervalValue) sqlIntervalLiteral.getValue();
-        long equivalentSecondValue = SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(),
-              interval.getIntervalQualifier()) / 1000;
+        long equivalentSecondValue =
+              SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(), interval.getIntervalQualifier()) / 1000;
         return Long.toString(equivalentSecondValue);
       }
 
@@ -100,8 +99,8 @@ public class IntervalUtils {
             .getIntervalQualifier().timeUnitRange;
         String timeUnit = tr == TimeUnitRange.HOUR_TO_SECOND
             ? TimeUnitRange.SECOND.toString() : tr.toString();
-        intervalLiteral = createInterval(intervalLiteral,
-          timeUnit);
+        intervalLiteral =
+          createInterval(intervalLiteral, timeUnit);
       }
     } else if (node instanceof SqlNumericLiteral) {
       Long intervalValue = ((SqlLiteral) node).getValueAs(Long.class);
@@ -149,5 +148,3 @@ public class IntervalUtils {
     return  "INTERVAL " + ip + " " + intervalType;
   }
 }
-
-// End IntervalUtils.java

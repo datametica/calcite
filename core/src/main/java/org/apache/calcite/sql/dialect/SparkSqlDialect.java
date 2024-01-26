@@ -18,7 +18,6 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.sql.JoinType;
@@ -50,10 +49,8 @@ import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.PaddingFunctionUtil;
 import org.apache.calcite.util.RelToSqlConverterUtil;
-import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.ToNumberUtils;
 
 import org.checkerframework.checker.nullness.qual.Nullable;

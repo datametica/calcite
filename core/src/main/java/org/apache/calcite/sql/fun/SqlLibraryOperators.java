@@ -2459,8 +2459,8 @@ public abstract class SqlLibraryOperators {
 //                  number -> number == 2 || number == 3),
 //          SqlFunctionCategory.STRING);
 
-  public static final SqlFunction TIMESTAMPINTADD = new SqlFunction("TIMESTAMP_ADD",
-          SqlKind.OTHER_FUNCTION,
+  public static final SqlFunction TIMESTAMPINTADD =
+          new SqlFunction("TIMESTAMP_ADD", SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER_NULLABLE,
           null,
           OperandTypes.family(ImmutableList.of
@@ -2469,8 +2469,8 @@ public abstract class SqlLibraryOperators {
               number -> number == 2 || number == 3),
           SqlFunctionCategory.STRING);
 
-  public static final SqlFunction TIMESTAMPINTSUB = new SqlFunction("TIMESTAMPINTSUB",
-          SqlKind.OTHER_FUNCTION,
+  public static final SqlFunction TIMESTAMPINTSUB =
+          new SqlFunction("TIMESTAMPINTSUB", SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIMESTAMP, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
           SqlFunctionCategory.USER_DEFINED_FUNCTION);

@@ -61,12 +61,10 @@ import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.format.FormatModel;
 import org.apache.calcite.util.format.FormatModels;
-import org.apache.calcite.util.interval.BigQueryDateTimestampInterval;
 
 import com.google.common.collect.ImmutableList;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
-
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -980,8 +978,8 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseCall(writer, parseDateCall, leftPrec, rightPrec);
       break;
     case "TO_DATE":
-      SqlCall parseToDateCall = PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
-              creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
+      SqlCall parseToDateCall =
+              PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO, creteDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
       final SqlWriter.Frame timestampSecond = writer.startFunCall("DATE");
       unparseCall(writer, parseToDateCall, leftPrec, rightPrec);
       writer.endFunCall(timestampSecond);

@@ -10322,8 +10322,7 @@ class RelToSqlConverterTest {
             .ok(expectedSnowFlake);
   }
 
-  @Test
-  public void testTimestamp() {
+  @Test public void testTimestamp() {
     String query = "select TO_TIMESTAMP(23423412) from \"employee\"";
     final String expectedBigQuery = "SELECT TRUNC(2.30259, employee_id)\n"
             + "FROM foodmart.employee";

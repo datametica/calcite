@@ -266,5 +266,3 @@ public class BigQueryDateTimestampInterval {
     writer.print(")");
   }
 }
-
-// End BigQueryDateTimestampInterval.java
