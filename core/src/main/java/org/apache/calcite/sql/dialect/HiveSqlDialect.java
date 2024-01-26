@@ -655,10 +655,10 @@ public class HiveSqlDialect extends SqlDialect {
       PaddingFunctionUtil.unparseCall(writer, call, leftPrec, rightPrec);
       break;
     case "DAYOFYEAR":
-      SqlCall formatCall = DATE_FORMAT.createCall(SqlParserPos.ZERO, call.operand(0),
-          SqlLiteral.createCharString("D", SqlParserPos.ZERO));
-      SqlCall castCall = CAST.createCall(SqlParserPos.ZERO, formatCall,
-          getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.INTEGER)));
+      SqlCall formatCall =
+          DATE_FORMAT.createCall(SqlParserPos.ZERO, call.operand(0), SqlLiteral.createCharString("D", SqlParserPos.ZERO));
+      SqlCall castCall =
+          CAST.createCall(SqlParserPos.ZERO, formatCall, getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.INTEGER)));
       unparseCall(writer, castCall, leftPrec, rightPrec);
       break;
     case "MONTHNUMBER_OF_QUARTER":

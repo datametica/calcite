@@ -346,7 +346,7 @@ public abstract class SqlOperator {
    * {@link #createCall(SqlParserPos, List)}. The ambiguity arises because
    * {@link SqlNodeList} extends {@link SqlNode}
    * and also implements {@code List<SqlNode>}. */
-  @Deprecated
+//  @Deprecated
   public SqlCall createCall(
       SqlParserPos pos,
       SqlNodeList operands) {

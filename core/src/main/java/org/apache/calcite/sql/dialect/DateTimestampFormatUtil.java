@@ -32,8 +32,6 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.DateString;
 
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.parser.SqlParserPos;
 
 /**
  * Support unparse logic for DateTimestamp function
@@ -87,10 +85,10 @@ public class DateTimestampFormatUtil {
 
   private SqlCall handleDayOccurrenceMonth(SqlCall call, DateTimeUnit dateTimeUnit) {
     SqlCall divideSqlCall = handleDivideLiteral(call, dateTimeUnit);
-    SqlNode[] plusOperands = new SqlNode[] { divideSqlCall, SqlLiteral.createExactNumeric("1",
-        SqlParserPos.ZERO) };
-    SqlCall plusSqlCall = new SqlBasicCall(SqlStdOperatorTable.PLUS, plusOperands,
-        SqlParserPos.ZERO);
+    SqlNode[] plusOperands =
+        new SqlNode[] { divideSqlCall, SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO) };
+    SqlCall plusSqlCall =
+        new SqlBasicCall(SqlStdOperatorTable.PLUS, plusOperands, SqlParserPos.ZERO);
     BasicSqlType sqlType = new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.INTEGER);
     return CAST.createCall(SqlParserPos.ZERO, plusSqlCall, SqlTypeUtil.convertTypeToSpec(sqlType));
   }
@@ -99,8 +97,8 @@ public class DateTimestampFormatUtil {
     SqlNode[] dateCastOperand = new SqlNode[] {
         SqlLiteral.createDate(new DateString("1900-01-01"), SqlParserPos.ZERO)
     };
-    SqlNode[] dateDiffOperands = new SqlNode[] { call.operand(0), dateCastOperand[0],
-        SqlLiteral.createSymbol(dateTimeUnit, SqlParserPos.ZERO) };
+    SqlNode[] dateDiffOperands =
+        new SqlNode[] { call.operand(0), dateCastOperand[0], SqlLiteral.createSymbol(dateTimeUnit, SqlParserPos.ZERO) };
     return new SqlBasicCall(SqlLibraryOperators.DATE_DIFF, dateDiffOperands,
         SqlParserPos.ZERO);
   }
@@ -114,8 +112,8 @@ public class DateTimestampFormatUtil {
 
   private SqlCall handleDivideLiteral(SqlCall call, DateTimeUnit dateTimeUnit) {
     SqlCall extractCall = unparseWeekNumber(call.operand(0), dateTimeUnit);
-    SqlNode[] divideOperands = new SqlNode[] { extractCall, SqlLiteral.createExactNumeric("7",
-        SqlParserPos.ZERO)};
+    SqlNode[] divideOperands =
+        new SqlNode[] { extractCall, SqlLiteral.createExactNumeric("7", SqlParserPos.ZERO)};
     return new SqlBasicCall(SqlStdOperatorTable.DIVIDE, divideOperands,
         SqlParserPos.ZERO);
   }
@@ -132,14 +130,14 @@ public class DateTimestampFormatUtil {
 
   private SqlCall unparseMonthNumberQuarter(SqlCall call, DateTimeUnit dateTimeUnit) {
     SqlCall extractCall = unparseWeekNumber(call.operand(0), dateTimeUnit);
-    SqlNumericLiteral quarterLiteral = SqlLiteral.createExactNumeric("3",
-        SqlParserPos.ZERO);
+    SqlNumericLiteral quarterLiteral =
+        SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO);
     SqlNode[] modOperand = new SqlNode[] { extractCall, quarterLiteral};
     SqlCall modSqlCall = new SqlBasicCall(SqlStdOperatorTable.MOD, modOperand, SqlParserPos.ZERO);
-    SqlNode[] equalsOperands = new SqlNode[] { modSqlCall, SqlLiteral.createExactNumeric("0",
-        SqlParserPos.ZERO)};
-    SqlCall equalsSqlCall = new SqlBasicCall(SqlStdOperatorTable.EQUALS, equalsOperands,
-        SqlParserPos.ZERO);
+    SqlNode[] equalsOperands =
+        new SqlNode[] { modSqlCall, SqlLiteral.createExactNumeric("0", SqlParserPos.ZERO)};
+    SqlCall equalsSqlCall =
+        new SqlBasicCall(SqlStdOperatorTable.EQUALS, equalsOperands, SqlParserPos.ZERO);
     SqlNode[] ifOperands = new SqlNode[] { equalsSqlCall, quarterLiteral, modSqlCall };
     return new SqlBasicCall(SqlStdOperatorTable.IF, ifOperands, SqlParserPos.ZERO);
   }
@@ -163,5 +161,3 @@ public class DateTimestampFormatUtil {
     }
   }
 }
-
-// End DateTimestampFormatUtil.java
