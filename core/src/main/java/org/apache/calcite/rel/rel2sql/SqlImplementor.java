@@ -32,6 +32,7 @@ import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Window;
+import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.rules.AggregateProjectConstantToDummyJoinRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -84,6 +85,7 @@ import org.apache.calcite.sql.SqlTableRef;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.fun.SqlCaseOperator;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -1763,7 +1765,7 @@ public abstract class SqlImplementor {
     }
 
     // CHECKSTYLE: IGNORE 3
-    /** deprecated Provide the expected clauses up-front, when you call
+    /** @deprecated Provide the expected clauses up-front, when you call
      * {@link #visitInput(RelNode, int, Set)}, then create a builder using
      * {@link #builder(RelNode)}. */
     @Deprecated // to be removed before 2.0
@@ -1795,6 +1797,13 @@ public abstract class SqlImplementor {
       final Set<Clause> clauses2 = ignoreClauses ? ImmutableSet.of() : clauses;
       final boolean needNew = needNewSubQuery(rel, this.clauses, clauses2);
       assert needNew == this.needNew;
+      boolean keepColumnAlias = false;
+
+      if (rel instanceof LogicalSort
+          && dialect.getConformance().isSortByAlias()) {
+        keepColumnAlias = true;
+      }
+
       SqlSelect select;
       Expressions.FluentList<Clause> clauseList = Expressions.list();
       if (needNew) {
@@ -1808,8 +1817,8 @@ public abstract class SqlImplementor {
       Map<String, RelDataType> newAliases = null;
       final SqlNodeList selectList = select.getSelectList();
       if (selectList != null && !selectList.equals(SqlNodeList.SINGLETON_STAR)) {
-        final boolean aliasRef = expectedClauses.contains(Clause.HAVING)
-            && dialect.getConformance().isHavingAlias();
+        final boolean aliasRef = (expectedClauses.contains(Clause.HAVING)
+            && dialect.getConformance().isHavingAlias()) || keepColumnAlias;
         newContext = new Context(dialect, selectList.size()) {
           @Override public SqlImplementor implementor() {
             return SqlImplementor.this;
@@ -1914,6 +1923,24 @@ public abstract class SqlImplementor {
                 && !nonWrapSet.contains(clause))) {
           return true;
         }
+      }
+
+      if (rel instanceof Project && rel.getInput(0) instanceof Aggregate
+          && dialect.getConformance().isGroupByAlias()
+          && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)) {
+        return true;
+      }
+
+      if (rel instanceof Aggregate && rel.getInput(0) instanceof Project
+          && dialect.getConformance().isGroupByAlias()
+          && hasAnalyticalFunctionUsedInGroupBy((Aggregate) rel)) {
+        return true;
+      }
+
+      if (rel instanceof Aggregate
+          && !dialect.supportsAnalyticalFunctionInAggregate()
+          && hasAnalyticalFunctionInAggregate((Aggregate) rel)) {
+        return true;
       }
 
       if (rel instanceof Project
@@ -2059,6 +2086,86 @@ public abstract class SqlImplementor {
                 }
               }
             }
+          }
+        }
+      }
+      return false;
+    }
+
+    private boolean hasAnalyticalFunctionInAggregate(Aggregate rel) {
+      boolean present = false;
+      if (node instanceof SqlSelect) {
+        final SqlNodeList selectList = ((SqlSelect) node).getSelectList();
+        if (selectList != null) {
+          final Set<Integer> aggregatesArgs = new HashSet<>();
+          for (AggregateCall aggregateCall : rel.getAggCallList()) {
+            aggregatesArgs.addAll(aggregateCall.getArgList());
+          }
+          for (int aggregatesArg : aggregatesArgs) {
+            if (selectList.get(aggregatesArg) instanceof SqlBasicCall) {
+              final SqlBasicCall call =
+                  (SqlBasicCall) selectList.get(aggregatesArg);
+              present = hasAnalyticalFunction(call);
+              if (!present) {
+                present = hasAnalyticalFunctionInWhenClauseOfCase(call);
+              }
+            }
+          }
+        }
+      }
+      return present;
+    }
+
+    private boolean hasAnalyticalFunctionInWhenClauseOfCase(SqlBasicCall call) {
+      SqlNode sqlNode = call.operand(0);
+      if (sqlNode instanceof SqlCall) {
+        if (((SqlCall) sqlNode).getOperator() instanceof SqlCaseOperator) {
+          for (SqlNode whenOperand : ((SqlCase) sqlNode).getWhenOperands()) {
+            boolean present = hasAnalyticalFunction((SqlBasicCall) whenOperand);
+            if (present) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    private boolean hasAnalyticalFunction(SqlBasicCall call) {
+      for (SqlNode operand : call.getOperandList()) {
+        if (operand instanceof SqlCall) {
+          if (((SqlCall) operand).getOperator() instanceof SqlOverOperator) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    private boolean hasAnalyticalFunctionUsedInGroupBy(Aggregate rel) {
+      if (node instanceof SqlSelect) {
+        List<String> groupByFieldNames = rel.getRowType().getFieldNames();
+        Project projectRel = (Project) rel.getInput(0);
+        for (String grp : groupByFieldNames) {
+          for (int i = 0; i < projectRel.getRowType().getFieldNames().size(); i++) {
+            if (grp.equals(projectRel.getRowType().getFieldNames().get(i))) {
+              if (isAnalyticalRex(projectRel.getProjects().get(i))) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    boolean isAnalyticalRex(RexNode rexNode) {
+      if (rexNode instanceof RexOver) {
+        return true;
+      } else if (rexNode instanceof RexCall) {
+        for (RexNode operand : ((RexCall) rexNode).getOperands()) {
+          if (isAnalyticalRex(operand)) {
+            return true;
           }
         }
       }

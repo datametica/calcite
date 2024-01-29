@@ -214,6 +214,11 @@ public class BigQuerySqlDialect extends SqlDialect {
         || RESERVED_KEYWORDS.contains(val.toUpperCase(Locale.ROOT));
   }
 
+  @Override public @Nullable SqlNode emulateNullDirection(SqlNode node,
+      boolean nullsFirst, boolean desc) {
+    return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
+  }
+
   @Override public boolean supportsImplicitTypeCoercion(RexCall call) {
     return super.supportsImplicitTypeCoercion(call)
             && RexUtil.isLiteral(call.getOperands().get(0), false)
@@ -499,6 +504,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   /** BigQuery interval syntax: INTERVAL int64 time_unit. */
   @Override public void unparseSqlIntervalLiteral(SqlWriter writer,
       SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
+    literal = modifiedSqlIntervalLiteral(literal);
     SqlIntervalLiteral.IntervalValue interval =
         literal.getValueAs(SqlIntervalLiteral.IntervalValue.class);
     writer.keyword("INTERVAL");
@@ -513,6 +519,25 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.literal(interval.getIntervalLiteral());
     unparseSqlIntervalQualifier(writer, interval.getIntervalQualifier(),
             RelDataTypeSystem.DEFAULT);
+  }
+
+  private SqlIntervalLiteral modifiedSqlIntervalLiteral(SqlIntervalLiteral literal) {
+    SqlIntervalLiteral.IntervalValue interval =
+        (SqlIntervalLiteral.IntervalValue) literal.getValue();
+    switch (literal.getTypeName()) {
+    case INTERVAL_HOUR_SECOND:
+      long equivalentSecondValue =
+          SqlParserUtil.intervalToMillis(interval.getIntervalLiteral(),
+              interval.getIntervalQualifier()) / 1000;
+      SqlIntervalQualifier qualifier =
+          new SqlIntervalQualifier(TimeUnit.SECOND, RelDataType.PRECISION_NOT_SPECIFIED,
+              TimeUnit.SECOND,
+              RelDataType.PRECISION_NOT_SPECIFIED, SqlParserPos.ZERO);
+      return SqlLiteral.createInterval(interval.getSign(), Long.toString(equivalentSecondValue),
+          qualifier, literal.getParserPosition());
+    default:
+      return literal;
+    }
   }
 
   @Override public void unparseSqlIntervalQualifier(
@@ -654,7 +679,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     return new SqlDataTypeSpec(typeNameSpec, SqlParserPos.ZERO);
   }
 
-  public SqlNode rewriteSingleValueExpr(SqlNode aggCall) {
+  @Override public SqlNode rewriteSingleValueExpr(SqlNode aggCall, RelDataType relDataType) {
     return ((SqlBasicCall) aggCall).operand(0);
   }
 

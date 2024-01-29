@@ -61,6 +61,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -170,6 +171,7 @@ public class SqlDialect {
   private final Casing unquotedCasing;
   private final Casing quotedCasing;
   private final boolean caseSensitive;
+  private final SqlConformance conformance;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -226,6 +228,7 @@ public class SqlDialect {
    * @param context All the information necessary to create a dialect
    */
   public SqlDialect(Context context) {
+    this.conformance = Objects.requireNonNull(context.conformance());
     this.nullCollation = requireNonNull(context.nullCollation());
     this.dataTypeSystem = requireNonNull(context.dataTypeSystem());
     this.databaseProduct = requireNonNull(context.databaseProduct());

@@ -498,6 +498,13 @@ public class RelBuilder {
     }
   }
 
+  public RexNode makeArrayLiteral(Object value) {
+    final RexBuilder rexBuilder = cluster.getRexBuilder();
+    RelDataType arrayDataType = getTypeFactory().
+        createArrayType(getTypeFactory().createSqlType(SqlTypeName.ANY), -1);
+    return rexBuilder.makeLiteral(value, arrayDataType, false);
+  }
+
   @Deprecated // to be removed before 2.0
   public RelBuilder variable(Holder<RexCorrelVariable> v) {
     return variable(v::set);
