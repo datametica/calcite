@@ -2915,7 +2915,7 @@ class RelToSqlConverterTest {
         + "INTERVAL '19800' SECOND(5) > cast(\"hire_date\" as TIMESTAMP(0))";
     final String expectedSpark = "SELECT *\n"
         + "FROM foodmart.employee\n"
-        + "WHERE (hire_date - INTERVAL '19800' SECOND(5)) > CAST(hire_date AS TIMESTAMP)";
+        + "WHERE DATEDIFF(hire_date, INTERVAL '19800' SECOND(5)) > CAST(hire_date AS TIMESTAMP)";
     final String expectedPresto = "SELECT *\n"
         + "FROM \"foodmart\".\"employee\"\n"
         + "WHERE (\"hire_date\" - INTERVAL '19800' SECOND) > CAST(\"hire_date\" AS TIMESTAMP)";

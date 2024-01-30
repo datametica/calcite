@@ -123,7 +123,7 @@ public abstract class SqlLibraryOperators {
           new SqlFunction(
                   "DATE_ADD",
                   SqlKind.PLUS,
-                  ReturnTypes.DATE,
+                  ReturnTypes.ARG0_NULLABLE,
                   null,
                   OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
                   SqlFunctionCategory.TIMEDATE) {
@@ -227,7 +227,7 @@ public abstract class SqlLibraryOperators {
           new SqlFunction(
                   "DATE_SUB",
                   SqlKind.MINUS,
-                  ReturnTypes.DATE,
+                  ReturnTypes.ARG0_NULLABLE,
                   null,
                   OperandTypes.or(DATETIME_INTERVAL, DATETIME_INTEGER),
                   SqlFunctionCategory.TIMEDATE) {
