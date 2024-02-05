@@ -548,7 +548,7 @@ public class RelToSqlConverter extends SqlImplementor
      *
      * @return null literal wrapped in CAST call
      */
-  private SqlNode castNullType(SqlNode nullLiteral, RelDataType type) {
+  public SqlNode castNullType(SqlNode nullLiteral, RelDataType type) {
     final SqlNode typeNode = dialect.getCastSpec(type);
     if (typeNode == null) {
       return nullLiteral;

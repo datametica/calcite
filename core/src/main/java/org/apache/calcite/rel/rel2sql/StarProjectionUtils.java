@@ -18,14 +18,20 @@ package org.apache.calcite.rel.rel2sql;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexOver;
+import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 
 import java.util.HashMap;
@@ -34,6 +40,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
 
 /**
  * If the given project rel has flattened fields because of * in the source query
@@ -54,7 +62,7 @@ import java.util.stream.IntStream;
 public class StarProjectionUtils {
 
   SqlImplementor sqlImplementor;
-
+  public SqlDialect dialect;
   StarProjectionUtils(SqlImplementor sqlImplementor) {
     this.sqlImplementor = sqlImplementor;
   }
@@ -95,11 +103,14 @@ public class StarProjectionUtils {
       projectRelNode = projectRelNode.getInput(0);
     }
     List<String> actualColumnNames = projectRelNode.getRowType().getFieldNames();
-    return projectedColumnNamesMatchesActualFieldNames(projectedColumnNames, actualColumnNames, subListBeginEnd);
+    return columnNamesMatchesActualFieldNames(projectedColumnNames, actualColumnNames,
+        subListBeginEnd);
   }
 
   /**
-   * This method evaluates whether the projected column names matches the actual column names in a table.
+   * This method evaluates whether the projected column names
+   * matches the actual column names in a table.
+   *
    * Eg:
    * query -> select warehouse_class_id as id, description as description
    *           from warehouse_class
@@ -113,7 +124,7 @@ public class StarProjectionUtils {
    * @param subListBeginEnd map which contains starting and ending index of *
    * @return boolean
    */
-  private static boolean projectedColumnNamesMatchesActualFieldNames(List<String> projectedColumnsNames,
+  private static boolean columnNamesMatchesActualFieldNames(List<String> projectedColumnsNames,
       List<String> actualColumnNames, Map<Integer, Integer> subListBeginEnd) {
     int startingIndex = 0;
     int endingIndex = 0;
@@ -126,13 +137,13 @@ public class StarProjectionUtils {
   }
 
   /**
-   * if projectedColumnNames contains EMPNO1, EMP_NAME2, POSITION1 as aliases
+   * if projectedColumnNames contains EMPNO1, EMP_NAME2, POSITION1 as aliases.
    * we will trim the numeric suffix from the column names
    * @param projectedColumnsNames contains projected column names
-   * @return List<String> containing EMPNO, EMP_NAME, POSITION
+   * @return List(String) containing EMPNO, EMP_NAME, POSITION
    */
   private static List<String> removeNumericSuffixFromColumns(List<String> projectedColumnsNames) {
-     return projectedColumnsNames.stream()
+    return projectedColumnsNames.stream()
         .map(s -> s.replaceAll("\\d*$", ""))
         .collect(Collectors.toList());
   }
@@ -163,6 +174,16 @@ public class StarProjectionUtils {
         i = starProjectionSublistIndices.get(i);
       } else {
         sqlExpr = builder.context.toSql(null, projectRel.getProjects().get(i));
+      }
+      RelDataTypeField targetField = projectRel.getRowType().getFieldList().get(i);
+
+      if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
+        sqlExpr = dialect.rewriteSingleValueExpr(sqlExpr);
+      }
+
+      if (SqlUtil.isNullLiteral(sqlExpr, false)
+          && targetField.getType().getSqlTypeName() != SqlTypeName.NULL) {
+        sqlExpr = castNullType(sqlExpr, targetField.getType());
       }
       addToSelect(projectRel, selectList, i, sqlExpr);
     }
@@ -196,7 +217,15 @@ public class StarProjectionUtils {
                 && it.toString().equals("*")));
   }
 
-  protected static boolean containsStarInSelectList(SqlNodeList selectList){
+  protected static boolean containsStarInSelectList(SqlNodeList selectList) {
     return selectList.stream().anyMatch(item -> item.toString().equals("*"));
+  }
+
+  public SqlNode castNullType(SqlNode nullLiteral, RelDataType type) {
+    final SqlNode typeNode = dialect.getCastSpec(type);
+    if (typeNode == null) {
+      return nullLiteral;
+    }
+    return SqlStdOperatorTable.CAST.createCall(POS, nullLiteral, typeNode);
   }
 }

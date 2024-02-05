@@ -1837,8 +1837,8 @@ public abstract class SqlImplementor {
           }
 
           @Override public SqlNode field(int ordinal) {
-            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(ordinal, selectList,
-                originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
+            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(ordinal,
+                selectList, originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
             switch (selectItem.getKind()) {
             case AS:
               final SqlCall asCall = (SqlCall) selectItem;
@@ -1858,8 +1858,8 @@ public abstract class SqlImplementor {
           }
 
           public SqlNode field(int ordinal, boolean useAlias) {
-            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(ordinal, selectList,
-                originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
+            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(ordinal,
+                selectList, originalList) ? originalList.get(ordinal) : selectList.get(ordinal);
             switch (selectItem.getKind()) {
             case AS:
               if (useAlias) {
@@ -1883,7 +1883,10 @@ public abstract class SqlImplementor {
             if (node instanceof SqlIdentifier
                 && ((SqlIdentifier) node).isSimple()) {
               final String name = ((SqlIdentifier) node).getSimple();
-              for (Ord<SqlNode> selectItem : Ord.zip(selectList)) {
+              final SqlNodeList modifiedSelectList =
+                  StarProjectionUtils.containsStarInSelectList(selectList)
+                      ? SqlNodeList.of(SqlParserPos.ZERO, originalList) : selectList;
+              for (Ord<SqlNode> selectItem : Ord.zip(modifiedSelectList)) {
                 if (selectItem.i != ordinal) {
                   final String alias =
                       SqlValidatorUtil.getAlias(selectItem.e, -1);
@@ -1954,9 +1957,9 @@ public abstract class SqlImplementor {
             aggregatesArgs.addAll(aggregateCall.getArgList());
           }
           for (int aggregatesArg : aggregatesArgs) {
-            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(aggregatesArg,
-                selectList,
-                originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
+            final SqlNode selectItem =
+                StarProjectionUtils.hasOptimizedStarInProjection(aggregatesArg, selectList,
+                 originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
             if (selectItem instanceof SqlBasicCall) {
               final SqlBasicCall call =
                   (SqlBasicCall) selectItem;
@@ -2346,9 +2349,9 @@ public abstract class SqlImplementor {
             aggregatesArgs.addAll(aggregateCall.getArgList());
           }
           for (int aggregatesArg : aggregatesArgs) {
-            final SqlNode selectItem = StarProjectionUtils.hasOptimizedStarInProjection(aggregatesArg,
-                selectList,
-                originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
+            final SqlNode selectItem =
+                StarProjectionUtils.hasOptimizedStarInProjection(aggregatesArg, selectList,
+                 originalList) ? originalList.get(aggregatesArg) : selectList.get(aggregatesArg);
             if (selectItem instanceof SqlBasicCall) {
               final SqlBasicCall call =
                   (SqlBasicCall) selectItem;
