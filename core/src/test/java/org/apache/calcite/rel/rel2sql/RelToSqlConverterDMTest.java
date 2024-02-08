@@ -13849,6 +13849,20 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqQuery));
   }
 
+  @Test public void testTDStrtokSplitToTable() {
+    final RelBuilder builder = relBuilder();
+    final RelNode root = builder
+        .functionScan(SqlLibraryOperators.TD_STRTOK_SPLIT_TO_TABLE, 0,
+            builder.literal(0), builder.literal("a,b,c"), builder.literal(","))
+        .project(builder.field(2))
+        .build();
+
+    final String expectedTDQuery = "SELECT \"VALUE\"\n"
+        + "FROM TABLE(SPLIT_TO_TABLE('a,b,c', ','))";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTDQuery));
+  }
+
   @Test public void testCTEWithTraits() {
     final RelBuilder builder = foodmartRelBuilder();
 
