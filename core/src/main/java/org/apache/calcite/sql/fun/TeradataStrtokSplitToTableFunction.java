@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.calcite.sql.fun;
 
 import org.apache.calcite.sql.SqlFunction;
@@ -33,11 +32,11 @@ public class TeradataStrtokSplitToTableFunction extends
     SqlFunction implements SqlTableFunction {
 
   public TeradataStrtokSplitToTableFunction() {
-    super("STRTOK_SPLIT_TO_TABLE",
+    super("TD_STRTOK_SPLIT_TO_TABLE",
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.CURSOR,
         null,
-        OperandTypes.STRING_STRING,
+        OperandTypes.INTEGER_STRING_STRING,
         SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION);
   }
 

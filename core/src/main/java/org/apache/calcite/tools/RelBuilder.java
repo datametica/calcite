@@ -1805,7 +1805,8 @@ public class RelBuilder {
    * @param withOrdinality If {@code withOrdinality}, the output contains an extra
    * {@code ORDINALITY} column
    */
-  public RelBuilder uncollect(List<String> itemAliases, boolean withOrdinality) {
+  public RelBuilder uncollect(List<String> itemAliases,
+      boolean withOrdinality, boolean withOffset) {
     Frame frame = stack.pop();
     stack.push(
         new Frame(
@@ -1814,6 +1815,7 @@ public class RelBuilder {
             cluster.traitSetOf(Convention.NONE),
             frame.rel,
             withOrdinality,
+            withOffset,
             requireNonNull(itemAliases))));
     return this;
   }

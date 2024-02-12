@@ -1255,6 +1255,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "STRTOK":
       unparseStrtok(writer, call, leftPrec, rightPrec);
       break;
+    case "REGEXP_EXTRACT_ALL":
+      unparseRegexpExtractAll(writer, call, leftPrec, rightPrec);
+      break;
     case "DAYOFMONTH":
       SqlNode daySymbolLiteral = SqlLiteral.createSymbol(TimeUnit.DAY, SqlParserPos.ZERO);
       SqlCall extractCall = EXTRACT.createCall(SqlParserPos.ZERO,

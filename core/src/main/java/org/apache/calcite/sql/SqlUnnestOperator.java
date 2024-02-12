@@ -37,7 +37,14 @@ public class SqlUnnestOperator extends SqlFunctionalOperator {
    * <p>If so, the returned records include a column {@code ORDINALITY}. */
   public final boolean withOrdinality;
 
+  /** Whether {@code WITH OFFSET} was specified.
+   *
+   * <p>If so, the returned records include a column {@code OFFSET}. */
+  public final boolean withOffset;
+
   public static final String ORDINALITY_COLUMN_NAME = "ORDINALITY";
+
+  public static final String OFFSET_COLUMN_NAME = "OFFSET";
 
   public static final String MAP_KEY_COLUMN_NAME = "KEY";
 
@@ -45,7 +52,7 @@ public class SqlUnnestOperator extends SqlFunctionalOperator {
 
   //~ Constructors -----------------------------------------------------------
 
-  public SqlUnnestOperator(boolean withOrdinality) {
+  public SqlUnnestOperator(boolean withOrdinality, boolean withOffset) {
     super(
         "UNNEST",
         SqlKind.UNNEST,
@@ -56,6 +63,7 @@ public class SqlUnnestOperator extends SqlFunctionalOperator {
         OperandTypes.repeat(SqlOperandCountRanges.from(1),
             OperandTypes.SCALAR_OR_RECORD_COLLECTION_OR_MAP));
     this.withOrdinality = withOrdinality;
+    this.withOffset = withOffset;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -98,6 +106,9 @@ public class SqlUnnestOperator extends SqlFunctionalOperator {
     if (withOrdinality) {
       builder.add(ORDINALITY_COLUMN_NAME, SqlTypeName.INTEGER);
     }
+    if (withOffset) {
+      builder.add(OFFSET_COLUMN_NAME, SqlTypeName.INTEGER);
+    }
     return builder.build();
   }
 
@@ -122,6 +133,9 @@ public class SqlUnnestOperator extends SqlFunctionalOperator {
     }
     if (withOrdinality) {
       writer.keyword("WITH ORDINALITY");
+    }
+    if (withOffset) {
+      writer.keyword("WITH OFFSET");
     }
   }
 

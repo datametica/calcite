@@ -13857,8 +13857,8 @@ class RelToSqlConverterDMTest {
         .project(builder.field(2))
         .build();
 
-    final String expectedTDQuery = "SELECT \"VALUE\"\n"
-        + "FROM TABLE(SPLIT_TO_TABLE('a,b,c', ','))";
+    final String expectedTDQuery = "SELECT \"TOKEN\"\n"
+        + "FROM TABLE(STRTOK_SPLIT_TO_TABLE(0, 'a,b,c', ','))";
 
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTDQuery));
   }
