@@ -128,8 +128,13 @@ public abstract class SqlLibraryOperators {
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction LEVEL =
-      new SqlFunction("LEVEL", SqlKind.ANY_VALUE, ReturnTypes.INTEGER, null,
-          null, SqlFunctionCategory.SYSTEM);
+      new SqlFunction("LEVEL", SqlKind.HEIRARCHICAL, ReturnTypes.INTEGER, null,
+          null, SqlFunctionCategory.SYSTEM){
+
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          writer.print(call.getOperator().getName());
+        }
+      };
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_ARRAY =

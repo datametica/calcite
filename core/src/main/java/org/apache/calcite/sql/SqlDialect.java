@@ -30,6 +30,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -481,7 +482,10 @@ public class SqlDialect {
           operator = SqlInternalOperators.ANONYMOUS_ROW;
         }
       }
-      // fall through
+    case HEIRARCHICAL:
+      if(operator.getName().equals("LEVEL")) {
+        SqlLibraryOperators.LEVEL.unparse(writer, call, leftPrec, rightPrec);
+      }
     default:
       operator.unparse(writer, call, leftPrec, rightPrec);
     }

@@ -416,6 +416,9 @@ public enum SqlKind {
   /** {@code DECODE} function (Oracle). */
   DECODE,
 
+  /** {@code HEIRARCHICAL} function (Oracle). */
+  HEIRARCHICAL,
+
   /** {@code NVL} function (Oracle). */
   NVL,
 
