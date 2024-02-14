@@ -126,6 +126,25 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("DECODE", SqlKind.DECODE, DECODE_RETURN_TYPE, null,
           OperandTypes.VARIADIC, SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction LEVEL =
+      new SqlFunction("LEVEL", SqlKind.ANY_VALUE, ReturnTypes.INTEGER, null,
+          null, SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction GENERATE_ARRAY =
+      new SqlFunction("GENERATE_ARRAY", SqlKind.ARRAY_VALUE_CONSTRUCTOR, SqlLibraryOperators::inferReturnType, null,
+          OperandTypes.INTEGER, SqlFunctionCategory.SYSTEM) {
+        /***
+         * Commenting this part as we create RexCall using this function
+         */
+      };
+  private static RelDataType inferReturnType(SqlOperatorBinding opBinding) {
+    final RelDataTypeFactory typeFactory =
+        opBinding.getTypeFactory();
+    return typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.INTEGER), -1);
+  }
+
   /** The "IF(condition, thenValue, elseValue)" function. */
   @LibraryOperator(libraries = {BIG_QUERY, HIVE, SPARK, SNOWFLAKE})
   public static final SqlFunction IF =

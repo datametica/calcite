@@ -109,21 +109,7 @@ import com.google.common.collect.Ordering;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.calcite.rex.RexLiteral.stringValue;
@@ -1286,6 +1272,9 @@ public class RelToSqlConverter extends SqlImplementor
 
     if (x.node instanceof SqlSelect) {
       operand = ((SqlSelect) x.node).getSelectList().get(0);
+      if(((SqlBasicCall) operand).getOperator().getName().equals("AS")) {
+        operand = Arrays.stream(((SqlBasicCall) operand).getOperands()).findFirst().get();
+      }
     }
     final SqlNode unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, operand);
     final List<SqlNode> operands = createAsFullOperands(e.getRowType(), unnestNode,
