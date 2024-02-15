@@ -42,9 +42,9 @@ public class TeradataStrtokSplitToTableFunction extends
 
   @Override public SqlReturnTypeInference getRowTypeInference() {
     return opBinding -> opBinding.getTypeFactory().builder()
-        .add("OUTKEY", SqlTypeName.INTEGER)
-        .add("TOKENNUM", SqlTypeName.INTEGER)
-        .add("TOKEN", SqlTypeName.VARCHAR)
+        .add("outkey", SqlTypeName.INTEGER)
+        .add("tokennum", SqlTypeName.INTEGER).nullable(true)
+        .add("token", SqlTypeName.VARCHAR).nullable(true)
         .build();
   }
 }

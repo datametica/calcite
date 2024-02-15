@@ -134,9 +134,6 @@ public class SqlUnnestOperator extends SqlFunctionalOperator {
     if (withOrdinality) {
       writer.keyword("WITH ORDINALITY");
     }
-    if (withOffset) {
-      writer.keyword("WITH OFFSET");
-    }
   }
 
   @Override public boolean argumentMustBeScalar(int ordinal) {

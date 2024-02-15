@@ -47,6 +47,7 @@ import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.SqlUnnestOperator;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlCase;
@@ -753,10 +754,14 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     case AS:
       SqlNode var = call.operand(0);
+      List<SqlNode> sqlNodes = call.getOperandList();
       if (call.operand(0) instanceof SqlCharStringLiteral
           && (var.toString().contains("\\")
           && !var.toString().substring(1, 3).startsWith("\\\\"))) {
         unparseAsOp(writer, call, leftPrec, rightPrec);
+      } else if (sqlNodes.size() == 4
+          && sqlNodes.get(0).getKind().name().equalsIgnoreCase(SqlKind.UNNEST.name())) {
+        unparseAsOpWithUnnest(writer, call, leftPrec, rightPrec);
       } else {
         call.getOperator().unparse(writer, call, leftPrec, rightPrec);
       }
@@ -897,6 +902,22 @@ public class BigQuerySqlDialect extends SqlDialect {
         operand.unparse(writer, 0, 0);
       }
       writer.endList(frame1);
+    }
+    writer.endList(frame);
+  }
+
+  private void unparseAsOpWithUnnest(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    assert call.operandCount() == 4;
+    SqlUnnestOperator unnestOperator =
+        (SqlUnnestOperator) ((SqlBasicCall) call.operand(0)).getOperator();
+    final SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.AS);
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.sep("AS");
+    call.operand(2).unparse(writer, leftPrec, rightPrec);
+    if (unnestOperator.withOffset) {
+      writer.literal("WITH OFFSET");
+      writer.sep("AS");
+      call.operand(3).unparse(writer, leftPrec, rightPrec);
     }
     writer.endList(frame);
   }
