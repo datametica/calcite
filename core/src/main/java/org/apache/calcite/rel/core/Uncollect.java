@@ -40,8 +40,7 @@ import java.util.List;
  *
  * <p>The input may have multiple columns, but each must be a multiset or
  * array. If {@code withOrdinality}, the output contains an extra
- * {@code ORDINALITY} column.If {@code withOffset}, the output contains an extra
- * {@code OFFSET} column.
+ * {@code ORDINALITY} column.
  *
  * <p>Like its inverse operation {@link Collect}, Uncollect is generally
  * invoked in a nested loop, driven by
@@ -49,8 +48,6 @@ import java.util.List;
  */
 public class Uncollect extends SingleRel {
   public final boolean withOrdinality;
-
-  public final boolean withOffset;
 
   // To alias the items in Uncollect list,
   // i.e., "UNNEST(a, b, c) as T(d, e, f)"
@@ -66,7 +63,7 @@ public class Uncollect extends SingleRel {
   @Deprecated // to be removed before 2.0
   public Uncollect(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode child) {
-    this(cluster, traitSet, child, false, false, Collections.emptyList());
+    this(cluster, traitSet, child, false, Collections.emptyList());
   }
 
   /** Creates an Uncollect.
@@ -74,10 +71,9 @@ public class Uncollect extends SingleRel {
    * <p>Use {@link #create} unless you know what you're doing. */
   @SuppressWarnings("method.invocation.invalid")
   public Uncollect(RelOptCluster cluster, RelTraitSet traitSet, RelNode input,
-      boolean withOrdinality, boolean withOffset, List<String> itemAliases) {
+      boolean withOrdinality, List<String> itemAliases) {
     super(cluster, traitSet, input);
     this.withOrdinality = withOrdinality;
-    this.withOffset = withOffset;
     this.itemAliases = ImmutableList.copyOf(itemAliases);
     assert deriveRowType() != null : "invalid child rowtype";
   }
@@ -88,7 +84,6 @@ public class Uncollect extends SingleRel {
   public Uncollect(RelInput input) {
     this(input.getCluster(), input.getTraitSet(), input.getInput(),
         input.getBoolean("withOrdinality", false),
-        input.getBoolean("withOffset", false),
         Collections.emptyList());
   }
 
@@ -109,15 +104,14 @@ public class Uncollect extends SingleRel {
       boolean withOrdinality,
       List<String> itemAliases) {
     final RelOptCluster cluster = input.getCluster();
-    return new Uncollect(cluster, traitSet, input, withOrdinality, false, itemAliases);
+    return new Uncollect(cluster, traitSet, input, withOrdinality, itemAliases);
   }
 
   //~ Methods ----------------------------------------------------------------
 
   @Override public RelWriter explainTerms(RelWriter pw) {
     return super.explainTerms(pw)
-        .itemIf("withOrdinality", withOrdinality, withOrdinality)
-        .itemIf("withOffset", withOffset, withOffset);
+        .itemIf("withOrdinality", withOrdinality, withOrdinality);
   }
 
   @Override public final RelNode copy(RelTraitSet traitSet,
@@ -127,11 +121,11 @@ public class Uncollect extends SingleRel {
 
   public RelNode copy(RelTraitSet traitSet, RelNode input) {
     assert traitSet.containsIfApplicable(Convention.NONE);
-    return new Uncollect(getCluster(), traitSet, input, withOrdinality, withOffset, itemAliases);
+    return new Uncollect(getCluster(), traitSet, input, withOrdinality, itemAliases);
   }
 
   @Override protected RelDataType deriveRowType() {
-    return deriveUncollectRowType(input, withOrdinality, withOffset, itemAliases);
+    return deriveUncollectRowType(input, withOrdinality, itemAliases);
   }
 
   /**
@@ -146,7 +140,7 @@ public class Uncollect extends SingleRel {
    * type has same column types as input type).
    */
   public static RelDataType deriveUncollectRowType(RelNode rel,
-      boolean withOrdinality, boolean withOffset, List<String> itemAliases) {
+      boolean withOrdinality, List<String> itemAliases) {
     RelDataType inputType = rel.getRowType();
     assert inputType.isStruct() : inputType + " is not a struct";
 
@@ -190,11 +184,6 @@ public class Uncollect extends SingleRel {
 
     if (withOrdinality) {
       builder.add(SqlUnnestOperator.ORDINALITY_COLUMN_NAME,
-          SqlTypeName.INTEGER);
-    }
-
-    if (withOffset) {
-      builder.add(SqlUnnestOperator.OFFSET_COLUMN_NAME,
           SqlTypeName.INTEGER);
     }
     return builder.build();

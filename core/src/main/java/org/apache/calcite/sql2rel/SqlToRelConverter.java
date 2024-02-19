@@ -2262,9 +2262,7 @@ public class SqlToRelConverter {
       uncollect = relBuilder
           .push(child)
           .project(exprs)
-          .uncollect(requireNonNull(fieldNames, "fieldNames"),
-              operator.withOrdinality,
-              operator.withOffset)
+          .uncollect(requireNonNull(fieldNames, "fieldNames"), operator.withOrdinality)
           .build();
     } else {
       // REVIEW danny 2020-04-26: should we unify the normal field aliases and
@@ -2272,9 +2270,7 @@ public class SqlToRelConverter {
       uncollect = relBuilder
           .push(child)
           .project(exprs)
-          .uncollect(Collections.emptyList(),
-              operator.withOrdinality,
-              operator.withOffset)
+          .uncollect(Collections.emptyList(), operator.withOrdinality)
           .let(r -> fieldNames == null ? r : r.rename(fieldNames))
           .build();
     }

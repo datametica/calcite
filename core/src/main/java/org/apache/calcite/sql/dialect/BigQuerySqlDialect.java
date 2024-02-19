@@ -766,6 +766,9 @@ public class BigQuerySqlDialect extends SqlDialect {
         call.getOperator().unparse(writer, call, leftPrec, rightPrec);
       }
       break;
+    case UNNEST:
+      unparseUnnest(writer, call, leftPrec, rightPrec);
+      break;
     case IN:
       if (call.operand(0) instanceof SqlLiteral
           && call.operand(1) instanceof SqlNodeList
@@ -914,12 +917,23 @@ public class BigQuerySqlDialect extends SqlDialect {
     call.operand(0).unparse(writer, leftPrec, rightPrec);
     writer.sep("AS");
     call.operand(2).unparse(writer, leftPrec, rightPrec);
-    if (unnestOperator.withOffset) {
+    if (unnestOperator.withOrdinality) {
       writer.literal("WITH OFFSET");
       writer.sep("AS");
       call.operand(3).unparse(writer, leftPrec, rightPrec);
     }
     writer.endList(frame);
+  }
+
+  private void unparseUnnest(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    if (call.operandCount() == 1
+        && call.getOperandList().get(0).getKind() == SqlKind.SELECT) {
+      // avoid double ( ) on unnesting a sub-query
+      writer.keyword(call.getOperator().getName());
+      call.operand(0).unparse(writer, 0, 0);
+    } else {
+      call.getOperator().unparse(writer, call, leftPrec, rightPrec);
+    }
   }
 
   private void unparseCastAsInteger(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {

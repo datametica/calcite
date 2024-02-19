@@ -1290,19 +1290,13 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
    * The <code>UNNEST</code> operator.
    */
   public static final SqlUnnestOperator UNNEST =
-      new SqlUnnestOperator(false, false);
+      new SqlUnnestOperator(false);
 
   /**
    * The <code>UNNEST WITH ORDINALITY</code> operator.
    */
   public static final SqlUnnestOperator UNNEST_WITH_ORDINALITY =
-      new SqlUnnestOperator(true, false);
-
-  /**
-   * The <code>UNNEST WITH OFFSET</code> operator.
-   */
-  public static final SqlUnnestOperator UNNEST_WITH_OFFSET =
-      new SqlUnnestOperator(false, true);
+      new SqlUnnestOperator(true);
 
   /**
    * The <code>LATERAL</code> operator.

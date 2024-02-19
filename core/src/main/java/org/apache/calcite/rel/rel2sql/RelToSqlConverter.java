@@ -1288,8 +1288,8 @@ public class RelToSqlConverter extends SqlImplementor
       operand = ((SqlSelect) x.node).getSelectList().get(0);
     }
     SqlNode unnestNode = null;
-    if (e.withOffset) {
-      unnestNode = SqlStdOperatorTable.UNNEST_WITH_OFFSET.createCall(POS, operand);
+    if (e.withOrdinality) {
+      unnestNode = SqlStdOperatorTable.UNNEST_WITH_ORDINALITY.createCall(POS, operand);
     } else {
       unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, operand);
     }
