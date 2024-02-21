@@ -14034,4 +14034,18 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test public void testIntFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode intNode = builder.call(SqlLibraryOperators.INT,
+        builder.scan("EMP").field("EMPNO"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(intNode, "RESULT"))
+        .build();
+    final String expectedDb2Query =
+        "SELECT INT(EMP.EMPNO) AS RESULT\nFROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDb2Query));
+  }
 }
