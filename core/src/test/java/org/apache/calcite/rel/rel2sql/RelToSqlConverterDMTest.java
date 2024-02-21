@@ -13984,6 +13984,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqQuery));
   }
 
+  @Test public void testTimestampFormat() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timestampFormat = builder.call(SqlLibraryOperators.TIMESTAMP_FORMAT,
+        builder.literal("1999-12-31 23:59:59"),
+        builder.literal("YYYY-MM-DD HH24:MI:SS"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(timestampFormat)
+        .build();
+    final String expectedBQSql = "SELECT TIMESTAMP_FORMAT('1999-12-31 23:59:59', 'YYYY-MM-DD "
+        + "HH24:MI:SS') AS $f0\n"
+        + "FROM scott.EMP AS EMP";
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedBQSql));
+  }
+
   @Test public void testForRegexpReplaceWithReplaceStringAsNull() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpReplaceRex = builder.call(SqlLibraryOperators.REGEXP_REPLACE,
