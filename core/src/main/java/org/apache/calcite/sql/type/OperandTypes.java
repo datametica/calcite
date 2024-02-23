@@ -573,6 +573,9 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker ANY_NUMERIC =
       family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC);
 
+  public static final SqlSingleOperandTypeChecker ANY_STRING_OPTIONAL =
+      family(ImmutableList.of(SqlTypeFamily.ANY, SqlTypeFamily.STRING), i -> i == 1);
+
   public static final SqlSingleOperandTypeChecker CURSOR =
       family(SqlTypeFamily.CURSOR);
 
