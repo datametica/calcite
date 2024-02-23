@@ -14034,4 +14034,17 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test public void testStandardHash() {
+    final RelBuilder builder = relBuilder();
+    final RexNode stdHash = builder.call(SqlLibraryOperators.STANDARD_HASH,
+        builder.scan("EMP").field("ENAME"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(stdHash)
+        .build();
+    final String expectedBQSql = "SELECT STANDARD_HASH(\"ENAME\")"
+        + " \"$f0\"\nFROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedBQSql));
+  }
 }

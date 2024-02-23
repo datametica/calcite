@@ -2044,4 +2044,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.NUMERIC,
               SqlTypeFamily.TIMESTAMP),
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction STANDARD_HASH =
+      new SqlFunction(
+          "STANDARD_HASH",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000,
+          null,
+          OperandTypes.STRING_OPTIONAL_STRING,
+          SqlFunctionCategory.SYSTEM);
 }
