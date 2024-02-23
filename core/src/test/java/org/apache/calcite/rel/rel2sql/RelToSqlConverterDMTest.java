@@ -14034,4 +14034,21 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test public void testForCharInDB2() {
+    final RelBuilder builder = relBuilder();
+    final RexNode charWithDateRex = builder.call(SqlLibraryOperators.CHAR,
+        builder.call(CURRENT_DATE), builder.literal("ISO"));
+    final RexNode charWithIntRex = builder.call(SqlLibraryOperators.CHAR, builder.literal(123));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(charWithDateRex, charWithIntRex)
+        .build();
+
+    final String expectedBiqQuery = "SELECT "
+        + "CHAR(CURRENT_DATE, 'ISO') AS $f0, CHAR(123) AS $f1\n"
+        + "FROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedBiqQuery));
+  }
 }

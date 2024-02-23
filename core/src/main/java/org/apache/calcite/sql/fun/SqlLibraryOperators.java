@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.calcite.sql.fun.SqlLibrary.BIG_QUERY;
+import static org.apache.calcite.sql.fun.SqlLibrary.DB2;
 import static org.apache.calcite.sql.fun.SqlLibrary.HIVE;
 import static org.apache.calcite.sql.fun.SqlLibrary.MSSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
@@ -249,7 +250,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction SUBSTR_ORACLE =
       new SqlFunction("SUBSTR", SqlKind.SUBSTR_ORACLE,
           ReturnTypes.ARG0_NULLABLE_VARYING, null,
-          OperandTypes.STRING_INTEGER_OPTIONAL_INTEGER,
+          OperandTypes.ANY_STRING_OPTIONAL,
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {ORACLE})
@@ -1465,6 +1466,14 @@ public abstract class SqlLibraryOperators {
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.VARCHAR_2000_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING),
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction CHAR =
+      new SqlFunction("CHAR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.ANY_STRING_OPTIONAL,
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {NETEZZA})
