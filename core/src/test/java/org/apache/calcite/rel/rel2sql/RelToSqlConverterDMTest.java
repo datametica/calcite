@@ -14035,6 +14035,22 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testForStrPos() {
+    final RelBuilder builder = relBuilder();
+    final RexNode strPosRex = builder.call(SqlLibraryOperators.STRPOS,
+        builder.literal("12349"), builder.literal("0"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(strPosRex, "strPos"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT "
+        + "STRPOS('12349', '0') AS strPos\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testForImplicitCastingForDateColumn() {
     final String query = "select \"employee_id\" "
         + "from \"foodmart\".\"employee\" "
@@ -14066,4 +14082,6 @@ class RelToSqlConverterDMTest {
         .withBigQuery()
         .ok(expectedBiqquery);
   }
+
+
 }

@@ -2044,4 +2044,10 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.NUMERIC,
               SqlTypeFamily.TIMESTAMP),
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction STRPOS =
+      new SqlFunction("STRPOS", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
 }
