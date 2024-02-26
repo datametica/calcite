@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.calcite.sql.fun.SqlLibrary.BIG_QUERY;
+import static org.apache.calcite.sql.fun.SqlLibrary.DB2;
 import static org.apache.calcite.sql.fun.SqlLibrary.HIVE;
 import static org.apache.calcite.sql.fun.SqlLibrary.MSSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
@@ -2044,4 +2045,17 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.NUMERIC,
               SqlTypeFamily.TIMESTAMP),
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction DB2_REGEXP_LIKE =
+      new SqlFunction("DB2_REGEXP_LIKE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+                  SqlTypeFamily.STRING),
+              // Third operand optional (operand index 0, 1, 2)
+              number -> number == 2),
+          SqlFunctionCategory.STRING);
 }
