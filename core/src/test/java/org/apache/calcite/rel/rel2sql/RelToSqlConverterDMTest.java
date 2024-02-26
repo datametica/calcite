@@ -14066,4 +14066,20 @@ class RelToSqlConverterDMTest {
         .withBigQuery()
         .ok(expectedBiqquery);
   }
+
+  @Test public void testForRegexpLike() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexplike = builder.call(SqlLibraryOperators.DB2_REGEXP_LIKE,
+        builder.literal("Mike Bird"), builder.literal("Mike B(i|y)RD"),
+        builder.literal("i"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexplike, "A"))
+        .build();
+
+    final String expectedBqSql = "SELECT DB2_REGEXP_LIKE('Mike Bird', 'Mike B(i|y)RD', 'i') AS A\n"
+        + "FROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedBqSql));
+  }
 }
