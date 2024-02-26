@@ -14066,4 +14066,18 @@ class RelToSqlConverterDMTest {
         .withBigQuery()
         .ok(expectedBiqquery);
   }
+
+  @Test public void testDaysFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode intNode = builder.call(SqlLibraryOperators.DAYS,
+        builder.literal("2024-01-23"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(intNode, "days"))
+        .build();
+    final String expectedDb2Query =
+        "SELECT DAYS('2024-01-23') AS days\nFROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDb2Query));
+  }
 }

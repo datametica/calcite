@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.calcite.sql.fun.SqlLibrary.BIG_QUERY;
+import static org.apache.calcite.sql.fun.SqlLibrary.DB2;
 import static org.apache.calcite.sql.fun.SqlLibrary.HIVE;
 import static org.apache.calcite.sql.fun.SqlLibrary.MSSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
@@ -2043,5 +2044,15 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.NUMERIC,
               SqlTypeFamily.TIMESTAMP),
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction DAYS =
+      new SqlFunction(
+          "DAYS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.DATETIME, OperandTypes.STRING),
           SqlFunctionCategory.TIMEDATE);
 }
