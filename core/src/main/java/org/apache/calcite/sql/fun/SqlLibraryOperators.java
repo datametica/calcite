@@ -2046,9 +2046,6 @@ public abstract class SqlLibraryOperators {
               SqlTypeFamily.TIMESTAMP),
           SqlFunctionCategory.TIMEDATE);
 
-  /** Regexp_like function in DB2
-   * returns a boolean value
-   * if the regular expression pattern is found in a string */
   @LibraryOperator(libraries = {DB2})
   public static final SqlFunction DB2_REGEXP_LIKE =
       new SqlFunction("DB2_REGEXP_LIKE",
