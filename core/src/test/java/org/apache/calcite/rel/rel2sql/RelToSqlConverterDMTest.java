@@ -12417,6 +12417,17 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
   }
 
+  @Test public void testToDatefoDB2() {
+    RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode db2ToDateCall = builder.call(SqlLibraryOperators.DB2_TO_DATE,
+        builder.call(SqlStdOperatorTable.CURRENT_DATE));
+    RelNode root = builder
+        .project(db2ToDateCall)
+        .build();
+    final String expectedDB2Sql = "SELECT TO_DATE(CURRENT_DATE) AS $f0\nFROM scott.EMP AS EMP";
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
+  }
+
   @Test public void testMONDateFormatforOracle() {
     RelBuilder builder = relBuilder().scan("EMP");
     final RexNode oracleToDateCall = builder.call(SqlLibraryOperators.PARSE_DATETIME,
