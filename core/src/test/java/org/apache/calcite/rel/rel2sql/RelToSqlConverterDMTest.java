@@ -14082,4 +14082,20 @@ class RelToSqlConverterDMTest {
         .withBigQuery()
         .ok(expectedBiqquery);
   }
+
+  @Test public void testForRegexpContainsWithString() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpContainsRex = builder.call(SqlLibraryOperators.REGEXP_CONTAINS,
+        builder.literal("Calcite"), builder.literal("^[0-9]*$"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpContainsRex, "regexpConatins"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT "
+        + "REGEXP_CONTAINS('Calcite', r'^[0-9]*$') AS regexpConatins\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
 }
