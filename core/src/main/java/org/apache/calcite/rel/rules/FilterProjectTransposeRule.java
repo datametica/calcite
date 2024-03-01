@@ -206,7 +206,7 @@ public class FilterProjectTransposeRule
   public interface Config extends RelRule.Config {
     Config DEFAULT = EMPTY.as(Config.class)
         .withOperandFor(Filter.class,
-            f -> !RexUtil.containsCorrelation(f.getCondition()),
+            f -> true,
             Project.class, p -> true)
         .withCopyFilter(true)
         .withCopyProject(true);
