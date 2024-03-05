@@ -417,14 +417,21 @@ public class RelToSqlConverter extends SqlImplementor
     } else if (input instanceof Aggregate) {
       final Aggregate aggregate = (Aggregate) input;
       final boolean ignoreClauses = aggregate.getInput() instanceof Project;
-      final Result x = visitInput(e, 0, isAnon(), ignoreClauses,
-          ImmutableSet.of(Clause.HAVING));
+      Result x = visitInput(e, 0, isAnon(), ignoreClauses, ImmutableSet.of(Clause.HAVING));
+      if (isNotExistClausePresentInRel(e)) {
+        List<String> listAliases = new ArrayList<String>(aliasSet);
+        String newAlias = listAliases.get(1);
+        x = x.resetAlias(newAlias, e.getRowType());
+      }
       parseCorrelTable(e, x);
       final Builder builder = x.builder(e);
       builder.setHaving(builder.context.toSql(null, e.getCondition()));
       return builder.result();
     } else {
-      final Result x = visitInput(e, 0, Clause.WHERE);
+      Result x = visitInput(e, 0, Clause.WHERE);
+      if (isNotExistClausePresentInRel(e)) {
+        x = x.resetAlias();
+      }
       parseCorrelTable(e, x);
       final Builder builder = x.builder(e);
       SqlNode filterNode = builder.context.toSql(null, e.getCondition());
@@ -449,6 +456,17 @@ public class RelToSqlConverter extends SqlImplementor
     assert sqlUnpivot != null;
     return new SqlUnpivot(POS, sqlUnpivot.query, false, sqlUnpivot.measureList,
         sqlUnpivot.axisList, sqlUnpivot.inList);
+  }
+
+  public boolean isNotExistClausePresentInRel(Filter e) {
+    if (e.getCondition() instanceof RexCall
+        && ((RexCall) e.getCondition()).getOperator().getKind() == SqlKind.NOT
+        && ((RexCall) e.getCondition()).getOperands().get(0) instanceof RexCall
+        && ((RexCall) ((RexCall) e.getCondition()).getOperands().get(0)).getOperator().getKind()
+        == SqlKind.EXISTS) {
+      return true;
+    }
+    return false;
   }
 
   /** Visits a Project; called by {@link #dispatch} via reflection. */
