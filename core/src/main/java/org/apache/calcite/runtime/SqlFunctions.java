@@ -2250,6 +2250,16 @@ public class SqlFunctions {
         .getMillisSinceEpoch();
   }
 
+  public static @PolyNull Long toTimestampWithTimeZone(@PolyNull String v,
+      TimeZone timeZone) {
+    if (v == null) {
+      return castNonNull(null);
+    }
+    return new TimestampWithTimeZoneString(v + " " + timeZone.getID())
+        .withTimeZone(DateTimeUtils.UTC_ZONE)
+        .getLocalTimestampString()
+        .getMillisSinceEpoch();
+  }
   // Don't need shortValueOf etc. - Short.valueOf is sufficient.
 
   /** Helper for CAST(... AS VARCHAR(maxLength)). */

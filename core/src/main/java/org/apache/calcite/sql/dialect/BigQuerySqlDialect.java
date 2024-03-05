@@ -2211,6 +2211,8 @@ public class BigQuerySqlDialect extends SqlDialect {
         return createSqlDataTypeSpecByName("TIME", typeName);
       case TIMESTAMP:
         return createSqlDataTypeSpecByName("DATETIME", typeName);
+      case TIMESTAMP_WITH_TIME_ZONE:
+        return createSqlDataTypeSpecByName("TIMESTAMP", typeName);
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         return createSqlDataTypeSpecByName("TIMESTAMP_WITH_LOCAL_TIME_ZONE", typeName);
       case TIMESTAMP_WITH_TIME_ZONE:
