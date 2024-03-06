@@ -13117,6 +13117,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testForBitOrFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dayPart = builder.call(SqlLibraryOperators.BITOR,
+        builder.literal(1), builder.literal(3));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dayPart, "Result"))
+        .build();
+
+    final String expectedQuery = "SELECT BITOR(1, 3) AS Result\nFROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedQuery));
+  }
+
   @Test void testLiteralAfterGroupBy() {
     String query = "SELECT D.\"department_id\",MIN(E.\"salary\") MINSAL, COUNT(E.\"salary\") "
         + "SALCOUNT, 'INSIDE CTE1'\n"
