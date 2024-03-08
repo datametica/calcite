@@ -14089,11 +14089,11 @@ class RelToSqlConverterDMTest {
         builder.literal("Calcite"), builder.literal("^[0-9]*$"));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.alias(regexpContainsRex, "regexpConatins"))
+        .project(builder.alias(regexpContainsRex, "regexpContains0"))
         .build();
 
     final String expectedBiqQuery = "SELECT "
-        + "REGEXP_CONTAINS('Calcite', r'^[0-9]*$') AS regexpConatins\n"
+        + "REGEXP_CONTAINS('Calcite', r'^[0-9]*$') AS regexpContains0\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
