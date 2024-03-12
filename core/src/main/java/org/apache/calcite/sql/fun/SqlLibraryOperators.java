@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.calcite.sql.fun.SqlLibrary.BIG_QUERY;
+import static org.apache.calcite.sql.fun.SqlLibrary.DB2;
 import static org.apache.calcite.sql.fun.SqlLibrary.HIVE;
 import static org.apache.calcite.sql.fun.SqlLibrary.MSSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
@@ -915,6 +916,9 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction DB2_TO_DATE = ORACLE_TO_DATE;
 
   /** The "TO_TIMESTAMP(string1, string2)" function; casts string1
    * to a TIMESTAMP using the format specified in string2. */

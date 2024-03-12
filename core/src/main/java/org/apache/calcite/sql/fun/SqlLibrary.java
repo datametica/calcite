@@ -70,7 +70,10 @@ public enum SqlLibrary {
   /** A collection of operators that are in MSSQL but not in standard SQL. */
   MSSQL("mssql", "mssql"),
   /** A collection of operators that are in NETEZZA but not in standard SQL. */
-  NETEZZA("NETEZZA", "netezza");
+  NETEZZA("NETEZZA", "netezza"),
+
+  /** A collection of operators that are in NETEZZA but not in standard SQL. */
+  DB2("DB2", "db2");
 
   /** Abbreviation for the library used in SQL reference. */
   public final String abbrev;
