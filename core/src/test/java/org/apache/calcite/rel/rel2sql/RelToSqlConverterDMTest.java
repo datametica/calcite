@@ -306,6 +306,12 @@ class RelToSqlConverterDMTest {
         .getSql();
   }
 
+  /** Converts a relational expression to SQL Node */
+  private static SqlNode toSqlNode(RelNode root, SqlDialect dialect) {
+    final RelToSqlConverter converter = new RelToSqlConverter(dialect);
+    return converter.visitRoot(root).asStatement();
+  }
+
   @Test public void testSimpleSelectWithOrderByAliasAsc() {
     final String query = "select sku+1 as a from \"product\" order by a";
     final String bigQueryExpected = "SELECT SKU + 1 AS A\nFROM foodmart.product\n"
@@ -11551,6 +11557,38 @@ class RelToSqlConverterDMTest {
         + "QUALIFY (MAX(EMPNO) OVER (ORDER BY HIREDATE IS NULL, HIREDATE ROWS BETWEEN UNBOUNDED "
         + "PRECEDING AND UNBOUNDED FOLLOWING)) = 1";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSparkQuery));
+  }
+
+  @Test public void testQualifyForSqlSelectCall() {
+    RelBuilder builder = relBuilder().scan("EMP");
+    RexNode aggregateFunRexNode = builder.call(SqlStdOperatorTable.MAX, builder.field(0));
+    RelDataType type = aggregateFunRexNode.getType();
+    RexFieldCollation orderKeys = new RexFieldCollation(
+        builder.field("HIREDATE"),
+        ImmutableSet.of());
+    final RexNode analyticalFunCall = builder.getRexBuilder().makeOver(type,
+        SqlStdOperatorTable.MAX,
+        ImmutableList.of(builder.field(0)), ImmutableList.of(), ImmutableList.of(orderKeys),
+        RexWindowBounds.UNBOUNDED_PRECEDING,
+        RexWindowBounds.UNBOUNDED_FOLLOWING,
+        true, true, false, false, false);
+    final RexNode equalsNode =
+        builder.getRexBuilder().makeCall(EQUALS,
+            new RexInputRef(1, analyticalFunCall.getType()), builder.literal(1));
+    final RelNode root = builder
+        .project(builder.field("HIREDATE"), builder.alias(analyticalFunCall, "EXPR$"))
+        .filter(equalsNode)
+        .project(builder.field("HIREDATE"))
+        .build();
+    SqlCall call = (SqlCall) toSqlNode(root, DatabaseProduct.BIG_QUERY.getDialect());
+    List<SqlNode> operands = call.getOperandList();
+    String  generatedSql = String.valueOf(call.getOperator().createCall(
+        null, SqlParserPos.ZERO, operands).toSqlString(DatabaseProduct.SPARK.getDialect()));
+    String expectedSql = "SELECT HIREDATE\n"
+        + "FROM scott.EMP\n"
+        + "QUALIFY (MAX(EMPNO) OVER (ORDER BY HIREDATE IS NULL, HIREDATE ROWS BETWEEN UNBOUNDED "
+        + "PRECEDING AND UNBOUNDED FOLLOWING)) = 1";
+    assertThat(generatedSql, isLinux(expectedSql));
   }
 
   @Test void testForSparkRound() {
