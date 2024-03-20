@@ -305,7 +305,7 @@ class RelToSqlConverterDMTest {
         .getSql();
   }
 
-  /** Converts a relational expression to SQL Node */
+  /** Converts a relational expression to SQL Node. */
   private static SqlNode toSqlNode(RelNode root, SqlDialect dialect) {
     final RelToSqlConverter converter = new RelToSqlConverter(dialect);
     return converter.visitRoot(root).asStatement();
