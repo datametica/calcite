@@ -2101,4 +2101,11 @@ public abstract class SqlLibraryOperators {
                   null,
                   OperandTypes.STRING,
                   SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction IN_STRING = new InStringFunction();
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction IN_NUMBER = new InNumberFunction();
+
 }
