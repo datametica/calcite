@@ -280,7 +280,7 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   @Override public SqlNode emulateNullDirection(
-      SqlNode node, boolean nullsFirst, boolean desc) {
+      SqlNode node, boolean nullsFirst, boolean desc, boolean nullDirection) {
     if (emulateNullDirection) {
       return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
     }

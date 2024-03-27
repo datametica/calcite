@@ -195,7 +195,7 @@ public class HiveSqlDialect extends SqlDialect {
   }
 
   @Override public @Nullable SqlNode emulateNullDirection(SqlNode node,
-      boolean nullsFirst, boolean desc) {
+      boolean nullsFirst, boolean desc, boolean nullDirection) {
     if (emulateNullDirection) {
       return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
     }

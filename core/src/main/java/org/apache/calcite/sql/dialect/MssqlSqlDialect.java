@@ -105,7 +105,7 @@ public class MssqlSqlDialect extends SqlDialect {
    * </blockquote>
    */
   @Override public @Nullable SqlNode emulateNullDirection(SqlNode node,
-      boolean nullsFirst, boolean desc) {
+      boolean nullsFirst, boolean desc, boolean nullDirection) {
     // Default ordering preserved
     if (nullCollation.isDefaultOrder(nullsFirst, desc)) {
       return null;

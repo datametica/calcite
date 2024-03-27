@@ -1011,7 +1011,7 @@ public class SqlDialect {
    * @return A SqlNode for null direction emulation or <code>null</code> if not required
    */
   public @Nullable SqlNode emulateNullDirection(SqlNode node, boolean nullsFirst,
-      boolean desc) {
+      boolean desc, boolean requiredIsNull) {
     return null;
   }
 

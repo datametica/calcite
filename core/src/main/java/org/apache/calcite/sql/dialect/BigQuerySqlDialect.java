@@ -2312,6 +2312,11 @@ public class BigQuerySqlDialect extends SqlDialect {
     }
   }
 
+  @Override public @Nullable SqlNode emulateNullDirection(SqlNode node,
+      boolean nullsFirst, boolean desc, boolean needNullDirection) {
+    return !needNullDirection ? null : emulateNullDirectionWithIsNull(node, nullsFirst, desc);
+  }
+
   private static SqlDataTypeSpec createSqlDataTypeSpecByName(String typeAlias,
       SqlTypeName typeName) {
     SqlAlienSystemTypeNameSpec typeNameSpec = new SqlAlienSystemTypeNameSpec(

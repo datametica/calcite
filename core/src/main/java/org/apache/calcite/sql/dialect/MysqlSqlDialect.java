@@ -112,7 +112,7 @@ public class MysqlSqlDialect extends SqlDialect {
   }
 
   @Override public @Nullable SqlNode emulateNullDirection(SqlNode node,
-      boolean nullsFirst, boolean desc) {
+      boolean nullsFirst, boolean desc, boolean nullDirection) {
     return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
   }
 
