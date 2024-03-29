@@ -202,7 +202,10 @@ class ProjectExpansionUtil {
   }
 
   private SqlBasicCall extractSqlBasicCallFromJoin(SqlJoin sqlJoin) {
-    return (SqlBasicCall) ((SqlJoin) sqlJoin.getLeft()).getLeft();
+    while (sqlJoin.getLeft() instanceof SqlJoin) {
+      sqlJoin = (SqlJoin) sqlJoin.getLeft();
+    }
+    return (sqlJoin.getLeft() instanceof SqlBasicCall) ? (SqlBasicCall) sqlJoin.getLeft() : null;
   }
 
   private SqlBasicCall extractSqlBasicCallFromResult(SqlImplementor.Result result) {
@@ -382,8 +385,12 @@ class ProjectExpansionUtil {
 
   private SqlNode[] getOperandsFromJoin(SqlNode sqlNode, boolean endsWithDigit) {
     SqlJoin joinNode = (SqlJoin) ((SqlSelect) sqlNode).getFrom();
-    SqlBasicCall basicCall = (SqlBasicCall) (endsWithDigit ? joinNode.getRight()
-        : joinNode.getLeft());
+    SqlBasicCall basicCall;
+    if (joinNode != null && !endsWithDigit) {
+      basicCall = extractSqlBasicCallFromJoin(joinNode);
+    } else {
+      basicCall = (SqlBasicCall) joinNode.getRight();
+    }
     return basicCall.getOperands();
   }
 
