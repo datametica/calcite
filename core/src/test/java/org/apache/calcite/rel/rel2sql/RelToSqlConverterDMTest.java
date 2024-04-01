@@ -14047,4 +14047,18 @@ class RelToSqlConverterDMTest {
         + " \"$f0\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedBQSql));
   }
+
+  @Test public void testBigQuerySha512Function() {
+    final RelBuilder builder = relBuilder();
+    final RexNode sha512Node = builder.call(SqlLibraryOperators.SHA512,
+        builder.scan("EMP").field(1));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(sha512Node, "hashing"))
+        .build();
+    final String expectedBQSql = "SELECT SHA512(ENAME) AS hashing\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
+  }
 }

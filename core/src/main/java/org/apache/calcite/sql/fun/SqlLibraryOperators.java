@@ -2054,4 +2054,15 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_OPTIONAL_STRING,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SHA512 =
+      new SqlFunction("SHA512",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(SqlTypeName.VARCHAR)
+              .andThen(SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
+              OperandTypes.family(SqlTypeFamily.BINARY, SqlTypeFamily.INTEGER)),
+          SqlFunctionCategory.STRING);
 }
