@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.sql.fun;
 
+import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -1758,6 +1759,10 @@ public abstract class SqlLibraryOperators {
           null,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlDatePartFunction DB2_WEEK =
+      new SqlDatePartFunction("DB2_WEEK", TimeUnit.WEEK);
+
   @LibraryOperator(libraries = {NETEZZA})
   public static final SqlFunction FALSE =
       new SqlFunction(
@@ -2095,4 +2100,33 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.ARG0_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction TO_CLOB =
+          new SqlFunction("TO_CLOB",
+                  SqlKind.OTHER_FUNCTION,
+                  ReturnTypes.CLOB,
+                  null,
+                  OperandTypes.STRING,
+                  SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction IN_STRING = new OracleSqlTableFunction(
+      "IN_STRING",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.TO_ARRAY,
+      null,
+      OperandTypes.STRING,
+      SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION
+  );
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction IN_NUMBER = new OracleSqlTableFunction(
+      "IN_NUMBER",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.TO_ARRAY,
+      null,
+      OperandTypes.STRING,
+      SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION
+  );
 }
