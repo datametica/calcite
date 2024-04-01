@@ -14113,6 +14113,19 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testDb2Trunc() {
+    RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode dateTruncNode = builder.call(SqlLibraryOperators.DB2_TRUNC,
+        builder.call(CURRENT_TIMESTAMP),
+        builder.literal("YEAR"));
+    RelNode root = builder
+        .project(dateTruncNode)
+        .build();
+    final String expectedDb2Sql =
+        "SELECT TRUNC(CURRENT_TIMESTAMP, 'YEAR') AS $f0\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDb2Sql));
+  }
+
   @Test public void testToClobFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode toClobRex = builder.call(SqlLibraryOperators.TO_CLOB,
@@ -14172,5 +14185,4 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(inStringRel, DatabaseProduct.ORACLE.getDialect()), isLinux(inStringSql));
     assertThat(toSql(inNumberRel, DatabaseProduct.ORACLE.getDialect()), isLinux(inNumberSql));
   }
-
 }
