@@ -14152,4 +14152,24 @@ class RelToSqlConverterDMTest {
         .build();
   }
 
+  /*NEXT VALUE is a SqlSequenceValueOperator which works on sequence generator.
+  As of now, we don't have any sequence generator present in calcite, nor do we have the complete
+  implementation to create one. It can be implemented later on using SqlKind.CREATE_SEQUENCE
+  For now test for NEXT_VALUE has been added using the literal "EMP_SEQ" as an argument.*/
+  @Test public void testNextValueFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode nextValueRex = builder.call(
+        SqlStdOperatorTable.NEXT_VALUE, builder.literal("EMP_SEQ")
+    );
+
+    final RelNode root = builder
+        .project(nextValueRex)
+        .build();
+
+    final String expectedSql = "SELECT NEXT VALUE FOR 'EMP_SEQ' AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
+
 }
