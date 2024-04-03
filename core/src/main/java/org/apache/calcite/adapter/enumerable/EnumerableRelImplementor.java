@@ -35,6 +35,7 @@ import org.apache.calcite.linq4j.tree.MemberDeclaration;
 import org.apache.calcite.linq4j.tree.MethodCallExpression;
 import org.apache.calcite.linq4j.tree.NewArrayExpression;
 import org.apache.calcite.linq4j.tree.NewExpression;
+import org.apache.calcite.linq4j.tree.Node;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.linq4j.tree.Statement;
@@ -121,7 +122,7 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
           && rootRel.getRowType().getFieldCount() == 1) {
         BlockBuilder bb = new BlockBuilder();
         Expression e = null;
-        for (Statement statement : result.block.statements) {
+        for (Node statement : result.block.nodes) {
           if (statement instanceof GotoStatement) {
             e = bb.append("v",
                 requireNonNull(((GotoStatement) statement).expression, "expression"));
@@ -160,7 +161,7 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
     final BlockStatement block = Expressions.block(
         Iterables.concat(
             stashed,
-            result.block.statements));
+            result.block.nodes));
     memberDeclarations.add(
         Expressions.methodDecl(
             Modifier.PUBLIC,

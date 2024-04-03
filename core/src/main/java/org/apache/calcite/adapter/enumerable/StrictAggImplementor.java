@@ -180,7 +180,7 @@ public abstract class StrictAggImplementor implements AggImplementor {
         ? acc.get(acc.size() - 1)
         : ((WinAggResultContext) result).hasRows();
 
-    if (thenBranch.statements.size() == 1) {
+    if (thenBranch.nodes.size() == 1) {
       return Expressions.condition(seenNotNullRows,
           nonNull, RexImpTable.getDefaultValue(res.getType()));
     }

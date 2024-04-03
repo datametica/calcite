@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
  * <p>Has methods that help ensure that variable names are unique.</p>
  */
 public class BlockBuilder {
-  final List<Statement> statements = new ArrayList<>();
+  final List<Node> statements = new ArrayList<>();
   final Set<String> variables = new HashSet<>();
   /** Contains final-fine-to-reuse-declarations.
    * An entry to this map is added when adding final declaration of a
@@ -107,7 +107,7 @@ public class BlockBuilder {
   public Expression append(String name, BlockStatement block,
       boolean optimize) {
     if (statements.size() > 0) {
-      Statement lastStatement = statements.get(statements.size() - 1);
+      Node lastStatement = statements.get(statements.size() - 1);
       if (lastStatement instanceof GotoStatement) {
         // convert "return expr;" into "expr;"
         statements.set(statements.size() - 1,
@@ -118,8 +118,8 @@ public class BlockBuilder {
     final Map<ParameterExpression, Expression> replacements =
         new IdentityHashMap<>();
     final Shuttle shuttle = new SubstituteVariableVisitor(replacements);
-    for (int i = 0; i < block.statements.size(); i++) {
-      Statement statement = block.statements.get(i);
+    for (int i = 0; i < block.nodes.size(); i++) {
+      Statement statement = (Statement) block.nodes.get(i);
       if (!replacements.isEmpty()) {
         // Save effort, and only substitute variables if there are some.
         statement = statement.accept(shuttle);
@@ -153,7 +153,7 @@ public class BlockBuilder {
       } else {
         add(statement);
       }
-      if (i == block.statements.size() - 1) {
+      if (i == block.nodes.size() - 1) {
         if (statement instanceof DeclarationStatement) {
           result = ((DeclarationStatement) statement).parameter;
         } else if (statement instanceof GotoStatement) {
@@ -205,7 +205,7 @@ public class BlockBuilder {
   public Expression append(String name, Expression expression,
       boolean optimize) {
     if (statements.size() > 0) {
-      Statement lastStatement = statements.get(statements.size() - 1);
+      Node lastStatement = statements.get(statements.size() - 1);
       if (lastStatement instanceof GotoStatement) {
         // convert "return expr;" into "expr;"
         statements.set(statements.size() - 1,
@@ -302,7 +302,7 @@ public class BlockBuilder {
     return optimizing ? expressionForReuse.get(expr) : null;
   }
 
-  public void add(Statement statement) {
+  public void add(Node statement) {
     statements.add(statement);
     if (statement instanceof DeclarationStatement) {
       DeclarationStatement decl = (DeclarationStatement) statement;
@@ -345,7 +345,7 @@ public class BlockBuilder {
   private boolean optimize(Shuttle optimizer, boolean performInline) {
     int optimizeCount = 0;
     final UseCounter useCounter = new UseCounter();
-    for (Statement statement : statements) {
+    for (Node statement : statements) {
       if (statement instanceof DeclarationStatement && performInline) {
         DeclarationStatement decl = (DeclarationStatement) statement;
         useCounter.map.put(decl.parameter, new Slot());
@@ -361,10 +361,10 @@ public class BlockBuilder {
         new IdentityHashMap<>(useCounter.map.size());
     final Shuttle visitor = new InlineVariableVisitor(
         subMap);
-    final ArrayList<Statement> oldStatements = new ArrayList<>(statements);
+    final ArrayList<Node> oldStatements = new ArrayList<>(statements);
     statements.clear();
 
-    for (Statement oldStatement : oldStatements) {
+    for (Node oldStatement : oldStatements) {
       if (oldStatement instanceof DeclarationStatement) {
         DeclarationStatement statement = (DeclarationStatement) oldStatement;
         final Slot slot = useCounter.map.get(statement.parameter);
@@ -410,7 +410,7 @@ public class BlockBuilder {
           subMap.put(statement.parameter, normalized);
           break;
         default:
-          Statement beforeOptimize = oldStatement;
+          Node beforeOptimize = oldStatement;
           if (!subMap.isEmpty()) {
             oldStatement = oldStatement.accept(visitor); // remap
           }
@@ -439,7 +439,7 @@ public class BlockBuilder {
           break;
         }
       } else {
-        Statement beforeOptimize = oldStatement;
+        Node beforeOptimize = oldStatement;
         if (!subMap.isEmpty()) {
           oldStatement = oldStatement.accept(visitor); // remap
         }

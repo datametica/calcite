@@ -20,6 +20,7 @@ import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
+import org.apache.calcite.linq4j.tree.Node;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.linq4j.tree.Statement;
 
@@ -62,7 +63,7 @@ public final class BlockBuilderBase {
       b.add(statement);
     } else {
       BlockStatement bs = (BlockStatement) statement;
-      for (Statement stmt : bs.statements) {
+      for (Node stmt : bs.nodes) {
         b.add(stmt);
       }
     }

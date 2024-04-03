@@ -30,14 +30,14 @@ import java.util.Set;
  * can be defined.
  */
 public class BlockStatement extends Statement {
-  public final List<Statement> statements;
+  public final List<Node> nodes;
   /** Cached hash code for the expression. */
   private int hash;
 
-  BlockStatement(List<Statement> statements, Type type) {
+  BlockStatement(List<Node> nodes, Type type) {
     super(ExpressionType.Block, type);
-    assert statements != null : "statements should not be null";
-    this.statements = statements;
+    assert nodes != null : "nodes should not be null";
+    this.nodes = nodes;
     assert distinctVariables(true);
   }
 
@@ -46,9 +46,9 @@ public class BlockStatement extends Statement {
       boolean fail
   ) {
     Set<String> names = new HashSet<>();
-    for (Statement statement : statements) {
-      if (statement instanceof DeclarationStatement) {
-        String name = ((DeclarationStatement) statement).parameter.name;
+    for (Node node : nodes) {
+      if (node instanceof DeclarationStatement) {
+        String name = ((DeclarationStatement) node).parameter.name;
         if (!names.add(name)) {
           assert !fail : "duplicate variable " + name;
           return false;
@@ -60,9 +60,9 @@ public class BlockStatement extends Statement {
 
   @Override public BlockStatement accept(Shuttle shuttle) {
     shuttle = shuttle.preVisit(this);
-    List<Statement> newStatements = Expressions.acceptStatements(statements,
+    List<Node> newnodes = Expressions.acceptNodes(nodes,
         shuttle);
-    return shuttle.visit(this, newStatements);
+    return shuttle.visit(this, newnodes);
   }
 
   @Override public <R> R accept(Visitor<R> visitor) {
@@ -70,21 +70,23 @@ public class BlockStatement extends Statement {
   }
 
   @Override void accept0(ExpressionWriter writer) {
-    if (statements.isEmpty()) {
+    if (nodes.isEmpty()) {
       writer.append("{}");
       return;
     }
     writer.begin("{\n");
-    for (Statement node : statements) {
-      node.accept(writer, 0, 0);
+    for (Node node : nodes) {
+      node.accept(writer);
     }
     writer.end("}\n");
   }
 
   @Override public @Nullable Object evaluate(Evaluator evaluator) {
     Object o = null;
-    for (Statement statement : statements) {
-      o = statement.evaluate(evaluator);
+    for (Node node : nodes) {
+      if (Statement.class.isInstance(node)) {
+        o = ((Statement) node).evaluate(evaluator);
+      }
     }
     return o;
   }
@@ -102,7 +104,7 @@ public class BlockStatement extends Statement {
 
     BlockStatement that = (BlockStatement) o;
 
-    if (!statements.equals(that.statements)) {
+    if (!nodes.equals(that.nodes)) {
       return false;
     }
 
@@ -112,7 +114,7 @@ public class BlockStatement extends Statement {
   @Override public int hashCode() {
     int result = hash;
     if (result == 0) {
-      result = Objects.hash(nodeType, type, statements);
+      result = Objects.hash(nodeType, type, nodes);
       if (result == 0) {
         result = 1;
       }
