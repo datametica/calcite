@@ -14208,4 +14208,19 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root), isLinux(expectedSql));
   }
 
+  @Test public void testForBitAndNotFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode bitPart = builder.call(SqlLibraryOperators.BITANDNOT,
+        builder.literal(3), builder.literal(2));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(bitPart, "Result"))
+        .build();
+
+    final String expectedQuery = "SELECT BITANDNOT(3, 2) AS Result\nFROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedQuery));
+  }
+
 }
