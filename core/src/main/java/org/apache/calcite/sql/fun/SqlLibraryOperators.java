@@ -2121,4 +2121,12 @@ public abstract class SqlLibraryOperators {
       OperandTypes.STRING,
       SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION
   );
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction BITANDNOT =
+      new SqlFunction("BITANDNOT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+          SqlFunctionCategory.NUMERIC);
 }
