@@ -14344,4 +14344,19 @@ class RelToSqlConverterDMTest {
   private static RelNode toLogical(RelNode rel, RelBuilder builder) {
     return rel.accept(new ToLogicalConverter(builder));
   }
+
+  @Test public void testForTruncTimestampFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode truncTimestampNode = builder.call(SqlLibraryOperators.TRUNC_TIMESTAMP,
+        builder.call(CURRENT_TIMESTAMP),
+        builder.literal("Year"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(truncTimestampNode)
+        .build();
+    final String expectedBQSql = "SELECT TRUNC_TIMESTAMP(CURRENT_TIMESTAMP, 'Year') AS $f0\nFROM"
+        + " scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedBQSql));
+  }
 }
