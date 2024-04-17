@@ -2121,4 +2121,14 @@ public abstract class SqlLibraryOperators {
       OperandTypes.STRING,
       SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION
   );
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction TRUNC_TIMESTAMP =
+      new SqlFunction(
+          "TRUNC_TIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP,
+          null,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
+          SqlFunctionCategory.TIMEDATE);
 }
