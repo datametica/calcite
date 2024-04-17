@@ -78,7 +78,7 @@ public class PostgresqlSqlDialect extends SqlDialect {
   }
 
   @Override public @Nullable SqlNode getCastSpec(RelDataType type) {
-    String castSpec;
+    String castSpec = null;
     switch (type.getSqlTypeName()) {
     case TINYINT:
       // Postgres has no tinyint (1 byte), so instead cast to smallint (2 bytes)
@@ -87,6 +87,15 @@ public class PostgresqlSqlDialect extends SqlDialect {
     case DOUBLE:
       // Postgres has a double type but it is named differently
       castSpec = "double precision";
+      break;
+    // Postgres has type 'text' with no predefined maximum length,
+    // stores values in a variable-length format
+    case VARCHAR:
+      if (type.getPrecision() == RelDataType.PRECISION_NOT_SPECIFIED) {
+        castSpec = "text";
+      } else {
+        return super.getCastSpec(type);
+      }
       break;
     default:
       return super.getCastSpec(type);

@@ -2103,6 +2103,15 @@ public abstract class SqlLibraryOperators {
                   SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction TO_NCLOB =
+      new SqlFunction("TO_NCLOB",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.NCLOB,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction IN_STRING = new OracleSqlTableFunction(
       "IN_STRING",
       SqlKind.OTHER_FUNCTION,

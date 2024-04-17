@@ -14030,6 +14030,28 @@ class RelToSqlConverterDMTest {
         isLinux(expectedSnowFlakeQuery));
   }
 
+  @Test public void testToNclobFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode toClobRex = builder.call(SqlLibraryOperators.TO_NCLOB,
+        builder.literal("ab123"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(toClobRex)
+        .build();
+    final String expectedOracleQuery = "SELECT TO_NCLOB('ab123') \"$f0\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleQuery));
+  }
+
+  @Test void testCastToTextForPostgres() {
+    String query = "select cast(\"employee_id\" as varchar) from \"foodmart\".\"employee\"";
+    final String expectedPostgresSql = "SELECT CAST(\"employee_id\" AS TEXT)\n"
+        + "FROM \"foodmart\".\"employee\"";
+    sql(query)
+        .withPostgresql()
+        .ok(expectedPostgresSql);
+  }
+
   @Test public void testForRegexpReplaceWithReplaceStringAsNull() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpReplaceRex = builder.call(SqlLibraryOperators.REGEXP_REPLACE,
