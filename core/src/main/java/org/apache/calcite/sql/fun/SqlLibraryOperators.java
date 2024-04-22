@@ -64,6 +64,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_INTEGER;
 
 /**
  * Defines functions and operators that are not part of standard SQL but
@@ -1074,6 +1075,14 @@ public abstract class SqlLibraryOperators {
         null,
         OperandTypes.or(OperandTypes.STRING, OperandTypes.BINARY),
         SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction ADD_DAYS =
+      new SqlFunction("ADD_DAYS",
+          SqlKind.PLUS,
+          ReturnTypes.ARG0_NULLABLE, null,
+          OperandTypes.or(DATETIME_INTEGER, STRING_INTEGER),
+          SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction TO_HEX =
@@ -2110,6 +2119,7 @@ public abstract class SqlLibraryOperators {
           OperandTypes.VARIADIC,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction IN_STRING = new OracleSqlTableFunction(
       "IN_STRING",
       SqlKind.OTHER_FUNCTION,
