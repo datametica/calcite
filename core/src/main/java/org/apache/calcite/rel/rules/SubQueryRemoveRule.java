@@ -665,7 +665,6 @@ public class SubQueryRemoveRule
         join.getLeft(), join.getRight(), join.getJoinType(), join.isSemiJoinDone());
     RelNode replacedRel = RelOptUtil.replace(builder.build(), join, replacedInput);
     builder.push(replacedRel);
-    builder.join(join.getJoinType(), shuttle.apply(join.getCondition()));
     builder.project(fields(builder, join.getRowType().getFieldCount()));
     call.transformTo(builder.build());
   }
