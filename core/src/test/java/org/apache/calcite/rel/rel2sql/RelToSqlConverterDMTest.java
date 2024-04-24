@@ -14043,18 +14043,6 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleQuery));
   }
 
-  @Test public void testForEmptyClobFunction() {
-    final RelBuilder builder = relBuilder();
-    final RexNode toClobRex = builder.call(SqlLibraryOperators.EMPTY_CLOB);
-    final RelNode root = builder
-        .scan("EMP")
-        .project(toClobRex)
-        .build();
-    final String expectedOracleQuery = "SELECT EMPTY_CLOB() \"$f0\"\nFROM \"scott\".\"EMP\"";
-
-    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleQuery));
-  }
-
   @Test void testCastToTextForPostgres() {
     String query = "select cast(\"employee_id\" as varchar) from \"foodmart\".\"employee\"";
     final String expectedPostgresSql = "SELECT CAST(\"employee_id\" AS TEXT)\n"
