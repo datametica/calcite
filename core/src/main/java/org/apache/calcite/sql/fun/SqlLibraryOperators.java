@@ -925,7 +925,18 @@ public abstract class SqlLibraryOperators {
 
   /** The "TO_TIMESTAMP(string1, string2)" function; casts string1
    * to a TIMESTAMP using the format specified in string2. */
-  @LibraryOperator(libraries = {POSTGRESQL, SNOWFLAKE})
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction POSTGRESQL_TO_TIMESTAMP =
+      new SqlFunction("TO_TIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_WITH_TIME_ZONE_NULLABLE,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.TIMEDATE);
+
+  /** The "TO_TIMESTAMP(string1, string2)" function; casts string1
+   * to a TIMESTAMP using the format specified in string2. */
+  @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction TO_TIMESTAMP =
       new SqlFunction("TO_TIMESTAMP",
           SqlKind.OTHER_FUNCTION,
