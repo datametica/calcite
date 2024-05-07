@@ -83,7 +83,8 @@ public class Uncollect extends SingleRel {
    */
   public Uncollect(RelInput input) {
     this(input.getCluster(), input.getTraitSet(), input.getInput(),
-        input.getBoolean("withOrdinality", false), Collections.emptyList());
+        input.getBoolean("withOrdinality", false),
+        Collections.emptyList());
   }
 
   /**
