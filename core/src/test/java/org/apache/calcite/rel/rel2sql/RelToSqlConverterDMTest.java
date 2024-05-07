@@ -35,6 +35,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.logical.ToLogicalConverter;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
@@ -10905,6 +10906,17 @@ class RelToSqlConverterDMTest {
             + "INTERVAL 1 MICROSECOND) AS FD\n"
             + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testFromClauseInPg() {
+    final RelBuilder builder = relBuilder();
+    final RelNode root = builder
+        .push(LogicalValues.createOneRow(builder.getCluster()))
+        .project(builder.alias(builder.literal(1), "one"))
+        .build();
+    final String expectedPostgresQuery =
+        "SELECT 1 AS \"one\"";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgresQuery));
   }
 
   @Test public void testPlusForDateAdd() {
