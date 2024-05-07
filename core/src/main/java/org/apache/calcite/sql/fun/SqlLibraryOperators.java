@@ -62,10 +62,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
-import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
-import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
-import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING;
-import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_BOOLEAN;
+import static org.apache.calcite.sql.type.OperandTypes.*;
 
 /**
  * Defines functions and operators that are not part of standard SQL but
@@ -1260,6 +1257,17 @@ public abstract class SqlLibraryOperators {
       null,
       OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction ARRAY_SLICE = new SqlFunction(
+      "ARRAY_SLICE",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.TO_ARRAY
+          .andThen(SqlTypeTransforms.TO_NULLABLE),
+      null,
+      OperandTypes.or(ARRAY_INTEGER_INTEGER, ARRAY_INTEGER_NULL,
+          ARRAY_NULL_INTEGER, NULL_INTEGER_INTEGER),
+      SqlFunctionCategory.NUMERIC);
 
   /** The "TO_VARCHAR(numeric, string)" function; casts string
    * Format first_operand to specified in second operand. */

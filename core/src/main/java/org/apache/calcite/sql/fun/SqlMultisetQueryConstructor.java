@@ -122,10 +122,8 @@ public class SqlMultisetQueryConstructor extends SqlSpecialOperator {
       int leftPrec,
       int rightPrec) {
     writer.keyword(getName());
-    final SqlWriter.Frame frame = writer.startList("(", ")");
     assert call.operandCount() == 1;
     call.operand(0).unparse(writer, leftPrec, rightPrec);
-    writer.endList(frame);
   }
 
   @Override public boolean argumentMustBeScalar(int ordinal) {
