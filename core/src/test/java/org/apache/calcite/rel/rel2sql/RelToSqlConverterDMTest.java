@@ -10914,9 +10914,9 @@ class RelToSqlConverterDMTest {
         .push(LogicalValues.createOneRow(builder.getCluster()))
         .project(builder.alias(builder.literal(1), "one"))
         .build();
-    final String expectedPostgresQuery =
+    final String expectedPgQuery =
         "SELECT 1 AS \"one\"";
-    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgresQuery));
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPgQuery));
   }
 
   @Test public void testPlusForDateAdd() {
