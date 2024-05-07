@@ -26,10 +26,9 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlQuantifyOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 
 import com.google.common.collect.ImmutableList;
-
-import org.apache.calcite.sql.type.SqlTypeUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 

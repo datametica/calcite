@@ -62,7 +62,14 @@ import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
-import static org.apache.calcite.sql.type.OperandTypes.*;
+import static org.apache.calcite.sql.type.OperandTypes.ARRAY_INTEGER_INTEGER;
+import static org.apache.calcite.sql.type.OperandTypes.ARRAY_INTEGER_NULL;
+import static org.apache.calcite.sql.type.OperandTypes.ARRAY_NULL_INTEGER;
+import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
+import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
+import static org.apache.calcite.sql.type.OperandTypes.NULL_INTEGER_INTEGER;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_BOOLEAN;
 
 /**
  * Defines functions and operators that are not part of standard SQL but

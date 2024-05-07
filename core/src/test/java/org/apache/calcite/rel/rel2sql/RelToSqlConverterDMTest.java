@@ -10832,7 +10832,8 @@ class RelToSqlConverterDMTest {
         .build();
     RelNode projectNode = builder
         .push(unCollectNode)
-        .filter(builder.call(SqlLibraryOperators.BETWEEN, builder.field(1),
+        .filter(
+            builder.call(SqlLibraryOperators.BETWEEN, builder.field(1),
             builder.literal(0), builder.literal(1)))
         .project(builder.field(0))
         .build();
@@ -10856,8 +10857,8 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(arraySliceNode, "arraySlice"))
         .build();
-    final String expectedSnowflake = "SELECT ARRAY_SLICE(NULL, 1, 2) AS \"arraySlice\"\n" +
-        "FROM \"scott\".\"EMP\"";
+    final String expectedSnowflake = "SELECT ARRAY_SLICE(NULL, 1, 2) AS \"arraySlice\"\n"
+        + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflake));
   }
 
