@@ -311,6 +311,17 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker PERIOD =
       new PeriodOperandTypeChecker();
 
+  public static final SqlSingleOperandTypeChecker ARRAY_NULLABLE =
+      or(family(SqlTypeFamily.ARRAY),
+          family(SqlTypeFamily.NULL));
+
+  public static final SqlSingleOperandTypeChecker INTEGER_NULLABLE =
+      or(family(SqlTypeFamily.ARRAY),
+          family(SqlTypeFamily.NULL));
+
+  public static final SqlSingleOperandTypeChecker ARRAY_INTEGER_INTEGER_NULLABLE =
+      and(ARRAY_NULLABLE, INTEGER_NULLABLE, INTEGER_NULLABLE);
+
   public static final SqlSingleOperandTypeChecker PERIOD_OR_DATETIME =
       or(PERIOD, DATETIME);
 
@@ -322,18 +333,6 @@ public abstract class OperandTypes {
 
   public static final SqlSingleOperandTypeChecker ARRAY =
       family(SqlTypeFamily.ARRAY);
-
-  public static final SqlSingleOperandTypeChecker ARRAY_INTEGER_INTEGER =
-      family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
-
-  public static final SqlSingleOperandTypeChecker NULL_INTEGER_INTEGER =
-      family(SqlTypeFamily.NULL, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
-
-  public static final SqlSingleOperandTypeChecker ARRAY_NULL_INTEGER =
-      family(SqlTypeFamily.ARRAY, SqlTypeFamily.NULL, SqlTypeFamily.INTEGER);
-
-  public static final SqlSingleOperandTypeChecker ARRAY_INTEGER_NULL =
-      family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER, SqlTypeFamily.NULL);
 
   public static final SqlSingleOperandTypeChecker ARRAY_OR_MAP =
       or(family(SqlTypeFamily.ARRAY),

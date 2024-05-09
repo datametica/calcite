@@ -62,12 +62,8 @@ import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
-import static org.apache.calcite.sql.type.OperandTypes.ARRAY_INTEGER_INTEGER;
-import static org.apache.calcite.sql.type.OperandTypes.ARRAY_INTEGER_NULL;
-import static org.apache.calcite.sql.type.OperandTypes.ARRAY_NULL_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
-import static org.apache.calcite.sql.type.OperandTypes.NULL_INTEGER_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_BOOLEAN;
 
@@ -1272,9 +1268,8 @@ public abstract class SqlLibraryOperators {
       ReturnTypes.TO_ARRAY
           .andThen(SqlTypeTransforms.TO_NULLABLE),
       null,
-      OperandTypes.or(ARRAY_INTEGER_INTEGER, ARRAY_INTEGER_NULL,
-          ARRAY_NULL_INTEGER, NULL_INTEGER_INTEGER),
-      SqlFunctionCategory.NUMERIC);
+      OperandTypes.ARRAY_INTEGER_INTEGER_NULLABLE,
+      SqlFunctionCategory.SYSTEM);
 
   /** The "TO_VARCHAR(numeric, string)" function; casts string
    * Format first_operand to specified in second operand. */
