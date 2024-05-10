@@ -132,9 +132,34 @@ public class PostgresqlSqlDialect extends SqlDialect {
           timeUnitNode.getParserPosition());
       SqlFloorFunction.unparseDatetimeFunction(writer, call2, "DATE_TRUNC", false);
       break;
+    case OTHER_FUNCTION:
+    case OTHER:
+      this.unparseOtherFunction(writer, call, leftPrec, rightPrec);
+      break;
 
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseOtherFunction(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
+    switch (call.getOperator().getName()) {
+    case "BITWISE_AND":
+      SqlNode[] operands = new SqlNode[]{call.operand(0), call.operand(1)};
+      this.unparseBitwiseAnd(writer, operands, leftPrec, rightPrec);
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseBitwiseAnd(SqlWriter writer, SqlNode[] operands,
+      int leftPrec, int rightPrec) {
+    writer.print("(");
+    operands[0].unparse(writer, leftPrec, rightPrec);
+    writer.print("& ");
+    operands[1].unparse(writer, leftPrec, rightPrec);
+    writer.print(")");
   }
 }
