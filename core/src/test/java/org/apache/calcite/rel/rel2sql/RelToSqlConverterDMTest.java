@@ -10817,6 +10817,7 @@ class RelToSqlConverterDMTest {
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
   @Test public void testIntervalSeconds() {
     final RelBuilder builder = relBuilder();
 
@@ -12555,8 +12556,11 @@ class RelToSqlConverterDMTest {
 
     final String expectedBQSql = "SELECT CURRENT_TIMESTAMP() AS `$f0`\n"
         + "FROM scott.EMP";
+    final String expectedPgSql = "SELECT CURRENT_TIMESTAMP() AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPgSql));
   }
 
   @Test public void testCurrentTimestampWithLocalTimeZone() {
