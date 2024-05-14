@@ -14395,22 +14395,24 @@ class RelToSqlConverterDMTest {
   }
 
   @Test void testUnparseSqlIntervalQualifierForDayAndHour() {
-    String queryDatePlus = "select INTERVAL '200' DAY(6) , INTERVAL '10' HOUR(2)";
-    String expectedDatePlus = "SELECT *\nFROM (VALUES (INTERVAL '200' DAY, "
-        + "INTERVAL '10' HOUR)) AS \"t\" (\"EXPR$0\", \"EXPR$1\")";
+    String queryDatePlus = "select INTERVAL -'200' DAY(6) , INTERVAL '10' HOUR(2)";
+    String expectedPostgres = "SELECT *\n"
+        + "FROM (VALUES (INTERVAL '-200' DAY, INTERVAL '10' HOUR)) "
+        + "AS \"t\" (\"EXPR$0\", \"EXPR$1\")";
 
     sql(queryDatePlus)
         .withPostgresql()
-        .ok(expectedDatePlus);
+        .ok(expectedPostgres);
   }
 
   @Test void testUnparseSqlIntervalQualifierForSecAndMin() {
     String queryDatePlus = "select INTERVAL '19800' SECOND(5) , INTERVAL '100' MINUTE(3)";
-    String expectedDatePlus = "SELECT *\nFROM (VALUES (INTERVAL '19800' SECOND(5), "
-        + "INTERVAL '100' MINUTE)) AS \"t\" (\"EXPR$0\", \"EXPR$1\")";
+    String expectedPostgres = "SELECT *\n"
+        + "FROM (VALUES (INTERVAL '19800' SECOND(5), INTERVAL '100' MINUTE)) "
+        + "AS \"t\" (\"EXPR$0\", \"EXPR$1\")";
 
     sql(queryDatePlus)
         .withPostgresql()
-        .ok(expectedDatePlus);
+        .ok(expectedPostgres);
   }
 }

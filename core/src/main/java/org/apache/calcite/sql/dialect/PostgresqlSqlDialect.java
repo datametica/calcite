@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -138,6 +139,21 @@ public class PostgresqlSqlDialect extends SqlDialect {
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  public void unparseSqlIntervalLiteral(SqlWriter writer,
+      SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
+    SqlIntervalLiteral.IntervalValue interval =
+        literal.getValueAs(SqlIntervalLiteral.IntervalValue.class);
+    writer.keyword("INTERVAL");
+    String literalValue = "'";
+    if (interval.getSign() == -1) {
+      literalValue += "-";
+    }
+    literalValue += interval.getIntervalLiteral() + "'";
+    writer.literal(literalValue);
+    unparseSqlIntervalQualifier(writer, interval.getIntervalQualifier(),
+        POSTGRESQL_TYPE_SYSTEM);
   }
 
   @Override public void unparseSqlIntervalQualifier(SqlWriter writer,
