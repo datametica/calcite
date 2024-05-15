@@ -10923,8 +10923,11 @@ class RelToSqlConverterDMTest {
         + "FROM scott.EMP";
     final String expectedSparkQuery = "SELECT DATE '1999-07-01' + 1 FD\n"
         + "FROM scott.EMP";
+    final String expectedPgQuery = "SELECT DATE '1999-07-01' + INTERVAL '1' DAY AS \"FD\"\n"
+        + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPgQuery));
   }
 
   @Test public void testPlusForDateAddForWeek() {
