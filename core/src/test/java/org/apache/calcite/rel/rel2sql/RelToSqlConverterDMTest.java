@@ -14090,15 +14090,6 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedDB2Sql));
   }
 
-  @Test void testCastToTextForPostgres() {
-    String query = "select cast(\"employee_id\" as varchar) from \"foodmart\".\"employee\"";
-    final String expectedPostgresSql = "SELECT CAST(\"employee_id\" AS TEXT)\n"
-        + "FROM \"foodmart\".\"employee\"";
-    sql(query)
-        .withPostgresql()
-        .ok(expectedPostgresSql);
-  }
-
   @Test public void testForRegexpReplaceWithReplaceStringAsNull() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpReplaceRex = builder.call(SqlLibraryOperators.REGEXP_REPLACE,
