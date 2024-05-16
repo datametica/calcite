@@ -14077,17 +14077,17 @@ class RelToSqlConverterDMTest {
         isLinux(expectedSnowFlakeQuery));
   }
 
-  @Test public void testToNclobFunction() {
-    final RelBuilder builder = relBuilder();
-    final RexNode toClobRex = builder.call(SqlLibraryOperators.TO_NCLOB,
-        builder.literal("ab123"));
-    final RelNode root = builder
-        .scan("EMP")
-        .project(toClobRex)
+  @Test public void testCastToClobForPostgres() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode clobNode = relBuilder.cast(relBuilder.literal("a123"),
+        SqlTypeName.CLOB);
+    RelNode root = relBuilder
+        .project(clobNode)
         .build();
-    final String expectedOracleQuery = "SELECT TO_NCLOB('ab123') \"$f0\"\nFROM \"scott\".\"EMP\"";
+    final String expectedDB2Sql = "SELECT CAST('a123' AS TEXT) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
 
-    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleQuery));
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedDB2Sql));
   }
 
   @Test void testCastToTextForPostgres() {
