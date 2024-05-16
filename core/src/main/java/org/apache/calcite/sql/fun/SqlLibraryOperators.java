@@ -64,6 +64,9 @@ import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_INTEGER;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_BOOLEAN;
 
 /**
  * Defines functions and operators that are not part of standard SQL but
@@ -353,6 +356,14 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("XMLTRANSFORM", SqlKind.OTHER_FUNCTION,
           ReturnTypes.VARCHAR_2000.andThen(SqlTypeTransforms.FORCE_NULLABLE),
           null, OperandTypes.STRING_STRING, SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction DAYS_BETWEEN =
+      new SqlFunction("DAYS_BETWEEN",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.ANY_ANY,
+          SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction EXTRACT_XML =
@@ -725,23 +736,7 @@ public abstract class SqlLibraryOperators {
 
   @LibraryOperator(libraries = {HIVE, SPARK, SNOWFLAKE, TERADATA})
   public static final SqlFunction ADD_MONTHS =
-      new SqlFunction(
-        "ADD_MONTHS",
-        SqlKind.PLUS,
-        ReturnTypes.ARG0,
-        null,
-        OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
-        SqlFunctionCategory.TIMEDATE);
-
-  @LibraryOperator(libraries = {ORACLE})
-  public static final SqlFunction ORACLE_ADD_MONTHS =
-      new SqlFunction(
-          "ADD_MONTHS",
-          SqlKind.PLUS,
-          ReturnTypes.ARG0_NULLABLE,
-          null,
-          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER),
-          SqlFunctionCategory.TIMEDATE);
+      new SqlAddMonths(false);
 
   /** The "DAYNAME(datetime)" function; returns the name of the day of the week,
    * in the current locale, of a TIMESTAMP or DATE argument. */
@@ -845,6 +840,9 @@ public abstract class SqlLibraryOperators {
   /** The "CONCAT(arg0, arg1)" function that concatenates strings.
    * For example, "CONCAT('a', 'bc')" returns "abc".
    *
+   * The optional boolean operand represents whether we have a concat operator (||)
+   * or concat function [CONCAT()] in the source side. This extra operand avoids the addition
+   * of an extra operator to represent oracle's concat operator (||)
    * <p>It is assigned {@link SqlKind#CONCAT2} to make it not equal to
    * {@link #CONCAT_FUNCTION}. */
   @LibraryOperator(libraries = {ORACLE})
@@ -853,7 +851,7 @@ public abstract class SqlLibraryOperators {
           SqlKind.CONCAT2,
           ReturnTypes.MULTIVALENT_STRING_SUM_PRECISION_NULLABLE,
           InferTypes.RETURN_TYPE,
-          OperandTypes.STRING_SAME_SAME,
+          OperandTypes.or(STRING_STRING, STRING_STRING_BOOLEAN),
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {MYSQL})
@@ -1074,6 +1072,14 @@ public abstract class SqlLibraryOperators {
         null,
         OperandTypes.or(OperandTypes.STRING, OperandTypes.BINARY),
         SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction ADD_DAYS =
+      new SqlFunction("ADD_DAYS",
+          SqlKind.PLUS,
+          ReturnTypes.ARG0, null,
+          OperandTypes.or(DATETIME_INTEGER, STRING_INTEGER),
+          SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction TO_HEX =
@@ -1883,12 +1889,12 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING_STRING,
           SqlFunctionCategory.STRING);
 
-  @LibraryOperator(libraries = {ORACLE})
-  public static final SqlFunction ORACLE_LAST_DAY =
+  @LibraryOperator(libraries = {ORACLE, DB2})
+  public static final SqlFunction LAST_DAY =
       new SqlFunction(
           "LAST_DAY",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.TIMESTAMP_NULLABLE,
+          ReturnTypes.ARG0_NULLABLE,
           null,
           OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
@@ -2085,6 +2091,15 @@ public abstract class SqlLibraryOperators {
               SqlTypeFamily.TIMESTAMP),
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ARRAY_CONCAT =
+      new SqlFunction("ARRAY_CONCAT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.ANY_ANY,
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction DIV0 =
       new SqlFunction("DIV0",
@@ -2103,13 +2118,12 @@ public abstract class SqlLibraryOperators {
                   SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {ORACLE})
-  public static final SqlFunction TO_NCLOB =
-      new SqlFunction("TO_NCLOB",
+  public static final SqlFunction XMLELEMENT =
+      new SqlFunction("XMLELEMENT",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.NCLOB,
-          null,
-          OperandTypes.STRING,
-          SqlFunctionCategory.STRING);
+          ReturnTypes.VARCHAR_2000, null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction IN_STRING = new OracleSqlTableFunction(
@@ -2130,4 +2144,20 @@ public abstract class SqlLibraryOperators {
       OperandTypes.STRING,
       SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION
   );
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction FIRST_DAY =
+      new SqlFunction("FIRST_DAY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE, null,
+          OperandTypes.DATETIME,
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {DB2})
+  public static final SqlFunction DB2_TRUNC =
+      new SqlFunction("TRUNC",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
+          SqlFunctionCategory.SYSTEM);
 }

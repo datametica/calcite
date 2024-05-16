@@ -84,6 +84,7 @@ import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.dialect.OracleSqlDialect;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
+import org.apache.calcite.sql.fun.SqlAddMonths;
 import org.apache.calcite.sql.fun.SqlLibrary;
 import org.apache.calcite.sql.fun.SqlLibraryOperatorTableFactory;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
@@ -12527,7 +12528,7 @@ class RelToSqlConverterDMTest {
     RexBuilder rexBuilder = relBuilder.getRexBuilder();
     final RexLiteral intervalLiteral = rexBuilder.makeIntervalLiteral(BigDecimal.valueOf(-2),
         new SqlIntervalQualifier(MONTH, null, SqlParserPos.ZERO));
-    final RexNode oracleAddMonthsCall = relBuilder.call(SqlLibraryOperators.ORACLE_ADD_MONTHS,
+    final RexNode oracleAddMonthsCall = relBuilder.call(new SqlAddMonths(true),
         relBuilder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP), intervalLiteral);
     RelNode root = relBuilder
         .project(oracleAddMonthsCall)
@@ -12642,14 +12643,17 @@ class RelToSqlConverterDMTest {
   @Test public void testOracleLastDay() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     final RexNode literalTimestamp = relBuilder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP);
-    RexNode lastDayNode = relBuilder.call(SqlLibraryOperators.ORACLE_LAST_DAY, literalTimestamp);
+    RexNode lastDayNode = relBuilder.call(SqlLibraryOperators.LAST_DAY, literalTimestamp);
     RelNode root = relBuilder
         .project(lastDayNode)
         .build();
     final String expectedOracleSql = "SELECT LAST_DAY(CURRENT_TIMESTAMP) \"$f0\"\n"
         + "FROM \"scott\".\"EMP\"";
+    final String expectedDB2Sql = "SELECT LAST_DAY(CURRENT_TIMESTAMP) AS $f0\n"
+        + "FROM scott.EMP AS EMP";
 
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
   @Test public void testSnowflakeLastDay() {
@@ -13125,6 +13129,22 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testForDaysBetweenFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dayPart = builder.call(SqlLibraryOperators.DAYS_BETWEEN,
+        builder.literal("2012-03-03"), builder.literal("2012-05-03"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dayPart, "daysBetween"))
+        .build();
+
+    final String expectedQuery = "SELECT DAYS_BETWEEN('2012-03-03', '2012-05-03') AS "
+        + "daysBetween\nFROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedQuery));
+  }
+
   @Test public void testStringLiteralsWithValidEscapeSequences() {
     final RelBuilder builder = relBuilder();
     final RexNode literal1 = builder.literal("Wal\ter");
@@ -13179,6 +13199,33 @@ class RelToSqlConverterDMTest {
     sql(query)
         .schema(CalciteAssert.SchemaSpec.JDBC_FOODMART)
         .withBigQuery().ok(expected);
+  }
+
+  @Test public void testForAddDaysFunction() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexLiteral literalValue = relBuilder.literal(1);
+    final RexNode addDays = relBuilder.call(SqlLibraryOperators.ADD_DAYS,
+        relBuilder.call(CURRENT_DATE), literalValue);
+    RelNode root = relBuilder
+        .project(addDays)
+        .build();
+    final String expectedDb2Sql = "SELECT ADD_DAYS(CURRENT_DATE, 1) AS $f0\n"
+        + "FROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDb2Sql));
+  }
+
+  @Test public void testDb2Trunc() {
+    RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode dateTruncNode = builder.call(SqlLibraryOperators.DB2_TRUNC,
+        builder.call(CURRENT_TIMESTAMP),
+        builder.literal("YEAR"));
+    RelNode root = builder
+        .project(dateTruncNode)
+        .build();
+    final String expectedDb2Sql = "SELECT TRUNC(CURRENT_TIMESTAMP, 'YEAR') AS $f0\n"
+            + "FROM scott.EMP AS EMP";
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDb2Sql));
   }
 
   @Test void testAggregateExpressionInOrderBy() {
@@ -14135,6 +14182,27 @@ class RelToSqlConverterDMTest {
         .ok(expectedBiqquery);
   }
 
+  @Test public void testArrayConcatAndArray() {
+    final RelBuilder builder = relBuilder();
+    final RelDataType stringValue = builder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR);
+    final RelDataType arrayRelDataType = builder.getTypeFactory().createArrayType(stringValue, -1);
+    final RexNode arrayConcatRex = builder.call(SqlLibraryOperators.ARRAY_CONCAT,
+        builder.getRexBuilder().makeCall(arrayRelDataType,
+            SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, new ArrayList<>()),
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal("A"), builder.literal("B")));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(arrayConcatRex, "ARRY_CONCAT"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT "
+        + "ARRAY_CONCAT(ARRAY[], ARRAY['A', 'B']) AS ARRY_CONCAT\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testFromTimezoneFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode fromTimezoneNode = builder.call(SqlLibraryOperators.FROM_TZ,
@@ -14202,6 +14270,22 @@ class RelToSqlConverterDMTest {
         .filter(equalsNode)
         .project(builder.field("HIREDATE"))
         .build();
+  }
+
+  @Test public void testForXMLElementFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode xmlElementRex = builder.call(SqlLibraryOperators.XMLELEMENT,
+        builder.literal("EMPLOYEE_NAME"), builder.scan("EMP").field(1));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(xmlElementRex, "xmlElement"))
+        .build();
+
+    final String expectedOracleQuery = "SELECT "
+        + "XMLELEMENT('EMPLOYEE_NAME', \"ENAME\") \"xmlElement\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleQuery));
   }
 
   @Test public void testOracleTableFunctions() {
@@ -14366,4 +14450,17 @@ class RelToSqlConverterDMTest {
   private static RelNode toLogical(RelNode rel, RelBuilder builder) {
     return rel.accept(new ToLogicalConverter(builder));
   }
+  @Test public void testOracleFirstDay() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode literalTimestamp = relBuilder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP);
+    RexNode firstDayNode = relBuilder.call(SqlLibraryOperators.FIRST_DAY, literalTimestamp);
+    RelNode root = relBuilder
+        .project(firstDayNode)
+        .build();
+    final String expectedDB2Sql = "SELECT FIRST_DAY(CURRENT_TIMESTAMP) AS $f0\n"
+        + "FROM scott.EMP AS EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
+  }
+
 }
