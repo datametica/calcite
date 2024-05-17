@@ -10910,12 +10910,14 @@ class RelToSqlConverterDMTest {
 
   @Test public void testFromClauseInPg() {
     final RelBuilder builder = relBuilder();
+    final RexNode currentimestampNode = builder.call(CURRENT_TIMESTAMP_WITH_TIME_ZONE,
+        builder.literal(6));
     final RelNode root = builder
         .push(LogicalValues.createOneRow(builder.getCluster()))
-        .project(builder.alias(builder.literal(1), "one"))
+        .project(currentimestampNode, builder.alias(builder.literal(1), "one"))
         .build();
     final String expectedPgQuery =
-        "SELECT 1 AS \"one\"";
+        "SELECT CURRENT_TIMESTAMP AS \"$f0\", 1 AS \"one\"";
     assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPgQuery));
   }
 

@@ -21,15 +21,9 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
-import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
-import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
+import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 
@@ -145,8 +139,14 @@ public class PostgresqlSqlDialect extends SqlDialect {
     switch (call.getOperator().getName()) {
     case "CURRENT_TIMESTAMP_TZ":
     case "CURRENT_TIMESTAMP_LTZ":
-      final SqlWriter.Frame currentTimestampFunc = writer.startFunCall("CURRENT_TIMESTAMP");
-      writer.endFunCall(currentTimestampFunc);
+      writer.keyword("CURRENT_TIMESTAMP");
+      if (((SqlBasicCall) call).getOperands().length > 0
+          && call.operand(0) instanceof SqlNumericLiteral
+          && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) < 6) {
+        writer.keyword("(");
+        call.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.keyword(")");
+      }
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
