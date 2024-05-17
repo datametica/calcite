@@ -45,6 +45,7 @@ import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinToCorrelateRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
+import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -14380,5 +14381,42 @@ class RelToSqlConverterDMTest {
 
   private static RelNode toLogical(RelNode rel, RelBuilder builder) {
     return rel.accept(new ToLogicalConverter(builder));
+  }
+
+  @Test public void testSubQueryWithInClauseRule() {
+
+    final RelBuilder builder = relBuilder();
+    final RelNode subQueryInClause = builder.scan("DEPT")
+        .project(builder.field(0), builder.field(1))
+        .build();
+
+    final RelNode root = builder.scan("EMP")
+        .scan("DEPT")
+        .join(JoinRelType.INNER,
+            builder.and(
+                builder.call(SqlStdOperatorTable.EQUALS,
+                    builder.field(2, 0, "DEPTNO"),
+                    builder.field(2, 1, "DEPTNO")),
+                RexSubQuery.in(
+                    subQueryInClause, ImmutableList.of(builder.field(0),
+                    builder.field(1)))))
+        .build();
+
+    final String expectedBiqQuery = "SELECT EMP.EMPNO, EMP.ENAME, EMP.JOB, EMP.MGR, EMP.HIREDATE,"
+        + " EMP.SAL, EMP.COMM, EMP.DEPTNO, DEPT.DEPTNO AS DEPTNO0, DEPT.DNAME, DEPT.LOC\n"
+        + "FROM scott.EMP\n"
+        + "INNER JOIN scott.DEPT ON EMP.DEPTNO = DEPT.DEPTNO\n"
+        + "INNER JOIN (SELECT DEPTNO, DNAME\n"
+        + "FROM scott.DEPT) AS t ON EMP.EMPNO = t.DEPTNO AND EMP.ENAME = t.DNAME";
+
+    Collection<RelOptRule> rules = new ArrayList<>();
+    rules.add((SubQueryRemoveRule.Config.JOIN).toRule());
+    HepProgram hepProgram = new HepProgramBuilder().addRuleCollection(rules).build();
+    HepPlanner hepPlanner = new HepPlanner(hepProgram);
+    hepPlanner.setRoot(root);
+    RelNode optimizedRel = hepPlanner.findBestExp();
+
+    assertThat(toSql(optimizedRel, DatabaseProduct.BIG_QUERY.getDialect()),
+        isLinux(expectedBiqQuery));
   }
 }
