@@ -14381,4 +14381,16 @@ class RelToSqlConverterDMTest {
   private static RelNode toLogical(RelNode rel, RelBuilder builder) {
     return rel.accept(new ToLogicalConverter(builder));
   }
+
+  @Test public void testOraToPostgresBitAnd() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode literalTimestamp = relBuilder.call(SqlLibraryOperators.BITWISE_AND,
+        relBuilder.literal(3), relBuilder.literal(2));
+    RelNode root = relBuilder
+        .project(literalTimestamp)
+        .build();
+    final String expectedOracleSql = "SELECT BITWISE_AND(3, 2) \"$f0\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
+  }
 }
