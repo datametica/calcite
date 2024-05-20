@@ -47,12 +47,6 @@ public class SqlCurrentTimestampFunction extends SqlAbstractTimeFunction {
       }
     }
     assert precision >= 0;
-    if (precision > MAX_TIMESTAMP_PRECISION) {
-      throw opBinding.newError(
-          RESOURCE.argumentMustBeValidPrecision(
-              opBinding.getOperator().getName(), 0,
-              MAX_TIMESTAMP_PRECISION));
-    }
     return opBinding.getTypeFactory().createSqlType(typeName, precision);
   }
 }

@@ -14458,4 +14458,17 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test public void testPostgresCurrentTimestampTZ() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode literalTimestamp = relBuilder
+        .call(CURRENT_TIMESTAMP_WITH_TIME_ZONE, relBuilder.literal(9));
+    RelNode root = relBuilder
+        .project(literalTimestamp)
+        .build();
+    final String expectedDB2Sql = "SELECT CURRENT_TIMESTAMP (6) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedDB2Sql));
+  }
+
 }
