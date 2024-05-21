@@ -14014,6 +14014,20 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqQuery));
   }
 
+  @Test public void testUidAndPgBackEndId() {
+    final RelBuilder builder = relBuilder();
+    final RexNode oracleUID = builder.call(SqlLibraryOperators.UID);
+    final RexNode pgBackendId = builder.call(SqlLibraryOperators.PG_BACKEND_PID);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(oracleUID, pgBackendId)
+        .build();
+    final String expectedBqQuery = "SELECT UID() AS \"$f0\", PG_BACKEND_PID() AS "
+        + "\"$f1\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedBqQuery));
+  }
+
   @Test public void testDatetimeTrunc() {
     final RelBuilder builder = relBuilder();
     final RexNode trunc = builder.call(SqlLibraryOperators.DATETIME_TRUNC,
