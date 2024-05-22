@@ -149,23 +149,28 @@ public class PostgresqlSqlDialect extends SqlDialect {
 
   private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     switch (call.getOperator().getName()) {
+    case "CURRENT_TIMESTAMP":
     case "CURRENT_TIMESTAMP_TZ":
     case "CURRENT_TIMESTAMP_LTZ":
-      writer.keyword("CURRENT_TIMESTAMP");
-      if (((SqlBasicCall) call).getOperands().length > 0
-          && call.operand(0) instanceof SqlNumericLiteral
-          && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) < 6) {
-        writer.keyword("(");
-        call.operand(0).unparse(writer, leftPrec, rightPrec);
-        writer.keyword(")");
-      } else if (((SqlBasicCall) call).getOperands().length > 0
-          && call.operand(0) instanceof SqlNumericLiteral
-          && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) > 6) {
-        writer.keyword("(6)");
-      }
-      break;
+      unparseCurrentTimestampWithTZ(writer, call, leftPrec, rightPrec);
+      return;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  void unparseCurrentTimestampWithTZ(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    writer.keyword("CURRENT_TIMESTAMP");
+    if (((SqlBasicCall) call).getOperands().length > 0
+        && call.operand(0) instanceof SqlNumericLiteral
+        && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) < 6) {
+      writer.keyword("(");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.keyword(")");
+    } else if (((SqlBasicCall) call).getOperands().length > 0
+        && call.operand(0) instanceof SqlNumericLiteral
+        && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) > 6) {
+      writer.keyword("(6)");
     }
   }
 }
