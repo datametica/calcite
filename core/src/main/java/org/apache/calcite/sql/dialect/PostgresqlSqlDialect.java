@@ -158,8 +158,7 @@ public class PostgresqlSqlDialect extends SqlDialect {
         writer.keyword("(");
         call.operand(0).unparse(writer, leftPrec, rightPrec);
         writer.keyword(")");
-      }
-      else if (((SqlBasicCall) call).getOperands().length > 0
+      } else if (((SqlBasicCall) call).getOperands().length > 0
           && call.operand(0) instanceof SqlNumericLiteral
           && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) > 6) {
         writer.keyword("(6)");
