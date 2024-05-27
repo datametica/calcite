@@ -2066,6 +2066,24 @@ public abstract class SqlLibraryOperators {
           OperandTypes.NILADIC,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction UID =
+      new SqlFunction("UID",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.NILADIC,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction PG_BACKEND_PID =
+      new SqlFunction("PG_BACKEND_PID",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.NILADIC,
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction DATETIME_TRUNC =
       new SqlFunction("DATETIME_TRUNC", SqlKind.OTHER_FUNCTION, ReturnTypes.TIMESTAMP, null,

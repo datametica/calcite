@@ -35,6 +35,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.logical.ToLogicalConverter;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
@@ -5846,8 +5847,9 @@ class RelToSqlConverterDMTest {
         + "UNION ALL\n"
         + "SELECT 2 AS `a`, 'yy' AS `b`) AS `t`";
     final String expectedPostgresql = "SELECT \"a\"\n"
-        + "FROM (VALUES (1, 'x '),\n"
-        + "(2, 'yy')) AS \"t\" (\"a\", \"b\")";
+        + "FROM (SELECT 1 AS \"a\", 'x ' AS \"b\"\n"
+        + "UNION ALL\n"
+        + "SELECT 2 AS \"a\", 'yy' AS \"b\") AS \"t\"";
     final String expectedOracle = "SELECT \"a\"\n"
         + "FROM (SELECT 1 \"a\", 'x ' \"b\"\n"
         + "FROM \"DUAL\"\n"
@@ -5870,7 +5872,9 @@ class RelToSqlConverterDMTest {
         + "FROM (SELECT 1 AS \"a\", 'x ' AS \"b\"\n"
         + "UNION ALL\n"
         + "SELECT 2 AS \"a\", 'yy' AS \"b\")";
-    final String expectedRedshift = expectedPostgresql;
+    final String expectedRedshift = "SELECT \"a\"\n"
+        + "FROM (VALUES (1, 'x '),\n"
+        + "(2, 'yy')) AS \"t\" (\"a\", \"b\")";
     sql(sql)
         .withHsqldb()
         .ok(expectedHsqldb)
@@ -5905,7 +5909,7 @@ class RelToSqlConverterDMTest {
         + "FROM \"DUAL\"\n"
         + "WHERE 1 = 0";
     final String expectedPostgresql = "SELECT *\n"
-        + "FROM (VALUES (NULL, NULL)) AS \"t\" (\"X\", \"Y\")\n"
+        + "FROM (SELECT NULL AS \"X\", NULL AS \"Y\") AS \"t\"\n"
         + "WHERE 1 = 0";
     sql(sql)
         .optimize(rules, null)
@@ -10908,6 +10912,17 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testFromClauseInPg() {
+    final RelBuilder builder = relBuilder();
+    final RelNode root = builder
+        .push(LogicalValues.createOneRow(builder.getCluster()))
+        .project(builder.alias(builder.literal(1), "one"))
+        .build();
+    final String expectedPgQuery =
+        "SELECT 1 AS \"one\"";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPgQuery));
+  }
+
   @Test public void testPlusForDateAdd() {
     final RelBuilder builder = relBuilder();
 
@@ -14012,6 +14027,20 @@ class RelToSqlConverterDMTest {
     final String expectedBqQuery = "SELECT GENERATE_UUID() AS `$f0`"
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqQuery));
+  }
+
+  @Test public void testUidAndPgBackEndId() {
+    final RelBuilder builder = relBuilder();
+    final RexNode oracleUID = builder.call(SqlLibraryOperators.UID);
+    final RexNode pgBackendId = builder.call(SqlLibraryOperators.PG_BACKEND_PID);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(oracleUID, pgBackendId)
+        .build();
+    final String expectedBqQuery = "SELECT UID() AS \"$f0\", PG_BACKEND_PID() AS "
+        + "\"$f1\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedBqQuery));
   }
 
   @Test public void testDatetimeTrunc() {
