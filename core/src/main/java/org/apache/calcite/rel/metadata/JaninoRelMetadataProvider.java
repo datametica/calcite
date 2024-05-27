@@ -424,7 +424,8 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
   }
 
   /**
-   * Temporary workaround for CALCITE-3745: CompileException in UnitCompiler with multiple class loaders.
+   * Temporary workaround for CALCITE-3745:
+   * CompileException in UnitCompiler with multiple class loaders.
    * Method Call:
    * - getDefaultCompilerFactory(classLoader)
    * Note:
