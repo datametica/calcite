@@ -10286,6 +10286,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
   }
+
+  @Test public void testTruncate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode trunc = builder.call(SqlStdOperatorTable.TRUNCATE,
+        builder.literal(1234.56), builder.literal(1));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(trunc, "FD"))
+        .build();
+    final String expectedPostgresSql = "SELECT TRUNC(1234.56, 1) AS \"FD\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgresSql));
+  }
+
   @Test public void testdatetruncWithYear() {
     final RelBuilder builder = relBuilder();
     final RexNode trunc = builder.call(SqlLibraryOperators.TRUNC,
