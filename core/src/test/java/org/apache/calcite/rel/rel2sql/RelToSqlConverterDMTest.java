@@ -10295,8 +10295,8 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(trunc, "FD"))
         .build();
-    final String expectedPostgresSql = "SELECT TRUNC(1234.56, 1) AS \"FD\"\n" +
-        "FROM \"scott\".\"EMP\"";
+    final String expectedPostgresSql = "SELECT TRUNC(1234.56, 1) AS \"FD\"\n"
+        + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgresSql));
   }
