@@ -21,8 +21,6 @@ import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 
-import static org.apache.calcite.util.Static.RESOURCE;
-
 /**
  * Sub class of SqlAbstractTimeFunction for current_timestamp function such as CURRENT_TIMESTAMP(6)
  * or CURRENT_TIMESTAMP".
@@ -47,12 +45,6 @@ public class SqlCurrentTimestampFunction extends SqlAbstractTimeFunction {
       }
     }
     assert precision >= 0;
-    if (precision > MAX_TIMESTAMP_PRECISION) {
-      throw opBinding.newError(
-          RESOURCE.argumentMustBeValidPrecision(
-              opBinding.getOperator().getName(), 0,
-              MAX_TIMESTAMP_PRECISION));
-    }
     return opBinding.getTypeFactory().createSqlType(typeName, precision);
   }
 }

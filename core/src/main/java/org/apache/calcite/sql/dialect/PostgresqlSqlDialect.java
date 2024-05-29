@@ -22,11 +22,13 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
@@ -108,6 +110,10 @@ public class PostgresqlSqlDialect extends SqlDialect {
     }
   }
 
+  @Override public boolean supportsAliasedValues() {
+    return false;
+  }
+
   @Override public boolean requiresAliasForFromItems() {
     return true;
   }
@@ -132,9 +138,39 @@ public class PostgresqlSqlDialect extends SqlDialect {
           timeUnitNode.getParserPosition());
       SqlFloorFunction.unparseDatetimeFunction(writer, call2, "DATE_TRUNC", false);
       break;
-
+    case OTHER_FUNCTION:
+    case OTHER:
+      unparseOtherFunction(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.getOperator().getName()) {
+    case "CURRENT_TIMESTAMP":
+    case "CURRENT_TIMESTAMP_TZ":
+    case "CURRENT_TIMESTAMP_LTZ":
+      unparseCurrentTimestampWithTZ(writer, call, leftPrec, rightPrec);
+      return;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  void unparseCurrentTimestampWithTZ(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    writer.keyword("CURRENT_TIMESTAMP");
+    if (((SqlBasicCall) call).getOperands().length > 0
+        && call.operand(0) instanceof SqlNumericLiteral
+        && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) < 6) {
+      writer.keyword("(");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.keyword(")");
+    } else if (((SqlBasicCall) call).getOperands().length > 0
+        && call.operand(0) instanceof SqlNumericLiteral
+        && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) > 6) {
+      writer.keyword("(6)");
     }
   }
 }
