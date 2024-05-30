@@ -765,7 +765,7 @@ public class BigQuerySqlDialect extends SqlDialect {
           && !var.toString().substring(1, 3).startsWith("\\\\"))) {
         unparseAsOp(writer, call, leftPrec, rightPrec);
       } else if (sqlNodes.size() == 4
-          && sqlNodes.get(0).getKind().name().equalsIgnoreCase(SqlKind.UNNEST.name())) {
+          && sqlNodes.get(0).getKind() == SqlKind.UNNEST) {
         unparseAsOpWithUnnest(writer, call, leftPrec, rightPrec);
       } else {
         call.getOperator().unparse(writer, call, leftPrec, rightPrec);

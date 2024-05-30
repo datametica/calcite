@@ -16,7 +16,9 @@
  */
 package org.apache.calcite.sql.fun;
 
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlWriter;
 
 /**
  * Definition of the SQL:2003 standard ARRAY query constructor, <code>
@@ -27,5 +29,15 @@ public class SqlArrayQueryConstructor extends SqlMultisetQueryConstructor {
 
   public SqlArrayQueryConstructor() {
     super("ARRAY", SqlKind.ARRAY_QUERY_CONSTRUCTOR);
+  }
+
+  @Override public void unparse(
+      SqlWriter writer,
+      SqlCall call,
+      int leftPrec,
+      int rightPrec) {
+    writer.keyword(getName());
+    assert call.operandCount() == 1;
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
   }
 }

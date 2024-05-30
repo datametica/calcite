@@ -1269,7 +1269,7 @@ public abstract class SqlLibraryOperators {
       ReturnTypes.TO_ARRAY
           .andThen(SqlTypeTransforms.TO_NULLABLE),
       null,
-      OperandTypes.ARRAY_INTEGER_INTEGER_NULLABLE,
+      OperandTypes.ARRAY_INTEGER_INTEGER,
       SqlFunctionCategory.SYSTEM);
 
   /** The "TO_VARCHAR(numeric, string)" function; casts string

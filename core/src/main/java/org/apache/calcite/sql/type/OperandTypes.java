@@ -311,16 +311,8 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker PERIOD =
       new PeriodOperandTypeChecker();
 
-  public static final SqlSingleOperandTypeChecker ARRAY_NULLABLE =
-      or(family(SqlTypeFamily.ARRAY),
-          family(SqlTypeFamily.NULL));
-
-  public static final SqlSingleOperandTypeChecker INTEGER_NULLABLE =
-      or(family(SqlTypeFamily.ARRAY),
-          family(SqlTypeFamily.NULL));
-
-  public static final SqlSingleOperandTypeChecker ARRAY_INTEGER_INTEGER_NULLABLE =
-      and(ARRAY_NULLABLE, INTEGER_NULLABLE, INTEGER_NULLABLE);
+  public static final SqlSingleOperandTypeChecker ARRAY_INTEGER_INTEGER =
+      family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
 
   public static final SqlSingleOperandTypeChecker PERIOD_OR_DATETIME =
       or(PERIOD, DATETIME);
