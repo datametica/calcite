@@ -14441,4 +14441,9 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test void testTeraDataCastAsInt() {
+    String query = "SELECT CAST(45.12 AS Integer) ";
+    final String expected = "SELECT 45";
+    sql(query).withBigQuery().ok(expected);
+  }
 }
