@@ -836,6 +836,7 @@ public abstract class SqlImplementor {
 
       case EXISTS:
       case SCALAR_QUERY:
+      case ARRAY_QUERY_CONSTRUCTOR:
         subQuery = (RexSubQuery) rex;
         sqlSubQuery =
             implementor().visitRoot(subQuery.rel).asQueryOrValues();

@@ -1262,6 +1262,16 @@ public abstract class SqlLibraryOperators {
       OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction ARRAY_SLICE = new SqlFunction(
+      "ARRAY_SLICE",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.TO_ARRAY
+          .andThen(SqlTypeTransforms.TO_NULLABLE),
+      null,
+      OperandTypes.ARRAY_INTEGER_INTEGER,
+      SqlFunctionCategory.SYSTEM);
+
   /** The "TO_VARCHAR(numeric, string)" function; casts string
    * Format first_operand to specified in second operand. */
   @LibraryOperator(libraries = {SNOWFLAKE})
