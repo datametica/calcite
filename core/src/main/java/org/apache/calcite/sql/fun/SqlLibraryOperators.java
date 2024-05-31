@@ -2162,8 +2162,8 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {POSTGRESQL})
-  public static final SqlFunction REGEXP_MATCH =
-      new SqlFunction("REGEXP_MATCH",
+  public static final SqlFunction REGEXP_MATCHES =
+      new SqlFunction("REGEXP_MATCHES",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TO_ARRAY, null,
           OperandTypes.STRING_STRING_OPTIONAL_STRING,
