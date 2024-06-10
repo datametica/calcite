@@ -14455,4 +14455,25 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test void testUnparseSqlIntervalQualifierForDayAndHour() {
+    String queryDatePlus = "select INTERVAL -'200' DAY(6) , INTERVAL '10' HOUR(2)";
+    String expectedPostgres = "SELECT *\n"
+        + "FROM (VALUES (INTERVAL '-200' DAY, INTERVAL '10' HOUR)) "
+        + "AS \"t\" (\"EXPR$0\", \"EXPR$1\")";
+
+    sql(queryDatePlus)
+        .withPostgresql()
+        .ok(expectedPostgres);
+  }
+
+  @Test void testUnparseSqlIntervalQualifierForSecAndMin() {
+    String queryDatePlus = "select INTERVAL '19800' SECOND(5) , INTERVAL '100' MINUTE(3)";
+    String expectedPostgres = "SELECT *\n"
+        + "FROM (VALUES (INTERVAL '19800' SECOND(5), INTERVAL '100' MINUTE)) "
+        + "AS \"t\" (\"EXPR$0\", \"EXPR$1\")";
+
+    sql(queryDatePlus)
+        .withPostgresql()
+        .ok(expectedPostgres);
+  }
 }
