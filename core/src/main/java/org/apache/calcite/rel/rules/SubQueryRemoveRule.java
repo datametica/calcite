@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.rel.rules;
 
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptPredicateList;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelRule;
@@ -30,13 +28,11 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.LogicVisitor;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
-import org.apache.calcite.rex.RexSimplify;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -95,7 +91,7 @@ public class SubQueryRemoveRule
     case SOME:
       return rewriteSome(e, variablesSet, builder);
     case IN:
-      return rewriteIn(e, variablesSet, logic, builder, offset);
+      return rewriteIn(e, variablesSet, logic, builder);
     case EXISTS:
       return rewriteExists(e, variablesSet, logic, builder);
     default:
@@ -320,12 +316,11 @@ public class SubQueryRemoveRule
    *                     expression of the specified RexSubQuery
    * @param logic        Logic for evaluating
    * @param builder      Builder
-   * @param offset       Offset to shift {@link RexInputRef}
    *
    * @return Expression that may be used to replace the RexSubQuery
    */
   private static RexNode rewriteIn(RexSubQuery e, Set<CorrelationId> variablesSet,
-      RelOptUtil.Logic logic, RelBuilder builder, int offset) {
+      RelOptUtil.Logic logic, RelBuilder builder) {
     // Most general case, where the left and right keys might have nulls, and
     // caller requires 3-valued logic return.
     //
@@ -379,7 +374,7 @@ public class SubQueryRemoveRule
     // inner join (select distinct deptno from emp) as dt
     //   on e.deptno = dt.deptno
     //
-
+    int offset = builder.fields().size();
     builder.push(e.rel);
     final List<RexNode> fields = new ArrayList<>(builder.fields());
 
@@ -649,22 +644,15 @@ public class SubQueryRemoveRule
     final RelOptUtil.Logic logic =
         LogicVisitor.find(RelOptUtil.Logic.TRUE,
             ImmutableList.of(join.getCondition()), e);
-    builder.push(join);
+    builder.push(join.getLeft());
+    builder.push(join.getRight());
     final int fieldCount = join.getRowType().getFieldCount();
     final Set<CorrelationId>  variablesSet =
         RelOptUtil.getVariablesUsed(e.rel);
     final RexNode target = rule.apply(e, variablesSet,
         logic, builder, 2, fieldCount);
     final RexShuttle shuttle = new ReplaceSubQueryShuttle(e, target);
-    RelOptCluster cluster = join.getCluster();
-    RexBuilder rexBuilder = cluster.getRexBuilder();
-    final RexSimplify rexSimplify =
-        new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, RexUtil.EXECUTOR);
-    RelNode replacedInput = join.copy(join.getTraitSet(),
-        rexSimplify.simplify(join.getCondition().accept(shuttle)),
-        join.getLeft(), join.getRight(), join.getJoinType(), join.isSemiJoinDone());
-    RelNode replacedRel = RelOptUtil.replace(builder.build(), join, replacedInput);
-    builder.push(replacedRel);
+    builder.join(join.getJoinType(), shuttle.apply(join.getCondition()));
     builder.project(fields(builder, join.getRowType().getFieldCount()));
     call.transformTo(builder.build());
   }

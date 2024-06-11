@@ -14452,9 +14452,9 @@ class RelToSqlConverterDMTest {
     final String expectedBiqQuery = "SELECT EMP.EMPNO, EMP.ENAME, EMP.JOB, EMP.MGR, EMP.HIREDATE,"
         + " EMP.SAL, EMP.COMM, EMP.DEPTNO, DEPT.DEPTNO AS DEPTNO0, DEPT.DNAME, DEPT.LOC\n"
         + "FROM scott.EMP\n"
-        + "INNER JOIN scott.DEPT ON EMP.DEPTNO = DEPT.DEPTNO\n"
-        + "INNER JOIN (SELECT DEPTNO, DNAME\n"
-        + "FROM scott.DEPT) AS t ON EMP.EMPNO = t.DEPTNO AND EMP.ENAME = t.DNAME";
+        + "INNER JOIN (scott.DEPT INNER JOIN (SELECT DEPTNO, DNAME\n"
+        + "FROM scott.DEPT) AS t ON DEPT.DEPTNO = t.DEPTNO AND DEPT.DNAME = t.DNAME) "
+        + "ON EMP.DEPTNO = DEPT.DEPTNO";
 
     Collection<RelOptRule> rules = new ArrayList<>();
     rules.add((SubQueryRemoveRule.Config.JOIN).toRule());
