@@ -1027,7 +1027,7 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.BIGINT_NULLABLE, null, OperandTypes.TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
 
-  @LibraryOperator(libraries = {ORACLE})
+  @LibraryOperator(libraries = {ORACLE, BIG_QUERY})
   public static final SqlFunction CHR =
       new SqlFunction("CHR",
           SqlKind.OTHER_FUNCTION,
