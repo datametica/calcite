@@ -132,9 +132,21 @@ public class PostgresqlSqlDialect extends SqlDialect {
           timeUnitNode.getParserPosition());
       SqlFloorFunction.unparseDatetimeFunction(writer, call2, "DATE_TRUNC", false);
       break;
-
+    case NEXT_VALUE:
+      unparseSequenceOperators(writer, call, leftPrec, rightPrec, "NEXTVAL");
+      break;
+    case CURRENT_VALUE:
+      unparseSequenceOperators(writer, call, leftPrec, rightPrec, "CURRVAL");
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseSequenceOperators(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec, String functionName) {
+    final SqlWriter.Frame seqCallFrame = writer.startFunCall(functionName);
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.endFunCall(seqCallFrame);
   }
 }
