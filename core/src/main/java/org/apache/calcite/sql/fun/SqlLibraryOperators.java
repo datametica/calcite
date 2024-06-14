@@ -1488,7 +1488,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("TO_CHAR",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.VARCHAR_2000_NULLABLE, null,
-          OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING),
+          OperandTypes.ONE_OR_MORE,
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {NETEZZA})
