@@ -13595,6 +13595,22 @@ class RelToSqlConverterDMTest {
         isLinux(expectedBigQuery));
   }
 
+  @Test public void testTeradataJsonCheck() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode = builder.call(SqlLibraryOperators.JSON_CHECK,
+        builder.literal("{\"name\": \"Bob\", \"age\": \"thirty\"}"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json_data"))
+        .build();
+    final String expectedTeradataQuery = "SELECT JSON_CHECK('{\"name\": \"Bob\", \"age\": "
+        + "\"thirty\"}') AS \"json_data\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradataQuery));
+
+  }
+
   @Test public void testToCurrentTimestampFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 = builder.call(SqlLibraryOperators.TO_TIMESTAMP,

@@ -1491,6 +1491,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction JSON_CHECK =
+      new SqlFunction("JSON_CHECK",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {NETEZZA})
   public static final SqlFunction MONTHS_BETWEEN =
       new SqlFunction("MONTHS_BETWEEN",
