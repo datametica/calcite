@@ -166,7 +166,6 @@ public class FilterProjectTransposeRule
     RexNode newCondition =
         RelOptUtil.pushPastProject(filter.getCondition(), project);
 
-
     final RelBuilder relBuilder = call.builder();
     RelNode newFilterRel;
     if (config.isCopyFilter()) {
