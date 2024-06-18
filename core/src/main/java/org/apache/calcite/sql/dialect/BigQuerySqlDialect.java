@@ -2285,7 +2285,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         if (isContainsPrecision) {
           String dataType = getDataTypeBasedOnPrecision(precision, scale);
           if (!isContainsNegativePrecisionOrScale) {
-            typeAlias = precision > 0 && !(scale >= 127) ? isContainsScale
+            typeAlias = precision > 0 && !(scale > 38) ? isContainsScale
                 ? dataType + "(" + precision + "," + scale + ")"
                 : dataType + "(" + precision + ")" : dataType;
           } else {
