@@ -547,13 +547,13 @@ public class SubQueryRemoveRule
    *                        expression of the specified RexSubQuery
    * @param logic           Logic for evaluating
    * @param builder         Builder
-   * @param inputsOffset          Offset to shift {@link RexInputRef}
+   * @param totalOffset          Offset to shift {@link RexInputRef}
    * @param subQueryIndex   sub-query index in multiple sub-queries
    *
    * @return Expression that may be used to replace the RexSubQuery
    */
   private static RexNode rewriteIn(RexSubQuery e, Set<CorrelationId> variablesSet,
-      RelOptUtil.Logic logic, RelBuilder builder, int inputsOffset, int subQueryIndex) {
+      RelOptUtil.Logic logic, RelBuilder builder, int totalOffset, int subQueryIndex) {
     // Most general case, where the left and right keys might have nulls, and
     // caller requires 3-valued logic return.
     //
@@ -607,7 +607,7 @@ public class SubQueryRemoveRule
     // inner join (select distinct deptno from emp) as dt
     //   on e.deptno = dt.deptno
     //
-    int prevInputFieldsSize = builder.fields().size();
+    int prevInputSize = builder.fields().size();
     int offset = 0;
     builder.push(e.rel);
     final List<RexNode> fields = new ArrayList<>(builder.fields());
@@ -731,22 +731,22 @@ public class SubQueryRemoveRule
       dtAlias = "dt" + subQueryIndex;
     }
     builder.as(dtAlias);
-    final int refOffset = prevInputFieldsSize + offset;
-    final int totalOffset = inputsOffset + offset;
+    final int refOffset = prevInputSize + offset;
     switch (logic) {
     case TRUE:
       List<RexNode> prevInputConditions = new ArrayList<>(expressionOperands.size());
       List<RexNode> otherConditions = new ArrayList<>(expressionOperands.size());
-      Pair.zip(expressionOperands, builder.fields())
-          .forEach(pair -> {
-            if (pair.left.isA(SqlKind.INPUT_REF)
-                && ((RexInputRef) pair.left).getIndex() >= (inputsOffset - prevInputFieldsSize)) {
-              prevInputConditions.add(builder.equals(pair.left, RexUtil.shift(pair.right, refOffset)));
-            } else {
-              otherConditions.add(
-                  builder.equals(pair.left, RexUtil.shift(pair.right, totalOffset)));
-            }
-          });
+      for (Pair<RexNode, RexNode> pair : Pair.zip(expressionOperands, builder.fields())) {
+        if (pair.left.isA(SqlKind.INPUT_REF)
+            && ((RexInputRef) pair.left).getIndex() >= (totalOffset - prevInputSize)) {
+          prevInputConditions.add(
+              builder.equals(RexUtil.shift(pair.left, prevInputSize),
+                  RexUtil.shift(pair.right, refOffset)));
+        } else {
+          otherConditions.add(
+              builder.equals(pair.left, RexUtil.shift(pair.right, totalOffset + offset)));
+        }
+      }
       builder.join(JoinRelType.INNER, builder.and(prevInputConditions), variablesSet);
       return builder.and(otherConditions);
     default:
