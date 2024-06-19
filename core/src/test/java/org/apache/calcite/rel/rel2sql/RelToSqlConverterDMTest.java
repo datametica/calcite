@@ -43,7 +43,6 @@ import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinToCorrelateRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
-import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -10953,7 +10952,6 @@ class RelToSqlConverterDMTest {
   }
 
   @Test public void testSubQueryWithInClauseRule() {
-
     final RelBuilder builder = relBuilder();
     final RelNode subQueryInClause = builder.scan("DEPT")
         .project(builder.field(0), builder.field(1))
@@ -10968,26 +10966,27 @@ class RelToSqlConverterDMTest {
                     builder.field(2, 1, "DEPTNO")),
                 RexSubQuery.in(
                     subQueryInClause, ImmutableList.of(builder.field(0),
-                    builder.field(1)))))
+                        builder.field(1)))))
         .build();
 
-    final String expectedBiqQuery = "SELECT EMP.EMPNO, EMP.ENAME, EMP.JOB, EMP.MGR, EMP.HIREDATE,"
-        + " EMP.SAL, EMP.COMM, EMP.DEPTNO, DEPT.DEPTNO AS DEPTNO0, DEPT.DNAME, DEPT.LOC\n"
+    final String expected = "SELECT EMP.EMPNO, EMP.ENAME, EMP.JOB, EMP.MGR, EMP.HIREDATE, EMP.SAL, "
+        + "EMP.COMM, EMP.DEPTNO, DEPT.DEPTNO AS DEPTNO0, DEPT.DNAME, DEPT.LOC\n"
         + "FROM scott.EMP\n"
         + "INNER JOIN (scott.DEPT INNER JOIN (SELECT DEPTNO, DNAME\n"
-        + "FROM scott.DEPT) AS t ON DEPT.DEPTNO = t.DEPTNO AND DEPT.DNAME = t.DNAME) "
-        + "ON EMP.DEPTNO = DEPT.DEPTNO";
+        + "FROM scott.DEPT) AS t ON TRUE) ON EMP.DEPTNO = DEPT.DEPTNO "
+        + "AND EMP.EMPNO = t.DEPTNO AND EMP.ENAME = t.DNAME";
 
-    Collection<RelOptRule> rules = new ArrayList<>();
-    rules.add((SubQueryRemoveRule.Config.JOIN).toRule());
-    HepProgram hepProgram = new HepProgramBuilder().addRuleCollection(rules).build();
+    HepProgram hepProgram = new HepProgramBuilder()
+        .addRuleInstance(SubQueryRemoveRule.Config.JOIN.toRule())
+        .build();
     HepPlanner hepPlanner = new HepPlanner(hepProgram);
     hepPlanner.setRoot(root);
     RelNode optimizedRel = hepPlanner.findBestExp();
 
     assertThat(toSql(optimizedRel, DatabaseProduct.BIG_QUERY.getDialect()),
-        isLinux(expectedBiqQuery));
+        isLinux(expected));
   }
+
   @Test public void testOracleFirstDay() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     final RexNode literalTimestamp = relBuilder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP);
