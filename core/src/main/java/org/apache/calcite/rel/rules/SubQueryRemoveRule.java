@@ -740,7 +740,7 @@ public class SubQueryRemoveRule
         if (pair.left.isA(SqlKind.INPUT_REF)
             && ((RexInputRef) pair.left).getIndex() >= (totalOffset - prevInputSize)) {
           prevInputConditions.add(
-              builder.equals(RexUtil.shift(pair.left, prevInputSize),
+              builder.equals(RexUtil.shift(pair.left, prevInputSize - totalOffset),
                   RexUtil.shift(pair.right, refOffset)));
         } else {
           otherConditions.add(
