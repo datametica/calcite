@@ -409,6 +409,7 @@ public class RelToSqlConverter extends SqlImplementor
     return result(sqlSelect, leftResult, rightResult);
   }
 
+
   /** Returns whether this join should be unparsed as a {@link JoinType#COMMA}.
    *
    * <p>Comma-join is one possible syntax for {@code CROSS JOIN ... ON TRUE},
