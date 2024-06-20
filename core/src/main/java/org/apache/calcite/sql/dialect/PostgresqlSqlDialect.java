@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWriter;
@@ -148,6 +149,10 @@ public class PostgresqlSqlDialect extends SqlDialect {
     }
   }
 
+  @Override public boolean supportsAliasedValues() {
+    return false;
+  }
+
   @Override public boolean requiresAliasForFromItems() {
     return true;
   }
@@ -172,6 +177,28 @@ public class PostgresqlSqlDialect extends SqlDialect {
           SqlFloorFunction.replaceTimeUnitOperand(call, timeUnit.name(),
               timeUnitNode.getParserPosition());
       SqlFloorFunction.unparseDatetimeFunction(writer, call2, "DATE_TRUNC", false);
+      break;
+    case OTHER_FUNCTION:
+    case OTHER:
+      unparseOtherFunction(writer, call, leftPrec, rightPrec);
+      break;
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
+    }
+  }
+
+  private void unparseOtherFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    switch (call.getOperator().getName()) {
+    case "CURRENT_TIMESTAMP_TZ":
+    case "CURRENT_TIMESTAMP_LTZ":
+      writer.keyword("CURRENT_TIMESTAMP");
+      if (((SqlBasicCall) call).getOperands().length > 0
+          && call.operand(0) instanceof SqlNumericLiteral
+          && ((SqlNumericLiteral) call.operand(0)).getValueAs(Integer.class) < 6) {
+        writer.keyword("(");
+        call.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.keyword(")");
+      }
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
