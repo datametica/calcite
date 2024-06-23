@@ -3792,4 +3792,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.ARG0_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {ORACLE, DB2})
+  public static final SqlFunction LENGTH =
+      new SqlFunction("LENGTH",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.STRING),
+          SqlFunctionCategory.SYSTEM);
 }

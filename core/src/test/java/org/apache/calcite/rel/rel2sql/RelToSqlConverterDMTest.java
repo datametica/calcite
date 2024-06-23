@@ -11115,4 +11115,17 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test public void testOracleLength() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode lengthNode =
+        relBuilder.call(SqlLibraryOperators.LENGTH, relBuilder.literal("abcd"));
+    RelNode root = relBuilder
+        .project(lengthNode)
+        .build();
+    final String expectedOracleSql = "SELECT LENGTH('abcd') \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
+  }
+
 }
