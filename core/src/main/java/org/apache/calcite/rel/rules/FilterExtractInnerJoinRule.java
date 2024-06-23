@@ -40,6 +40,8 @@ import org.apache.commons.lang3.tuple.Triple;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import org.immutables.value.Value;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -68,6 +70,7 @@ import java.util.stream.Collectors;
  *
  * @see CoreRules#FILTER_EXTRACT_INNER_JOIN_RULE
  */
+@Value.Enclosing
 public class FilterExtractInnerJoinRule
     extends RelRule<FilterExtractInnerJoinRule.Config>
     implements TransformationRule {
@@ -160,8 +163,9 @@ public class FilterExtractInnerJoinRule
           getConditionsForEndIndex(allConditions, rightEntry.getMiddle());
       RexNode joinPredicate = builder.and(joinConditions);
       allConditions.removeAll(joinConditions);
-      left = LogicalJoin.create(left, rightEntry.getLeft(), ImmutableList.of(),
-          joinPredicate, ImmutableSet.of(), rightEntry.getRight());
+      left =
+          LogicalJoin.create(left, rightEntry.getLeft(), ImmutableList.of(),
+                  joinPredicate, ImmutableSet.of(), rightEntry.getRight());
     }
     return builder.push(left)
         .filter(op.kind == SqlKind.OR ? builder.or(allConditions) : builder.and(allConditions))
@@ -225,10 +229,10 @@ public class FilterExtractInnerJoinRule
   }
 
   /** Rule configuration. */
+  @Value.Immutable
   public interface Config extends RelRule.Config {
-    FilterExtractInnerJoinRule.Config DEFAULT = EMPTY
-        .as(Config.class)
-        .withOperandFor(Filter.class, Join.class);
+    Config DEFAULT = ImmutableFilterExtractInnerJoinRule.Config.of()
+            .withOperandFor(Filter.class, Join.class);
 
     @Override default FilterExtractInnerJoinRule toRule() {
       return new FilterExtractInnerJoinRule(this);
