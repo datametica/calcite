@@ -11115,4 +11115,20 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test public void testRegexpMatches() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode regexpMatchesRex =
+        builder.call(SqlLibraryOperators.REGEXP_MATCHES,
+            builder.literal("This is text"), builder.literal("text"));
+
+    final RelNode root = builder
+        .project(regexpMatchesRex)
+        .build();
+
+    final String expectedSql = "SELECT REGEXP_MATCHES('This is text', 'text') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedSql));
+  }
+
 }
