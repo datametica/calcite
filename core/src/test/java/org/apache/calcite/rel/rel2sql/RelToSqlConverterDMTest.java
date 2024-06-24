@@ -11034,10 +11034,10 @@ class RelToSqlConverterDMTest {
     return rel.accept(new ToLogicalConverter(builder));
   }
 
-  @Test public void testSubQueryWithInClauseRule() {
+  @Test public void testSubQueryRemoveRuleForSubqueryWithInClause() {
     final RelBuilder builder = relBuilder();
     final RelNode subQueryInClause = builder.scan("DEPT")
-        .project(builder.field(0), builder.field(1))
+        .project(builder.field("DEPTNO"), builder.field("DNAME"))
         .build();
 
     final RelNode root = builder.scan("EMP")
