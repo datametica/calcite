@@ -3792,4 +3792,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.ARG0_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction REGEXP_MATCHES =
+      new SqlFunction("REGEXP_MATCHES",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY, null,
+          OperandTypes.STRING_STRING_OPTIONAL_STRING,
+          SqlFunctionCategory.SYSTEM);
 }
