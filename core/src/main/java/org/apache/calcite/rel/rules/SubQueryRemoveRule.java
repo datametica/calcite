@@ -737,14 +737,16 @@ public class SubQueryRemoveRule
       List<RexNode> prevInputConditions = new ArrayList<>(expressionOperands.size());
       List<RexNode> otherConditions = new ArrayList<>(expressionOperands.size());
       for (Pair<RexNode, RexNode> pair : Pair.zip(expressionOperands, builder.fields())) {
-        if (pair.left.isA(SqlKind.INPUT_REF)
-            && ((RexInputRef) pair.left).getIndex() >= (totalOffset - prevInputSize)) {
+        RexNode leftPairNode = pair.left;
+        RexNode rightPairNode = pair.right;
+        if (leftPairNode.isA(SqlKind.INPUT_REF)
+            && ((RexInputRef) leftPairNode).getIndex() >= (totalOffset - prevInputSize)) {
           prevInputConditions.add(
-              builder.equals(RexUtil.shift(pair.left, prevInputSize - totalOffset),
-                  RexUtil.shift(pair.right, refOffset)));
+              builder.equals(RexUtil.shift(leftPairNode, prevInputSize - totalOffset),
+                  RexUtil.shift(rightPairNode, refOffset)));
         } else {
           otherConditions.add(
-              builder.equals(pair.left, RexUtil.shift(pair.right, totalOffset + offset)));
+              builder.equals(leftPairNode, RexUtil.shift(rightPairNode, totalOffset + offset)));
         }
       }
       builder.join(JoinRelType.INNER, builder.and(prevInputConditions), variablesSet);
