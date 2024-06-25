@@ -11115,4 +11115,18 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test public void testTimeFromParts() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timeFromParts = builder.call(SqlLibraryOperators.TIME_FROM_PARTS,
+        builder.literal(3),
+        builder.literal(15), builder.literal(30));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(timeFromParts, "time_diff")).build();
+
+    final String expectedSql = "SELECT TIME_FROM_PARTS(3, 15, 30) AS \"time_diff\"\nFROM " +
+        "\"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
+
 }
