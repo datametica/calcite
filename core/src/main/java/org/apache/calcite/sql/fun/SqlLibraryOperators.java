@@ -3792,4 +3792,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.ARG0_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction TIME_FROM_PARTS =
+      new SqlFunction("TIME_FROM_PARTS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIME, null,
+          OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.NUMERIC);
 }
