@@ -100,7 +100,7 @@ public class PivotRelToSqlUtil {
     for (AggregateCall aggCall : e.getAggCallList()) {
       SqlNode inListColumnNode;
       if (aggCall.type.getSqlTypeName() == SqlTypeName.BIGINT) {
-        inListColumnNode = getColumnNodeForInteger(e, aggCall);
+        inListColumnNode = getColumnNodeForBigIntType(e, aggCall);
       } else {
         inListColumnNode = getDefaultColumnNode(e, aggCall);
       }
@@ -109,7 +109,7 @@ public class PivotRelToSqlUtil {
     return inColumnList;
   }
 
-  private SqlNode getColumnNodeForInteger(Aggregate e, AggregateCall aggCall) {
+  private SqlNode getColumnNodeForBigIntType(Aggregate e, AggregateCall aggCall) {
     String columnName = e.getRowType().getFieldList().get(aggCall.filterArg).getKey();
     String[] intValue = columnName.split("-");
     if (intValue.length == 1) {
