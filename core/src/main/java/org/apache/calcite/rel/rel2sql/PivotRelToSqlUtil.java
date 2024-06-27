@@ -19,6 +19,7 @@ package org.apache.calcite.rel.rel2sql;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -99,43 +100,49 @@ public class PivotRelToSqlUtil {
     for (AggregateCall aggCall : e.getAggCallList()) {
       SqlNode inListColumnNode;
       if (aggCall.type.getSqlTypeName() == SqlTypeName.BIGINT) {
-        String columnName = e.getRowType().getFieldList().get(aggCall.filterArg).getKey();
-        String[] intValue = columnName.split("-");
-        if (intValue.length == 1) {
-          inListColumnNode =
-              SqlNumericLiteral.createExactNumeric(intValue[0].replace("_null", ""), pos);
-        } else {
-          pivotTableAlias = intValue[1].replace("_null", "");
-          inListColumnNode = SqlNumericLiteral.createExactNumeric(intValue[0], pos);
-        }
+        inListColumnNode = getColumnNodeForInteger(e, aggCall);
       } else {
-        String columnName1 = e.getRowType().getFieldList().get(aggCall.filterArg).getKey();
-        String[] inValues = columnName1.split("'");
-        String tableInValueAliases = inValues[2];
-        if (tableInValueAliases.contains("null")) {
-          tableInValueAliases = tableInValueAliases.replace("_null", "")
-              .replace("-null", "")
-              .replace("'", "");
-        }
-        String[] columnNameAndAlias = tableInValueAliases.split("-");
-        if (columnNameAndAlias.length == 1) {
-          inListColumnNode = SqlLiteral.createCharString(inValues[1], pos);
-        } else {
-          pivotTableAlias = columnNameAndAlias[1];
-          if (columnNameAndAlias.length == 2) {
-            inListColumnNode = SqlLiteral.createCharString(inValues[1], pos);
-          } else {
-            inListColumnNode =
-                SqlStdOperatorTable.AS.createCall(
-                    pos, SqlLiteral.createCharString(
-                    inValues[1], pos),
-                new SqlIdentifier(columnNameAndAlias[2], pos));
-          }
-        }
+        inListColumnNode = getDefaultColumnNode(e, aggCall);
       }
       inColumnList.add(inListColumnNode);
     }
     return inColumnList;
+  }
+
+  private SqlNode getColumnNodeForInteger(Aggregate e, AggregateCall aggCall) {
+    String columnName = e.getRowType().getFieldList().get(aggCall.filterArg).getKey();
+    String[] intValue = columnName.split("-");
+    if (intValue.length == 1) {
+      return SqlNumericLiteral.createExactNumeric(intValue[0].replace("_null", ""), pos);
+    } else {
+      pivotTableAlias = intValue[1].replace("_null", "");
+      return SqlNumericLiteral.createExactNumeric(intValue[0], pos);
+    }
+  }
+
+  private SqlNode getDefaultColumnNode(Aggregate e, AggregateCall aggCall) {
+    String columnName = e.getRowType().getFieldList().get(aggCall.filterArg).getKey();
+    String[] inValues = columnName.split("'");
+    String tableInValueAliases = inValues[2];
+    if (tableInValueAliases.contains("null")) {
+      tableInValueAliases = tableInValueAliases.replace("_null", "")
+          .replace("-null", "")
+          .replace("'", "");
+    }
+    String[] columnNameAndAlias = tableInValueAliases.split("-");
+    if (columnNameAndAlias.length == 1) {
+      return SqlLiteral.createCharString(inValues[1], pos);
+    } else {
+      pivotTableAlias = columnNameAndAlias[1];
+      if (columnNameAndAlias.length == 2) {
+        return SqlLiteral.createCharString(inValues[1], pos);
+      } else {
+        return SqlStdOperatorTable.AS.createCall(
+            pos, SqlLiteral.createCharString(
+                inValues[1], pos),
+            new SqlIdentifier(columnNameAndAlias[2], pos));
+      }
+    }
   }
 
   private SqlNodeList getAxisSqlNodes(Aggregate e) {
@@ -157,17 +164,19 @@ public class PivotRelToSqlUtil {
 
   private SqlNodeList getAggSqlNodes(Aggregate e, List<SqlNode> selectColumnList) {
     final Set<SqlNode> selectList = new HashSet<>();
-    SqlCase lastAggCol =
+    SqlCase pivotColumnAggregationCaseCall =
         (SqlCase) ((SqlBasicCall) ((SqlBasicCall) selectColumnList.get(selectColumnList.size() - 1))
-        .getOperandList().get(0)).getOperandList().get(0);
-    SqlBasicCall caseCall = (SqlBasicCall) lastAggCol.getWhenOperands().get(0);
-    String aggregateCol = caseCall.operand(0).toString();
+            .getOperandList().get(0)).getOperandList().get(0);
+    SqlBasicCall caseConditionCall =
+        (SqlBasicCall) pivotColumnAggregationCaseCall.getWhenOperands().get(0);
+    SqlCharStringLiteral aggregateCol = caseConditionCall.operand(0);
 
     Optional<SqlNode> node =
         selectColumnList.stream().filter(
-            x -> x.toString().equalsIgnoreCase(
-                aggregateCol.replace(
-            "'", ""))).findFirst();
+            x -> x instanceof SqlIdentifier && ((SqlIdentifier) x).names.get(0).equalsIgnoreCase(
+                aggregateCol.toString().replace(
+                    "'", ""))).findFirst();
+
     node.ifPresent(selectList::add);
 
     return new SqlNodeList(selectList, pos);
