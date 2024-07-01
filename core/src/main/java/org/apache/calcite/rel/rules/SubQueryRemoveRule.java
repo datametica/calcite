@@ -739,8 +739,10 @@ public class SubQueryRemoveRule
       for (Pair<RexNode, RexNode> pair : Pair.zip(expressionOperands, builder.fields())) {
         RexNode leftPairNode = pair.left;
         RexNode rightPairNode = pair.right;
+        int prevInputStart = totalOffset - prevInputSize;
+        // condition to check whether the left expression is within the previous input.
         if (leftPairNode.isA(SqlKind.INPUT_REF)
-            && ((RexInputRef) leftPairNode).getIndex() >= (totalOffset - prevInputSize)) {
+            && ((RexInputRef) leftPairNode).getIndex() >= prevInputStart) {
           prevInputConditions.add(
               builder.equals(RexUtil.shift(leftPairNode, -prevInputStart),
                   RexUtil.shift(rightPairNode, refOffset)));
