@@ -335,7 +335,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   public static final Map<String, String> STRING_LITERAL_ESCAPE_SEQUENCES =
       new LinkedHashMap<String, String>() {{
-        put("\\\\(?!')", "\\\\\\\\");
+        put("\\\\(?![u'])", "\\\\\\\\");
         put("\b", "\\\\b");
         put("\\n", "\\\\n");
         put("\\r", "\\\\r");

@@ -351,6 +351,24 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING)
           .withFunctionType(SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction UNISTR =
+      new SqlFunction("UNISTR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction COMPOSE =
+      new SqlFunction("COMPOSE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
   /** The "RTRIM(string)" function. */
   @LibraryOperator(libraries = {BIG_QUERY, ORACLE, SPARK})
   public static final SqlFunction RTRIM =
