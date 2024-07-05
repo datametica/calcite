@@ -352,6 +352,7 @@ public abstract class ReturnTypes {
     switch (op) {
     case VARCHAR:
     case CHAR:
+    case SYMBOL:
       return typeFactory.createSqlType(opBinding.getOperandType(1).getSqlTypeName());
     default:
       return typeFactory.createSqlType(op);
