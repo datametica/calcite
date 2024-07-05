@@ -155,6 +155,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.USING;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.YEARNUMBER_OF_CALENDAR;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CONCAT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IN;
@@ -8409,10 +8410,10 @@ class RelToSqlConverterDMTest {
 
   @Test public void testComposeFunction() {
     final RelBuilder builder = relBuilder();
-    RexNode unistrNode = builder.call(SqlLibraryOperators.UNISTR, builder.literal("\\0308"));
+    RexNode unistrNode = builder.call(UNISTR, builder.literal("\\0308"));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.call(SqlLibraryOperators.COMPOSE,
+        .project(builder.call(COMPOSE,
             builder.call(CONCAT,
                 builder.literal("abcd"), unistrNode)))
         .build();
