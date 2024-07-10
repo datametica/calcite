@@ -3154,6 +3154,14 @@ class RelToSqlConverterDMTest {
     sql(query).withSpark().ok(expected);
   }
 
+  @Test void testSpecialCharacterInSpark() {
+    final String query = "select 'café' "
+        + "from \"employee\"";
+    final String expected = "SELECT 'café'\n"
+        + "FROM foodmart.employee";
+    sql(query).withSpark().ok(expected);
+  }
+
   @Test void testNumericFloorInSpark() {
     final String query = "select floor(\"salary\") "
         + "from \"employee\"";
@@ -8413,7 +8421,8 @@ class RelToSqlConverterDMTest {
     RexNode unistrNode = builder.call(UNISTR, builder.literal("\\0308"));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.call(COMPOSE,
+        .project(
+            builder.call(COMPOSE,
             builder.call(CONCAT,
                 builder.literal("abcd"), unistrNode)))
         .build();
