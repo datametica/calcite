@@ -60,7 +60,6 @@ import org.apache.calcite.util.interval.SparkDateTimestampInterval;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -150,10 +149,12 @@ public class SparkSqlDialect extends SqlDialect {
 
   private static final String DEFAULT_DATE_FOR_TIME = "1970-01-01";
 
-  private final char[] HEXITS =
-      {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  private static final char[] HEXITS = {
+      '0', '1', '2', '3', '4', '5', '6', '7',
+      '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
-  private final List<Character> EXCLUDECHARSET = List.of('é');
+  private static final List<Character> EXCLUDECHARSET =
+      List.of('é');
 
   private static final Map<SqlDateTimeFormat, String> DATE_TIME_FORMAT_MAP =
       new HashMap<SqlDateTimeFormat, String>() {{
