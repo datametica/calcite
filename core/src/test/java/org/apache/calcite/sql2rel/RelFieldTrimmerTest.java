@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Calc;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
@@ -32,14 +33,17 @@ import org.apache.calcite.rel.hint.HintPredicates;
 import org.apache.calcite.rel.hint.HintStrategyTable;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.rules.CoreRules;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.test.CalciteAssert;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import org.junit.jupiter.api.Test;
@@ -254,7 +258,7 @@ class RelFieldTrimmerTest {
         builder.scan("EMP")
             .aggregate(
                 builder.groupKey(builder.field("DEPTNO")),
-                builder.count(false, "C", builder.field("EMPNO")))
+                builder.count(false, "C", builder.field("SAL")))
             .hints(aggHint)
             .build();
 
@@ -263,7 +267,7 @@ class RelFieldTrimmerTest {
 
     final String expected = ""
         + "LogicalAggregate(group=[{1}], C=[COUNT($0)])\n"
-        + "  LogicalProject(EMPNO=[$0], DEPTNO=[$7])\n"
+        + "  LogicalProject(SAL=[$5], DEPTNO=[$7])\n"
         + "    LogicalTableScan(table=[[scott, EMP]])\n";
     assertThat(trimmed, hasTree(expected));
 
@@ -286,11 +290,10 @@ class RelFieldTrimmerTest {
         HintStrategyTable.builder().hintStrategy("resource", HintPredicates.PROJECT).build());
     final RelNode original =
         builder.scan("EMP")
-            .project(
-                builder.field("EMPNO"),
+            .project(builder.field("EMPNO"),
                 builder.field("ENAME"),
-                builder.field("DEPTNO")
-            ).hints(projectHint)
+                builder.field("DEPTNO"))
+            .hints(projectHint)
             .sort(builder.field("EMPNO"))
             .project(builder.field("EMPNO"))
             .build();
@@ -344,11 +347,12 @@ class RelFieldTrimmerTest {
     final RelBuilder builder = RelBuilder.create(config().build());
     final RelNode root =
         builder.scan("EMP")
-            .project(builder.field("EMPNO"), builder.field("ENAME"), builder.field("DEPTNO"))
+            .project(builder.field("EMPNO"), builder.field("ENAME"),
+                builder.field("DEPTNO"))
             .exchange(RelDistributions.SINGLETON)
             .filter(
-                builder.call(SqlStdOperatorTable.GREATER_THAN,
-                    builder.field("EMPNO"), builder.literal(100)))
+                builder.greaterThan(builder.field("EMPNO"),
+                    builder.literal(100)))
             .build();
 
     final HepProgram hepProgram = new HepProgramBuilder()
@@ -379,8 +383,8 @@ class RelFieldTrimmerTest {
             .project(builder.field("EMPNO"), builder.field("ENAME"), builder.field("DEPTNO"))
             .exchange(RelDistributions.SINGLETON)
             .filter(
-                builder.call(SqlStdOperatorTable.GREATER_THAN,
-                    builder.field("EMPNO"), builder.literal(100)))
+                builder.greaterThan(builder.field("EMPNO"),
+                    builder.literal(100)))
             .project(builder.field("EMPNO"), builder.field("ENAME"))
             .build();
 
@@ -412,11 +416,10 @@ class RelFieldTrimmerTest {
         HintStrategyTable.builder().hintStrategy("resource", HintPredicates.CALC).build());
     final RelNode original =
         builder.scan("EMP")
-            .project(
-                builder.field("EMPNO"),
+            .project(builder.field("EMPNO"),
                 builder.field("ENAME"),
-                builder.field("DEPTNO")
-            ).hints(calcHint)
+                builder.field("DEPTNO"))
+            .hints(calcHint)
             .sort(builder.field("EMPNO"))
             .project(builder.field("EMPNO"))
             .build();
@@ -452,4 +455,135 @@ class RelFieldTrimmerTest {
     assertTrue(calc.getHints().contains(calcHint));
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4783">[CALCITE-4783]
+   * RelFieldTrimmer incorrectly drops filter condition</a>. */
+  @Test void testCalcFieldTrimmer3() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    final RelNode root =
+        builder.scan("EMP")
+            .project(
+                builder.field("ENAME"),
+                builder.field("DEPTNO"))
+            .exchange(RelDistributions.SINGLETON)
+            .filter(builder.equals(builder.field("ENAME"), builder.literal("bob")))
+            .aggregate(builder.groupKey(), builder.countStar(null))
+            .build();
+
+    final HepProgram hepProgram = new HepProgramBuilder()
+        .addRuleInstance(CoreRules.FILTER_TO_CALC).build();
+
+    final HepPlanner hepPlanner = new HepPlanner(hepProgram);
+    hepPlanner.setRoot(root);
+    final RelNode relNode = hepPlanner.findBestExp();
+    final RelFieldTrimmer fieldTrimmer = new RelFieldTrimmer(null, builder);
+    final RelNode trimmed = fieldTrimmer.trim(relNode);
+
+    final String expected = ""
+        + "LogicalAggregate(group=[{}], agg#0=[COUNT()])\n"
+        + "  LogicalCalc(expr#0=[{inputs}], expr#1=['bob'], expr#2=[=($t0, $t1)], $condition=[$t2])\n"
+        + "    LogicalExchange(distribution=[single])\n"
+        + "      LogicalProject(ENAME=[$1])\n"
+        + "        LogicalTableScan(table=[[scott, EMP]])\n";
+    assertThat(trimmed, hasTree(expected));
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4995">[CALCITE-4995]
+   * AssertionError caused by RelFieldTrimmer on SEMI/ANTI join</a>. */
+  @Test void testSemiJoinAntiJoinFieldTrimmer() {
+    for (final JoinRelType joinType : new JoinRelType[]{JoinRelType.ANTI, JoinRelType.SEMI}) {
+      final RelBuilder builder = RelBuilder.create(config().build());
+      final RelNode root = builder
+          .values(new String[]{"id"}, 1, 2).as("a")
+          .values(new String[]{"id"}, 2, 3).as("b")
+          .join(joinType,
+              builder.equals(
+                  builder.field(2, "a", "id"),
+                  builder.field(2, "b", "id")))
+          .values(new String[]{"id"}, 0, 2).as("c")
+          .join(joinType,
+              builder.equals(
+                  builder.field(2, "a", "id"),
+                  builder.field(2, "c", "id")))
+          .build();
+
+      final RelFieldTrimmer fieldTrimmer = new RelFieldTrimmer(null, builder);
+      final RelNode trimmed = fieldTrimmer.trim(root);
+      final String expected = ""
+          + "LogicalJoin(condition=[=($0, $1)], joinType=[" + joinType.lowerName + "])\n"
+          + "  LogicalJoin(condition=[=($0, $1)], joinType=[" + joinType.lowerName + "])\n"
+          + "    LogicalValues(tuples=[[{ 1 }, { 2 }]])\n"
+          + "    LogicalValues(tuples=[[{ 2 }, { 3 }]])\n"
+          + "  LogicalValues(tuples=[[{ 0 }, { 2 }]])\n";
+      assertThat(trimmed, hasTree(expected));
+    }
+  }
+
+  @Test void testUnionFieldTrimmer() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    final RelNode root =
+        builder.scan("EMP").as("t1")
+            .project(builder.field("EMPNO"))
+            .scan("EMP").as("t2")
+            .scan("EMP").as("t3")
+            .join(JoinRelType.INNER,
+                builder.equals(
+                    builder.field(2, "t2", "EMPNO"),
+                    builder.field(2, "t3", "EMPNO")))
+            .project(builder.field("t2", "EMPNO"))
+            .union(false)
+            .build();
+    final RelFieldTrimmer fieldTrimmer = new RelFieldTrimmer(null, builder);
+    final RelNode trimmed = fieldTrimmer.trim(root);
+    final String expected = ""
+        + "LogicalUnion(all=[false])\n"
+        + "  LogicalProject(EMPNO=[$0])\n"
+        + "    LogicalTableScan(table=[[scott, EMP]])\n"
+        + "  LogicalProject(EMPNO=[$0])\n"
+        + "    LogicalJoin(condition=[=($0, $1)], joinType=[inner])\n"
+        + "      LogicalProject(EMPNO=[$0])\n"
+        + "        LogicalTableScan(table=[[scott, EMP]])\n"
+        + "      LogicalProject(EMPNO=[$0])\n"
+        + "        LogicalTableScan(table=[[scott, EMP]])\n";
+    assertThat(trimmed, hasTree(expected));
+  }
+
+  @Test void testCorrelationalFieldTrimmer() {
+    RelBuilder builder = RelBuilder.create(config().build());
+    builder.scan("EMP");
+    CorrelationId correlationId = builder.getCluster().createCorrel();
+    RelDataType relDataType = builder.peek().getRowType();
+    RexNode correlVariable = builder.getRexBuilder().makeCorrel(relDataType, correlationId);
+    int departmentIdIndex = builder.field("DEPTNO").getIndex();
+    RexNode correlatedScalarSubQuery = RexSubQuery.scalar(builder
+        .scan("DEPT")
+        .filter(builder
+            .equals(
+                builder.field("DEPTNO"),
+                builder.getRexBuilder().makeFieldAccess(correlVariable, departmentIdIndex)))
+        .aggregate(builder.groupKey(), builder.max(builder.field(0)))
+        .project(builder.field(0))
+        .build());
+    RelNode root = builder
+        .project(
+            ImmutableSet.of(builder.field("EMPNO"), correlatedScalarSubQuery),
+            ImmutableSet.of("emp_id", "dept_id"),
+            false,
+            ImmutableSet.of(correlationId))
+        .build();
+
+    final String expected = ""
+        + "LogicalProject(variablesSet=[[$cor0]], emp_id=[$0], dept_id=[$SCALAR_QUERY({\n"
+        + "LogicalAggregate(group=[{}], agg#0=[MAX($0)])\n"
+        + "  LogicalFilter(condition=[=($0, $cor0.DEPTNO)])\n"
+        + "    LogicalTableScan(table=[[scott, DEPT]])\n"
+        + "})])\n"
+        + "  LogicalProject(EMPNO=[$0], DEPTNO=[$7])\n"
+        + "    LogicalTableScan(table=[[scott, EMP]])\n";
+
+    final RelFieldTrimmer fieldTrimmer = new RelFieldTrimmer(null, builder);
+    final RelNode trimmed = fieldTrimmer.trim(root);
+    assertThat(trimmed, hasTree(expected));
+  }
 }
