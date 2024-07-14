@@ -2046,6 +2046,12 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction JSON_EXTRACT =
+      new SqlFunction("JSON_EXTRACT", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction QUANTILE =
       new SqlQuantileFunction(SqlKind.QUANTILE, ReturnTypes.INTEGER);
