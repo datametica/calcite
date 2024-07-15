@@ -1942,7 +1942,9 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction TO_CHAR =
       SqlBasicFunction.create("TO_CHAR",
           ReturnTypes.VARCHAR_2000_NULLABLE,
-          OperandTypes.TIMESTAMP_STRING,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.ANY, SqlTypeFamily.STRING),
+              number -> number == 1),
           SqlFunctionCategory.TIMEDATE);
 
   /** The "TO_DATE(string1, string2)" function; casts string1
