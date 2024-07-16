@@ -297,7 +297,7 @@ public final class CalciteSystemProperty<T> {
   // TODO review zabetak:
   // What happens if a wrong value is specified?
   public static final CalciteSystemProperty<String> DEFAULT_CHARSET =
-      stringProperty("calcite.default.charset", "ISO-8859-1");
+      stringProperty("calcite.default.charset", "UTF-16LE");
 
   /**
    * The name of the default national character set.
@@ -309,7 +309,7 @@ public final class CalciteSystemProperty<T> {
   // TODO review zabetak:
   // What happens if a wrong value is specified?
   public static final CalciteSystemProperty<String> DEFAULT_NATIONAL_CHARSET =
-      stringProperty("calcite.default.nationalcharset", "ISO-8859-1");
+      stringProperty("calcite.default.nationalcharset", "UTF-16LE");
 
   /**
    * The name of the default collation.
@@ -320,7 +320,7 @@ public final class CalciteSystemProperty<T> {
   // TODO review zabetak:
   // What happens if a wrong value is specified?
   public static final CalciteSystemProperty<String> DEFAULT_COLLATION =
-      stringProperty("calcite.default.collation.name", "ISO-8859-1$en_US");
+      stringProperty("calcite.default.collation.name", "UTF-16LE$en_US");
 
   /**
    * The strength of the default collation.

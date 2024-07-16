@@ -11265,6 +11265,18 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test public void testOracleSpecialChar() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode literalTimestamp = relBuilder.literal("–");
+    RelNode root = relBuilder
+        .project(literalTimestamp)
+        .build();
+    final String expectedDB2Sql = "SELECT '\\u2013' AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedDB2Sql));
+  }
+
   @Test public void testParseDateFunctionWithConcat() {
     final RelBuilder builder = relBuilder();
     final RexNode formatRexNode =
