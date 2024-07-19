@@ -16,6 +16,10 @@
  */
 package org.apache.calcite.rel.rel2sql;
 
+import org.apache.calcite.plan.InnerJoinTrait;
+import org.apache.calcite.plan.InnerJoinTraitDef;
+import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
@@ -123,4 +127,16 @@ public class RelToSqlUtils {
 
   }
 
+  /**
+   * This function checks whether InnerJoinTrait is available in RelTraitSet or not.
+   */
+  public static boolean isInnerJoinTrait(RelTraitSet relTraitSet) {
+    RelTrait relTrait = relTraitSet.getTrait(InnerJoinTraitDef.instance);
+    if (relTrait != null && relTrait instanceof InnerJoinTrait) {
+      if (((InnerJoinTrait) relTrait).isPreserveInnerJoin()) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
