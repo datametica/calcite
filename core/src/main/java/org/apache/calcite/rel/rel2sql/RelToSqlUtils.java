@@ -132,11 +132,7 @@ public class RelToSqlUtils {
    */
   public static boolean isInnerJoinTrait(RelTraitSet relTraitSet) {
     RelTrait relTrait = relTraitSet.getTrait(InnerJoinTraitDef.instance);
-    if (relTrait != null && relTrait instanceof InnerJoinTrait) {
-      if (((InnerJoinTrait) relTrait).isPreserveInnerJoin()) {
-        return true;
-      }
-    }
-    return false;
+    return relTrait != null && relTrait instanceof InnerJoinTrait
+        && ((InnerJoinTrait) relTrait).isPreserveInnerJoin();
   }
 }
