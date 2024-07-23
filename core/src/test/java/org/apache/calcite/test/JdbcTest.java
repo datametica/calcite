@@ -6867,19 +6867,19 @@ public class JdbcTest {
         .returns("EXPR$0=\u82f1\u56fd\n");
     with.query("values u&'\\82f1\\56fd'")
         .returns("EXPR$0=\u82f1\u56fd\n");
-    with.query("values '\u82f1\u56fd'");
-//        .throws_(
-//            "Failed to encode '\u82f1\u56fd' in character set 'ISO-8859-1'");
+    with.query("values '\u82f1\u56fd'")
+        .throws_(
+            "Failed to encode '\u82f1\u56fd' in character set 'ISO-8859-1'");
 
     // comparing a unicode string literal with a regular string literal
     with.query(
-        "select * from \"employee\" where \"full_name\" = '\u82f1\u56fd'");
-//        .throws_(
-//            "Failed to encode '\u82f1\u56fd' in character set 'ISO-8859-1'");
+        "select * from \"employee\" where \"full_name\" = '\u82f1\u56fd'")
+        .throws_(
+            "Failed to encode '\u82f1\u56fd' in character set 'ISO-8859-1'");
     with.query(
-        "select * from \"employee\" where \"full_name\" = _UTF16'\u82f1\u56fd'");
-//        .throws_(
-//            "Cannot apply = to the two different charsets ISO-8859-1 and UTF-16LE");
+        "select * from \"employee\" where \"full_name\" = _UTF16'\u82f1\u56fd'")
+        .throws_(
+            "Cannot apply = to the two different charsets ISO-8859-1 and UTF-16LE");
   }
 
   /** Tests metadata for the MySQL lexical scheme. */

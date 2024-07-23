@@ -212,7 +212,7 @@ class EnumerableStringComparisonTest {
         .explainHookMatches("" // It is important that we have MergeUnion in the plan
             + "EnumerableMergeUnion(all=[false])\n"
             + "  EnumerableSort(sort0=[$0], dir0=[ASC])\n"
-            + "    EnumerableCalc(expr#0=[{inputs}], expr#1=[CAST($t0):VARCHAR COLLATE \"UTF-16LE$en_US$tertiary$JAVA_COLLATOR\" NOT NULL], name=[$t1])\n"
+            + "    EnumerableCalc(expr#0=[{inputs}], expr#1=[CAST($t0):VARCHAR COLLATE \"ISO-8859-1$en_US$tertiary$JAVA_COLLATOR\" NOT NULL], name=[$t1])\n"
             + "      EnumerableValues(tuples=[[{ 'facilities' }, { 'HR' }, { 'administration' }, { 'Marketing' }]])\n"
             + "  EnumerableSort(sort0=[$0], dir0=[ASC])\n"
             + "    EnumerableValues(tuples=[[{ 'Marketing' }, { 'administration' }, { 'presales' }, { 'HR' }]])\n")

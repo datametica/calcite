@@ -3527,7 +3527,7 @@ public class SqlParserTest {
     expr("'abba'\n'abba'").same();
     expr("'abba'\n'0001'").same();
     expr("N'yabba'\n'dabba'\n'doo'")
-        .ok("_UTF-16LE'yabba'\n'dabba'\n'doo'");
+        .ok("_ISO-8859-1'yabba'\n'dabba'\n'doo'");
     expr("_iso-8859-1'yabba'\n'dabba'\n'don''t'")
         .ok("_ISO-8859-1'yabba'\n'dabba'\n'don''t'");
 
@@ -5190,9 +5190,9 @@ public class SqlParserTest {
     expr("_latin1'hi'")
         .ok("_LATIN1'hi'");
     expr("N'is it a plane? no it''s superman!'")
-        .ok("_UTF-16LE'is it a plane? no it''s superman!'");
+        .ok("_ISO-8859-1'is it a plane? no it''s superman!'");
     expr("n'lowercase n'")
-        .ok("_UTF-16LE'lowercase n'");
+        .ok("_ISO-8859-1'lowercase n'");
     expr("'boring string'").same();
     expr("_iSo-8859-1'bye'")
         .ok("_ISO-8859-1'bye'");
@@ -5200,7 +5200,7 @@ public class SqlParserTest {
     expr("'three' -- comment\n' blind'\n' mice'")
         .ok("'three'\n' blind'\n' mice'");
     expr("N'bye' \t\r\f\f\n' bye'")
-        .ok("_UTF-16LE'bye'\n' bye'");
+        .ok("_ISO-8859-1'bye'\n' bye'");
     expr("_iso-8859-1'bye'\n\n--\n-- this is a comment\n' bye'")
         .ok("_ISO-8859-1'bye'\n' bye'");
     expr("_utf8'hi'")
@@ -5226,7 +5226,7 @@ public class SqlParserTest {
 
     // valid syntax, but should give a validator error
     sql("select (N'1' '2') from t")
-        .ok("SELECT _UTF-16LE'1'\n"
+        .ok("SELECT _ISO-8859-1'1'\n"
             + "'2'\n"
             + "FROM `T`");
   }

@@ -300,7 +300,7 @@ class RelToSqlConverterTest {
         .ok("SELECT _UTF-8'\u4F60\u597D'");
     sql("select _UTF16'" + ConversionUtil.TEST_UNICODE_STRING + "'")
         .withMysql()
-        .ok("SELECT '\\u03b1\\u03bd\\u03b8\\u03c1\\u03c9\\u03c0\\u03bf\\u03c2'");
+        .ok("SELECT _UTF-16LE'" + ConversionUtil.TEST_UNICODE_STRING + "'");
   }
 
   /** Test case for
@@ -4192,15 +4192,15 @@ class RelToSqlConverterTest {
    */
   @Test void testCastAsMapType() {
     sql("SELECT CAST(MAP['A', 1.0] AS MAP<VARCHAR, DOUBLE>)")
-        .ok("SELECT CAST(MAP['A', 1.0] AS MAP< VARCHAR CHARACTER SET \"UTF-16LE\", DOUBLE >)\n"
+        .ok("SELECT CAST(MAP['A', 1.0] AS MAP< VARCHAR CHARACTER SET \"ISO-8859-1\", DOUBLE >)\n"
             + "FROM (VALUES (0)) AS \"t\" (\"ZERO\")");
     sql("SELECT CAST(MAP['A', ARRAY[1, 2, 3]] AS MAP<VARCHAR, INT ARRAY>)")
         .ok("SELECT CAST(MAP['A', ARRAY[1, 2, 3]] AS "
-            + "MAP< VARCHAR CHARACTER SET \"UTF-16LE\", INTEGER ARRAY >)\n"
+            + "MAP< VARCHAR CHARACTER SET \"ISO-8859-1\", INTEGER ARRAY >)\n"
             + "FROM (VALUES (0)) AS \"t\" (\"ZERO\")");
     sql("SELECT CAST(MAP[ARRAY['A'], MAP[1, 2]] AS MAP<VARCHAR ARRAY, MAP<INT, INT>>)")
         .ok("SELECT CAST(MAP[ARRAY['A'], MAP[1, 2]] AS "
-            + "MAP< VARCHAR CHARACTER SET \"UTF-16LE\" ARRAY, MAP< INTEGER, INTEGER > >)\n"
+            + "MAP< VARCHAR CHARACTER SET \"ISO-8859-1\" ARRAY, MAP< INTEGER, INTEGER > >)\n"
             + "FROM (VALUES (0)) AS \"t\" (\"ZERO\")");
   }
 
@@ -7150,11 +7150,11 @@ class RelToSqlConverterTest {
         + "\"account_type\", \"account_rollup\", \"Custom_Members\")\n"
         + "SELECT \"EXPR$0\" AS \"account_id\","
         + " \"EXPR$1\" AS \"account_parent\","
-        + " CAST(NULL AS VARCHAR(30) CHARACTER SET \"UTF-16LE\") "
+        + " CAST(NULL AS VARCHAR(30) CHARACTER SET \"ISO-8859-1\") "
         + "AS \"account_description\","
         + " \"EXPR$2\" AS \"account_type\","
         + " \"EXPR$3\" AS \"account_rollup\","
-        + " CAST(NULL AS VARCHAR(255) CHARACTER SET \"UTF-16LE\") "
+        + " CAST(NULL AS VARCHAR(255) CHARACTER SET \"ISO-8859-1\") "
         + "AS \"Custom_Members\"\n"
         + "FROM (VALUES (1, NULL, '123', '123')) "
         + "AS \"t\" (\"EXPR$0\", \"EXPR$1\", \"EXPR$2\", \"EXPR$3\")";
@@ -7179,12 +7179,12 @@ class RelToSqlConverterTest {
         + "\"account_type\", \"account_rollup\", \"Custom_Members\")\n"
         + "SELECT \"product\".\"product_id\" AS \"account_id\", "
         + "CAST(NULL AS INTEGER) AS \"account_parent\", CAST(NULL AS VARCHAR"
-        + "(30) CHARACTER SET \"UTF-16LE\") AS \"account_description\", "
+        + "(30) CHARACTER SET \"ISO-8859-1\") AS \"account_description\", "
         + "CAST(\"product\".\"product_id\" AS VARCHAR CHARACTER SET "
-        + "\"UTF-16LE\") AS \"account_type\", "
-        + "CAST(\"sales_fact_1997\".\"store_id\" AS VARCHAR CHARACTER SET \"UTF-16LE\") AS "
+        + "\"ISO-8859-1\") AS \"account_type\", "
+        + "CAST(\"sales_fact_1997\".\"store_id\" AS VARCHAR CHARACTER SET \"ISO-8859-1\") AS "
         + "\"account_rollup\", "
-        + "CAST(NULL AS VARCHAR(255) CHARACTER SET \"UTF-16LE\") AS \"Custom_Members\"\n"
+        + "CAST(NULL AS VARCHAR(255) CHARACTER SET \"ISO-8859-1\") AS \"Custom_Members\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "INNER JOIN \"foodmart\".\"sales_fact_1997\" "
         + "ON \"product\".\"product_id\" = \"sales_fact_1997\".\"product_id\"";

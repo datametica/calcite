@@ -68,7 +68,7 @@ public interface SaffronProperties {
    * {@link org.apache.calcite.sql.validate.SqlValidator}.
    */
   @Resource("saffron.default.charset")
-  @Default("UTF-16LE")
+  @Default("ISO-8859-1")
   StringProp defaultCharset();
 
   /**
@@ -79,7 +79,7 @@ public interface SaffronProperties {
    * {@link org.apache.calcite.sql.SqlLiteral#SqlLiteral}
    */
   @Resource("saffron.default.nationalcharset")
-  @Default("UTF-16LE")
+  @Default("ISO-8859-1")
   StringProp defaultNationalCharset();
 
   /**
@@ -89,7 +89,7 @@ public interface SaffronProperties {
    * {@link org.apache.calcite.sql.SqlLiteral#SqlLiteral}
    */
   @Resource("saffron.default.collation.name")
-  @Default("UTF-16LE$en_US")
+  @Default("ISO-8859-1$en_US")
   StringProp defaultCollation();
 
   /**
