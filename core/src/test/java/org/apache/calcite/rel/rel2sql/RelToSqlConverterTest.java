@@ -300,7 +300,7 @@ class RelToSqlConverterTest {
         .ok("SELECT _UTF-8'\u4F60\u597D'");
     sql("select _UTF16'" + ConversionUtil.TEST_UNICODE_STRING + "'")
         .withMysql()
-        .ok("SELECT _UTF-16LE'" + ConversionUtil.TEST_UNICODE_STRING + "'");
+        .ok("SELECT '\\u03b1\\u03bd\\u03b8\\u03c1\\u03c9\\u03c0\\u03bf\\u03c2'");
   }
 
   /** Test case for
