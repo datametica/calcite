@@ -11430,9 +11430,9 @@ class RelToSqlConverterDMTest {
   }
   @Test public void testEnDashSpecialChar() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
-    final RexNode literalTimestamp = relBuilder.literal("–");
+    final RexNode literal = relBuilder.literal("–");
     RelNode root = relBuilder
-        .project(literalTimestamp)
+        .project(literal)
         .build();
     final String expectedDB2Sql = "SELECT _UTF-16LE'–' AS `$f0`\n"
         + "FROM scott.EMP";

@@ -53,6 +53,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -804,7 +805,8 @@ public abstract class SqlTypeUtil {
     }
 
     if (areCharacterSetsMismatched(toType, fromType)) {
-      return false;
+      return toType.getCharset() == StandardCharsets.ISO_8859_1
+          && fromType.getCharset() == StandardCharsets.UTF_16LE;
     }
 
     return toType.getFamily() == fromType.getFamily();
