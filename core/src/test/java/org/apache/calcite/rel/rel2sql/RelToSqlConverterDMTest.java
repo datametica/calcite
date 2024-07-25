@@ -11443,4 +11443,14 @@ class RelToSqlConverterDMTest {
                                            + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test public void testInterval() {
+    String query = "select DATE'2018-01-01' - INTERVAL '1' DAY - INTERVAL '31' DAY from "
+        + "\"employee\"";
+    final String expectedSpark = "SELECT DATE '2018-01-01' - 1 - 31\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withSpark()
+        .ok(expectedSpark);
+  }
 }
