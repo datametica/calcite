@@ -1153,10 +1153,9 @@ public class RexBuilder {
     if (s.equals("")) {
       return charEmpty;
     }
-    boolean isEncodedInDefaultCharset = typeFactory.getDefaultCharset().newEncoder().canEncode(s);
-    String charSetName =
-        !isEncodedInDefaultCharset && StandardCharsets.UTF_16LE.newEncoder().canEncode(s)
-            ? StandardCharsets.UTF_16LE.name() : null;
+    boolean canEncodeInUtf16le = !typeFactory.getDefaultCharset().newEncoder().canEncode(s)
+        && StandardCharsets.UTF_16LE.newEncoder().canEncode(s);
+    String charSetName = canEncodeInUtf16le ? StandardCharsets.UTF_16LE.name() : null;
     return makeCharLiteral(new NlsString(s, charSetName, null));
   }
 
