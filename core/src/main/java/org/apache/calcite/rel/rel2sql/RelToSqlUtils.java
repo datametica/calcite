@@ -128,9 +128,9 @@ public class RelToSqlUtils {
   }
 
   /**
-   * This function checks whether InnerJoinTrait is available in RelTraitSet or not.
+   * This function checks whether InnerJoinTrait having preserveInnerJoin status as true exist in RelTraitSet or not.
    */
-  public static boolean isInnerJoinTrait(RelTraitSet relTraitSet) {
+  public static boolean preserveInnerJoin(RelTraitSet relTraitSet) {
     RelTrait relTrait = relTraitSet.getTrait(InnerJoinTraitDef.instance);
     return relTrait != null && relTrait instanceof InnerJoinTrait
         && ((InnerJoinTrait) relTrait).isPreserveInnerJoin();

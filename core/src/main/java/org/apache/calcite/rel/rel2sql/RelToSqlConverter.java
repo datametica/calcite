@@ -288,7 +288,7 @@ public class RelToSqlConverter extends SqlImplementor
     JoinType joinType = joinType(e.getJoinType());
     JoinType currentDialectJoinType = dialect.emulateJoinTypeForCrossJoin();
     if (isCrossJoin(e) && currentDialectJoinType != JoinType.INNER
-        && !RelToSqlUtils.isInnerJoinTrait(e.getTraitSet())) {
+        && !RelToSqlUtils.preserveInnerJoin(e.getTraitSet())) {
       if (isCommaJoin(e)) {
         joinType = JoinType.COMMA;
       } else {
