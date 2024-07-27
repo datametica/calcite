@@ -9447,7 +9447,7 @@ class RelToSqlConverterDMTest {
   @Test public void testOracleNextDayFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode nextDayRexNode =
-        builder.call(SqlLibraryOperators.ORACLE_NEXT_DAY, builder.call(CURRENT_DATE),
+        builder.call(SqlLibraryOperators.NEXT_DAY, builder.call(CURRENT_DATE),
                 builder.literal(DayOfWeek.SATURDAY.name()));
     final RelNode root = builder
         .scan("EMP")
