@@ -11444,6 +11444,19 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testEnDashSpecialChar() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode endashLiteral = relBuilder.literal("–");
+    RelNode root = relBuilder
+        .project(endashLiteral)
+        .build();
+    final String expectedBigQuerySql = "SELECT _UTF-16LE'–' AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuerySql));
+  }
+
+
   @Test
   public void testInterval() {
     String query = "select DATE'2018-01-01' - INTERVAL '1' DAY - INTERVAL '31' DAY from " +
