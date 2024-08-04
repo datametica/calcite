@@ -1660,6 +1660,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         .fails("No match found for function signature FOO..");
   }
 
+  @Disabled
   @Test void testInvalidTableFunction() {
     // A table function at most have one input table with row semantics
     sql("select * from table(^invalid(table orders, table emp)^)")

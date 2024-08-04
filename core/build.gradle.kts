@@ -24,6 +24,7 @@ plugins {
     kotlin("jvm")
     id("com.github.vlsi.crlf")
     id("com.github.vlsi.ide")
+    id("io.freefair.aspectj.post-compile-weaving") version "8.0.1"
     calcite.fmpp
     calcite.javacc
 }
@@ -57,6 +58,8 @@ dependencies {
     api("org.checkerframework:checker-qual")
     api("org.slf4j:slf4j-api")
 
+    implementation("org.aspectj:aspectjrt:1.9.22")
+    implementation("org.aspectj:aspectjweaver:1.9.22")
     implementation("com.fasterxml.jackson.core:jackson-core")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")

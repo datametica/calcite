@@ -351,8 +351,12 @@ public class RelBuilder {
    * you need to use previously built expressions as inputs, call
    * {@link #build()} to pop those inputs. */
   public RelBuilder push(RelNode node) {
-    stack.push(new Frame(node));
-    return this;
+    try {
+      stack.push(new Frame(node));
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Adds a rel node to the top of the stack while preserving the field names
@@ -364,10 +368,14 @@ public class RelBuilder {
 
   /** Pushes a collection of relational expressions. */
   public RelBuilder pushAll(Iterable<? extends RelNode> nodes) {
-    for (RelNode node : nodes) {
-      push(node);
+    try {
+      for (RelNode node : nodes) {
+        push(node);
+      }
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
     }
-    return this;
   }
 
   /** Returns the size of the stack. */
@@ -437,6 +445,8 @@ public class RelBuilder {
     try {
       push(r);
       return fn.apply(this);
+    }  catch (RuntimeException ex) {
+      throw ex;
     } finally {
       stack.pop();
     }
@@ -1776,8 +1786,12 @@ public class RelBuilder {
     final RelNode functionScan =
         struct.tableFunctionScanFactory.createTableFunctionScan(cluster,
             inputs, call, null, getColumnMappings(operator));
-    push(functionScan);
-    return this;
+    try {
+      push(functionScan);
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Creates a {@link Filter} of an array of
@@ -1839,8 +1853,12 @@ public class RelBuilder {
     final RelNode filter =
         struct.filterFactory.createFilter(frame.rel,
             conjunctionPredicates, ImmutableSet.copyOf(variablesSet));
-    stack.push(new Frame(filter, frame.fields));
-    return this;
+    try {
+      stack.push(new Frame(filter, frame.fields));
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Creates a {@link Project} of the given
@@ -2117,9 +2135,13 @@ public class RelBuilder {
         // create "virtual" row type for project only rename fields
         stack.pop();
         // Ignore the hints.
-        stack.push(new Frame(frame.rel, fields));
+        try {
+          stack.push(new Frame(frame.rel, fields));
+          return this;
+        } catch (RuntimeException ex) {
+          throw ex;
+        }
       }
-      return this;
     }
 
     // If the expressions are all literals, and the input is a Values with N
@@ -2146,8 +2168,12 @@ public class RelBuilder {
             fieldNameList,
             variables);
     stack.pop();
-    stack.push(new Frame(project, fields));
-    return this;
+    try {
+      stack.push(new Frame(project, fields));
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** If current frame will return a known, constant number of
@@ -2287,7 +2313,11 @@ public class RelBuilder {
         final Project newInput =
             childProject.copy(childProject.getTraitSet(),
                 childProject.getInput(), childProject.getProjects(), rowType);
-        stack.push(new Frame(newInput.attachHints(childProject.getHints()), frame.fields));
+        try {
+          stack.push(new Frame(newInput.attachHints(childProject.getHints()), frame.fields));
+        } catch (RuntimeException ex) {
+          throw ex;
+        }
       }
       if (input instanceof Values && fieldNameList != null) {
         // Rename columns of child values if desired field names are given.
@@ -2301,7 +2331,11 @@ public class RelBuilder {
         final RelNode newValues =
             struct.valuesFactory.createValues(cluster, newRowType,
                 values.tuples);
-        stack.push(new Frame(newValues, frame.fields));
+        try {
+          stack.push(new Frame(newValues, frame.fields));
+        } catch (RuntimeException ex) {
+          throw ex;
+        }
       }
     } else {
       project(nodeList, rowType.getFieldNames(), force, variablesSet);
@@ -2318,15 +2352,19 @@ public class RelBuilder {
    */
   public RelBuilder uncollect(List<String> itemAliases, boolean withOrdinality) {
     Frame frame = stack.pop();
-    stack.push(
-        new Frame(
-          new Uncollect(
-            cluster,
-            cluster.traitSetOf(Convention.NONE),
-            frame.rel,
-            withOrdinality,
-            requireNonNull(itemAliases, "itemAliases"))));
-    return this;
+    try {
+      stack.push(
+          new Frame(
+              new Uncollect(
+                  cluster,
+                  cluster.traitSetOf(Convention.NONE),
+                  frame.rel,
+                  withOrdinality,
+                  requireNonNull(itemAliases, "itemAliases"))));
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Ensures that the field names match those given.
@@ -2708,8 +2746,12 @@ public class RelBuilder {
               call.getType());
       fields.add(ImmutableSet.of(), fieldType);
     }
-    stack.push(new Frame(aggregate, fields));
-    return this;
+    try {
+      stack.push(new Frame(aggregate, fields));
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /**
@@ -3128,9 +3170,12 @@ public class RelBuilder {
         PairList.of();
     fields.addAll(left.fields);
     fields.addAll(right.fields);
-    stack.push(new Frame(correlate, fields));
-
-    return this;
+    try {
+      stack.push(new Frame(correlate, fields));
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Creates a {@link Join} using USING syntax.
@@ -3240,8 +3285,12 @@ public class RelBuilder {
                   .build();
       newFields.add(aliasList, field);
     });
-    stack.push(new Frame(pair.rel, newFields));
-    return this;
+    try {
+      stack.push(new Frame(pair.rel, newFields));
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Creates a {@link Values}.
@@ -3352,8 +3401,12 @@ public class RelBuilder {
     final RelNode values =
         struct.valuesFactory.createValues(cluster, frame.rel.getRowType(),
             ImmutableList.of());
-    stack.push(new Frame(values, frame.fields));
-    return this;
+    try {
+      stack.push(new Frame(values, frame.fields));
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Creates a {@link Values} with a specified row type.
@@ -3371,8 +3424,12 @@ public class RelBuilder {
     RelNode values =
         struct.valuesFactory.createValues(cluster, rowType,
             ImmutableList.copyOf(tupleList));
-    push(values);
-    return this;
+    try {
+      push(values);
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Creates a {@link Values} with a specified row type.
@@ -3389,8 +3446,12 @@ public class RelBuilder {
     RelNode values =
         struct.valuesFactory.createValues(cluster, rowType,
             copy(tupleList));
-    push(values);
-    return this;
+    try {
+      push(values);
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   /** Creates a {@link Values} with a specified row type and
@@ -3659,8 +3720,12 @@ public class RelBuilder {
     final RelNode r2 =
         RelOptUtil.createCastRel(r, castRowType, rename,
             struct.projectFactory);
-    push(r2);
-    return this;
+    try {
+      push(r2);
+      return this;
+    } catch (RuntimeException ex) {
+      throw ex;
+    }
   }
 
   public RelBuilder permute(Mapping mapping) {
