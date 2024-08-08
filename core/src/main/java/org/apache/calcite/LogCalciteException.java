@@ -28,25 +28,32 @@ import org.aspectj.lang.annotation.Aspect;
  * easily and quickly
  */
 @Aspect
-public class LogException {
+public class LogCalciteException {
 
-  @AfterThrowing(pointcut = "execution(* org.apache.calcite..*(..)) && (within(org.apache.calcite.rel..*) || "
-        + "within(org.apache.calcite.tools..*)) && !within(org.apache.calcite.metadata..*)", throwing = "ex")
+  private static final String BASE_PACKAGE = "org.apache.calcite";
+  private static final String REL_PACKAGE = "org.apache.calcite.rel..*";
+  private static final String TOOL_PACKAGE = "org.apache.calcite.tool..*";
+  private static final String METADATA_PACKAGE = "org.apache.calcite.metadata..*";
+  public static final String MESSAGE_PREFIX = "The issue occurred because of ";
+
+  @AfterThrowing(pointcut =
+      "execution(* " + BASE_PACKAGE + "..*(..)) && (within(" + REL_PACKAGE + ") || "
+      + "within(" + TOOL_PACKAGE + ")) && !within(" + METADATA_PACKAGE + ")", throwing = "ex")
   public void logException(JoinPoint joinPoint, Exception ex) {
 
     if (joinPoint.getTarget() != null) {
       String detail = "";
       if (joinPoint.getThis() instanceof RelBuilder
           && ((RelBuilder) joinPoint.getThis()).size() > 0) {
-        detail += "The issue occurred because of relNode "
+        detail += MESSAGE_PREFIX + "relNode "
             + ((RelBuilder) joinPoint.getThis()).peek();
       } else if (joinPoint.getThis() instanceof SingleRel
           && ((SingleRel) joinPoint.getThis()).getInput() != null) {
-        detail += "The issue occurred because of relNode "
+        detail += MESSAGE_PREFIX + "relNode "
             + ((SingleRel) joinPoint.getThis()).getInput();
       }
       if ("".equals(detail) && joinPoint.getArgs().length > 0) {
-        detail += "The issue occurred because of method call " + joinPoint.getSignature().toString()
+        detail += MESSAGE_PREFIX + "method call " + joinPoint.getSignature().toString()
             + " with args";
         for (Object arg : joinPoint.getArgs()) {
           detail += " " + arg.toString();
