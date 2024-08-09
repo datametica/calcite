@@ -18,16 +18,7 @@ package org.apache.calcite.tools;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Experimental;
-import org.apache.calcite.plan.Context;
-import org.apache.calcite.plan.Contexts;
-import org.apache.calcite.plan.Convention;
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptPredicateList;
-import org.apache.calcite.plan.RelOptSamplingParameters;
-import org.apache.calcite.plan.RelOptSchema;
-import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.ViewExpanders;
+import org.apache.calcite.plan.*;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
@@ -133,23 +124,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.immutables.value.Value;
 
 import java.math.BigDecimal;
-import java.util.AbstractList;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -2466,6 +2441,7 @@ public class RelBuilder {
     }
 
     ImmutableList<ImmutableBitSet> groupSets;
+    boolean subqueryPresent = false;
     if (groupKey.nodeLists != null) {
       final int sizeBefore = registrar.extraNodes.size();
       final List<ImmutableBitSet> groupSetList = new ArrayList<>();
@@ -2485,6 +2461,10 @@ public class RelBuilder {
           /*|| !ImmutableBitSet.ORDERING.isStrictlyOrdered(groupSetMultiset)*/) {
         return rewriteAggregateWithDuplicateGroupSets(groupSet, groupSetMultiset,
             aggCalls);
+      }
+      Optional<RelTrait> pivotRelTrait = stack.getFirst().rel.getTraitSet().stream().filter(it -> it instanceof PivotRelTrait).findFirst();
+      if(pivotRelTrait.isPresent()) {
+        subqueryPresent = ((PivotRelTrait)pivotRelTrait.get()).getsubqueryPresentFlag();
       }
       groupSets = ImmutableList.copyOf(groupSetMultiset.elementSet());
       if (registrar.extraNodes.size() > sizeBefore) {
@@ -2521,7 +2501,7 @@ public class RelBuilder {
     if (config.pruneInputOfAggregate()
         && r instanceof Project) {
       final Set<Integer> fieldsUsed =
-          RelOptUtil.getAllFields2(groupSet, aggregateCalls);
+          getAllFields2(groupSet, aggregateCalls, subqueryPresent, inFields.size());
       // Some parts of the system can't handle rows with zero fields, so
       // pretend that one field is used.
       if (fieldsUsed.isEmpty()) {
@@ -2600,6 +2580,30 @@ public class RelBuilder {
     aggregate_(groupSet2, groupSets2, r, distinctAggregateCalls,
         registrar.extraNodes, inFields);
     return project(projects.transform((i, name) -> aliasMaybe(field(i), name)));
+  }
+
+  public static Set<Integer> getAllFields2(ImmutableBitSet groupSet,
+      List<AggregateCall> aggCallList,boolean checkSubquery, int expcnt) {
+    final Set<Integer> allFields = new TreeSet<>();
+    allFields.addAll(groupSet.asList());
+    if(checkSubquery){
+      for(int i = 0 ; i < expcnt ; i++){
+        allFields.add(i);
+      }
+
+      return allFields;
+    }
+    for (AggregateCall aggregateCall : aggCallList) {
+      allFields.addAll(aggregateCall.getArgList());
+      if (aggregateCall.filterArg >= 0) {
+        allFields.add(aggregateCall.filterArg);
+      }
+      if (aggregateCall.distinctKeys != null) {
+        allFields.addAll(aggregateCall.distinctKeys.asList());
+      }
+      allFields.addAll(RelCollations.ordinals(aggregateCall.collation));
+    }
+    return allFields;
   }
 
   /**

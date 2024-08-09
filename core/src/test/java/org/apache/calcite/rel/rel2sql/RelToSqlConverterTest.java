@@ -6668,6 +6668,18 @@ class RelToSqlConverterTest {
     sql(sql).withMysql().ok(expectedMysql);
   }
 
+  @Test void testPivotFuncstion() {
+    final String sql = "SELECT *\n FROM (SELECT SUM(B.\"employee_id\") AS EMPLOYEE_ID_TOTAL, "
+        + "TRIM(B.\"full_name\") as DEPARTMENT_ID111 "
+        + "FROM \"employee\" A ,\"employee\" B "
+        +" WHERE A.\"employee_id\" = B.\"employee_id\" GROUP BY B.\"full_name\") "
+        +" PIVOT(COUNT(EMPLOYEE_ID_TOTAL) FOR "
+        + "DEPARTMENT_ID111 IN (16, 17, 18)) AS p";
+    final String expectedMysql = "SELECT *\n";
+    //sql(sql).withCalcite().ok(expectedMysql);
+    sql(sql).withBigQuery().ok(expectedMysql);
+  }
+
   /** As {@link #testLeftJoinPreventsCommaJoin()}, but the non-cross-join
    * occurs later in the FROM clause. */
   @Test void testRightJoinPreventsCommaJoin() {
