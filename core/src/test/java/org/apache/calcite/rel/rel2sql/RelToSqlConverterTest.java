@@ -7529,35 +7529,6 @@ class RelToSqlConverterTest {
         .ok(expected7);
   }
 
-  /*
-  Two on-matched clauses are not supported in calcite, adding test case
-  just to add information about the change related to sql used in RSFB-3247
-   */
-  @Disabled
-  @Test void testMergeWithTwoOnMatchedClause() {
-    final String sql1 = "merge into \"DEPT\" as \"t\"\n"
-        + "using \"DEPT\" as \"s\"\n"
-        + "on \"t\".\"DEPTNO\" = \"s\".\"DEPTNO\"\n"
-        + "when matched then\n"
-        + "update set \"DNAME\" = \"s\".\"DNAME\"\n"
-        + "when matched then\n"
-        + "update set \"DEPTNO\" = \"DEPTNO\"+1\n"
-        + "when not matched then\n"
-        + "insert (DEPTNO, DNAME, LOC)\n"
-        + "values (\"s\".\"DEPTNO\" + 1, lower(\"s\".\"DNAME\"), upper(\"s\".\"LOC\"))";
-    final String expected1 = "MERGE INTO \"SCOTT\".\"DEPT\" AS \"DEPT0\"\n"
-        + "USING \"SCOTT\".\"DEPT\"\n"
-        + "ON \"DEPT\".\"DEPTNO\" = \"DEPT0\".\"DEPTNO\"\n"
-        + "WHEN MATCHED THEN UPDATE SET \"DNAME\" = \"DEPT\".\"DNAME\"\n"
-        + "WHEN NOT MATCHED THEN INSERT (\"DEPTNO\", \"DNAME\", \"LOC\") "
-        + "VALUES CAST(\"DEPT\".\"DEPTNO\" + 1 AS TINYINT),\n"
-        + "LOWER(\"DEPT\".\"DNAME\"),\n"
-        + "UPPER(\"DEPT\".\"LOC\")";
-    sql(sql1)
-        .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
-        .ok(expected1);
-  }
-
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-3679">[CALCITE-3679]
    * Allow lambda expressions in SQL queries</a>. */
