@@ -470,6 +470,16 @@ public abstract class OperandTypes {
   public static final FamilyOperandTypeChecker STRING_STRING_BOOLEAN =
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.BOOLEAN);
 
+  public static final SqlOperandTypeChecker ANY_OR_ANY_BOOLEAN =
+      OperandTypes.or(
+          OperandTypes.family(SqlTypeFamily.ANY),
+          OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.BOOLEAN));
+
+  public static final SqlOperandTypeChecker ANY_STRING_OR_STRING_STRING =
+      OperandTypes.or(
+          OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING),
+          OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.STRING));
+
   public static final FamilyOperandTypeChecker STRING_STRING_OPTIONAL_STRING =
       family(
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
