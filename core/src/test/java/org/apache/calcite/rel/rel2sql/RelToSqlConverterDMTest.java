@@ -142,6 +142,7 @@ import static org.apache.calcite.avatica.util.TimeUnit.SECOND;
 import static org.apache.calcite.avatica.util.TimeUnit.WEEK;
 import static org.apache.calcite.avatica.util.TimeUnit.YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.BITNOT;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.COMPOSE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.CURRENT_TIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.CURRENT_TIMESTAMP_WITH_TIME_ZONE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_ADD;
@@ -153,10 +154,12 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.MONTHNUMBER_OF_YEAR
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.QUARTERNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SAFE_OFFSET;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRUE;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNISTR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.USING;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.YEARNUMBER_OF_CALENDAR;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CONCAT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IN;
@@ -3195,6 +3198,14 @@ class RelToSqlConverterDMTest {
     final String query = "select floor(\"hire_date\" TO MINUTE) "
         + "from \"employee\"";
     final String expected = "SELECT DATE_TRUNC('MINUTE', hire_date)\n"
+        + "FROM foodmart.employee";
+    sql(query).withSpark().ok(expected);
+  }
+
+  @Test void testSpecialCharacterInSpark() {
+    final String query = "select 'café' "
+        + "from \"employee\"";
+    final String expected = "SELECT 'café'\n"
         + "FROM foodmart.employee";
     sql(query).withSpark().ok(expected);
   }
@@ -8516,6 +8527,33 @@ class RelToSqlConverterDMTest {
         + "AS array_contains\n"
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testComposeFunction() {
+    final RelBuilder builder = relBuilder();
+    RexNode unistrNode = builder.call(UNISTR, builder.literal("\\0308"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(
+            builder.call(COMPOSE,
+            builder.call(CONCAT,
+                builder.literal("abcd"), unistrNode)))
+        .build();
+    final String expectedOracleSql = "SELECT COMPOSE(CONCAT('abcd', UNISTR('\\0308'))) "
+        + "\"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracleSql));
+  }
+
+  @Test public void testBigQueryUnicodeEscapeSequence() {
+    final RelBuilder builder = relBuilder();
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.literal("\\u0308"))
+        .build();
+    final String expectedBqSql = "SELECT '\\u0308' AS `$f0`\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
   }
 
   @Test public void rowNumberOverFunctionAsWhereClauseInJoin() {
