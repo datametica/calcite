@@ -11475,4 +11475,15 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuerySql));
   }
 
+  @Test public void testCastToClobForSpark() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode clobNode =
+        relBuilder.cast(relBuilder.literal("^XYZ"), SqlTypeName.CLOB);
+    RelNode root = relBuilder
+        .project(clobNode)
+        .build();
+    final String expectedSql = "SELECT CAST('^XYZ' AS STRING) $f0\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSql));
+  }
 }
