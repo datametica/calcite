@@ -11519,4 +11519,19 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuerySql));
   }
 
+  @Test public void testDateFormat() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatDateRexNode =
+        builder.call(SqlLibraryOperators.FORMAT_DATE, builder.literal("MMMDD"), builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatDateRexNode, "FD"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT FORMAT_DATE('%b%d', HIREDATE) AS FD\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
 }
