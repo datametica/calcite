@@ -22,7 +22,6 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.rules.TransformationRule;
-
 import org.apache.calcite.sql.SqlKind;
 
 import org.immutables.value.Value;
