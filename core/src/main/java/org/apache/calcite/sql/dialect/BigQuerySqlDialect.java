@@ -2412,9 +2412,9 @@ public class BigQuerySqlDialect extends SqlDialect {
           precision = precisionScale[0];
           scale = precisionScale[1];
           if (!isContainsNegativePrecisionOrScale) {
-            typeAlias =
-                precision > 0 ? isContainsScale ? dataType + "(" + precision + ","
-                    + scale + ")" : dataType + "(" + precision + ")" : dataType;
+            typeAlias = precision > 0 && !(scale > 38) ? isContainsScale
+                ? dataType + "(" + precision + "," + scale + ")"
+                : dataType + "(" + precision + ")" : dataType;
           } else {
             typeAlias = dataType;
           }
