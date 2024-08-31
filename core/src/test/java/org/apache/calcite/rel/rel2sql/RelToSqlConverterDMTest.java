@@ -7728,12 +7728,11 @@ class RelToSqlConverterDMTest {
         + " and \"re\".\"employee_id\" = \"d\".\"department_id\"\n";
 
     String expect = "SELECT *\n"
-        + "FROM foodmart.employee\n"
+        +  "FROM foodmart.employee\n"
         + "INNER JOIN foodmart.department ON TRUE\n"
-        + "INNER JOIN foodmart.reserve_employee ON TRUE\n"
-        + "WHERE (employee.department_id = department.department_id "
-        + "OR reserve_employee.employee_id = employee.employee_id) "
-        + "AND reserve_employee.employee_id = department.department_id";
+        +  "INNER JOIN foodmart.reserve_employee ON (employee.department_id = department"
+        +  ".department_id OR employee.employee_id = reserve_employee.employee_id) AND department"
+        +  ".department_id = reserve_employee.employee_id";
 
     HepProgramBuilder builder = new HepProgramBuilder();
     builder.addRuleClass(FilterExtractInnerJoinRule.class);
@@ -7753,12 +7752,10 @@ class RelToSqlConverterDMTest {
 
     String expect = "SELECT *\n"
         + "FROM foodmart.employee\n"
-        + "INNER JOIN foodmart.department ON TRUE\n"
-        + "INNER JOIN foodmart.reserve_employee ON TRUE\n"
-        + "WHERE employee.department_id = department.department_id "
-        + "AND reserve_employee.employee_id = department.department_id "
-        + "AND (reserve_employee.department_id < department.department_id "
-        + "OR department.department_id = reserve_employee.department_id)";
+        + "INNER JOIN foodmart.department ON employee.department_id = department.department_id\n"
+        + "INNER JOIN foodmart.reserve_employee ON department.department_id = reserve_employee"
+        +  ".employee_id AND (department.department_id > reserve_employee.department_id OR "
+        +   "department.department_id = reserve_employee.department_id)";
 
     HepProgramBuilder builder = new HepProgramBuilder();
     builder.addRuleClass(FilterExtractInnerJoinRule.class);
