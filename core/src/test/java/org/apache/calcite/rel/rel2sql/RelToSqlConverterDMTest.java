@@ -11530,7 +11530,7 @@ class RelToSqlConverterDMTest {
     RelNode root = relBuilder
         .project(endashLiteral)
         .build();
-    final String expectedBigQuerySql = "SELECT _UTF-16LE'–' AS `$f0`\n"
+    final String expectedSql = "SELECT _UTF-16LE'–' AS `$f0`\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuerySql));
