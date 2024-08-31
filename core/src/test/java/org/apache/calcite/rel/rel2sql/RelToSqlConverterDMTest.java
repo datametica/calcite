@@ -11530,10 +11530,23 @@ class RelToSqlConverterDMTest {
     RelNode root = relBuilder
         .project(endashLiteral)
         .build();
-    final String expectedBigQuerySql = "SELECT _UTF-16LE'–' AS `$f0`\n"
+    final String expectedSql = "SELECT _UTF-16LE'–' AS `$f0`\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuerySql));
+  }
+
+  @Test public void testRemainderOperator() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode remainderRex = relBuilder.call(SqlLibraryOperators.REMAINDER,
+        relBuilder.literal(10), relBuilder.literal(5));
+    RelNode root = relBuilder
+        .project(remainderRex)
+        .build();
+    final String expectedBigQuerySql = "SELECT REMAINDER(10, 5) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedBigQuerySql));
   }
 
 }

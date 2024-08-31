@@ -3855,4 +3855,12 @@ public abstract class SqlLibraryOperators {
           OperandTypes.INTERVALINTERVAL_INTERVALDATETIME,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction REMAINDER =
+      new SqlFunction("REMAINDER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DECIMAL_NULLABLE, null,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.SYSTEM);
+
 }
