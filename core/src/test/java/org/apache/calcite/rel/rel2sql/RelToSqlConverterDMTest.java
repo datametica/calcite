@@ -11536,4 +11536,17 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuerySql));
   }
 
+  @Test public void testRemainderOperator() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode remainderRex = relBuilder.call(SqlLibraryOperators.REMAINDER,
+        relBuilder.literal(10), relBuilder.literal(5));
+    RelNode root = relBuilder
+        .project(remainderRex)
+        .build();
+    final String expectedBigQuerySql = "SELECT REMAINDER(10, 5) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedBigQuerySql));
+  }
+
 }
