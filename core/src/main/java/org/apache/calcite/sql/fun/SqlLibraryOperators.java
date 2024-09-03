@@ -2590,7 +2590,7 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIG_QUERY, POSTGRESQL})
   public static final SqlFunction SHA256 =
       SqlBasicFunction.create("SHA256",
-          ReturnTypes.VARCHAR_NULLABLE,
+          ReturnTypes.VARBINARY,
           OperandTypes.STRING.or(OperandTypes.BINARY),
           SqlFunctionCategory.STRING);
 
@@ -3290,7 +3290,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "SHA2",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.VARBINARY,
+          ReturnTypes.VARCHAR_2000,
           null,
           OperandTypes.family(
               ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
