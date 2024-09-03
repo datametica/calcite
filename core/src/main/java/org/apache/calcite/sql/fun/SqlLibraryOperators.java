@@ -3290,7 +3290,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "SHA2",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.VARBINARY,
+          ReturnTypes.VARCHAR_2000,
           null,
           OperandTypes.family(
               ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
