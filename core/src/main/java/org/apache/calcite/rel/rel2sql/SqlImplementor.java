@@ -25,6 +25,8 @@ import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.CTEScopeTraitDef;
 import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.DistinctTraitDef;
+import org.apache.calcite.plan.PivotRelTrait;
+import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.hep.HepPlanner;
@@ -1928,8 +1930,10 @@ public abstract class SqlImplementor {
 
       SqlSelect select;
       Expressions.FluentList<Clause> clauseList = Expressions.list();
+      @Nullable PivotRelTrait def = rel.getTraitSet().getTrait(PivotRelTraitDef.instance);
+      boolean pivotFlag = def != null && def.isPivotRel();
       // Additional condition than apache calcite
-      if (needNew || isCorrelated(rel)) {
+      if (!pivotFlag && needNew || isCorrelated(rel)) {
         select = subSelect();
       } else {
         select = asSelect();

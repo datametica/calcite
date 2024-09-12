@@ -21,10 +21,22 @@ package org.apache.calcite.plan;
  */
 
 public class PivotRelTrait implements RelTrait {
-  private final boolean isPivotRel;
+  private boolean isPivotRel;
+  private boolean subqueryPresent;
+  private String pivotAlias;
 
-  public PivotRelTrait(boolean isPivotRel) {
+  public PivotRelTrait(boolean isPivotRel, boolean subqueryPresent, String pivotAlias) {
     this.isPivotRel = isPivotRel;
+    this.subqueryPresent = subqueryPresent;
+    this.pivotAlias = pivotAlias;
+  }
+
+  public String getPivotAlias() {
+    return pivotAlias;
+  }
+
+  public boolean getsubqueryPresentFlag() {
+    return subqueryPresent;
   }
 
   public final boolean isPivotRel() {
