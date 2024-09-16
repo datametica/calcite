@@ -101,6 +101,20 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  @Test void testPivotFunction() {
+    final String sql = "SELECT * FROM (SELECT SUM(B.empno) AS EMPLOYEE_ID_TOTAL, "
+        + "TRIM(B.ename) as DEPARTMENT_ID111 "
+        + "FROM emp A ,emp B "
+        +" WHERE A.empno = B.empno GROUP BY B.ename) "
+        +" PIVOT(COUNT(EMPLOYEE_ID_TOTAL) FOR "
+        + "DEPARTMENT_ID111 IN (16, 17, 18))";
+    fixture()
+        .withFactory(c ->
+            c.withOperatorTable(t -> MockSqlOperatorTable.standard().extend()))
+        .withSql(sql)
+        .ok();
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-3679">[CALCITE-3679]
    * Allow lambda expressions in SQL queries</a>. */

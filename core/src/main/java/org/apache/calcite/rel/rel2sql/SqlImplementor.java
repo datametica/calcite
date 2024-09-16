@@ -19,14 +19,7 @@ package org.apache.calcite.rel.rel2sql;
 import org.apache.calcite.config.CalciteSystemProperty;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
-import org.apache.calcite.plan.CTEDefinationTrait;
-import org.apache.calcite.plan.CTEDefinationTraitDef;
-import org.apache.calcite.plan.CTEScopeTrait;
-import org.apache.calcite.plan.CTEScopeTraitDef;
-import org.apache.calcite.plan.DistinctTrait;
-import org.apache.calcite.plan.DistinctTraitDef;
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.plan.*;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelCollation;
@@ -1928,8 +1921,10 @@ public abstract class SqlImplementor {
 
       SqlSelect select;
       Expressions.FluentList<Clause> clauseList = Expressions.list();
+      @Nullable PivotRelTrait def = rel.getTraitSet().getTrait(PivotRelTraitDef.instance);
+      boolean pivotFlag = def != null && def.isPivotRel();
       // Additional condition than apache calcite
-      if (needNew || isCorrelated(rel)) {
+      if (!pivotFlag && needNew || isCorrelated(rel)) {
         select = subSelect();
       } else {
         select = asSelect();

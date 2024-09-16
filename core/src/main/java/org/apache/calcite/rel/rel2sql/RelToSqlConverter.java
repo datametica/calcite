@@ -734,9 +734,45 @@ public class RelToSqlConverter extends SqlImplementor
     RelTrait relTrait = e.getTraitSet().getTrait(PivotRelTraitDef.instance);
     if (relTrait != null && relTrait instanceof PivotRelTrait) {
       if (((PivotRelTrait) relTrait).isPivotRel()) {
+        List<SqlNode> selectList = builder.select.getSelectList();
+        if (((PivotRelTrait) relTrait).getsubqueryPresentFlag()) {
+          List<SqlNode> updatedSelectList;
+
+          List<String> aggName = e.getAggCallList().stream()
+              .map(aggCall -> aggCall.name)
+              .collect(Collectors.toList());
+
+          updatedSelectList = builder.select.getSelectList().stream()
+              .filter(it -> {
+                if (it instanceof SqlBasicCall) {
+                  SqlBasicCall sqlBasicCall = (SqlBasicCall) it;
+                  boolean isAsCall = ((SqlBasicCall)sqlBasicCall.getOperandList().get(0)).getOperandList().size() > 1;
+                  if(!isAsCall){
+                    return true;
+                  }
+
+                  if(!((((SqlBasicCall)sqlBasicCall.getOperandList().get(0)).operand(1)) instanceof SqlBasicCall)){
+                    return true;
+                  }
+                  SqlBasicCall nestedCall = (((SqlBasicCall)sqlBasicCall.getOperandList().get(0)).operand(1));
+                  for(String s : aggName){
+                    if(s.startsWith(nestedCall.operand(0).toString().toLowerCase()) && s.toLowerCase().endsWith(nestedCall.operand(1).toString().toLowerCase().replaceAll("\'",""))){
+                      return false;
+                    }
+                  }
+                  String operand = sqlBasicCall.getOperandList().get(1).toString();
+                  return aggName.stream().noneMatch(operand::contains);
+                }
+                return true; // or false, depending on how you want to handle non-SqlBasicCall instances
+              })
+              .collect(Collectors.toList());
+
+          builder.setSelect(new SqlNodeList(updatedSelectList, POS));
+        }
+
         PivotRelToSqlUtil pivotRelToSqlUtil = new PivotRelToSqlUtil(POS);
         SqlNode select =
-            pivotRelToSqlUtil.buildSqlPivotNode(e, builder, builder.select.getSelectList());
+            pivotRelToSqlUtil.buildSqlPivotNode(e, builder, selectList);
         return result(select, ImmutableList.of(Clause.SELECT), e, null);
       }
     }
@@ -851,6 +887,11 @@ public class RelToSqlConverter extends SqlImplementor
    * @return true if selectList is required to be added in sqlNode
    */
   boolean isStarInAggregateRel(Aggregate e) {
+
+    PivotRelTrait relTrait = e.getTraitSet().getTrait(PivotRelTraitDef.instance);
+    if(relTrait != null && relTrait.getsubqueryPresentFlag()){
+      return true;
+    }
     if (e.getAggCallList().size() > 0) {
       return false;
     }
