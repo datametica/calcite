@@ -10563,6 +10563,36 @@ class RelToSqlConverterDMTest {
         isLinux(expectedBigQuery));
   }
 
+  @Test public void testJsonCheckFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode = builder.call(SqlLibraryOperators.JSON_CHECK,
+        builder.literal("{\"name\": \"Bob\", \"age\": \"thirty\"}"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json_data"))
+        .build();
+    final String expectedTeradataQuery = "SELECT JSON_CHECK('{\"name\": \"Bob\", \"age\": "
+        + "\"thirty\"}') AS \"json_data\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradataQuery));
+  }
+
+  @Test public void testJsonExtractFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode = builder.call(SqlLibraryOperators.JSON_EXTRACT,
+        builder.literal("{\"name\": \"Bob\", \"age\": \"thirty\"}"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json_data"))
+        .build();
+    final String expectedBqQuery = "SELECT "
+        + "JSON_EXTRACT('{\"name\": \"Bob\", \"age\": \"thirty\"}') AS json_data\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqQuery));
+  }
+
   @Test public void testToCurrentTimestampFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 =
