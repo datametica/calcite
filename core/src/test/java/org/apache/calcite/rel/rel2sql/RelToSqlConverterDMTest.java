@@ -4377,7 +4377,7 @@ class RelToSqlConverterDMTest {
   @Test public void testToNumberFunctionHandlingFloatingPoint() {
     String query = "select TO_NUMBER('-1.7892','9.9999')";
     final String expected = "SELECT CAST('-1.7892' AS FLOAT)";
-    final String expectedBigQuery = "SELECT CAST('-1.7892' AS FLOAT64)";
+    final String expectedBigQuery = "SELECT CAST('-1.7892' AS NUMERIC)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.7892', 38, 4)";
     sql(query)
         .withHive()
@@ -4540,7 +4540,7 @@ class RelToSqlConverterDMTest {
   @Test public void testToNumberFunctionHandlingFloatingPointWithD() {
     String query = "select TO_NUMBER('1.789','9D999')";
     final String expected = "SELECT CAST('1.789' AS FLOAT)";
-    final String expectedBigQuery = "SELECT CAST('1.789' AS FLOAT64)";
+    final String expectedBigQuery = "SELECT CAST('1.789' AS NUMERIC)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('1.789', 38, 3)";
     sql(query)
         .withHive()
@@ -4796,7 +4796,7 @@ class RelToSqlConverterDMTest {
   @Test public void testToNumberFunctionHandlingWithMIDecimal() {
     String query = "SELECT TO_NUMBER ('1.234-', '9.999MI')";
     final String expected = "SELECT CAST('-1.234' AS FLOAT)";
-    final String expectedBigQuery = "SELECT CAST('-1.234' AS FLOAT64)";
+    final String expectedBigQuery = "SELECT CAST('-1.234' AS NUMERIC)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-1.234', 38, 3)";
     sql(query)
         .withHive()
@@ -5009,7 +5009,7 @@ class RelToSqlConverterDMTest {
   @Test public void testToNumberFunctionHandlingWithGDS() {
     String query = "SELECT TO_NUMBER ('12,454.8-', '99G999D9S')";
     final String expected = "SELECT CAST('-12454.8' AS FLOAT)";
-    final String expectedBigQuery = "SELECT CAST('-12454.8' AS FLOAT64)";
+    final String expectedBigQuery = "SELECT CAST('-12454.8' AS NUMERIC)";
     final String expectedSnowFlake = "SELECT TO_NUMBER('-12454.8', 38, 1)";
     sql(query)
         .withHive()
