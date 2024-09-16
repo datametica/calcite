@@ -6154,7 +6154,7 @@ class RelToSqlConverterDMTest {
             + "FROM \"foodmart\".\"employee\"";
     final String expectedHive = "SELECT FLOOR(RAND() * (3 - 1 + 1)) + 1\n"
             + "FROM foodmart.employee";
-    final String expectedBQ = "SELECT FLOOR(RAND() * (3 - 1 + 1)) + 1\n"
+    final String expectedBQ = "SELECT CAST(RAND() * (3 - 1) AS INT64) + 1\n"
             + "FROM foodmart.employee";
     final String expectedSpark = "SELECT FLOOR(RAND() * (3 - 1 + 1)) + 1\n"
             + "FROM foodmart.employee";

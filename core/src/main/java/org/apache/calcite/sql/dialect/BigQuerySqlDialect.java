@@ -186,7 +186,6 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CEIL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EXTRACT;
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.FLOOR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IS_NULL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MINUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MOD;
@@ -2054,11 +2053,13 @@ public class BigQuerySqlDialect extends SqlDialect {
    */
   private void unparseRandomfunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     SqlCall randCall = RAND.createCall(SqlParserPos.ZERO);
-    SqlCall upperLimitCall = PLUS.createCall(SqlParserPos.ZERO, MINUS.createCall
-            (SqlParserPos.ZERO, call.operand(1), call.operand(0)), call.operand(0));
+    SqlCall upperLimitCall = MINUS.createCall(SqlParserPos.ZERO, call.operand(1), call.operand(0));
     SqlCall numberGenerator = MULTIPLY.createCall(SqlParserPos.ZERO, randCall, upperLimitCall);
-    SqlCall floorDoubleValue = FLOOR.createCall(SqlParserPos.ZERO, numberGenerator);
-    SqlCall plusNode = PLUS.createCall(SqlParserPos.ZERO, floorDoubleValue, call.operand(0));
+    SqlNode integerNode = getCastSpec(
+        new BasicSqlType(RelDataTypeSystem.DEFAULT,
+            SqlTypeName.INTEGER));
+    SqlCall castVlue = CAST.createCall(SqlParserPos.ZERO, numberGenerator, integerNode);
+    SqlCall plusNode = PLUS.createCall(SqlParserPos.ZERO, castVlue, call.operand(0));
     unparseCall(writer, plusNode, leftPrec, rightPrec);
   }
 
