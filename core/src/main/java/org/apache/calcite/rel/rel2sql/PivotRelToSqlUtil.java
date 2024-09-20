@@ -20,21 +20,17 @@ import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCharStringLiteral;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
 
 import java.util.ArrayList;
@@ -42,8 +38,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 
 /**
  * Class to identify Rel structure which is of UNPIVOT Type.
@@ -138,47 +132,14 @@ public class PivotRelToSqlUtil {
                   ((NlsString) ((SqlCharStringLiteral) secondOperand)
                   .getValue()).getValue(), pos);
             }
-            if (secondOperand instanceof SqlBasicCall && ((SqlBasicCall) secondOperand)
-                .getOperator().kind == SqlKind.AS) {
-              return secondOperand;
-            }
 
-            // Extract the type name from the first operand
-            SqlTypeName sqlTypeName =
-                ((SqlCharStringLiteral)
-                    ((SqlBasicCall)
-                        ((SqlCase)
-                            ((SqlBasicCall)
-                                ((SqlBasicCall) node)
-                                    .getOperandList().get(0))
-                                .operand(0))
-                            .getWhenOperands().get(0))
-                        .operand(0))
-                    .getTypeName();
-
-            SqlNode sqlType =
-                new SqlDataTypeSpec(new SqlBasicTypeNameSpec(sqlTypeName, SqlParserPos.ZERO),
-                    SqlParserPos.ZERO);
-
-            // Create a CAST operation using the extracted SQL type name
-            SqlNode castedNode = CAST.createCall(SqlParserPos.ZERO, secondOperand, sqlType);
-
-            return castedNode;
+            return secondOperand;
           })
           .forEach(extractedNode -> inColumnList.add(extractedNode));
     }
-    SqlNode axis = axisNode.get(0);
+
     for (int i = 0; i < aggregateColList.size(); i++) {
-      SqlNode secondOperand = aggregateColList.get(i);
-      if (((SqlCharStringLiteral) axis).getTypeName() != ((SqlNumericLiteral) secondOperand)
-          .getTypeName()) {
-        SqlNode sqlType =
-            new SqlDataTypeSpec(
-                new SqlBasicTypeNameSpec(((SqlLiteral) axis).getTypeName(),
-                SqlParserPos.ZERO),
-                SqlParserPos.ZERO);
-        inColumnList.add(CAST.createCall(SqlParserPos.ZERO, secondOperand, sqlType));
-      }
+      inColumnList.add(aggregateColList.get(i));
     }
 
     return inColumnList;
@@ -216,13 +177,19 @@ public class PivotRelToSqlUtil {
               .getOperandList().get(0)).getOperandList().get(0);
       SqlBasicCall caseConditionCall =
           (SqlBasicCall) pivotColumnAggregationCaseCall.getWhenOperands().get(0);
-      SqlCharStringLiteral aggregateCol = caseConditionCall.operand(0);
+      SqlIdentifier aggregateCol = caseConditionCall.operand(0);
       selectList.add(aggregateCol);
       return new SqlNodeList(selectList, pos);
     }
-    SqlCharStringLiteral aggregateCol =
+
+    SqlBasicCall axisNodeList =
         ((SqlBasicCall) pivotColumnAggregation.getOperandList().get(0)).operand(0);
-    selectList.add(aggregateCol);
+
+    if (axisNodeList.getOperator().kind == SqlKind.AS) {
+      selectList.add(axisNodeList.operand(1));
+    } else {
+      selectList.add(axisNodeList);
+    }
     return new SqlNodeList(selectList, pos);
 
   }

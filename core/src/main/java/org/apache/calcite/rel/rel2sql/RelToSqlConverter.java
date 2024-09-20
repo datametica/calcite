@@ -767,7 +767,9 @@ public class RelToSqlConverter extends SqlImplementor
                   SqlNode nestedCall =
                       ((SqlBasicCall) sqlBasicCall.getOperandList().get(0)).operand(1);
                   for (String s : aggName) {
-                    if (s.startsWith(nestedCall.toString().toLowerCase())) {
+                    if (s.replaceAll("'", "").startsWith(
+                        nestedCall.toString().replaceAll("'",
+                        "").toLowerCase())) {
                       aggregateColList.add(nestedCall);
                       return false;
                     }
