@@ -11846,10 +11846,10 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedSql));
   }
 
-  @Test public void testFloorFunction() {
+  @Test public void testFloorFunctionForSnowflake() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 =
-        builder.call(SqlLibraryOperators.FLOOR, builder.literal("2009.34343"));
+        builder.call(SqlLibraryOperators.SNOWFLAKE_FLOOR, builder.literal("2009.34343"));
     final RelNode root = builder
         .scan("EMP")
         .project(parseTSNode1)

@@ -3932,8 +3932,8 @@ public abstract class SqlLibraryOperators {
               OperandTypes.NUMERIC_NUMERIC)
           .withFunctionType(SqlFunctionCategory.NUMERIC);
 
-  @LibraryOperator(libraries = {BIG_QUERY})
-  public static final SqlFunction FLOOR =
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_FLOOR =
       new SqlFunction("FLOOR",
           SqlKind.FLOOR,
           ReturnTypes.ARG0,
