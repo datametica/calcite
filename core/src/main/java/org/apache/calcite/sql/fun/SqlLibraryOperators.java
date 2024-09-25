@@ -3931,4 +3931,15 @@ public abstract class SqlLibraryOperators {
               ReturnTypes.DOUBLE_NULLABLE,
               OperandTypes.NUMERIC_NUMERIC)
           .withFunctionType(SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction FLOOR =
+      new SqlFunction("FLOOR",
+          SqlKind.FLOOR,
+          ReturnTypes.ARG0,
+          null,
+          OperandTypes.or(
+              OperandTypes.NUMERIC_INTEGER,
+              OperandTypes.NUMERIC),
+          SqlFunctionCategory.NUMERIC);
 }
