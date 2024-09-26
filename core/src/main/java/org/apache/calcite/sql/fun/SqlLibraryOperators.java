@@ -3932,14 +3932,28 @@ public abstract class SqlLibraryOperators {
               OperandTypes.NUMERIC_NUMERIC)
           .withFunctionType(SqlFunctionCategory.NUMERIC);
 
+  /**
+   * Creates a new instance of {@link SqlFunction} representing the "SF_FLOOR" Snowflake function.
+   * This function overrides the default unparse method to print "FLOOR" instead of "SF_FLOOR".
+   */
   @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlFunction SNOWFLAKE_FLOOR =
-      new SqlFunction("FLOOR",
-          SqlKind.FLOOR,
+  public static final SqlFunction SF_FLOOR =
+      new SqlFunction("SF_FLOOR",
+          SqlKind.SF_FLOOR,
           ReturnTypes.ARG0,
           null,
           OperandTypes.or(
               OperandTypes.NUMERIC_INTEGER,
               OperandTypes.NUMERIC),
-          SqlFunctionCategory.NUMERIC);
+          SqlFunctionCategory.NUMERIC) {
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          writer.print("FLOOR");
+          final SqlWriter.Frame parenthesisFrame = writer.startList("(", ")");
+          for (SqlNode operand : call.getOperandList()) {
+            writer.sep(",");
+            operand.unparse(writer, leftPrec, rightPrec);
+          }
+          writer.endList(parenthesisFrame);
+        }
+      };
 }

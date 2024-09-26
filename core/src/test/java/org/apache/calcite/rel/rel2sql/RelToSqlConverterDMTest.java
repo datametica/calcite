@@ -11849,7 +11849,7 @@ class RelToSqlConverterDMTest {
   @Test public void testFloorFunctionForSnowflake() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 =
-        builder.call(SqlLibraryOperators.SNOWFLAKE_FLOOR, builder.literal("2009.34343"));
+        builder.call(SqlLibraryOperators.SF_FLOOR, builder.literal("2009.34343"));
     final RelNode root = builder
         .scan("EMP")
         .project(parseTSNode1)
