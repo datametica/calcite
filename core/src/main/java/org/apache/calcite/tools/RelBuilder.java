@@ -2612,11 +2612,13 @@ public class RelBuilder {
   }
 
   public static Set<Integer> getAllFields2(ImmutableBitSet groupSet,
-      List<AggregateCall> aggCallList, boolean checkSubquery, int expcnt) {
+      List<AggregateCall> aggCallList, boolean checkSubquery, int expectedSelectListCount) {
     final Set<Integer> allFields = new TreeSet<>();
     allFields.addAll(groupSet.asList());
     if (checkSubquery) {
-      for (int i = 0; i < expcnt; i++) {
+      //In case of pivot with subquery we need all columns of subquery and in-clause fields both
+      //hence we are adding all the fields to allFields.
+      for (int i = 0; i < expectedSelectListCount; i++) {
         allFields.add(i);
       }
 

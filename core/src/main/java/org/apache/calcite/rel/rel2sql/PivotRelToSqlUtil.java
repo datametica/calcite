@@ -23,7 +23,6 @@ import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlPivot;
@@ -31,7 +30,6 @@ import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.util.NlsString;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -60,41 +58,40 @@ public class PivotRelToSqlUtil {
    */
   public SqlNode buildSqlPivotNode(
       Aggregate e, SqlImplementor.Builder builder, List<SqlNode> selectColumnList,
-      List<SqlNode> aggregateColList) {
+      List<SqlNode> aggregateInfieldList) {
     //create query parameter
     Optional<RelTrait> pivotRelTrait =
         e.getTraitSet().stream().filter(relTrait -> relTrait instanceof PivotRelTrait).findAny();
-    boolean checksubquery = ((PivotRelTrait) pivotRelTrait.get()).getsubqueryPresentFlag();
+    boolean hasSubquery = ((PivotRelTrait) pivotRelTrait.get()).getsubqueryPresentFlag();
     String alias = ((PivotRelTrait) pivotRelTrait.get()).getPivotAlias();
     if (!alias.equals("false")) {
       pivotTableAlias = alias;
     }
     SqlNode query;
-    if (checksubquery) {
+    if (hasSubquery) {
       query = builder.select;
     } else {
       query = builder.select.getFrom();
     }
 
-    //create aggList parameter
-    SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, checksubquery);
-
     //create axisList parameter
-    SqlNodeList aggList = getAxisSqlNodes(e);
+    SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery);
+
+    //create aggreateColumnList parameter
+    SqlNodeList pivotAggreateColumn = getAggreateColumnNode(e);
 
     //create inValues List parameter
-    SqlNodeList inColumnList = getInValueNodes(selectColumnList, aggregateColList, axisNodeList);
+    SqlNodeList inColumnList = getInValueNodes(selectColumnList, aggregateInfieldList);
 
     //create Pivot Node
-
     return wrapSqlPivotInSqlSelectSqlNode(
-        builder, query, aggList, axisNodeList, inColumnList);
+        builder, query, pivotAggreateColumn, axisNodeList, inColumnList);
   }
 
   private SqlNode wrapSqlPivotInSqlSelectSqlNode(
-      SqlImplementor.Builder builder, SqlNode query, SqlNodeList aggList,
+      SqlImplementor.Builder builder, SqlNode query, SqlNodeList aggreateColumnList,
       SqlNodeList axisNodeList, SqlNodeList inColumnList) {
-    SqlPivot sqlPivot = new SqlPivot(pos, query, aggList, axisNodeList, inColumnList);
+    SqlPivot sqlPivot = new SqlPivot(pos, query, aggreateColumnList, axisNodeList, inColumnList);
     SqlNode sqlTableAlias = sqlPivot;
     if (pivotTableAlias.length() > 0) {
       sqlTableAlias =
@@ -109,12 +106,11 @@ public class PivotRelToSqlUtil {
     return select;
   }
 
-  private SqlNodeList getInValueNodes(List<SqlNode> selectList, List<SqlNode> aggregateColList,
-      SqlNodeList axisNode) {
+  private SqlNodeList getInValueNodes(List<SqlNode> selectNodeList, List<SqlNode> aggregateInfieldList) {
     SqlNodeList inColumnList = new SqlNodeList(pos);
 
-    if (aggregateColList.size() == 0) {
-      selectList.stream()
+    if (aggregateInfieldList.size() == 0) {
+      selectNodeList.stream()
           .filter(x -> !(x instanceof SqlIdentifier))
           .map(node -> {
             // Extract the specific node as per your expression
@@ -127,10 +123,11 @@ public class PivotRelToSqlUtil {
                     .getWhenOperands().get(0))
                 .operand(1);
 
-            if (secondOperand instanceof SqlCharStringLiteral) {
-              return SqlLiteral.createCharString(
-                  ((NlsString) ((SqlCharStringLiteral) secondOperand)
-                  .getValue()).getValue(), pos);
+            if (secondOperand.getKind() == SqlKind.AS
+                && ((SqlBasicCall) secondOperand).operand(1) instanceof SqlCharStringLiteral) {
+              return SqlStdOperatorTable.AS.createCall(pos,
+                  ((SqlBasicCall) secondOperand).operand(0),
+                  new SqlIdentifier(((SqlBasicCall) secondOperand).operand(1).toString().replaceAll("'", ""), pos));
             }
 
             return secondOperand;
@@ -138,14 +135,14 @@ public class PivotRelToSqlUtil {
           .forEach(extractedNode -> inColumnList.add(extractedNode));
     }
 
-    for (int i = 0; i < aggregateColList.size(); i++) {
-      inColumnList.add(aggregateColList.get(i));
+    for (int i = 0; i < aggregateInfieldList.size(); i++) {
+      inColumnList.add(aggregateInfieldList.get(i));
     }
 
     return inColumnList;
   }
 
-  private SqlNodeList getAxisSqlNodes(Aggregate e) {
+  private SqlNodeList getAggreateColumnNode(Aggregate e) {
     Set<SqlNode> aggArgList = new HashSet<>();
     Set<String> columnName = new HashSet<>();
     for (int i = 0; i < e.getAggCallList().size(); i++) {
@@ -158,18 +155,18 @@ public class PivotRelToSqlUtil {
     SqlNode aggFunctionNode =
         e.getAggCallList().get(0).getAggregation().createCall(pos, tempNode);
     aggArgList.add(aggFunctionNode);
-    SqlNodeList axesNodeList = new SqlNodeList(aggArgList, pos);
-    return axesNodeList;
+    SqlNodeList axisNodeList = new SqlNodeList(aggArgList, pos);
+    return axisNodeList;
   }
 
-  private SqlNodeList getAxisNodeList(List<SqlNode> selectColumnList, boolean checksubquery) {
+  private SqlNodeList getAxisNodeList(List<SqlNode> selectColumnList, boolean hasSubquery) {
 
-    final Set<SqlNode> selectList = new HashSet<>();
+    final Set<SqlNode> selectNodeList = new HashSet<>();
 
     SqlBasicCall pivotColumnAggregation =
         (SqlBasicCall) selectColumnList.get(selectColumnList.size() - 1);
 
-    if (!checksubquery) {
+    if (!hasSubquery) {
       SqlCase pivotColumnAggregationCaseCall =
           (SqlCase) (
               (SqlBasicCall) ((SqlBasicCall) selectColumnList
@@ -178,19 +175,25 @@ public class PivotRelToSqlUtil {
       SqlBasicCall caseConditionCall =
           (SqlBasicCall) pivotColumnAggregationCaseCall.getWhenOperands().get(0);
       SqlIdentifier aggregateCol = caseConditionCall.operand(0);
-      selectList.add(aggregateCol);
-      return new SqlNodeList(selectList, pos);
+      selectNodeList.add(aggregateCol);
+      return new SqlNodeList(selectNodeList, pos);
     }
 
     SqlBasicCall axisNodeList =
         ((SqlBasicCall) pivotColumnAggregation.getOperandList().get(0)).operand(0);
 
     if (axisNodeList.getOperator().kind == SqlKind.AS) {
-      selectList.add(axisNodeList.operand(1));
+      if (!(axisNodeList.operand(1) instanceof SqlIdentifier)) {
+        selectNodeList.add(
+            new SqlIdentifier(
+            axisNodeList.operand(1).toString().replaceAll("'", ""),
+            SqlParserPos.QUOTED_ZERO));
+      } else {
+        selectNodeList.add(axisNodeList);
+      }
     } else {
-      selectList.add(axisNodeList);
+      selectNodeList.add(new SqlIdentifier(axisNodeList.toString(), SqlParserPos.QUOTED_ZERO));
     }
-    return new SqlNodeList(selectList, pos);
-
+    return new SqlNodeList(selectNodeList, pos);
   }
 }

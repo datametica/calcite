@@ -26,7 +26,6 @@ import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelOptSamplingParameters;
 import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.SubQueryAliasTrait;
 import org.apache.calcite.plan.SubQueryAliasTraitDef;
 import org.apache.calcite.plan.TableAliasTrait;
@@ -731,71 +730,71 @@ public class RelToSqlConverter extends SqlImplementor
   public Result visit(Aggregate e) {
     final Builder builder =
         visitAggregate(e, e.getGroupSet().toList(), Clause.GROUP_BY);
-    RelTrait relTrait = e.getTraitSet().getTrait(PivotRelTraitDef.instance);
-    if (relTrait != null && relTrait instanceof PivotRelTrait) {
-      if (((PivotRelTrait) relTrait).isPivotRel()) {
-        List<SqlNode> selectList = builder.select.getSelectList();
-        List<SqlNode> aggregateColList = new ArrayList<>();
-        if (((PivotRelTrait) relTrait).getsubqueryPresentFlag()) {
-          List<SqlNode> updatedSelectList;
+    PivotRelTrait relTrait = e.getTraitSet().getTrait(PivotRelTraitDef.instance);
+    if (relTrait != null && relTrait.isPivotRel()) {
+      List<SqlNode> selectList = builder.select.getSelectList();
+      List<SqlNode> aggregateColList = new ArrayList<>();
 
-          List<String> aggName = e.getAggCallList().stream()
-              .map(aggCall -> aggCall.name)
-              .collect(Collectors.toList());
+      if (relTrait.getsubqueryPresentFlag()) {
+        List<String> aggNames = e.getAggCallList().stream()
+            .map(aggCall -> aggCall.name)
+            .collect(Collectors.toList());
 
-          updatedSelectList = builder.select.getSelectList().stream()
-              .filter(it -> {
-                if (it instanceof SqlBasicCall) {
-                  SqlBasicCall sqlBasicCall = (SqlBasicCall) it;
-                  if (sqlBasicCall.getOperandList().get(0) instanceof SqlIdentifier) {
-                    return true;
-                  }
-                  boolean isAsCall =
-                      ((SqlBasicCall) sqlBasicCall.getOperandList().get(0))
-                          .getOperandList().size() > 1;
-                  if (!isAsCall) {
-                    return true;
-                  }
-
-                  if (!(
-                      (((SqlBasicCall) sqlBasicCall.getOperandList().get(0))
-                      .operand(1)) instanceof SqlBasicCall)
-                      && ((SqlBasicCall) sqlBasicCall.getOperandList().get(0))
-                      .getOperator().kind != SqlKind.EQUALS) {
-                    return true;
-                  }
-                  SqlNode nestedCall =
-                      ((SqlBasicCall) sqlBasicCall.getOperandList().get(0)).operand(1);
-                  for (String s : aggName) {
-                    if (s.replaceAll("'", "").startsWith(
-                        nestedCall.toString().replaceAll("'",
-                        "").toLowerCase())) {
-                      aggregateColList.add(nestedCall);
-                      return false;
-                    }
-                  }
-                  String operand = sqlBasicCall.getOperandList().get(1).toString();
-                  return aggName.stream().noneMatch(operand::contains);
-                }
-                return true; // or false, depending on how you want to handle non-SqlBasicCall
-                // instances
-              })
-              .collect(Collectors.toList());
-
-          builder.setSelect(new SqlNodeList(updatedSelectList, POS));
-        }
-
-        PivotRelToSqlUtil pivotRelToSqlUtil = new PivotRelToSqlUtil(POS);
-        SqlNode select =
-            pivotRelToSqlUtil.buildSqlPivotNode(e, builder, selectList, aggregateColList);
-        return result(select, ImmutableList.of(Clause.SELECT), e, null);
+        List<SqlNode> updatedSelectList = filterSelectList(builder.select.getSelectList(), aggNames, aggregateColList);
+        builder.setSelect(new SqlNodeList(updatedSelectList, POS));
       }
+
+      PivotRelToSqlUtil pivotUtil = new PivotRelToSqlUtil(POS);
+      SqlNode pivotSelect = pivotUtil.buildSqlPivotNode(e, builder, selectList, aggregateColList);
+      return result(pivotSelect, ImmutableList.of(Clause.SELECT), e, null);
     }
     Result result = builder.result();
     if (CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(e.getTraitSet())) {
       return updateCTEResult(e, result);
     }
     return adjustResultWithSubQueryAlias(e, result);
+  }
+
+  private List<SqlNode> filterSelectList(List<SqlNode> selectList, List<String> aggNames,
+      List<SqlNode> aggregateColList) {
+    return selectList.stream()
+        .filter(sqlNode -> {
+          if (sqlNode instanceof SqlBasicCall) {
+            return isSqlNodeValid((SqlBasicCall) sqlNode, aggNames, aggregateColList);
+          }
+          return true;
+        })
+        .collect(Collectors.toList());
+  }
+
+  private boolean isSqlNodeValid(SqlBasicCall sqlBasicCall, List<String> aggNames,
+      List<SqlNode> aggregateColList) {
+    SqlNode firstOperand = sqlBasicCall.getOperandList().get(0);
+    if (firstOperand instanceof SqlIdentifier) {
+      return true;
+    }
+
+    SqlBasicCall firstBasicCall = (SqlBasicCall) firstOperand;
+    boolean isAsCall = firstBasicCall.getOperandList().size() > 1;
+    if (!isAsCall) {
+      return true;
+    }
+
+    SqlNode nestedCall = firstBasicCall.operand(1);
+    if (!(nestedCall instanceof SqlBasicCall) && firstBasicCall.getOperator().kind != SqlKind.EQUALS) {
+      return true;
+    }
+
+    String nestedCallString = nestedCall.toString().replaceAll("'", "").toLowerCase();
+    for (String aggName : aggNames) {
+      if (aggName.replaceAll("'", "").startsWith(nestedCallString)) {
+        aggregateColList.add(nestedCall);
+        return false;
+      }
+    }
+
+    String secondOperandString = sqlBasicCall.getOperandList().get(1).toString();
+    return aggNames.stream().noneMatch(secondOperandString::contains);
   }
 
   private Builder visitAggregate(Aggregate e, List<Integer> groupKeyList,

@@ -77,13 +77,8 @@ public class SqlCharStringLiteral extends SqlAbstractStringLiteral {
       String stringValue = nlsString.getValue();
       writer.literal(
           writer.getDialect().quoteStringLiteral(stringValue));
-    } else if (!writer.toString().contains("UNPIVOT") && writer.toString().contains("PIVOT")
-        && (writer.toString().endsWith("FOR")
-        || (writer.toString().contains("IN") && writer.toString().endsWith("AS")))) {
-      writer.literal(nlsString.asSql(true, true, writer.getDialect()).replaceAll("'", ""));
-    } else {
-      writer.literal(nlsString.asSql(true, true, writer.getDialect()));
     }
+    writer.literal(nlsString.asSql(true, true, writer.getDialect()));
   }
 
   @Override protected SqlAbstractStringLiteral concat1(List<SqlLiteral> literals) {
