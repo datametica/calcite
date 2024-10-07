@@ -78,14 +78,14 @@ public class PivotRelToSqlUtil {
     SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery);
 
     //create aggreateColumnList parameter
-    SqlNodeList pivotAggreateColumn = getAggreateColumnNode(e);
+    SqlNodeList pivotAggreateColumnList = getAggreateColumnNode(e);
 
     //create inValues List parameter
     SqlNodeList inColumnList = getInValueNodes(selectColumnList, aggregateInfieldList);
 
     //create Pivot Node
     return wrapSqlPivotInSqlSelectSqlNode(
-        builder, query, pivotAggreateColumn, axisNodeList, inColumnList);
+        builder, query, pivotAggreateColumnList, axisNodeList, inColumnList);
   }
 
   private SqlNode wrapSqlPivotInSqlSelectSqlNode(

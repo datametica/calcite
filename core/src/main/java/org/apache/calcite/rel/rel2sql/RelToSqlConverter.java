@@ -754,7 +754,8 @@ public class RelToSqlConverter extends SqlImplementor
     }
     return adjustResultWithSubQueryAlias(e, result);
   }
-
+  // We are filtering the aggregate columns from the selectlist so that only subquery column are left in select
+  // and storing all the IN clause values in aggregateColList
   private List<SqlNode> filterSelectList(List<SqlNode> selectList, List<String> aggNames,
       List<SqlNode> aggregateColList) {
     return selectList.stream()
