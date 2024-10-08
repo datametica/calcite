@@ -2492,8 +2492,9 @@ public class RelBuilder {
         return rewriteAggregateWithDuplicateGroupSets(groupSet, groupSetMultiset,
             aggCalls);
       }
-      Optional<RelTrait> pivotRelTrait = Optional.ofNullable(
-          stack.getFirst().rel.getTraitSet().getTrait(PivotRelTraitDef.instance));
+      Optional<RelTrait> pivotRelTrait =
+          Optional.ofNullable(stack.getFirst()
+              .rel.getTraitSet().getTrait(PivotRelTraitDef.instance));
       if (pivotRelTrait.isPresent()) {
         hasSubquery = ((PivotRelTrait) pivotRelTrait.get()).hasSubquery();
       }
