@@ -97,7 +97,7 @@ public class PivotRelToSqlUtil {
     SqlPivot sqlPivot =
         new SqlPivot(pos, query, pivotAggregateColumnList, axisNodeList, pivotInClauseValueNodes);
     SqlNode sqlTableAlias = sqlPivot;
-    if (!pivotTableAlias.isEmpty()) {
+    if (pivotTableAlias != null) {
       sqlTableAlias =
           SqlStdOperatorTable.AS.createCall(pos, sqlPivot,
               new SqlIdentifier(pivotTableAlias, pos));
