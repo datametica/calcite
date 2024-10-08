@@ -17,6 +17,7 @@
 package org.apache.calcite.rel.rel2sql;
 
 import org.apache.calcite.plan.PivotRelTrait;
+import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.sql.SqlBasicCall;
@@ -48,24 +49,25 @@ public class PivotRelToSqlUtil {
   PivotRelToSqlUtil(SqlParserPos pos) {
     this.pos = pos;
   }
+
   /**
-   *  Builds SqlPivotNode for Aggregate RelNode.
+   * Builds SqlPivotNode for Aggregate RelNode.
    *
-   * @param e The aggregate node with pivot relTrait flag
-   * @param builder The SQL builder
-   * @param selectColumnList  selectNodeList from Project node
-   * @return  Result with sqlPivotNode wrap in it.
+   * @param e                The aggregate node with pivot relTrait flag
+   * @param builder          The SQL builder
+   * @param selectColumnList selectNodeList from Project node
+   * @return Result with sqlPivotNode wrap in it.
    */
   public SqlNode buildSqlPivotNode(
       Aggregate e, SqlImplementor.Builder builder, List<SqlNode> selectColumnList,
-      List<SqlNode> aggregateInfieldList) {
+      List<SqlNode> aggregateInClauseFieldList) {
     //create query parameter
     Optional<RelTrait> pivotRelTrait =
-        e.getTraitSet().stream().filter(relTrait -> relTrait instanceof PivotRelTrait).findAny();
-    boolean hasSubquery = ((PivotRelTrait) pivotRelTrait.get()).getsubqueryPresentFlag();
-    String alias = ((PivotRelTrait) pivotRelTrait.get()).getPivotAlias();
-    if (!alias.equals("false")) {
-      pivotTableAlias = alias;
+        Optional.ofNullable(e.getTraitSet().getTrait(PivotRelTraitDef.instance));
+    boolean hasSubquery = false;
+    if (pivotRelTrait.isPresent()) {
+      hasSubquery = ((PivotRelTrait) pivotRelTrait.get()).hasSubquery();
+      pivotTableAlias = ((PivotRelTrait) pivotRelTrait.get()).getPivotAlias();
     }
     SqlNode query;
     if (hasSubquery) {
@@ -78,22 +80,24 @@ public class PivotRelToSqlUtil {
     SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery);
 
     //create aggreateColumnList parameter
-    SqlNodeList pivotAggreateColumnList = getAggreateColumnNode(e);
+    SqlNodeList pivotAggregateColumnList = getAggregateColumnNode(e);
 
     //create inValues List parameter
-    SqlNodeList inColumnList = getInValueNodes(selectColumnList, aggregateInfieldList);
+    SqlNodeList pivotInClauseValueNodes =
+        getPivotInClauseValueNodes(selectColumnList, aggregateInClauseFieldList);
 
     //create Pivot Node
     return wrapSqlPivotInSqlSelectSqlNode(
-        builder, query, pivotAggreateColumnList, axisNodeList, inColumnList);
+        builder, query, pivotAggregateColumnList, axisNodeList, pivotInClauseValueNodes);
   }
 
   private SqlNode wrapSqlPivotInSqlSelectSqlNode(
-      SqlImplementor.Builder builder, SqlNode query, SqlNodeList aggreateColumnList,
-      SqlNodeList axisNodeList, SqlNodeList inColumnList) {
-    SqlPivot sqlPivot = new SqlPivot(pos, query, aggreateColumnList, axisNodeList, inColumnList);
+      SqlImplementor.Builder builder, SqlNode query, SqlNodeList pivotAggregateColumnList,
+      SqlNodeList axisNodeList, SqlNodeList pivotInClauseValueNodes) {
+    SqlPivot sqlPivot =
+        new SqlPivot(pos, query, pivotAggregateColumnList, axisNodeList, pivotInClauseValueNodes);
     SqlNode sqlTableAlias = sqlPivot;
-    if (pivotTableAlias.length() > 0) {
+    if (pivotTableAlias != null) {
       sqlTableAlias =
           SqlStdOperatorTable.AS.createCall(pos, sqlPivot,
               new SqlIdentifier(pivotTableAlias, pos));
@@ -106,10 +110,11 @@ public class PivotRelToSqlUtil {
     return select;
   }
 
-  private SqlNodeList getInValueNodes(List<SqlNode> selectNodeList, List<SqlNode> aggregateInfieldList) {
+  private SqlNodeList getPivotInClauseValueNodes(List<SqlNode> selectNodeList,
+      List<SqlNode> aggregateInClauseFieldList) {
     SqlNodeList inColumnList = new SqlNodeList(pos);
 
-    if (aggregateInfieldList.size() == 0) {
+    if (aggregateInClauseFieldList.isEmpty()) {
       selectNodeList.stream()
           .filter(x -> !(x instanceof SqlIdentifier))
           .map(node -> {
@@ -132,17 +137,15 @@ public class PivotRelToSqlUtil {
 
             return secondOperand;
           })
-          .forEach(extractedNode -> inColumnList.add(extractedNode));
+          .forEach(inColumnList::add);
     }
 
-    for (int i = 0; i < aggregateInfieldList.size(); i++) {
-      inColumnList.add(aggregateInfieldList.get(i));
-    }
+    inColumnList.addAll(aggregateInClauseFieldList);
 
     return inColumnList;
   }
 
-  private SqlNodeList getAggreateColumnNode(Aggregate e) {
+  private SqlNodeList getAggregateColumnNode(Aggregate e) {
     Set<SqlNode> aggArgList = new HashSet<>();
     Set<String> columnName = new HashSet<>();
     for (int i = 0; i < e.getAggCallList().size(); i++) {
@@ -155,8 +158,7 @@ public class PivotRelToSqlUtil {
     SqlNode aggFunctionNode =
         e.getAggCallList().get(0).getAggregation().createCall(pos, tempNode);
     aggArgList.add(aggFunctionNode);
-    SqlNodeList axisNodeList = new SqlNodeList(aggArgList, pos);
-    return axisNodeList;
+    return new SqlNodeList(aggArgList, pos);
   }
 
   private SqlNodeList getAxisNodeList(List<SqlNode> selectColumnList, boolean hasSubquery) {
@@ -170,8 +172,8 @@ public class PivotRelToSqlUtil {
       SqlCase pivotColumnAggregationCaseCall =
           (SqlCase) (
               (SqlBasicCall) ((SqlBasicCall) selectColumnList
-              .get(selectColumnList.size() - 1))
-              .getOperandList().get(0)).getOperandList().get(0);
+                  .get(selectColumnList.size() - 1))
+                  .getOperandList().get(0)).getOperandList().get(0);
       SqlBasicCall caseConditionCall =
           (SqlBasicCall) pivotColumnAggregationCaseCall.getWhenOperands().get(0);
       SqlIdentifier aggregateCol = caseConditionCall.operand(0);
@@ -186,8 +188,8 @@ public class PivotRelToSqlUtil {
       if (!(axisNodeList.operand(1) instanceof SqlIdentifier)) {
         selectNodeList.add(
             new SqlIdentifier(
-            axisNodeList.operand(1).toString().replaceAll("'", ""),
-            SqlParserPos.QUOTED_ZERO));
+                axisNodeList.operand(1).toString().replaceAll("'", ""),
+                SqlParserPos.QUOTED_ZERO));
       } else {
         selectNodeList.add(axisNodeList);
       }

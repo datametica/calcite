@@ -17,17 +17,17 @@
 package org.apache.calcite.plan;
 
 /**
- * Pivot rel trait is use to identify if a given rel is a pivot rel or not.
+ * Pivot rel trait is used to identify if a given rel is a pivot rel or not.
  */
 
 public class PivotRelTrait implements RelTrait {
   private boolean isPivotRel;
-  private boolean subqueryPresent;
+  private boolean hasSubquery;
   private String pivotAlias;
 
-  public PivotRelTrait(boolean isPivotRel, boolean subqueryPresent, String pivotAlias) {
+  public PivotRelTrait(boolean isPivotRel, boolean hasSubquery, String pivotAlias) {
     this.isPivotRel = isPivotRel;
-    this.subqueryPresent = subqueryPresent;
+    this.hasSubquery = hasSubquery;
     this.pivotAlias = pivotAlias;
   }
 
@@ -35,8 +35,8 @@ public class PivotRelTrait implements RelTrait {
     return pivotAlias;
   }
 
-  public boolean getsubqueryPresentFlag() {
-    return subqueryPresent;
+  public boolean hasSubquery() {
+    return hasSubquery;
   }
 
   public final boolean isPivotRel() {

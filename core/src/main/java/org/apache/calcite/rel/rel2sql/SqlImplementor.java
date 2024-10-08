@@ -152,6 +152,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.IntFunction;
@@ -1935,10 +1936,11 @@ public abstract class SqlImplementor {
 
       SqlSelect select;
       Expressions.FluentList<Clause> clauseList = Expressions.list();
-      @Nullable PivotRelTrait def = rel.getTraitSet().getTrait(PivotRelTraitDef.instance);
-      boolean pivotFlag = def != null && def.isPivotRel();
+      Optional<PivotRelTrait> pivotRelTrait = Optional.ofNullable(rel.getTraitSet()
+          .getTrait(PivotRelTraitDef.instance));
+      boolean isPivotPresent = pivotRelTrait.isPresent() && pivotRelTrait.get().isPivotRel();
       // Additional condition than apache calcite
-      if (!pivotFlag && needNew || isCorrelated(rel)) {
+      if (!isPivotPresent && needNew || isCorrelated(rel)) {
         select = subSelect();
       } else {
         select = asSelect();

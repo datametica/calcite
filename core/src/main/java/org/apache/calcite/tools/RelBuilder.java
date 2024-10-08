@@ -22,6 +22,7 @@ import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.PivotRelTrait;
+import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPredicateList;
 import org.apache.calcite.plan.RelOptSamplingParameters;
@@ -158,6 +159,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -2469,7 +2471,7 @@ public class RelBuilder {
     }
 
     ImmutableList<ImmutableBitSet> groupSets;
-    boolean subqueryPresent = false;
+    boolean hasSubquery = false;
     if (groupKey.nodeLists != null) {
       final int sizeBefore = registrar.extraNodes.size();
       final List<ImmutableBitSet> groupSetList = new ArrayList<>();
@@ -2490,10 +2492,10 @@ public class RelBuilder {
         return rewriteAggregateWithDuplicateGroupSets(groupSet, groupSetMultiset,
             aggCalls);
       }
-      Optional<RelTrait> pivotRelTrait = stack.getFirst().rel.getTraitSet().stream()
-          .filter(it -> it instanceof PivotRelTrait).findFirst();
+      Optional<RelTrait> pivotRelTrait =
+          Optional.ofNullable(stack.getFirst().rel.getTraitSet().getTrait(PivotRelTraitDef.instance));
       if (pivotRelTrait.isPresent()) {
-        subqueryPresent = ((PivotRelTrait) pivotRelTrait.get()).getsubqueryPresentFlag();
+        hasSubquery = ((PivotRelTrait) pivotRelTrait.get()).hasSubquery();
       }
       groupSets = ImmutableList.copyOf(groupSetMultiset.elementSet());
       if (registrar.extraNodes.size() > sizeBefore) {
@@ -2530,7 +2532,7 @@ public class RelBuilder {
     if (config.pruneInputOfAggregate()
         && r instanceof Project) {
       final Set<Integer> fieldsUsed =
-          getAllFields2(groupSet, aggregateCalls, subqueryPresent, inFields.size());
+          getAllUsedProjectionFields(groupSet, aggregateCalls, hasSubquery, inFields.size());
       // Some parts of the system can't handle rows with zero fields, so
       // pretend that one field is used.
       if (fieldsUsed.isEmpty()) {
@@ -2611,16 +2613,13 @@ public class RelBuilder {
     return project(projects.transform((i, name) -> aliasMaybe(field(i), name)));
   }
 
-  public static Set<Integer> getAllFields2(ImmutableBitSet groupSet,
-      List<AggregateCall> aggCallList, boolean checkSubquery, int expectedSelectListCount) {
-    final Set<Integer> allFields = new TreeSet<>();
-    allFields.addAll(groupSet.asList());
-    if (checkSubquery) {
+  public static Set<Integer> getAllUsedProjectionFields(ImmutableBitSet groupSet,
+      List<AggregateCall> aggCallList, boolean subqueryPresent, int expectedSelectListCount) {
+    final Set<Integer> allFields = new TreeSet<>(groupSet.asList());
+    if (subqueryPresent) {
       //In case of pivot with subquery we need all columns of subquery and in-clause fields both
       //hence we are adding all the fields to allFields.
-      for (int i = 0; i < expectedSelectListCount; i++) {
-        allFields.add(i);
-      }
+      IntStream.range(0, expectedSelectListCount).forEach(allFields::add);
 
       return allFields;
     }
