@@ -79,7 +79,7 @@ public class PivotRelToSqlUtil {
     //create axisList parameter
     SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery);
 
-    //create aggreateColumnList parameter
+    //create pivotAggregateColumnList parameter
     SqlNodeList pivotAggregateColumnList = getAggregateColumnNode(e);
 
     //create inValues List parameter
@@ -97,7 +97,7 @@ public class PivotRelToSqlUtil {
     SqlPivot sqlPivot =
         new SqlPivot(pos, query, pivotAggregateColumnList, axisNodeList, pivotInClauseValueNodes);
     SqlNode sqlTableAlias = sqlPivot;
-    if (pivotTableAlias != null) {
+    if (!pivotTableAlias.isEmpty()) {
       sqlTableAlias =
           SqlStdOperatorTable.AS.createCall(pos, sqlPivot,
               new SqlIdentifier(pivotTableAlias, pos));

@@ -48,10 +48,10 @@ public class PivotRelTrait implements RelTrait {
   }
 
   @Override public boolean satisfies(RelTrait trait) {
-    throw new UnsupportedOperationException("Method not implemented for TableAliasTrait");
+    throw new UnsupportedOperationException("Method not implemented for PivotRelTrait");
   }
 
   @Override public void register(RelOptPlanner planner) {
-    throw new UnsupportedOperationException("Registration not supported for TableAliasTrait");
+    throw new UnsupportedOperationException("Registration not supported for PivotRelTrait");
   }
 }

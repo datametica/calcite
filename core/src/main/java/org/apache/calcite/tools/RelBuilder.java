@@ -2492,8 +2492,8 @@ public class RelBuilder {
         return rewriteAggregateWithDuplicateGroupSets(groupSet, groupSetMultiset,
             aggCalls);
       }
-      Optional<RelTrait> pivotRelTrait =
-          Optional.ofNullable(stack.getFirst().rel.getTraitSet().getTrait(PivotRelTraitDef.instance));
+      Optional<RelTrait> pivotRelTrait = Optional.ofNullable(
+          stack.getFirst().rel.getTraitSet().getTrait(PivotRelTraitDef.instance));
       if (pivotRelTrait.isPresent()) {
         hasSubquery = ((PivotRelTrait) pivotRelTrait.get()).hasSubquery();
       }
@@ -2620,7 +2620,6 @@ public class RelBuilder {
       //In case of pivot with subquery we need all columns of subquery and in-clause fields both
       //hence we are adding all the fields to allFields.
       IntStream.range(0, expectedSelectListCount).forEach(allFields::add);
-
       return allFields;
     }
     for (AggregateCall aggregateCall : aggCallList) {
