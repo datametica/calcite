@@ -163,7 +163,7 @@ public class PivotRelToSqlUtil {
 
   private SqlNodeList getAxisNodeList(List<SqlNode> selectColumnList, boolean hasSubquery) {
 
-    final Set<SqlNode> selectNodeList = new HashSet<>();
+    final Set<SqlNode> modifiedAxisNodeList = new HashSet<>();
 
     SqlBasicCall pivotColumnAggregation =
         (SqlBasicCall) selectColumnList.get(selectColumnList.size() - 1);
@@ -177,8 +177,8 @@ public class PivotRelToSqlUtil {
       SqlBasicCall caseConditionCall =
           (SqlBasicCall) pivotColumnAggregationCaseCall.getWhenOperands().get(0);
       SqlIdentifier aggregateCol = caseConditionCall.operand(0);
-      selectNodeList.add(aggregateCol);
-      return new SqlNodeList(selectNodeList, pos);
+      modifiedAxisNodeList.add(aggregateCol);
+      return new SqlNodeList(modifiedAxisNodeList, pos);
     }
 
     SqlBasicCall axisNodeList =
@@ -186,16 +186,16 @@ public class PivotRelToSqlUtil {
 
     if (axisNodeList.getOperator().kind == SqlKind.AS) {
       if (!(axisNodeList.operand(1) instanceof SqlIdentifier)) {
-        selectNodeList.add(
+        modifiedAxisNodeList.add(
             new SqlIdentifier(
                 axisNodeList.operand(1).toString().replaceAll("'", ""),
                 SqlParserPos.QUOTED_ZERO));
       } else {
-        selectNodeList.add(axisNodeList);
+        modifiedAxisNodeList.add(axisNodeList);
       }
     } else {
-      selectNodeList.add(new SqlIdentifier(axisNodeList.toString(), SqlParserPos.QUOTED_ZERO));
+      modifiedAxisNodeList.add(new SqlIdentifier(axisNodeList.toString(), SqlParserPos.QUOTED_ZERO));
     }
-    return new SqlNodeList(selectNodeList, pos);
+    return new SqlNodeList(modifiedAxisNodeList, pos);
   }
 }
