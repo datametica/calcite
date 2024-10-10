@@ -19,6 +19,7 @@ package org.apache.calcite.sql.fun;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlAbstractDateTimeLiteral;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlBasicFunction;
 import org.apache.calcite.sql.SqlBinaryOperator;
@@ -80,6 +81,7 @@ import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_BOOLEAN;
+import static org.apache.calcite.sql.type.OperandTypes.family;
 import static org.apache.calcite.util.Static.RESOURCE;
 
 import static java.util.Objects.requireNonNull;
@@ -530,6 +532,15 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction FLOOR_BIG_QUERY = new SqlFloorFunction(SqlKind.FLOOR)
       .withName("FLOOR_BIG_QUERY")
       .withReturnTypeInference(ReturnTypes.ARG0_EXCEPT_INTEGER_NULLABLE);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction PERIOD_CONSTRUCTOR = new SqlPeriodValueConstructor("PERIOD");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction PERIOD_INTERSECT =
+      SqlBasicFunction.create(SqlKind.PERIOD_INTERSECT,
+          ReturnTypes.ARG0_NULLABLE,
+          family(SqlTypeFamily.PERIOD, SqlTypeFamily.PERIOD));
 
   /**
    * The <code>TRANSLATE(<i>string_expr</i>, <i>search_chars</i>,
@@ -997,6 +1008,26 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction CURRENT_TIMESTAMP_WITH_LOCAL_TIME_ZONE =
       new SqlCurrentTimestampFunction("CURRENT_TIMESTAMP_LTZ",
           SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction RANGE_LITERAL =
+      new SqlFunction("RANGE", SqlKind.OTHER_FUNCTION, ReturnTypes.ARG0_NULLABLE,
+          null, OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME),
+          SqlFunctionCategory.SYSTEM) {
+
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          assert call.operandCount() >= 2;
+          writer.keyword(call.getOperator().getName() + "<"
+              + ((SqlAbstractDateTimeLiteral) call.operand(0)).getTypeName().getName() + ">");
+          writer.literal("'[");
+          writer.setNeedWhitespace(false);
+          writer.literal(((SqlAbstractDateTimeLiteral) call.operand(0)).toFormattedString());
+          writer.literal(",");
+          writer.literal(((SqlAbstractDateTimeLiteral) call.operand(1)).toFormattedString());
+          writer.setNeedWhitespace(false);
+          writer.literal(")'");
+        }
+      };
 
   /**
    * The REGEXP_EXTRACT(source_string, regex_pattern) returns the first substring in source_string
