@@ -12082,4 +12082,18 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
   }
+
+  @Test public void testRandomOracleFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode randomNode =
+        builder.call(SqlLibraryOperators.RANDOM);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(randomNode)
+        .build();
+    final String expectedSql =
+        "SELECT RANDOM() \"$f0\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedSql));
+  }
 }
