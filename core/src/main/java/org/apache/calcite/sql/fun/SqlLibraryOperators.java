@@ -4036,4 +4036,12 @@ public abstract class SqlLibraryOperators {
           writer.endList(parenthesisFrame);
         }
       };
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction RANDOM = new SqlFunction("RANDOM",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.DOUBLE,
+      null,
+      OperandTypes.NILADIC.or(OperandTypes.NUMERIC),
+      SqlFunctionCategory.NUMERIC);
 }
