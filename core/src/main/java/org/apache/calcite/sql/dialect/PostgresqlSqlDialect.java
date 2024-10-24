@@ -40,6 +40,7 @@ import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -105,6 +106,9 @@ public class PostgresqlSqlDialect extends SqlDialect {
     // stores values in a variable-length format
     case CLOB:
       castSpec = "text";
+      break;
+    case DATE:
+      castSpec = ((BasicSqlType) type).isDateTypeSupportsTimeParts() ? "TIMESTAMP(0)" : "DATE";
       break;
     case INTERVAL_DAY_SECOND:
       castSpec = "INTERVAL DAY TO SECOND";
