@@ -47,6 +47,7 @@ public class SqlUpdate extends SqlCall {
   SqlNodeList sourceExpressionList;
   @Nullable SqlNode condition;
   @Nullable SqlSelect sourceSelect;
+  @Nullable SqlWith sqlWith;
   @Nullable SqlIdentifier alias;
 
   //~ Constructors -----------------------------------------------------------
@@ -57,6 +58,7 @@ public class SqlUpdate extends SqlCall {
       SqlNodeList sourceExpressionList,
       @Nullable SqlNode condition,
       @Nullable SqlSelect sourceSelect,
+      @Nullable SqlWith sqlWith,
       @Nullable SqlIdentifier alias) {
     super(pos);
     this.targetTable = targetTable;
@@ -64,6 +66,7 @@ public class SqlUpdate extends SqlCall {
     this.sourceExpressionList = sourceExpressionList;
     this.condition = condition;
     this.sourceSelect = sourceSelect;
+    this.sqlWith = sqlWith;
     assert sourceExpressionList.size() == targetColumnList.size();
     this.alias = alias;
     init();
@@ -157,12 +160,20 @@ public class SqlUpdate extends SqlCall {
   public @Nullable SqlSelect getSourceSelect() {
     return sourceSelect;
   }
+  public @Nullable SqlWith getSqlWith() {
+    return sqlWith;
+  }
+
+  public void setSqlWith(SqlWith sqlWith) {
+    this.sqlWith = sqlWith;
+  }
 
   public void setSourceSelect(SqlSelect sourceSelect) {
     this.sourceSelect = sourceSelect;
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    sqlWith.unparse(writer, leftPrec, rightPrec);
     final SqlWriter.Frame frame =
         writer.startList(SqlWriter.FrameTypeEnum.SELECT, "UPDATE", "");
     final int operatorLeftPrec = getOperator().getLeftPrec();

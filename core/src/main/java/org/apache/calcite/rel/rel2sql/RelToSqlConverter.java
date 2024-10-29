@@ -1513,7 +1513,7 @@ public class RelToSqlConverter extends SqlImplementor
                   requireNonNull(modify.getSourceExpressionList(),
                       () -> "modify.getSourceExpressionList() is null for " + modify)),
               ((SqlSelect) input.node).getWhere(), input.asSelect(),
-              null);
+              null, null);
 
       return result(sqlUpdate, input.clauses, modify, null);
     }
@@ -1554,7 +1554,7 @@ public class RelToSqlConverter extends SqlImplementor
             new SqlUpdate(POS, sqlTargetTable,
                 identifierList(updateColumnList),
                 expressionList,
-                condition, null, null);
+                condition, null, null, null);
       }
 
       final RelDataType targetRowType = modify.getTable().getRowType();
