@@ -58,8 +58,10 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -1099,11 +1101,14 @@ public abstract class SqlTypeUtil {
     assert typeName != null;
 
     final SqlTypeNameSpec typeNameSpec;
+    Set<SqlTypeName> unsupportedTypes =
+        EnumSet.of(SqlTypeName.UNKNOWN,
+        SqlTypeName.GEOMETRY,
+        SqlTypeName.GEOGRAPHY,
+        SqlTypeName.INTERVAL,
+        SqlTypeName.TIMEUNIT);
     if (isAtomic(type) || isNull(type)
-        || type.getSqlTypeName() == SqlTypeName.UNKNOWN
-        || type.getSqlTypeName() == SqlTypeName.GEOMETRY
-        || type.getSqlTypeName() == SqlTypeName.GEOGRAPHY
-        || type.getSqlTypeName() == SqlTypeName.INTERVAL) {
+        || unsupportedTypes.contains(type.getSqlTypeName())) {
       int precision = typeName.allowsPrec() ? type.getPrecision() : -1;
       // fix up the precision.
       if (maxPrecision > 0 && precision > maxPrecision) {

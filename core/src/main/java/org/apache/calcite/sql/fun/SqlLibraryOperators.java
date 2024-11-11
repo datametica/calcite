@@ -3476,15 +3476,15 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.family(SqlTypeFamily.INTEGER), SqlFunctionCategory.SYSTEM);
 
-//  @LibraryOperator(libraries = {SPARK, BIG_QUERY})
-//  public static final SqlFunction DATE_TRUNC =
-//      new SqlFunction(
-//          "DATE_TRUNC",
-//          SqlKind.OTHER_FUNCTION,
-//          ReturnTypes.TIMESTAMP,
-//          null,
-//          OperandTypes.family(SqlTypeFamily.STRING,
-//              SqlTypeFamily.TIMESTAMP), SqlFunctionCategory.SYSTEM);
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction DATETRUNC =
+      new SqlFunction(
+          "DATETRUNC",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP,
+          null,
+          OperandTypes.family(SqlTypeFamily.TIMEUNIT,
+              SqlTypeFamily.TIMESTAMP), SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction RAISE_ERROR =
