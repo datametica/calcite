@@ -80,6 +80,7 @@ public enum SqlTypeFamily implements RelDataTypeFamily {
   GEO,
   FUNCTION,
   VARIANT,
+  TIMEUNIT,
   /** Like ANY, but do not even validate the operand. It may not be an
    * expression. */
   IGNORE;
@@ -225,6 +226,8 @@ public enum SqlTypeFamily implements RelDataTypeFamily {
       return ImmutableList.of(SqlTypeName.FUNCTION);
     case VARIANT:
       return ImmutableList.of(SqlTypeName.VARIANT);
+    case TIMEUNIT:
+      return ImmutableList.of(SqlTypeName.TIMEUNIT);
     default:
       throw new IllegalArgumentException();
     }

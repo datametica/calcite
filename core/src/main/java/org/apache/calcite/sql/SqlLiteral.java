@@ -237,6 +237,8 @@ public class SqlLiteral extends SqlNode {
       return true;
     case UNKNOWN:
       return value instanceof String;
+    case TIMEUNIT:
+      return value instanceof TimeUnit;
     case INTEGER: // not allowed -- use Decimal
     case VARCHAR: // not allowed -- use Char
     case VARBINARY: // not allowed -- use Binary
@@ -636,6 +638,23 @@ public class SqlLiteral extends SqlNode {
    */
   public static SqlLiteral createSymbol(@Nullable Enum<?> o, SqlParserPos pos) {
     return new SqlLiteral(o, SqlTypeName.SYMBOL, pos);
+  }
+
+  /**
+   * Creates a `SqlLiteral` of type `TIMEUNIT` using the specified enum value and parser position.
+   * <p>
+   * This static method constructs a `SqlLiteral` representing a time unit, such as YEAR, MONTH,
+   * or DAY, based on the provided enum value `o`. The literal is assigned a SQL type of `TIMEUNIT`
+   * and is associated with the specified `SqlParserPos` position, which tracks its location in
+   * the parsed SQL query.
+   *
+   * @param o   an optional `Enum` value representing the time unit to be used in the literal
+   *            (may be null)
+   * @param pos the parser position (`SqlParserPos`) where this literal appears in the SQL query
+   * @return a `SqlLiteral` of type `TIMEUNIT` with the specified enum value and position
+   */
+  public static SqlLiteral createTimeUnit(@Nullable Enum<?> o, SqlParserPos pos) {
+    return new SqlLiteral(o, SqlTypeName.TIMEUNIT, pos);
   }
 
   /**

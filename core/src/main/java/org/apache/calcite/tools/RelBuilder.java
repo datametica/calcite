@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.tools;
 
+import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Experimental;
 import org.apache.calcite.plan.Context;
@@ -488,6 +489,8 @@ public class RelBuilder {
           BigDecimal.valueOf(((Number) value).longValue()));
     } else if (value instanceof String) {
       return rexBuilder.makeLiteral((String) value);
+    } else if (value instanceof TimeUnit) {
+      return timeUnit(value);
     } else if (value instanceof Enum) {
       return rexBuilder.makeLiteral(value,
           getTypeFactory().createSqlType(SqlTypeName.SYMBOL));
@@ -497,6 +500,22 @@ public class RelBuilder {
       throw new IllegalArgumentException("cannot convert " + value
           + " (" + value.getClass() + ") to a constant");
     }
+  }
+
+  /**
+   * Creates a literal of type TIMEUNIT based on the provided value.
+   *
+   * This method generates a `RexLiteral` representing a time unit
+   * (e.g., YEAR, MONTH, DAY, etc.) using the specified `value`.
+   * It utilizes the `RexBuilder` from the cluster to construct
+   * the literal, and the type factory to define the `TIMEUNIT` SQL type.
+   *
+   * @param value the value representing the time unit to be used in the literal
+   * @return a `RexLiteral` of type `TIMEUNIT` with the specified value
+   */
+  public RexLiteral timeUnit(Object value) {
+    return cluster.getRexBuilder().makeLiteral(value,
+        getTypeFactory().createSqlType(SqlTypeName.TIMEUNIT));
   }
 
   public RexNode makeArrayLiteral(Object value) {

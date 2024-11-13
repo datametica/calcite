@@ -1747,6 +1747,8 @@ public class RexBuilder {
       return makeLiteral(value, guessType(value), allowCast);
     case JSON:
       return makeLiteral(value, guessType(value));
+    case TIMEUNIT:
+      return makeTimeUnitLiteral((Comparable) value);
     default:
       throw new IllegalArgumentException(
           "Cannot create literal for type '" + sqlTypeName + "'");
@@ -1930,5 +1932,16 @@ public class RexBuilder {
       return s;
     }
     return new ByteString(Arrays.copyOf(s.getBytes(), length));
+  }
+
+  /**
+   * Constructs a `RexLiteral` of type `TIMEUNIT` using the specified value.
+   *
+   * @param value a `Comparable` representing the value of the time unit to use in the literal
+   * @return a `RexLiteral` of type `TIMEUNIT` with the specified value
+   */
+  private RexLiteral makeTimeUnitLiteral(Comparable value) {
+    RelDataType type = typeFactory.createSqlType(SqlTypeName.TIMEUNIT);
+    return new RexLiteral(value, type, SqlTypeName.TIMEUNIT);
   }
 }

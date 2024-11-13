@@ -54,6 +54,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 import org.slf4j.Logger;
@@ -1547,6 +1548,10 @@ public class SqlDialect {
 
   public SqlOperator getOperatorForOtherFunc(RexCall call) {
     return call.getOperator();
+  }
+
+  public SqlNode getTimeUnitLiteral(@NonNull TimeUnit timeUnit, SqlParserPos pos) {
+    return SqlLiteral.createTimeUnit(timeUnit, pos);
   }
 
   /**

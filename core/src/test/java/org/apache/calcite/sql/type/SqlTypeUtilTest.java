@@ -172,6 +172,9 @@ class SqlTypeUtilTest {
         (SqlBasicTypeNameSpec) convertTypeToSpec(f.sqlGeography).getTypeNameSpec();
     assertThat(geographySpec.getTypeName().getSimple(), is("GEOGRAPHY"));
 
+    SqlBasicTypeNameSpec timeunitSpec =
+        (SqlBasicTypeNameSpec) convertTypeToSpec(f.sqlTimeUnit).getTypeNameSpec();
+    assertThat(timeunitSpec.getTypeName().getSimple(), is("TIMEUNIT"));
 
     SqlBasicTypeNameSpec basicSpec =
         (SqlBasicTypeNameSpec) convertTypeToSpec(f.sqlBigInt).getTypeNameSpec();

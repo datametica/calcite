@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rel.rel2sql;
 
+import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.config.CalciteSystemProperty;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -1623,6 +1624,8 @@ public abstract class SqlImplementor {
       }
 
       return dialect.getTimestampLiteral(castNonNull(timestampString), precision, POS);
+    case TIMEUNIT:
+      return dialect.getTimeUnitLiteral(castNonNull(literal.getValueAs(TimeUnit.class)), POS);
     case BINARY:
       return SqlLiteral.createBinaryString(castNonNull(literal.getValueAs(byte[].class)), POS);
     case ANY:

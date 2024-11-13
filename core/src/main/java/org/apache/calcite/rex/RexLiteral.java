@@ -391,6 +391,8 @@ public class RexLiteral extends RexNode {
       return value instanceof Clob;
     case GEOMETRY:
       return value instanceof Geometry;
+    case TIMEUNIT:
+      return value instanceof TimeUnit;
     case ANY:
     case VARIANT:
       // Literal of type ANY is not legal. "CAST(2 AS ANY)" remains
@@ -743,6 +745,9 @@ public class RexLiteral extends RexNode {
     case GEOMETRY:
       final String wkt = SpatialTypeFunctions.ST_AsWKT((Geometry) castNonNull(value));
       sb.append(wkt);
+      break;
+    case TIMEUNIT:
+      sb.append(value);
       break;
     default:
       assert valueMatchesType(value, typeName, true);
