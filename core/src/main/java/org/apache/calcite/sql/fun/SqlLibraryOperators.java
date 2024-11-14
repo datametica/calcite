@@ -1619,14 +1619,13 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_2000_NULLABLE, null,
           OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction JSON_EXTRACT_ARRAY =
       new SqlFunction("JSON_EXTRACT_ARRAY",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.VARCHAR.andThen(SqlTypeTransforms.TO_ARRAY),
           null,
-          OperandTypes.or(
-              OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING),
-              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.STRING)),
+          OperandTypes.STRING_OPTIONAL_STRING,
           SqlFunctionCategory.SYSTEM);
 
   /** The "ARRAY_DISTINCT(array)" function. */
