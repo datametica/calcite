@@ -34,6 +34,7 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.BitString;
 import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.DateTimeString;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TimeString;
@@ -894,6 +895,14 @@ public class SqlLiteral extends SqlNode {
       int precision,
       SqlParserPos pos) {
     return new SqlTimestampLiteral(ts, precision, typeName, pos);
+  }
+
+  /** Creates a DATETIME literal. */
+  public static SqlDateTimeLiteral createDateTime(
+      DateTimeString dt,
+      int precision,
+      SqlParserPos pos) {
+    return new SqlDateTimeLiteral(dt, precision, SqlTypeName.DATETIME, pos);
   }
 
   public static SqlTimestampWithTimezoneLiteral createTimestampWithTimeZone(

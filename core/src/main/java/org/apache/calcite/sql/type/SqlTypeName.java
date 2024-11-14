@@ -63,6 +63,7 @@ public enum SqlTypeName {
   REAL(PrecScale.NO_NO, false, Types.REAL, SqlTypeFamily.NUMERIC),
   DOUBLE(PrecScale.NO_NO, false, Types.DOUBLE, SqlTypeFamily.NUMERIC),
   DATE(PrecScale.NO_NO, false, Types.DATE, SqlTypeFamily.DATE),
+  DATETIME(PrecScale.NO_NO, false, Types.DATE, SqlTypeFamily.DATETIME),
   TIME(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.TIME,
       SqlTypeFamily.TIME),
   TIME_WITH_LOCAL_TIME_ZONE(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.OTHER,
@@ -204,7 +205,7 @@ public enum SqlTypeName {
       ImmutableList.of(GEOMETRY);
 
   public static final List<SqlTypeName> DATETIME_TYPES =
-      ImmutableList.of(DATE, TIME, TIME_WITH_LOCAL_TIME_ZONE,
+      ImmutableList.of(DATE, TIME, TIME_WITH_LOCAL_TIME_ZONE, DATETIME,
           TIMESTAMP, TIMESTAMP_WITH_LOCAL_TIME_ZONE, TIMESTAMP_WITH_TIME_ZONE);
 
   public static final Set<SqlTypeName> YEAR_INTERVAL_TYPES =

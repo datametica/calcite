@@ -36,6 +36,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.CompositeList;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.DateTimeString;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Sarg;
@@ -341,6 +342,8 @@ public class RexLiteral extends RexNode {
       return value instanceof TimeString;
     case TIMESTAMP:
       return value instanceof TimestampString;
+    case DATETIME:
+      return value instanceof DateTimeString;
     case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       return value instanceof TimestampString;
     case TIMESTAMP_WITH_TIME_ZONE:
@@ -713,6 +716,10 @@ public class RexLiteral extends RexNode {
     case TIMESTAMP:
     case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       assert value instanceof TimestampString;
+      sb.append(value.toString());
+      break;
+    case DATETIME:
+      assert value instanceof DateTimeString;
       sb.append(value.toString());
       break;
     case INTERVAL_YEAR:
@@ -1121,6 +1128,15 @@ public class RexLiteral extends RexNode {
       } else if (clazz == Calendar.class) {
         // Note: Nanos are ignored
         return clazz.cast(((TimestampString) value).toCalendar());
+      }
+      break;
+    case DATETIME:
+      if (clazz == Long.class) {
+        // Milliseconds since 1970-01-01 00:00:00
+        return clazz.cast(((DateTimeString) value).getMillisSinceEpoch());
+      } else if (clazz == Calendar.class) {
+        // Note: Nanos are ignored
+        return clazz.cast(((DateTimeString) value).toCalendar());
       }
       break;
     case TIMESTAMP_WITH_LOCAL_TIME_ZONE:

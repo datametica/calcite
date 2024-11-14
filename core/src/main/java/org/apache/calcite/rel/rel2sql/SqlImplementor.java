@@ -118,6 +118,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.DateTimeString;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.RangeSets;
@@ -1623,6 +1624,11 @@ public abstract class SqlImplementor {
       }
 
       return dialect.getTimestampLiteral(castNonNull(timestampString), precision, POS);
+    case DATETIME:
+      DateTimeString dateTimeString = literal.getValueAs(DateTimeString.class);
+      int dtPrecision = literal.getType().getPrecision();
+
+      return dialect.getDateTimeLiteral(castNonNull(dateTimeString), dtPrecision, POS);
     case BINARY:
       return SqlLiteral.createBinaryString(castNonNull(literal.getValueAs(byte[].class)), POS);
     case ANY:
