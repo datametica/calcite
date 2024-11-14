@@ -12155,4 +12155,21 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
   }
+
+  @Test public void testJsonExtractArrayFunctionForSnowflake() {
+    String jsonString = "{\"numbers\": [1, 2, 3]}";
+    String jsonPath = "$.numbers";
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 =
+        builder.call(SqlLibraryOperators.JSON_EXTRACT_ARRAY, builder.literal(jsonString), builder.literal(jsonPath));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(parseTSNode1)
+        .build();
+    final String expectedSql =
+        "SELECT JSON_EXTRACT_ARRAY('{\"numbers\": [1, 2, 3]}', '$.numbers') AS "
+            + "\"$f0\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
 }
