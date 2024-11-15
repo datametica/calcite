@@ -42,6 +42,7 @@ class SqlTypeFixture {
   final RelDataType sqlFloat = type(SqlTypeName.FLOAT, false);
   final RelDataType sqlTimestampPrec0 = type(SqlTypeName.TIMESTAMP, 0);
   final RelDataType sqlTimestampPrec3 = type(SqlTypeName.TIMESTAMP, 3);
+  final RelDataType sqlDateTime = type(SqlTypeName.DATETIME, false);
   final RelDataType sqlGeometry = type(SqlTypeName.GEOMETRY, false);
   final RelDataType sqlGeography = type(SqlTypeName.GEOGRAPHY, false);
   final RelDataType arrayFloat =

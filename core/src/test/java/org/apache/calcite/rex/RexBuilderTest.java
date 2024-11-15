@@ -36,7 +36,6 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.test.RexImplicationCheckerFixtures;
 import org.apache.calcite.util.DateString;
-import org.apache.calcite.util.DateTimeString;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TimeString;
@@ -307,93 +306,6 @@ class RexBuilderTest {
     // TimestampString.fromCalendarFields
     c.set(Calendar.YEAR, 1969);
     final TimestampString ts10 = TimestampString.fromCalendarFields(c);
-    assertThat(ts10, hasToString("1969-02-26 19:06:00.987"));
-    assertThat(ts10.getMillisSinceEpoch(), is(c.getTimeInMillis()));
-  }
-
-  @Test void testDateTimeString() {
-    final DateTimeString ts = new DateTimeString(1969, 7, 21, 2, 56, 15);
-    assertThat(ts, hasToString("1969-07-21 02:56:15"));
-    assertThat(ts.round(1), is(ts));
-
-    // Now with milliseconds
-    final DateTimeString ts2 = ts.withMillis(56);
-    assertThat(ts2, hasToString("1969-07-21 02:56:15.056"));
-
-    // toString
-    assertThat(ts2.round(1), hasToString("1969-07-21 02:56:15"));
-    assertThat(ts2.round(2), hasToString("1969-07-21 02:56:15.05"));
-    assertThat(ts2.round(3), hasToString("1969-07-21 02:56:15.056"));
-    assertThat(ts2.round(4), hasToString("1969-07-21 02:56:15.056"));
-
-    assertThat(ts2.toString(6), is("1969-07-21 02:56:15.056000"));
-    assertThat(ts2.toString(1), is("1969-07-21 02:56:15.0"));
-    assertThat(ts2.toString(0), is("1969-07-21 02:56:15"));
-
-    assertThat(ts2.round(0), hasToString("1969-07-21 02:56:15"));
-    assertThat(ts2.round(0).toString(0), is("1969-07-21 02:56:15"));
-    assertThat(ts2.round(0).toString(1), is("1969-07-21 02:56:15.0"));
-    assertThat(ts2.round(0).toString(2), is("1969-07-21 02:56:15.00"));
-
-    // Now with milliseconds ending in zero (3 equivalent strings).
-    final DateTimeString ts3 = ts.withMillis(10);
-    assertThat(ts3, hasToString("1969-07-21 02:56:15.01"));
-
-    final DateTimeString ts3b = new DateTimeString("1969-07-21 02:56:15.01");
-    assertThat(ts3b, hasToString("1969-07-21 02:56:15.01"));
-    assertThat(ts3b, is(ts3));
-
-    final DateTimeString ts3c = new DateTimeString("1969-07-21 02:56:15.010");
-    assertThat(ts3c, hasToString("1969-07-21 02:56:15.01"));
-    assertThat(ts3c, is(ts3));
-
-    // Now with nanoseconds
-    final DateTimeString ts4 = ts.withNanos(56);
-    assertThat(ts4, hasToString("1969-07-21 02:56:15.000000056"));
-
-    // Check rounding; uses RoundingMode.DOWN
-    final DateTimeString ts5 = ts.withNanos(2345670);
-    assertThat(ts5, hasToString("1969-07-21 02:56:15.00234567"));
-    assertThat(ts5.round(0), hasToString("1969-07-21 02:56:15"));
-    assertThat(ts5.round(1), hasToString("1969-07-21 02:56:15"));
-    assertThat(ts5.round(2), hasToString("1969-07-21 02:56:15"));
-    assertThat(ts5.round(3), hasToString("1969-07-21 02:56:15.002"));
-    assertThat(ts5.round(4), hasToString("1969-07-21 02:56:15.0023"));
-    assertThat(ts5.round(5), hasToString("1969-07-21 02:56:15.00234"));
-    assertThat(ts5.round(6), hasToString("1969-07-21 02:56:15.002345"));
-    assertThat(ts5.round(600), hasToString("1969-07-21 02:56:15.00234567"));
-
-    // Now with a very long fraction
-    final DateTimeString ts6 = ts.withFraction("102030405060708090102");
-    assertThat(ts6, hasToString("1969-07-21 02:56:15.102030405060708090102"));
-
-    // From milliseconds
-    final DateTimeString ts7 =
-        DateTimeString.fromMillisSinceEpoch(1456513560123L);
-    assertThat(ts7, hasToString("2016-02-26 19:06:00.123"));
-
-    final DateTimeString ts8 =
-        DateTimeString.fromMillisSinceEpoch(1456513560120L);
-    assertThat(ts8, hasToString("2016-02-26 19:06:00.12"));
-
-    final DateTimeString ts9 = ts8.withFraction("9876543210");
-    assertThat(ts9, hasToString("2016-02-26 19:06:00.987654321"));
-
-    // DateTimeString.toCalendar
-    final Calendar c = ts9.toCalendar();
-    assertThat(c.get(Calendar.ERA), is(1)); // CE
-    assertThat(c.get(Calendar.YEAR), is(2016));
-    assertThat(c.get(Calendar.MONTH), is(1)); // February
-    assertThat(c.get(Calendar.DATE), is(26));
-    assertThat(c.get(Calendar.HOUR_OF_DAY), is(19));
-    assertThat(c.get(Calendar.MINUTE), is(6));
-    assertThat(c.get(Calendar.SECOND), is(0));
-    assertThat(c.get(Calendar.MILLISECOND), is(987)); // RoundingMode.DOWN
-    assertThat(ts9.getMillisSinceEpoch(), is(c.getTimeInMillis()));
-
-    // DateTimeString.fromCalendarFields
-    c.set(Calendar.YEAR, 1969);
-    final DateTimeString ts10 = DateTimeString.fromCalendarFields(c);
     assertThat(ts10, hasToString("1969-02-26 19:06:00.987"));
     assertThat(ts10.getMillisSinceEpoch(), is(c.getTimeInMillis()));
   }

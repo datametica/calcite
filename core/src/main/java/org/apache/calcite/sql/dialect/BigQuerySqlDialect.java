@@ -68,7 +68,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
-import org.apache.calcite.util.DateTimeString;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.ToNumberUtils;
@@ -642,14 +641,6 @@ public class BigQuerySqlDialect extends SqlDialect {
     SqlNode timestampNode =
         getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
     return CAST.createCall(pos, SqlLiteral.createCharString(timestampString.toString(), pos),
-        timestampNode);
-  }
-
-  @Override public SqlNode getDateTimeLiteral(
-      DateTimeString dateTimeString, int precision, SqlParserPos pos) {
-    SqlNode timestampNode =
-        getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.TIMESTAMP));
-    return CAST.createCall(pos, SqlLiteral.createCharString(dateTimeString.toString(), pos),
         timestampNode);
   }
 
@@ -2171,11 +2162,11 @@ public class BigQuerySqlDialect extends SqlDialect {
   @Override protected String getDateTimeFormatString(
       String standardDateFormat, Map<SqlDateTimeFormat, String> dateTimeFormatMap) {
     String dateTimeFormat = super.getDateTimeFormatString(standardDateFormat, dateTimeFormatMap);
-    return dateTimeFormat;
-/*        .replace("%Y-%m-%d", "%F")
+    return dateTimeFormat
+        .replace("%Y-%m-%d", "%F")
         .replace("'", "")
         .replace("%S.", "%E")
-        .replace("%E.*S", "%E*S");*/
+        .replace("%E.*S", "%E*S");
   }
 
   /**

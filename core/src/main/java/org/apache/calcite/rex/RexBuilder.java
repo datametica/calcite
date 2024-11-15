@@ -45,7 +45,6 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.DateString;
-import org.apache.calcite.util.DateTimeString;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Sarg;
@@ -1019,6 +1018,7 @@ public class RexBuilder {
       }
       o = ((TimeString) o).round(p);
       break;
+    case DATETIME:
     case TIMESTAMP:
     case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       assert o instanceof TimestampString;
@@ -1027,9 +1027,6 @@ public class RexBuilder {
         p = 0;
       }
       o = ((TimestampString) o).round(p);
-      break;
-    case DATETIME:
-      assert o instanceof DateTimeString;
       break;
     default:
       break;
@@ -1297,16 +1294,6 @@ public class RexBuilder {
         requireNonNull(timestamp, "timestamp"),
         typeFactory.createSqlType(SqlTypeName.TIMESTAMP, precision),
         SqlTypeName.TIMESTAMP);
-  }
-
-  /**
-   * Creates a DateTime literal.
-   */
-  public RexLiteral makeDateTimeLiteral(DateTimeString timestamp) {
-    return makeLiteral(
-        requireNonNull(timestamp, "timestamp"),
-        typeFactory.createSqlType(SqlTypeName.DATETIME),
-        SqlTypeName.DATETIME);
   }
 
   /**
