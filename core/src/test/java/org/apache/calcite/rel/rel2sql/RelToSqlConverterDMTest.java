@@ -12260,7 +12260,7 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedQuery));
   }
 
-  @Test public void testJsonExtractArrayFunctionForSnowflake() {
+  @Test public void testJsonExtractArrayFunction() {
     String jsonString = "{\"numbers\": [1, 2, 3]}";
     String jsonPath = "$.numbers";
     final RelBuilder builder = relBuilder();
@@ -12274,6 +12274,6 @@ class RelToSqlConverterDMTest {
         "SELECT JSON_EXTRACT_ARRAY('{\"numbers\": [1, 2, 3]}', '$.numbers') AS "
             + "\"$f0\"\nFROM \"scott\".\"EMP\"";
 
-    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
   }
 }
