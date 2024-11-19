@@ -354,6 +354,9 @@ public class SqlUpdate extends SqlCall {
   private final SourceCollector collectSourcesFromWith = node ->
       new ArrayList<>(Arrays.asList(node));
 
+  private final SourceCollector collectSourcesFromSelect = node ->
+      new ArrayList<>(Arrays.asList(node));
+
   private final SourceCollector collectSourcesFromJoin = node -> {
     SqlNode right = ((SqlJoin) node).right;
     SqlNode left = ((SqlJoin) node).left;
@@ -367,6 +370,7 @@ public class SqlUpdate extends SqlCall {
     sqlKindSourceCollectorMap.put(SqlKind.IDENTIFIER, collectSourcesFromIdentifier);
     sqlKindSourceCollectorMap.put(SqlKind.AS, collectSourcesFromAs);
     sqlKindSourceCollectorMap.put(SqlKind.WITH, collectSourcesFromWith);
+    sqlKindSourceCollectorMap.put(SqlKind.SELECT, collectSourcesFromSelect);
   }
 
   @Override public void validate(SqlValidator validator, SqlValidatorScope scope) {
