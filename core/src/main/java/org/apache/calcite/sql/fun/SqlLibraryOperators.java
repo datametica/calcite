@@ -399,6 +399,18 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction SUBSTR_MYSQL =
       SUBSTR.withKind(SqlKind.SUBSTR_MYSQL);
 
+  /** The "SAFE_CAST(expr AS type)" function; identical to CAST(),
+   * except that if conversion fails, it returns NULL instead of raising an
+   * error. */
+//  @LibraryOperator(libraries = {BIG_QUERY})
+//  public static final SqlFunction SAFE_CAST =
+//      new SqlCastFunction("SAFE_CAST", SqlKind.SAFE_CAST);
+
+  /** TERADATA's "SUBSTR(string, position [, substringLength ])" function. */
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction SUBSTR_TERADATA =
+      SUBSTR.withKind(SqlKind.SUBSTR_TERADATA);
+
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction IS_REAL =
       new SqlFunction("IS_REAL",
