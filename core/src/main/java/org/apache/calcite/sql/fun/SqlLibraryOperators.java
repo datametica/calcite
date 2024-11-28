@@ -3374,6 +3374,16 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.STRING);
 
+  public static final SqlFunction GENERATE_ARRAY =
+      new SqlFunction("GENERATE_ARRAY",
+          SqlKind.ARRAY_VALUE_CONSTRUCTOR,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+                  SqlTypeFamily.INTEGER),
+              number -> number == 2 || number == 3), SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction JSON_OBJECT =
       new SqlFunction("JSON_OBJECT",
