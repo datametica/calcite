@@ -8665,6 +8665,26 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test void testGenerateArrayFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode generateArrayWithTwoArgs =
+        builder.call(SqlLibraryOperators.GENERATE_ARRAY, builder.literal(1),
+            builder.literal(5));
+    final RexNode generateArrayWithThreeArgs =
+        builder.call(SqlLibraryOperators.GENERATE_ARRAY, builder.literal(1),
+            builder.literal(10), builder.literal(2));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(generateArrayWithTwoArgs, "generate_array")).build();
+    final RelNode root1 = builder.scan("EMP")
+        .project(builder.alias(generateArrayWithThreeArgs, "generate_array")).build();
+    final String expectedBiqQuery = "SELECT GENERATE_ARRAY(1, 5) AS generate_array"
+        + "\nFROM scott.EMP";
+    final String expectedBiqQuery2 = "SELECT GENERATE_ARRAY(1, 10, 2) AS generate_array"
+        + "\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+    assertThat(toSql(root1, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery2));
+  }
+
   @Test public void rowNumberOverFunctionAsWhereClauseInJoin() {
     String query = " select \"A\".\"product_id\"\n"
         + "    from (select \"product_id\", ROW_NUMBER() OVER (ORDER BY \"product_id\") AS RNK from \"product\") A\n"
