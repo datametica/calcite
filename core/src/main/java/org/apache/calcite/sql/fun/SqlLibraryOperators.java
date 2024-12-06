@@ -187,12 +187,24 @@ public abstract class SqlLibraryOperators {
               ReturnTypes.andThen(SqlLibraryOperators::transformConvert,
                   SqlCastFunction.returnTypeInference(false)),
               OperandTypes.repeat(SqlOperandCountRanges.between(2, 3),
-                  OperandTypes.ANY))
+                  OperandTypes.ANY_STRING_OPTIONAL_STRING))
           .withName("CONVERT")
           .withFunctionType(SqlFunctionCategory.SYSTEM)
           .withOperandTypeInference(InferTypes.FIRST_KNOWN)
           .withOperandHandler(
               OperandHandlers.of(SqlLibraryOperators::transformConvert));
+
+/* TODO-In progress
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction MSSQL_CONVERT1 =
+      new SqlConvertFunction("CONVERT") {
+        @Override public void unparse(SqlWriter writer, SqlCall call,
+            int leftPrec, int rightPrec) {
+          getSyntax().unparse(writer, this, call, leftPrec, rightPrec);
+        }
+      };
+*/
+
 
   /** Transforms a call binding of {@code CONVERT} to an equivalent binding for
    * {@code CAST}. */
