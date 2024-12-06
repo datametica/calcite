@@ -3734,4 +3734,11 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction GENERATE_SQLERRC =
       new SqlFunction("SQLERRC", SqlKind.LITERAL, ReturnTypes.CHAR, null,
           OperandTypes.STRING, SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlBasicFunction TZ_OFFSET =
+      SqlBasicFunction.create("TZ_OFFSET",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
 }
