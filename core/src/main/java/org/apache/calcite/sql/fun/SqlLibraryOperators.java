@@ -962,6 +962,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING_OPTIONAL_STRING,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction REGEXP_MATCH =
+      new SqlFunction("REGEXP_MATCH",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY, null,
+          STRING_STRING,
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction DATE_FORMAT =
       new SqlFunction("DATE_FORMAT", SqlKind.OTHER_FUNCTION,
