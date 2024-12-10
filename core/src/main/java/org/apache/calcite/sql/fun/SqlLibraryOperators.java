@@ -3735,16 +3735,16 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("SQLERRC", SqlKind.LITERAL, ReturnTypes.CHAR, null,
           OperandTypes.STRING, SqlFunctionCategory.SYSTEM);
 
-  @LibraryOperator(libraries = {BIG_QUERY})
+  @LibraryOperator(libraries = {MSSQL})
   public static final SqlFunction CONVERT =
       new SqlFunction(
           "CONVERT",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER,
+          ReturnTypes.ARG0,
           null,
           OperandTypes.or(
-              OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.ANY), // Two operands
-              OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.ANY, SqlTypeFamily.ANY) // Three operands
+              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY),
+              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
           ),
           SqlFunctionCategory.SYSTEM
       );
