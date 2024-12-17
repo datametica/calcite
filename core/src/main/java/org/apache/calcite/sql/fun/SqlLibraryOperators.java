@@ -3763,9 +3763,7 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.or(
               OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY),
-              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
-          ),
-          SqlFunctionCategory.SYSTEM
-      );
+              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)),
+          SqlFunctionCategory.SYSTEM);
 
 }
