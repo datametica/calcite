@@ -117,6 +117,11 @@ public class IntervalUtils {
       if (isBq) {
         intervalLiteral = createInterval(intervalLiteral, "MONTH");
       }
+    } else if (node.getKind().equals(SqlKind.MINUS_PREFIX)) {
+      intervalLiteral = "-";
+      SqlLiteral literalValue = ((SqlBasicCall) node).operand(0);
+      Long intervalValue = literalValue.getValueAs(Long.class);
+      intervalLiteral = intervalLiteral + Math.abs(intervalValue);
     } else {
       throw new UnsupportedOperationException("operand of type"
         + node.getClass().toString() + "not supported !");
@@ -141,7 +146,8 @@ public class IntervalUtils {
     }
     writer.sep(",", true);
     String val;
-    if (call.operand(1) instanceof SqlBasicCall) {
+    if (call.operand(1) instanceof SqlBasicCall
+        && !call.operand(1).getKind().equals(SqlKind.MINUS_PREFIX)) {
       if (isBq) {
         writer.print("INTERVAL ");
       }
