@@ -3751,17 +3751,26 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_SQLERRST =
       new SqlFunction("SQLERRST", SqlKind.LITERAL, ReturnTypes.CHAR, null,
-          OperandTypes.STRING, SqlFunctionCategory.SYSTEM);
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.STRING),
+              OperandTypes.NILADIC),
+          SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_SQLERRM =
       new SqlFunction("SQLERRM", SqlKind.LITERAL, ReturnTypes.CHAR, null,
-          OperandTypes.STRING, SqlFunctionCategory.SYSTEM);
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.STRING),
+              OperandTypes.NILADIC),
+          SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_SQLERRC =
       new SqlFunction("SQLERRC", SqlKind.LITERAL, ReturnTypes.CHAR, null,
-          OperandTypes.STRING, SqlFunctionCategory.SYSTEM);
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.STRING),
+              OperandTypes.NILADIC),
+          SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {MSSQL})
   public static final SqlFunction CONVERT =
