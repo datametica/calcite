@@ -3784,4 +3784,13 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)),
           SqlFunctionCategory.SYSTEM);
 
+
+  @LibraryOperator(libraries = {POSTGRESQL, BIG_QUERY})
+  public static final SqlAggFunction UNNEST =
+      SqlBasicAggFunction
+          .create(SqlKind.UNNEST,
+              ReturnTypes.CURSOR,
+              OperandTypes.ARRAY)
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withSyntax(SqlSyntax.FUNCTION);
 }
