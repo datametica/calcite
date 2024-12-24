@@ -3796,7 +3796,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "SYSDATETIMEOFFSET",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.TIMESTAMP_WITH_TIME_ZONE,
+          ReturnTypes.explicit(SqlTypeName.TIMESTAMP_WITH_TIME_ZONE, 7),
           null,
           OperandTypes.NILADIC,
           SqlFunctionCategory.TIMEDATE);
