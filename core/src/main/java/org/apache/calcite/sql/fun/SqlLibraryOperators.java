@@ -3797,4 +3797,14 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)),
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {SQL_SERVER})
+  public static final SqlFunction SYS_DATE_TIME_OFFSET =
+      new SqlFunction(
+          "SYSDATETIMEOFFSET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(SqlTypeName.TIMESTAMP, 7),
+          null,
+          OperandTypes.NILADIC,
+          SqlFunctionCategory.TIMEDATE);
+
 }

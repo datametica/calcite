@@ -12549,4 +12549,17 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(decorrelatedRel, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testSysDateTimeOffset() {
+    final RelBuilder builder = relBuilder();
+    final RexNode rexNode = builder.call(SqlLibraryOperators.SYS_DATE_TIME_OFFSET);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(rexNode, "CurrentDateTime"))
+        .build();
+
+    final String expectedMsSqlQuery = "SELECT SYSDATETIMEOFFSET() AS [CurrentDateTime]\n"
+        + "FROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedMsSqlQuery));
+  }
 }
