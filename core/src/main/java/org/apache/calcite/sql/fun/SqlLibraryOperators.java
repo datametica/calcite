@@ -3859,4 +3859,13 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER)),
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction COLLATE =
+      new SqlFunction(
+          "COLLATE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR,
+          null,
+          STRING_STRING,
+          SqlFunctionCategory.SYSTEM);
 }
