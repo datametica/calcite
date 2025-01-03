@@ -12648,4 +12648,19 @@ class RelToSqlConverterDMTest {
         + "FROM [scott].[EMP]";
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedMsSqlQuery));
   }
+
+  @Test public void testWithCollate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode collateRexNode = builder
+        .call(SqlLibraryOperators.COLLATE, builder.literal("John"),
+            builder.literal("en-ci"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(collateRexNode)
+        .build();
+
+    final String expectedMsSqlQuery = "SELECT COLLATE('John', 'en-ci') AS " +
+        "\"$f0\"\nFROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedMsSqlQuery));
+  }
 }
