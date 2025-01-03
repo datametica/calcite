@@ -2839,6 +2839,12 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction SESSION =
+      new SqlFunction("SESSION", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null, null,
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction YEARNUMBER_OF_CALENDAR =
       new SqlFunction("YEARNUMBER_OF_CALENDAR", SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
