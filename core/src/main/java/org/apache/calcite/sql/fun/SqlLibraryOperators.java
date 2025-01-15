@@ -2799,6 +2799,15 @@ public abstract class SqlLibraryOperators {
       OperandTypes.STRING_STRING,
       SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction STR_TO_TIMESTAMP =
+      new SqlFunction("STR_TO_TIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_NULLABLE,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction PARSE_TIMESTAMP_WITH_TIMEZONE =
       new SqlFunction("PARSE_TIMESTAMP_WITH_TIMEZONE",

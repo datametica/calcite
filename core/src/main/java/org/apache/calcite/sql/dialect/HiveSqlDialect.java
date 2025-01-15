@@ -78,6 +78,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MONTHNAME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.NUMERICMONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECOND;
+import static org.apache.calcite.sql.SqlDateTimeFormat.TERADATA_TWODIGITYEAR_YY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEZONE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOUR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
@@ -134,6 +135,7 @@ public class HiveSqlDialect extends SqlDialect {
         put(ABBREVIATEDMONTH, "MMM");
         put(MONTHNAME, "MMMM");
         put(TWODIGITYEAR, "yy");
+        put(TERADATA_TWODIGITYEAR_YY, "yy");
         put(FOURDIGITYEAR, "yyyy");
         put(DDMMYYYY, "ddMMyyyy");
         put(DDMMYY, "ddMMyy");

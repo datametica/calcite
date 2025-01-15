@@ -18,6 +18,7 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.linq4j.Nullness;
@@ -146,6 +147,8 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.QUARTER;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECOND;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SECONDS_PRECISION;
 import static org.apache.calcite.sql.SqlDateTimeFormat.SEC_FROM_MIDNIGHT;
+import static org.apache.calcite.sql.SqlDateTimeFormat.TERADATA_TWODIGITYEAR_YY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.TERADATA_TWODIGITYEAR_YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIME;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEOFDAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.TIMEWITHTIMEZONE;
@@ -169,6 +172,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHHMISS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.ACOS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.CONCAT2;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_DIFF;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_SUB;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FARM_FINGERPRINT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.FORMAT_TIME;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.IFNULL;
@@ -182,12 +186,14 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_SECONDS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_MICROS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_MILLIS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.UNIX_SECONDS;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CASE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CEIL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EXTRACT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.FLOOR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IS_NOT_FALSE;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.LESS_THAN_OR_EQUAL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MINUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MOD;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.MULTIPLY;
@@ -264,6 +270,8 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(ABBREVIATEDMONTH, "%b");
         put(MONTHNAME, "%B");
         put(TWODIGITYEAR, "%y");
+        put(TERADATA_TWODIGITYEAR_YY, "%y");
+        put(TERADATA_TWODIGITYEAR_YYMMDD, "%y%m%d");
         put(FOURDIGITYEAR, "%Y");
         put(DDMMYYYY, "%d%m%Y");
         put(DDMMYY, "%d%m%y");
@@ -1330,13 +1338,30 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     case "PARSE_DATETIME":
     case "PARSE_TIMESTAMP":
+      SqlCall formatCall;
       String dateFormat = call.operand(0) instanceof SqlCharStringLiteral
           ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
           .getValue()
           : call.operand(0).toString();
-      SqlCall formatCall =
-          PARSE_DATETIME.createCall(SqlParserPos.ZERO, createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
-      super.unparseCall(writer, formatCall, leftPrec, rightPrec);
+      if (!dateFormat.contains("%")) {
+        if (dateFormat.contains("19YY")) {
+          SqlCharStringLiteral convertedDate =
+              SqlLiteral.createCharString(
+                  dateFormat.replace("19YY", "YY"), SqlParserPos.ZERO);
+          formatCall =
+              createDateForTeradataYYFormat(
+                  PARSE_DATETIME.createCall(SqlParserPos.ZERO,
+                      convertedDate, call.operand(1)));
+          super.unparseCall(writer, formatCall, leftPrec, rightPrec);
+        } else {
+          formatCall =
+              PARSE_DATETIME.createCall(SqlParserPos.ZERO,
+                  createDateTimeFormatSqlCharLiteral(dateFormat), call.operand(1));
+          super.unparseCall(writer, formatCall, leftPrec, rightPrec);
+        }
+      } else {
+        super.unparseCall(writer, call, leftPrec, rightPrec);
+      }
       break;
     case "PARSE_TIMESTAMP_WITH_TIMEZONE":
       unparseParseTimestampWithTimeZone(writer, call, leftPrec, rightPrec);
@@ -1345,10 +1370,41 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseFormatCall(writer, call, leftPrec, rightPrec);
       break;
     case "STR_TO_DATE":
-      SqlCall parseDateCall =
-          PARSE_DATE.createCall(SqlParserPos.ZERO,
-                  createDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
+      SqlCall parseDateCall;
+      if (call.operand(1).toString().contains("19YY")) {
+        SqlCharStringLiteral convertedDate =
+            SqlLiteral.createCharString(call.operand(1).toString().replace("19YY", "YY"),
+                SqlParserPos.ZERO);
+        parseDateCall =
+            createDateForTeradataYYFormat(PARSE_DATE.createCall(SqlParserPos.ZERO, convertedDate, call.operand(0)));
+      } else {
+        parseDateCall =
+            PARSE_DATE.createCall(SqlParserPos.ZERO,
+                createDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
+      }
       unparseCall(writer, parseDateCall, leftPrec, rightPrec);
+      break;
+    case "STR_TO_TIMESTAMP":
+      SqlCall parseDateTimeCall;
+      if (!call.operand(1).toString().contains("%")) {
+        if (call.operand(1).toString().contains("19YY")) {
+          SqlCharStringLiteral convertedDate =
+              SqlLiteral.createCharString(call.operand(1).toString().replace("19YY", "YY"),
+                  SqlParserPos.ZERO);
+          parseDateTimeCall =
+              createDateForTeradataYYFormat(
+                  PARSE_DATETIME.createCall(SqlParserPos.ZERO,
+                      convertedDate, call.operand(0)));
+          unparseCall(writer, parseDateTimeCall, leftPrec, rightPrec);
+        } else {
+          parseDateTimeCall =
+              PARSE_DATETIME.createCall(SqlParserPos.ZERO,
+                  createDateTimeFormatSqlCharLiteral(call.operand(1).toString()), call.operand(0));
+          unparseCall(writer, parseDateTimeCall, leftPrec, rightPrec);
+        }
+      } else {
+        unparseCall(writer, call, leftPrec, rightPrec);
+      }
       break;
     case "SUBSTRING":
       final SqlWriter.Frame substringFrame = writer.startFunCall("SUBSTR");
@@ -1722,12 +1778,24 @@ public class BigQuerySqlDialect extends SqlDialect {
         ? ((NlsString) requireNonNull(((SqlCharStringLiteral) call.operand(0)).getValue()))
         .getValue() : call.operand(0).toString();
     SqlOperator function = call.getOperator();
+    SqlCall formatCall;
     if (!dateFormat.contains("%")) {
       SqlNode modifiedSecondOperandOfParseDate = modifySecondOperandOfParseDate(call.operand(1));
-      SqlCall formatCall =
-          function.createCall(SqlParserPos.ZERO,
-              createDateTimeFormatSqlCharLiteral(dateFormat), modifiedSecondOperandOfParseDate);
-      function.unparse(writer, formatCall, leftPrec, rightPrec);
+      if (dateFormat.contains("19YY")) {
+        SqlCharStringLiteral convertedDate =
+            SqlLiteral.createCharString(
+                dateFormat.replace("19YY", "YY"), SqlParserPos.ZERO);
+        formatCall =
+            createDateForTeradataYYFormat(
+                function.createCall(SqlParserPos.ZERO, convertedDate,
+                    modifiedSecondOperandOfParseDate));
+        unparseCall(writer, formatCall, leftPrec, rightPrec);
+      } else {
+        formatCall =
+            function.createCall(SqlParserPos.ZERO, createDateTimeFormatSqlCharLiteral(dateFormat),
+                modifiedSecondOperandOfParseDate);
+        function.unparse(writer, formatCall, leftPrec, rightPrec);
+      }
     } else {
       function.unparse(writer, call, leftPrec, rightPrec);
     }
@@ -2090,6 +2158,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseParseTimestampWithTimeZone(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
+    SqlCall formatCall;
     if (call.operand(0) instanceof SqlCase) {
       super.unparseCall(writer, getSqlCallForCaseExprInParseTimestamp(call), leftPrec, rightPrec);
     } else {
@@ -2098,12 +2167,45 @@ public class BigQuerySqlDialect extends SqlDialect {
           : call.operand(0).toString();
       dateFormatValue =
           dateFormatValue.replaceAll("S\\(\\d\\)", MILLISECONDS_5.value);
-      SqlCall formatCall =
-          PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
-              createDateTimeFormatSqlCharLiteral(dateFormatValue), call.operand(1));
+      if (dateFormatValue.contains("19YY")) {
+        SqlCharStringLiteral convertedDate =
+            SqlLiteral.createCharString(dateFormatValue.replace("19YY", "YY"), SqlParserPos.ZERO);
+        formatCall =
+            createDateForTeradataYYFormat(
+                PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
+                    convertedDate, call.operand(1)));
+      } else {
+        formatCall =
+            PARSE_TIMESTAMP.createCall(SqlParserPos.ZERO,
+                createDateTimeFormatSqlCharLiteral(dateFormatValue), call.operand(1));
+      }
       super.unparseCall(writer, formatCall, leftPrec, rightPrec);
     }
   }
+
+  private SqlCall createDateForTeradataYYFormat(SqlCall call) {
+    SqlNodeList whenList = new SqlNodeList(SqlParserPos.ZERO);
+    SqlNodeList thenList = new SqlNodeList(SqlParserPos.ZERO);
+    SqlIntervalQualifier intervalQualifier =
+        new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.YEAR, SqlParserPos.ZERO);
+    SqlNode yearSymbolLiteral = SqlLiteral.createSymbol(TimeUnitRange.YEAR, SqlParserPos.ZERO);
+    SqlCall extractyearCall = EXTRACT.createCall(SqlParserPos.ZERO, yearSymbolLiteral, call);
+    SqlCall yearToYYFormat =
+        MOD.createCall(SqlParserPos.ZERO, extractyearCall, SqlLiteral.createExactNumeric("100", SqlParserPos.ZERO));
+    SqlCall isLessThanCondition =
+        LESS_THAN_OR_EQUAL.createCall(SqlParserPos.ZERO, yearToYYFormat,
+            SqlLiteral.createExactNumeric("68", SqlParserPos.ZERO));
+    SqlCall dateSubCall =
+        DATE_SUB.createCall(
+            SqlParserPos.ZERO, call, SqlLiteral.createInterval(1, "100",
+                intervalQualifier, call.getParserPosition()));
+    whenList.add(isLessThanCondition);
+    thenList.add(dateSubCall);
+    SqlCall caseStatement =
+        CASE.createCall(null, SqlParserPos.ZERO, null, whenList, thenList, call);
+    return caseStatement;
+  }
+
 
   private static SqlCall getSqlCallForCaseExprInParseTimestamp(SqlCall call) {
     SqlCase caseExpression = call.operand(0);

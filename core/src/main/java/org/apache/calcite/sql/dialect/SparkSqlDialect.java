@@ -131,6 +131,7 @@ import static  org.apache.calcite.sql.SqlDateTimeFormat.NUMERICMONTH;
 import static  org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR;
 import static  org.apache.calcite.sql.SqlDateTimeFormat.POST_MERIDIAN_INDICATOR_WITH_DOT;
 import static  org.apache.calcite.sql.SqlDateTimeFormat.SECOND;
+import static  org.apache.calcite.sql.SqlDateTimeFormat.TERADATA_TWODIGITYEAR_YY;
 import static  org.apache.calcite.sql.SqlDateTimeFormat.TIMEOFDAY;
 import static  org.apache.calcite.sql.SqlDateTimeFormat.TIMEZONE;
 import static  org.apache.calcite.sql.SqlDateTimeFormat.TWENTYFOURHOUR;
@@ -178,6 +179,7 @@ public class SparkSqlDialect extends SqlDialect {
         put(MONTHNAME, "MMMM");
         put(MONTH_NAME, "MMMM");
         put(TWODIGITYEAR, "yy");
+        put(TERADATA_TWODIGITYEAR_YY, "yy");
         put(FOURDIGITYEAR, "yyyy");
         put(DDMMYYYY, "ddMMyyyy");
         put(DDMMYY, "ddMMyy");
