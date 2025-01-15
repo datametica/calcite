@@ -5826,6 +5826,58 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
 
+  @Test public void teradataYearFormatYYTest() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 =
+        builder.call(SqlLibraryOperators.TO_TIMESTAMP, builder.literal("06-NOV-24 01.35.50.123456 PM"),
+            builder.literal("DD-MMM-19YY HH24.MI.SS.S(6) T"));
+    final RexNode parseTSNode2 =
+        builder.call(SqlLibraryOperators.PARSE_DATE, builder.literal("19YYMMDD"), builder.literal("991231"));
+    final RexNode parseTSNode3 =
+        builder.call(SqlLibraryOperators.PARSE_TIMESTAMP, builder.literal("DD-MMM-19YY HH24:MI:SS"),
+            builder.literal("06-NOV-24 01:35:50"));
+    final RexNode parseTSNode4 =
+        builder.call(SqlLibraryOperators.PARSE_TIMESTAMP_WITH_TIMEZONE, builder.literal
+            ("DD-MMM-19YY HH24:MI:SS"), builder.literal("06-NOV-24 01:35:50"));
+    final RexNode parseTSNode =
+        builder.call(SqlLibraryOperators.STR_TO_DATE, builder.literal("20181106"),  builder.literal("YYYYMMDD"));
+    final RexNode parseTSNode5 =
+        builder.call(SqlLibraryOperators.FORMAT_DATE, builder.literal
+            ("19YY/MM/DD"), parseTSNode);
+    final RexNode parseTSNode6 =
+        builder.call(SqlLibraryOperators.STR_TO_DATE, builder.literal("15-DEC-23"),
+            builder.literal("DD-MMM-19YY"));
+    final RexNode parseTSNode7 =
+        builder.call(SqlLibraryOperators.STR_TO_TIMESTAMP, builder.literal("15-DEC-23"),
+            builder.literal("DD-MMM-19YY"));
+    final RelNode root =
+        builder.scan("EMP").project(builder.alias(parseTSNode1, "timestamp_value"),
+            builder.alias(parseTSNode2, "date"), builder.alias(parseTSNode3, "timestamp1"),
+            builder.alias(parseTSNode4, "timestamp_with_timezone"), builder.alias(parseTSNode5,
+                "date1"),
+            builder.alias(parseTSNode6, "date2"), builder.alias(parseTSNode7, "str_2_timestamp")).build();
+    final String expectedSql =
+        "SELECT TO_TIMESTAMP('06-NOV-24 01.35.50.123456 PM', 'DD-MMM-19YY HH24.MI.SS.S(6) T') AS \"timestamp_value\","
+            + " PARSE_DATE('19YYMMDD', '991231') AS \"date\","
+            + " PARSE_TIMESTAMP('DD-MMM-19YY HH24:MI:SS', '06-NOV-24 01:35:50') AS \"timestamp1\","
+            + " PARSE_TIMESTAMP_WITH_TIMEZONE('DD-MMM-19YY HH24:MI:SS', '06-NOV-24 01:35:50') AS \"timestamp_with_timezone\","
+            + " FORMAT_DATE('19YY/MM/DD', STR_TO_DATE('20181106', 'YYYYMMDD')) AS \"date1\","
+            + " STR_TO_DATE('15-DEC-23', 'DD-MMM-19YY') AS \"date2\","
+            + " STR_TO_TIMESTAMP('15-DEC-23', 'DD-MMM-19YY') AS \"str_2_timestamp\"\n"
+            + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery =
+        "SELECT CASE WHEN MOD(EXTRACT(YEAR FROM PARSE_DATETIME('%d-%b-%y %H.%M.%E6S %p', '06-NOV-24 01.35.50.123456 PM')), 100) <= 68 THEN DATE_SUB(PARSE_DATETIME('%d-%b-%y %H.%M.%E6S %p', '06-NOV-24 01.35.50.123456 PM'), INTERVAL 100 YEAR) ELSE PARSE_DATETIME('%d-%b-%y %H.%M.%E6S %p', '06-NOV-24 01.35.50.123456 PM') END AS timestamp_value,"
+            + " CASE WHEN MOD(EXTRACT(YEAR FROM PARSE_DATE('%y%m%d', '991231')), 100) <= 68 THEN DATE_SUB(PARSE_DATE('%y%m%d', '991231'), INTERVAL 100 YEAR) ELSE PARSE_DATE('%y%m%d', '991231') END AS date,"
+            + " CASE WHEN MOD(EXTRACT(YEAR FROM PARSE_DATETIME('%d-%b-%y %H:%M:%S', '06-NOV-24 01:35:50')), 100) <= 68 THEN DATE_SUB(PARSE_DATETIME('%d-%b-%y %H:%M:%S', '06-NOV-24 01:35:50'), INTERVAL 100 YEAR) ELSE PARSE_DATETIME('%d-%b-%y %H:%M:%S', '06-NOV-24 01:35:50') END AS timestamp1,"
+            + " CASE WHEN MOD(EXTRACT(YEAR FROM PARSE_DATETIME('%d-%b-%y %H:%M:%S', '06-NOV-24 01:35:50')), 100) <= 68 THEN DATE_SUB(PARSE_DATETIME('%d-%b-%y %H:%M:%S', '06-NOV-24 01:35:50'), INTERVAL 100 YEAR) ELSE PARSE_DATETIME('%d-%b-%y %H:%M:%S', '06-NOV-24 01:35:50') END AS timestamp_with_timezone,"
+            + " FORMAT_DATE('%y/%m/%d', PARSE_DATE('%Y%m%d', '20181106')) AS date1,"
+            + " CASE WHEN MOD(EXTRACT(YEAR FROM PARSE_DATE('%d-%b-%y', '15-DEC-23')), 100) <= 68 THEN DATE_SUB(PARSE_DATE('%d-%b-%y', '15-DEC-23'), INTERVAL 100 YEAR) ELSE PARSE_DATE('%d-%b-%y', '15-DEC-23') END AS date2,"
+            + " CASE WHEN MOD(EXTRACT(YEAR FROM PARSE_DATETIME('%d-%b-%y', '15-DEC-23')), 100) <= 68 THEN DATE_SUB(PARSE_DATETIME('%d-%b-%y', '15-DEC-23'), INTERVAL 100 YEAR) ELSE PARSE_DATETIME('%d-%b-%y', '15-DEC-23') END AS str_2_timestamp\n"
+            + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testParseTimestampFunctionFormat() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 =

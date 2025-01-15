@@ -65,6 +65,8 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATED_NAME_OF_DAY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E3;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E4;
+import static org.apache.calcite.sql.SqlDateTimeFormat.TERADATA_TWODIGITYEAR_YY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.TWODIGITYEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 
@@ -91,6 +93,7 @@ public class SnowflakeSqlDialect extends SqlDialect {
   private static Map<SqlDateTimeFormat, String> dateTimeFormatMap =
       new HashMap() {{
         put(E3, ABBREVIATED_NAME_OF_DAY.value);
+        put(TERADATA_TWODIGITYEAR_YY, TWODIGITYEAR.value);
         put(ABBREVIATEDDAYOFWEEK, ABBREVIATED_NAME_OF_DAY.value);
         put(ABBREVIATEDMONTH, ABBREVIATED_MONTH.value);
         put(DAYOFWEEK, ABBREVIATED_NAME_OF_DAY.value);
