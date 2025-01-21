@@ -1531,7 +1531,7 @@ class PlannerTest {
     final String sql = "select Case when DEPTNO <> 30 then 'hi' else 'world' end from dept";
     final String expectedVarying = "LogicalProject("
         + "EXPR$0=["
-        + "CASE(<>($0, 30),"
+        + "CASE(<>(CAST($0):INTEGER NOT NULL, 30),"
         + " 'hi':VARCHAR(5), "
         + "'world':VARCHAR(5))])\n"
         + "  LogicalValues("

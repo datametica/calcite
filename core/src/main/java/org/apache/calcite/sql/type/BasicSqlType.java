@@ -299,4 +299,13 @@ public class BasicSqlType extends AbstractSqlType {
         precision,
         scale);
   }
+
+  @Override public int hashCode() {
+    return Objects.hash(this.digest, this.typeSystem);
+  }
+
+  @Override public boolean equals(@Nullable Object obj) {
+    return !super.equals(obj) ? false : obj instanceof BasicSqlType
+        && Objects.equals(this.typeSystem, ((BasicSqlType) obj).typeSystem);
+  }
 }
