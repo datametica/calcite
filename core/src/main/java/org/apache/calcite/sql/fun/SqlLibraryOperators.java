@@ -3976,4 +3976,13 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction STR_TO_TIMESTAMP =
+      new SqlFunction("STR_TO_TIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_NULLABLE,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.TIMEDATE);
 }
