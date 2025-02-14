@@ -9997,6 +9997,35 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
 
+  @Test public void testBQTimestampMinusIntervalOperands() {
+    final RelBuilder builder = relBuilder();
+    final RexNode intervalDay =
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(1728000000),
+            new SqlIntervalQualifier(DAY, DAY, SqlParserPos.QUOTED_ZERO));
+    final RexNode intervalHour =
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(36000000),
+            new SqlIntervalQualifier(HOUR, HOUR, SqlParserPos.QUOTED_ZERO));
+    final RexNode intervalMinute =
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(600000),
+            new SqlIntervalQualifier(MINUTE, MINUTE, SqlParserPos.QUOTED_ZERO));
+    final RexNode intervalSecond =
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(10000),
+            new SqlIntervalQualifier(SECOND, SECOND, SqlParserPos.QUOTED_ZERO));
+    RexNode intervalDayHour = builder.call(PLUS, intervalDay, intervalHour);
+    RexNode intervalDayMinute = builder.call(PLUS, intervalDayHour, intervalMinute);
+    RexNode intervalDaySecond = builder.call(PLUS, intervalDayMinute, intervalSecond);
+    RexNode currentTimestamp =
+        builder.call(SqlLibraryOperators.CURRENT_TIMESTAMP_WITH_LOCAL_TIME_ZONE);
+    final RelNode root = builder
+        .values(new String[]{""}, 1)
+        .project(
+            builder.call(SqlLibraryOperators.TIMESTAMP_SUB, currentTimestamp, intervalDaySecond))
+        .build();
+    final String expectedBigQuery = "SELECT TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 20 DAY "
+        + "+ INTERVAL 10 HOUR + INTERVAL 10 MINUTE + INTERVAL 10 SECOND) AS `$f0`";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
   @Test public void testShiftLeftWithNegativeValueInSecondArgument() {
     final RelBuilder builder = relBuilder();
     final RexNode shiftLeftRexNode =
