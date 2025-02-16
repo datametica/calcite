@@ -10964,6 +10964,20 @@ class RelToSqlConverterDMTest {
 
   }
 
+  @Test public void testToCharWithSingleOperand() {
+    final RelBuilder builder = relBuilder();
+    final RexNode toCharNode = builder.call(SqlLibraryOperators.TO_CHAR,
+        builder.literal(123.56));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(toCharNode, "Numeric format"))
+        .build();
+    final String expectedTDSql = "SELECT TO_CHAR(123.56) AS \"Numeric format\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTDSql));
+  }
+
   @Test public void testSplitFunction() {
     final RelBuilder builder = relBuilder();
     RexNode split =
