@@ -12881,4 +12881,23 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test public void testStrToTimestampRelToSql() {
+    final RelBuilder builder = relBuilder();
+    final RexNode strToDateNode1 =
+        builder.call(SqlLibraryOperators.STR_TO_TIMESTAMP, builder.literal("15-DEC-23"),
+            builder.literal("DD-MMM-YY"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(strToDateNode1, "str_2_timestamp"))
+        .build();
+    final String expectedSql = "SELECT STR_TO_TIMESTAMP('15-DEC-23', 'DD-MMM-YY') AS \"str_2_timestamp\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBiqQuery = "SELECT STR_TO_TIMESTAMP('15-DEC-23', 'DD-MMM-YY') AS str_2_timestamp\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+
+  }
 }
