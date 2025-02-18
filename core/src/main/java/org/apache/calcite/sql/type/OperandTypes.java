@@ -434,6 +434,10 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker NUMERIC_NUMERIC =
       family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC);
 
+  public static final SqlSingleOperandTypeChecker NUMERIC_NUMERIC_OPTIONAL_NUMERIC =
+      family(ImmutableList.of(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+          number -> number == 2);
+
   public static final SqlSingleOperandTypeChecker INTEGER_BOOLEAN =
       family(SqlTypeFamily.INTEGER, SqlTypeFamily.BOOLEAN);
 
@@ -443,8 +447,14 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker EXACT_NUMERIC =
       family(SqlTypeFamily.EXACT_NUMERIC);
 
+  public static final SqlSingleOperandTypeChecker ARRAY_INTEGER =
+      family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER);
+
   public static final SqlSingleOperandTypeChecker ARRAY_INTEGER_INTEGER =
       family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
+
+  public static final SqlSingleOperandTypeChecker INTEGER_INTEGER_INTEGER =
+      family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
 
   public static final SqlSingleOperandTypeChecker EXACT_NUMERIC_EXACT_NUMERIC =
       family(SqlTypeFamily.EXACT_NUMERIC, SqlTypeFamily.EXACT_NUMERIC);
@@ -1071,6 +1081,20 @@ public abstract class OperandTypes {
       family(ImmutableList.of(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
           // Third operand optional (operand index 0, 1, 2)
         number -> number == 2);
+
+
+  /**
+   * Operand type-checking strategy where the second and third operands must be comparable.
+   * This is used when the operator has three operands and only the
+   * second and third operands need to be comparable.
+   */
+  public static final SqlSingleOperandTypeChecker SECOND_THIRD_SAME =
+      new SameOperandTypeChecker(3) {
+        @Override protected List<Integer> getOperandList(int operandCount) {
+          // Only check the second and third operands
+          return ImmutableList.of(1, 2);
+        }
+      };
 
   /**
    * Operand type-checking strategy used by {@code ARG_MIN(value, comp)} and

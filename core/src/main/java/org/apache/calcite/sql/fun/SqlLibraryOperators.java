@@ -268,6 +268,13 @@ public abstract class SqlLibraryOperators {
               .andThen(SqlTypeTransforms.TO_NULLABLE_ALL),
           OperandTypes.SAME_SAME);
 
+  /** The "NVL2(value, value, value)" function. */
+  @LibraryOperator(libraries = {ORACLE, SPARK})
+  public static final SqlBasicFunction NVL2 =
+      SqlBasicFunction.create(SqlKind.NVL2,
+          ReturnTypes.NVL2_RESTRICTIVE,
+          OperandTypes.SECOND_THIRD_SAME);
+
   /** The "IFNULL(value, value)" function. */
   @LibraryOperator(libraries = {BIG_QUERY, SPARK, SNOWFLAKE})
   public static final SqlFunction IFNULL =
@@ -275,7 +282,6 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.cascade(ReturnTypes.LEAST_RESTRICTIVE,
             SqlTypeTransforms.TO_NULLABLE_ALL),
           null, OperandTypes.SAME_SAME, SqlFunctionCategory.SYSTEM);
-
 
   /** The "LEN(string)" function. */
   @LibraryOperator(libraries = {SNOWFLAKE, SPARK})
@@ -457,6 +463,13 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_INTEGER_OPTIONAL_INTEGER,
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SQL_SERVER})
+  public static final SqlFunction REPLICATE =
+      new SqlFunction("REPLICATE", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR, null,
+          OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {ORACLE, BIG_QUERY})
   public static final SqlFunction USING =
       new SqlFunction(
@@ -598,6 +611,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_NULLABLE,
           OperandTypes.STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SQL_SERVER})
+  public static final SqlFunction ISDATE =
+      SqlBasicFunction.create("ISDATE",
+          ReturnTypes.INTEGER_NULLABLE, OperandTypes.STRING,
+          SqlFunctionCategory.TIMEDATE);
 
   /** The "URL_ENCODE(string)" function. */
   @LibraryOperator(libraries = {SPARK})
@@ -823,6 +842,32 @@ public abstract class SqlLibraryOperators {
                   OperandTypes.TIMESTAMP_LTZ, OperandTypes.CHARACTER)),
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction DATEFROMPARTS =
+      new SqlFunction("DATEFROMPARTS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DATE_NULLABLE, null,
+          OperandTypes.INTEGER_INTEGER_INTEGER,
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {SPARK})
+  public static final SqlFunction MAKE_DATE =
+      new SqlFunction("MAKE_DATE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DATE_NULLABLE, null,
+          OperandTypes.INTEGER_INTEGER_INTEGER,
+          SqlFunctionCategory.TIMEDATE);
+
+  /**
+   * The SQL <code>DAY</code> operator. Returns the Month
+   * from a DATETIME  E.g.<br>
+   * <code>DAY(date '2008-9-23')</code> returns <code>
+   * 23</code>
+   */
+  @LibraryOperator(libraries = {SPARK, MSSQL})
+  public static final SqlDatePartFunction DAY =
+      new SqlDatePartFunction("DAY", TimeUnit.DAY);
+
   /** The "DATETIME" function returns a Calcite
    * {@code TIMESTAMP} (which BigQuery calls a {@code DATETIME}).
    *
@@ -981,6 +1026,10 @@ public abstract class SqlLibraryOperators {
       ReturnTypes.VARCHAR_2000_NULLABLE, null,
       OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
       SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {SQL_SERVER, SPARK})
+  public static final SqlFunction GETDATE =
+      new SqlCurrentTimestampFunction("GETDATE", SqlTypeName.TIMESTAMP);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction FORMAT_DATE =
@@ -1597,6 +1646,23 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.INTEGER_NULLABLE,
           OperandTypes.ARRAY);
 
+  /** The "ARRAY_LENGTH(array, int)" function. */
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction POSTGRES_ARRAY_LENGTH =
+      SqlBasicFunction.create(SqlKind.ARRAY_LENGTH,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY_INTEGER);
+
+  /**
+   * The "APPROX_QUANTILES([DISTINCT] expression, number)" function.
+   */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction APPROX_QUANTILES =
+      SqlBasicAggFunction.create("APPROX_QUANTILES", SqlKind.APPROX_QUANTILES,
+              ReturnTypes.TO_ARRAY, OperandTypes.ANY_NUMERIC)
+          .withDistinct(Optionality.OPTIONAL)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
+
   /** The "ARRAY_MAX(array)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_MAX =
@@ -1891,6 +1957,44 @@ public abstract class SqlLibraryOperators {
       SqlBasicFunction.create("TO_HEX",
           ReturnTypes.VARCHAR_NULLABLE,
           OperandTypes.or(OperandTypes.family(SqlTypeFamily.STRING), OperandTypes.BINARY),
+          SqlFunctionCategory.STRING);
+
+  /**
+   * The "TO_HEX(integer)" function; converts an {@code int} value into a hexadecimal string.
+   */
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction POSTGRES_TO_HEX =
+      SqlBasicFunction.create("TO_HEX",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.INTEGER,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction QUOTE_IDENT =
+      SqlBasicFunction.create("QUOTE_IDENT",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction QUOTE_LITERAL =
+      SqlBasicFunction.create("QUOTE_LITERAL",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.ANY,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction TZ_OFFSET =
+      SqlBasicFunction.create("TZ_OFFSET",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction GET_TIMEZONE_OFFSET =
+      SqlBasicFunction.create("GET_TIMEZONE_OFFSET",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
           SqlFunctionCategory.STRING);
 
   /** The "FORMAT_NUMBER(value, decimalOrFormat)" function. */
@@ -2561,7 +2665,7 @@ public abstract class SqlLibraryOperators {
       new SqlCastFunction("SAFE_CAST", SqlKind.SAFE_CAST);
 
   /** The "TRY_CAST(expr AS type)" function, equivalent to SAFE_CAST. */
-  @LibraryOperator(libraries = {MSSQL})
+  @LibraryOperator(libraries = {MSSQL, SPARK})
   public static final SqlFunction TRY_CAST =
       new SqlCastFunction("TRY_CAST", SqlKind.SAFE_CAST);
 
@@ -2734,6 +2838,10 @@ public abstract class SqlLibraryOperators {
       null,
       OperandTypes.STRING_STRING,
       SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SQL_SERVER})
+  public static final SqlFunction MSSQL_STRING_SPLIT =
+      new SqlServerStringSplitFunction();
 
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction SPLIT_TO_TABLE =
@@ -3115,6 +3223,36 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.family(SqlTypeFamily.DATE,
           SqlTypeFamily.STRING), SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction HASHBYTES =
+      new SqlFunction(
+          "HASHBYTES",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARBINARY,
+          null,
+          OperandTypes.family(SqlTypeFamily.CHARACTER, SqlTypeFamily.STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction CURRENT_DATABASE =
+      new SqlFunction(
+          "CURRENT_DATABASE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR,
+          null,
+          OperandTypes.NILADIC,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction PROJECT_ID =
+      SqlBasicFunction
+          .create(
+          "@@PROJECT_ID",
+          ReturnTypes.CHAR,
+          OperandTypes.NILADIC,
+          SqlFunctionCategory.SYSTEM)
+          .withFunctionType(SqlFunctionCategory.SYSTEM).withSyntax(SqlSyntax.FUNCTION_ID);
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction TRUNC_ORACLE =
@@ -3779,16 +3917,63 @@ public abstract class SqlLibraryOperators {
               SqlTypeFamily.DATETIME_INTERVAL, SqlTypeFamily.BOOLEAN),
           SqlFunctionCategory.SYSTEM);
 
-  @LibraryOperator(libraries = {MSSQL})
-  public static final SqlFunction CONVERT =
-      new SqlFunction(
-          "CONVERT",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0,
-          null,
-          OperandTypes.or(
-              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY),
-              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)),
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction GENERATE_ARRAY =
+      new SqlFunction("GENERATE_ARRAY", SqlKind.OTHER, ReturnTypes.TO_ARRAY, null,
+          OperandTypes.NUMERIC_NUMERIC_OPTIONAL_NUMERIC,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction STUFF =
+      new SqlFunction("STUFF",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.ANY),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction CONVERT =
+      SqlBasicFunction.create(SqlKind.MSSQL_CONVERT,
+              ReturnTypes.andThen(SqlLibraryOperators::transformConvert,
+                  SqlCastFunction.returnTypeInference(false)),
+              OperandTypes.repeat(SqlOperandCountRanges.between(2, 3),
+                  OperandTypes.ANY))
+          .withName("CONVERT")
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withOperandTypeInference(InferTypes.FIRST_KNOWN)
+          .withOperandHandler(
+              OperandHandlers.of(SqlLibraryOperators::transformConvert));
+
+  @LibraryOperator(libraries = {SQL_SERVER})
+  public static final SqlFunction OBJECT_SCHEMA_NAME =
+      new SqlFunction(
+          "OBJECT_SCHEMA_NAME",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR,
+          null,
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.INTEGER),
+              OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER)),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE, BIG_QUERY})
+  public static final SqlFunction COLLATE =
+      new SqlFunction(
+          "COLLATE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR,
+          null,
+          STRING_STRING,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction HOST =
+      new SqlFunction(
+          "HOST",
+          SqlKind.NET_HOST,
+          ReturnTypes.VARCHAR,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
 }

@@ -477,6 +477,9 @@ public enum SqlKind {
   /** {@code NVL} function (Oracle). */
   NVL,
 
+  /** {@code NVL} function (Oracle, Vertica and Spark). */
+  NVL2,
+
   /** {@code GREATEST} function (Oracle). */
   GREATEST,
 
@@ -735,6 +738,11 @@ public enum SqlKind {
   SAFE_CAST,
 
   /**
+   * The "CONVERT(type, expr [,style])" function (Microsoft SQL Server).
+   */
+  MSSQL_CONVERT,
+
+  /**
    * The "NEXT VALUE OF sequence" operator.
    */
   NEXT_VALUE,
@@ -834,6 +842,9 @@ public enum SqlKind {
   /** {@code ARRAYS_ZIP} function (Spark semantics). */
   ARRAYS_ZIP,
 
+  /** {@code APPROX_QUANTILES} function. */
+  APPROX_QUANTILES,
+
   /** {@code SORT_ARRAY} function (Spark semantics). */
   SORT_ARRAY,
 
@@ -866,6 +877,9 @@ public enum SqlKind {
    * The "TO_NUMBER" function.
    */
   TO_NUMBER,
+
+  /** {@code HOST} function (Postgres). */
+  NET_HOST,
 
    /**
    * The "ASCII" function.
