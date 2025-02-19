@@ -376,11 +376,11 @@ public class SqlUpdate extends SqlCall {
   }
 
   private boolean isSameTableJoin() {
-    if (sourceSelect == null || sourceSelect.from == null) {
+    if (sourceSelect == null || sourceSelect.from == null || alias == null) {
       return false;
     }
     SqlJoin join = (SqlJoin) sourceSelect.from;
-    if (join.left instanceof SqlCall && join.right instanceof SqlCall) {
+    if (join.getJoinType() == JoinType.INNER && join.left instanceof SqlCall && join.right instanceof SqlCall) {
       return ((SqlCall) join.left).operand(0)
           .equalsDeep(((SqlCall) join.right).operand(0), Litmus.IGNORE);
     }
