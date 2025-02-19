@@ -3982,9 +3982,8 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "PATINDEX",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER,
+          ReturnTypes.INTEGER_NULLABLE,
           null,
-          OperandTypes.family(SqlTypeFamily.STRING,
-              SqlTypeFamily.STRING),
+          OperandTypes.STRING_STRING,
           SqlFunctionCategory.STRING);
 }
