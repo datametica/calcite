@@ -3976,4 +3976,14 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SQL_SERVER})
+  public static final SqlFunction PATINDEX =
+      new SqlFunction(
+          "PATINDEX",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.STRING);
 }
