@@ -75,6 +75,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.SQL_SERVER;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
+import static org.apache.calcite.sql.fun.SqlLibrary.VERTICA;
 import static org.apache.calcite.sql.type.OperandTypes.ANY_STRING_OR_STRING_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
@@ -2962,6 +2963,14 @@ public abstract class SqlLibraryOperators {
       ReturnTypes.INTEGER, null,
       OperandTypes.ANY_DATETIME_DATETIME_STRING,
       SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {VERTICA})
+  public static final SqlFunction TIMESTAMPDIFF =
+      new SqlFunction("TIMESTAMPDIFF", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null,
+          OperandTypes.family(SqlTypeFamily.ANY,
+              SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME),
+          SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction DATEDIFF =
