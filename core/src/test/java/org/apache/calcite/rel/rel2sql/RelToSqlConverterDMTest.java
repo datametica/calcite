@@ -8996,11 +8996,11 @@ class RelToSqlConverterDMTest {
 
   @Test public void testForPatindexFunction() {
     final RelBuilder builder = relBuilder();
-    final RexNode regexplike =
+    final RexNode patindex =
         builder.call(SqlLibraryOperators.PATINDEX, builder.literal("%abc%"), builder.literal("abcdef"));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.alias(regexplike, "A"))
+        .project(builder.alias(patindex, "A"))
         .build();
 
     final String expectedBqSql = "SELECT PATINDEX('%abc%', "
