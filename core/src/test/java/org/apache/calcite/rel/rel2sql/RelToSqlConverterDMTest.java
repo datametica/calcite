@@ -9003,11 +9003,11 @@ class RelToSqlConverterDMTest {
         .project(builder.alias(patindex, "A"))
         .build();
 
-    final String expectedBqSql = "SELECT PATINDEX('%abc%', "
+    final String expectedSql = "SELECT PATINDEX('%abc%', "
         + "'abcdef') A\n"
         + "FROM scott.EMP";
 
-    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedBqSql));
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testForRegexpSimilarFunctionWithThirdArgumentAsM() {
