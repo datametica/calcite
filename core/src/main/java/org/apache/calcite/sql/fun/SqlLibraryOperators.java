@@ -2757,6 +2757,16 @@ public abstract class SqlLibraryOperators {
         ONE_OR_MORE,
         SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction MSSQL_FORMAT =
+      new SqlFunction(
+          "FORMAT",
+          SqlKind.FORMAT,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.ANY_STRING_OPTIONAL_STRING,
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction ORACLE_TO_NUMBER =
       new SqlFunction(
