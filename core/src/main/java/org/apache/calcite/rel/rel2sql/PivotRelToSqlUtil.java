@@ -197,12 +197,14 @@ public class PivotRelToSqlUtil {
       return new SqlNodeList(modifiedAxisNodeList, pos);
     }
 
-    SqlBasicCall axisNodeList =
-        ((SqlBasicCall) pivotColumnAggregation.getOperandList().get(0)).operand(0);
+    SqlNode axisSqlNodeList =  ((SqlBasicCall) pivotColumnAggregation.getOperandList().get(0)).operand(0);
 
-    axisNodeList = axisNodeList.getOperator().kind == SqlKind.EQUALS
-        ? (SqlBasicCall) axisNodeList.getOperandList().get(0)
-        : axisNodeList;
+    if (axisSqlNodeList instanceof SqlIdentifier) {
+      modifiedAxisNodeList.add(axisSqlNodeList);
+      return new SqlNodeList(modifiedAxisNodeList, pos);
+    }
+    assert axisSqlNodeList instanceof SqlBasicCall;
+    SqlBasicCall axisNodeList = (SqlBasicCall) axisSqlNodeList;
 
     if (axisNodeList.getOperator().kind == SqlKind.AS) {
       if (!(axisNodeList.operand(1) instanceof SqlIdentifier)) {
