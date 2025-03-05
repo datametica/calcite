@@ -3568,6 +3568,25 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test
+  public void testTimestampDiffFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timestampDiffRexNode =
+        builder.call(SqlLibraryOperators.TIMESTAMPDIFF,
+            builder.literal(HOUR),
+            builder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP),
+            builder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(timestampDiffRexNode)
+        .build();
+    final String expectedSql = "SELECT TIMESTAMPDIFF(HOUR, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
+        + "AS \"$f0\""
+        + "\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testTimestampDiffFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
     final RexNode timestampDiffRexNode =
