@@ -77,7 +77,15 @@ public class CTERelToSqlUtil {
     } else if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlSelect).getFrom() != null) {
       fetchSqlWithItems(((SqlSelect) sqlSelect).getFrom(), sqlNodes);
     }
+    if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlSelect).getSelectList() != null) {
+      fetchSqlWithSelectList(((SqlSelect) sqlSelect).getSelectList(), sqlNodes);
+    }
     return sqlNodes;
+  }
+
+  public static void fetchSqlWithSelectList(List<SqlNode> selectItems, List<SqlNode> sqlNodes) {
+    selectItems.stream().filter(item -> item instanceof SqlBasicCall)
+        .forEach(item -> fetchFromSqlBasicCall(item, sqlNodes));
   }
 
   /**
@@ -189,6 +197,10 @@ public class CTERelToSqlUtil {
         SqlNode whereNode = sqlSelect.getWhere();
         if (whereNode instanceof SqlBasicCall) {
           updateNode(whereNode);
+        }
+        if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlNode).getSelectList() != null) {
+          ((SqlSelect) sqlNode).getSelectList().stream().filter(item -> item instanceof SqlBasicCall)
+              .forEach(item -> updateNode(item));
         }
       }
     }
