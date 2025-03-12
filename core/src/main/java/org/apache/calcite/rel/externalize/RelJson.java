@@ -602,6 +602,26 @@ public class RelJson {
       map.put("tableAlias", ((TableAliasTrait) node).getTableAlias());
       map.put("statementType", ((TableAliasTrait) node).getStatementType());
       break;
+    case "PivotRelTrait":
+      map = jsonBuilder().map();
+      map.put("isPivotRel", ((PivotRelTrait) node).isPivotRel());
+      map.put("hasSubquery", ((PivotRelTrait) node).hasSubquery());
+      map.put("pivotAlias", ((PivotRelTrait) node).getPivotAlias());
+      map.put("extraFieldCountFromInputRel",
+          ((PivotRelTrait) node).getExtraFieldCountFromInputRel());
+      break;
+    case "InnerJoinTrait":
+      map = jsonBuilder().map();
+      map.put("preserveInnerJoin", ((InnerJoinTrait) node).isPreserveInnerJoin());
+      break;
+      case "AdditionalProjectionTrait":
+      map = jsonBuilder().map();
+      map.put("additionalProjection", "yes");
+      break;
+      case "SubQueryAliasTrait":
+      map = jsonBuilder().map();
+      map.put("subQueryAlias", ((SubQueryAliasTrait) node).getSubQueryAlias());
+      break;
     default:
       throw new UnsupportedOperationException("unknown trait " + node);
     }
@@ -771,6 +791,26 @@ public class RelJson {
       trait = new TableAliasTrait(tableAlias);
       ((TableAliasTrait) trait).setStatementType(statementType);
       break;
+    case "PivotRelTrait":
+      Boolean isPivotRel = get(map, "isPivotRel");
+      Boolean hasSubquery = get(map, "hasSubquery");
+      String pivotAlias = get(map, "pivotAlias");
+      Integer extraFieldCountFromInputRel = get(map, "extraFieldCountFromInputRel");
+      trait = new PivotRelTrait(isPivotRel, hasSubquery, pivotAlias, extraFieldCountFromInputRel);
+      break;
+    case "InnerJoinTrait":
+      Boolean preserveInnerJoin = get(map, "preserveInnerJoin");
+      trait = new InnerJoinTrait(preserveInnerJoin);
+      break;
+      case "AdditionalProjectionTrait":
+      trait = new AdditionalProjectionTrait();
+      break;
+      case "SubQueryAliasTrait":
+      String subQueryAlias = get(map, "subQueryAlias");
+      trait = new SubQueryAliasTrait(subQueryAlias);
+      break;
+    default:
+      throw new UnsupportedOperationException("unknown trait " + traitName);
     }
     return trait;
   }
