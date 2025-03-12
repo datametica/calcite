@@ -140,9 +140,8 @@ public class RelJsonReader {
           for (Object relTrait : relTraits.keySet()) {
             String traitName = (String) relTrait;
             Map<String, Object> traitProperties = (Map<String, Object>) relTraits.get(relTrait);
-            traitSet.plus(relJson.toTrait(traitName, traitProperties));
+           return traitSet.plus(relJson.toTrait(traitName, traitProperties));
           }
-          return traitSet;
         }
         return cluster.traitSet();
 
