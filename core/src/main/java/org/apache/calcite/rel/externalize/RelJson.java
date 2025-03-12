@@ -19,9 +19,7 @@ package org.apache.calcite.rel.externalize;
 import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.avatica.util.TimeUnit;
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.*;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationImpl;
 import org.apache.calcite.rel.RelCollations;
@@ -462,6 +460,8 @@ public class RelJson {
       return toJson((RexWindowBound) value);
     } else if (value instanceof CorrelationId) {
       return toJson((CorrelationId) value);
+    } else if (value instanceof RelTraitSet) {
+      return toJson((RelTraitSet) value);
     } else if (value instanceof List || value instanceof Set) {
       final List<@Nullable Object> list = jsonBuilder().list();
       for (Object o : (Collection<?>) value) {
@@ -575,6 +575,40 @@ public class RelJson {
   private static Object toJson(CorrelationId node) {
     return node.getId();
   }
+
+  public Object toJson(RelTraitSet node) {
+    final Map<String, @Nullable Object> map = jsonBuilder().map();
+    ;
+    final List<@Nullable Object> list = jsonBuilder().list();
+    //skip first 2 traits as they are convention and calling convention
+    for (int i = 2; i < node.size(); i++) {
+      String traitName = node.getTrait(i).getTraitDef().getSimpleName();
+      RelTrait trait = node.getTrait(i);
+      map.put(traitName, toJson(trait));
+    }
+    return map;
+  }
+
+  public Object toJson(RelTrait node) {
+    final Map<String, @Nullable Object> map;
+    switch (node.getTraitDef().getSimpleName()) {
+    case "DistinctTrait":
+      map = jsonBuilder().map();
+      map.put("isDistinct", ((DistinctTrait) node).isDistinct());
+      map.put("isEvaluated", ((DistinctTrait) node).isEvaluated());
+      break;
+    case "TableAliasTrait":
+      map = jsonBuilder().map();
+      map.put("tableAlias", ((TableAliasTrait) node).getTableAlias());
+      map.put("statementType", ((TableAliasTrait) node).getStatementType());
+      break;
+    default:
+      throw new UnsupportedOperationException("unknown trait " + node);
+    }
+    return map;
+
+  }
+
 
   public Object toJson(RexNode node) {
     final Map<String, @Nullable Object> map;
@@ -720,6 +754,25 @@ public class RelJson {
   public RexNode toRex(RelOptCluster cluster, Object o) {
     RelInput input = new RelInputForCluster(cluster);
     return toRex(input, o);
+  }
+
+  public RelTrait toTrait(String traitName, Map<String, Object> map) {
+    RelTrait trait = null;
+    switch (traitName) {
+    case "DistinctTrait":
+      Boolean isDistinct = get(map, "isDistinct");
+      Boolean isEvaluated = get(map, "isEvaluated");
+      trait = new DistinctTrait(isDistinct);
+      ((DistinctTrait) trait).setEvaluatedStruct(isEvaluated);
+      break;
+    case "TableAliasTrait":
+      String tableAlias = get(map, "tableAlias");
+      String statementType = get(map, "statementType");
+      trait = new TableAliasTrait(tableAlias);
+      ((TableAliasTrait) trait).setStatementType(statementType);
+      break;
+    }
+    return trait;
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
