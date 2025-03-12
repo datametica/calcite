@@ -622,6 +622,11 @@ public class RelJson {
       map = jsonBuilder().map();
       map.put("subQueryAlias", ((SubQueryAliasTrait) node).getSubQueryAlias());
       break;
+    case "GroupByWithQualifyHavingRankRelTrait":
+      map = jsonBuilder().map();
+      map.put("clauseName",
+          ((GroupByWithQualifyHavingRankRelTrait) node).getClauseName());
+      break;
     default:
       throw new UnsupportedOperationException("unknown trait " + node);
     }
@@ -808,6 +813,10 @@ public class RelJson {
       case "SubQueryAliasTrait":
       String subQueryAlias = get(map, "subQueryAlias");
       trait = new SubQueryAliasTrait(subQueryAlias);
+      break;
+    case "GroupByWithQualifyHavingRankRelTrait":
+      String clauseName = get(map, "clauseName");
+      trait = new GroupByWithQualifyHavingRankRelTrait(clauseName);
       break;
     default:
       throw new UnsupportedOperationException("unknown trait " + traitName);
