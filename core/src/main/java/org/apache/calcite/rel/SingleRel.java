@@ -73,7 +73,7 @@ public abstract class SingleRel extends AbstractRelNode {
   }
 
   @Override public RelWriter explainTerms(RelWriter pw) {
-    if(getTraitSet().size()<=2) {
+    if (getTraitSet().size() <= 2) {
       return super.explainTerms(pw)
           .input("input", getInput());
     } else {

@@ -19,10 +19,20 @@ package org.apache.calcite.rel.rel2sql;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
-import org.apache.calcite.plan.*;
+import org.apache.calcite.plan.CTEDefinationTrait;
+import org.apache.calcite.plan.CTEScopeTrait;
+import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
+import org.apache.calcite.plan.QualifyRelTrait;
+import org.apache.calcite.plan.QualifyRelTraitDef;
+import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelTraitDef;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.ViewChildProjectRelTrait;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
+import org.apache.calcite.plan.DistinctTrait;
+import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttleImpl;
 import org.apache.calcite.rel.core.CorrelationId;
@@ -108,7 +118,14 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
-import org.apache.calcite.util.*;
+import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.Pair;
+
+import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.TimestampString;
+import org.apache.calcite.util.TestUtil;
+import org.apache.calcite.util.Holder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -12938,10 +12955,7 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 
-  /**
-   * ReltoJson and RelJsonReader test case
-   */
-  @Test void RelToJson() {
+  @Test void relToJson() {
     final RelBuilder builder = relBuilder();
     final RelNode base = builder
         .scan("EMP")
@@ -12964,8 +12978,7 @@ class RelToSqlConverterDMTest {
     // Find the schema. If there are no tables in the plan, we won't need one.
     final RelOptSchema[] schemas = {null};
     base.accept(new RelShuttleImpl() {
-      @Override
-      public RelNode visit(TableScan scan) {
+      @Override public RelNode visit(TableScan scan) {
         schemas[0] = scan.getTable().getRelOptSchema();
         return super.visit(scan);
       }
@@ -12985,10 +12998,8 @@ class RelToSqlConverterDMTest {
     });
   }
 
-  /**
-   * ReltoJson and RelJsonReader test case
-   */
-  @Test void RelToJsonWithTrait() {
+
+  @Test void relToJsonWithTrait() {
     final RelBuilder builder = relBuilder();
     final RelNode base = builder
         .scan("EMP")
@@ -13002,10 +13013,8 @@ class RelToSqlConverterDMTest {
         .build();
 
     // add a trait
-    RelTraitSet traitSet = base.getTraitSet();
     DistinctTrait distinctTrait = new DistinctTrait(true);
     distinctTrait.setEvaluatedStruct(false);
-    RelTrait trait[] = {distinctTrait};
     RelTraitSet traitSet1 = base.getTraitSet().plus(distinctTrait);
     RelNode base1 = base.copy(traitSet1, base.getInputs());
 
@@ -13018,8 +13027,7 @@ class RelToSqlConverterDMTest {
     // Find the schema. If there are no tables in the plan, we won't need one.
     final RelOptSchema[] schemas = {null};
     base1.accept(new RelShuttleImpl() {
-      @Override
-      public RelNode visit(TableScan scan) {
+      @Override public RelNode visit(TableScan scan) {
         schemas[0] = scan.getTable().getRelOptSchema();
         return super.visit(scan);
       }
@@ -13031,7 +13039,7 @@ class RelToSqlConverterDMTest {
       try {
         RelNode x = reader.read(relJson);
         assert x != null;
-        assert x.getTraitSet().size()==3;
+        assert x.getTraitSet().size() == 3;
         assert x.getTraitSet().get(2).getTraitDef().getSimpleName().equals("DistinctTrait");
       } catch (IOException e) {
         throw TestUtil.rethrow(e);

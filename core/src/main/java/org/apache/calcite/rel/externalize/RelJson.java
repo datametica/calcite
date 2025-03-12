@@ -19,7 +19,6 @@ package org.apache.calcite.rel.externalize;
 import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.avatica.util.TimeUnit;
-import org.apache.calcite.plan.*;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationImpl;
 import org.apache.calcite.rel.RelCollations;
@@ -72,6 +71,18 @@ import org.apache.calcite.util.Sarg;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.Util;
+
+import org.apache.calcite.plan.DistinctTrait;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.PivotRelTrait;
+import org.apache.calcite.plan.InnerJoinTrait;
+import org.apache.calcite.plan.TableAliasTrait;
+import org.apache.calcite.plan.SubQueryAliasTrait;
+import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
+import org.apache.calcite.plan.AdditionalProjectionTrait;
+import org.apache.calcite.plan.RelOptTable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -578,7 +589,6 @@ public class RelJson {
 
   public Object toJson(RelTraitSet node) {
     final Map<String, @Nullable Object> map = jsonBuilder().map();
-    ;
     final List<@Nullable Object> list = jsonBuilder().list();
     //skip first 2 traits as they are convention and calling convention
     for (int i = 2; i < node.size(); i++) {
@@ -614,11 +624,11 @@ public class RelJson {
       map = jsonBuilder().map();
       map.put("preserveInnerJoin", ((InnerJoinTrait) node).isPreserveInnerJoin());
       break;
-      case "AdditionalProjectionTrait":
+    case "AdditionalProjectionTrait":
       map = jsonBuilder().map();
       map.put("additionalProjection", "yes");
       break;
-      case "SubQueryAliasTrait":
+    case "SubQueryAliasTrait":
       map = jsonBuilder().map();
       map.put("subQueryAlias", ((SubQueryAliasTrait) node).getSubQueryAlias());
       break;
@@ -807,10 +817,10 @@ public class RelJson {
       Boolean preserveInnerJoin = get(map, "preserveInnerJoin");
       trait = new InnerJoinTrait(preserveInnerJoin);
       break;
-      case "AdditionalProjectionTrait":
+    case "AdditionalProjectionTrait":
       trait = new AdditionalProjectionTrait();
       break;
-      case "SubQueryAliasTrait":
+    case "SubQueryAliasTrait":
       String subQueryAlias = get(map, "subQueryAlias");
       trait = new SubQueryAliasTrait(subQueryAlias);
       break;
