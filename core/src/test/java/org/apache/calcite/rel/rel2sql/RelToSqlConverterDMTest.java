@@ -8542,7 +8542,7 @@ class RelToSqlConverterDMTest {
         .build();
     final String expectedBQSql = "SELECT COUNT(*) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS CNT\n"
         + "FROM scott.EMP\n"
-        + "QUALIFY (COUNT(*) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)) = 1";
+        + "QUALIFY CNT = 1";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
   }
 
@@ -11290,10 +11290,11 @@ class RelToSqlConverterDMTest {
         .build();
 
     final String expectedBiqQuery = "SELECT DEPTNO\n"
+        + "FROM (SELECT DEPTNO, CAST(FLOOR(((RANK() OVER (ORDER BY 23)) - 1) * 5 / (COUNT(*) OVER "
+        + "(RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING))) AS INT64) AS quantile\n"
         + "FROM scott.EMP\n"
         + "WHERE EMPNO NOT BETWEEN 1 AND 3\n"
-        + "QUALIFY CAST(FLOOR(((RANK() OVER (ORDER BY 23)) - 1) * 5 / (COUNT(*) OVER (RANGE BETWEEN "
-        + "UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING))) AS INT64) = 1";
+        + "QUALIFY quantile = 1) AS t1";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
