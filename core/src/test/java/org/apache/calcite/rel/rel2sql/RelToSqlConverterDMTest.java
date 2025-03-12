@@ -12954,23 +12954,16 @@ class RelToSqlConverterDMTest {
         .project(builder.field(0))
         .build();
 
-    // add a trait
-    RelTraitSet traitSet = base.getTraitSet();
-    DistinctTrait distinctTrait = new DistinctTrait(true);
-    distinctTrait.setEvaluatedStruct(false);
-    RelTrait trait[] = {distinctTrait};
-    RelTraitSet traitSet1 = base.getTraitSet().plus(distinctTrait);
-    RelNode base1 = base.copy(traitSet1, base.getInputs());
 
     //converting RelNode to RelJson
     RelJsonWriter relJsonWriter = new RelJsonWriter();
-    base1.explain(relJsonWriter);
+    base.explain(relJsonWriter);
     final String relJson = relJsonWriter.asString();
     System.out.println("RelJson::" + relJson);
 
     // Find the schema. If there are no tables in the plan, we won't need one.
     final RelOptSchema[] schemas = {null};
-    base1.accept(new RelShuttleImpl() {
+    base.accept(new RelShuttleImpl() {
       @Override
       public RelNode visit(TableScan scan) {
         schemas[0] = scan.getTable().getRelOptSchema();
@@ -12984,7 +12977,7 @@ class RelToSqlConverterDMTest {
       try {
         RelNode x = reader.read(relJson);
         assert x != null;
-        assert x.explain().equals(base1.explain());
+        assert x.explain().equals(base.explain());
       } catch (IOException e) {
         throw TestUtil.rethrow(e);
       }
