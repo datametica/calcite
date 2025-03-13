@@ -2072,7 +2072,9 @@ public abstract class SqlImplementor {
         return true;
       }
       if (expectedClauses.contains(Clause.QUALIFY)
-          && (rel.getInput(0) instanceof Aggregate || rel.getInput(0) instanceof Project)) {
+          && (rel.getInput(0) instanceof Aggregate
+          || (rel.getInput(0) instanceof Project
+          && ((Project) rel.getInput(0)).containsOver()))) {
         return true;
       }
       return false;
