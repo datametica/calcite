@@ -200,7 +200,7 @@ public class RelJson {
   @SuppressWarnings("unchecked")
   private static <T extends Object> T get(Map<String, ? extends @Nullable Object> map,
       String key) {
-    return (T) requireNonNull(map.get(key), () -> "entry for key " + key);
+    return (T) map.get(key);
   }
 
   private static <T extends Enum<T>> T enumVal(Class<T> clazz, Map<String, Object> map,
