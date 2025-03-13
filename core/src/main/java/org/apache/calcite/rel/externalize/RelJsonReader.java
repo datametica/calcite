@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.rel.externalize;
 
-
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
