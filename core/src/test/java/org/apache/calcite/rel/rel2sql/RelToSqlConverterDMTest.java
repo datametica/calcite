@@ -22,6 +22,7 @@ import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.DistinctTrait;
+import org.apache.calcite.plan.TableAliasTrait;
 import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
 import org.apache.calcite.plan.QualifyRelTrait;
 import org.apache.calcite.plan.QualifyRelTraitDef;
@@ -13056,6 +13057,49 @@ class RelToSqlConverterDMTest {
         assert x != null;
         assert x.getTraitSet().size() == 3;
         assert x.getTraitSet().get(2).getTraitDef().getSimpleName().equals("DistinctTrait");
+      } catch (IOException e) {
+        throw TestUtil.rethrow(e);
+      }
+      return null;
+    });
+  }
+
+
+  @Test void relToJsonWithTableAliasTrait() {
+    final RelBuilder builder = relBuilder();
+    final RelNode base = builder
+        .scan("EMP")
+        .build();
+
+
+    // add a trait
+    TableAliasTrait tableAliasTrait = new TableAliasTrait("EMP1");
+    RelTraitSet traitSet1 = base.getTraitSet().plus(tableAliasTrait);
+    RelNode base1 = base.copy(traitSet1, base.getInputs());
+
+    //converting RelNode to RelJson
+    RelJsonWriter relJsonWriter = new RelJsonWriter();
+    base1.explain(relJsonWriter);
+    final String relJson = relJsonWriter.asString();
+    System.out.println("RelJson::" + relJson);
+
+    // Find the schema. If there are no tables in the plan, we won't need one.
+    final RelOptSchema[] schemas = {null};
+    base1.accept(new RelShuttleImpl() {
+      @Override public RelNode visit(TableScan scan) {
+        schemas[0] = scan.getTable().getRelOptSchema();
+        return super.visit(scan);
+      }
+    });
+    //Converting string json back to RelNode
+    Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+      final RelJsonReader reader =
+          new RelJsonReader(cluster, schemas[0], rootSchema);
+      try {
+        RelNode x = reader.read(relJson);
+        assert x != null;
+        assert x.getTraitSet().size() == 3;
+        assert x.getTraitSet().get(2).getTraitDef().getSimpleName().equals("TableAliasTrait");
       } catch (IOException e) {
         throw TestUtil.rethrow(e);
       }
