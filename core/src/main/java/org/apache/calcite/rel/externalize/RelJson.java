@@ -20,6 +20,8 @@ import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.plan.AdditionalProjectionTrait;
+import org.apache.calcite.plan.CTEDefinationTrait;
+import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
 import org.apache.calcite.plan.InnerJoinTrait;
@@ -636,6 +638,15 @@ public class RelJson {
       map.put("clauseName",
           ((GroupByWithQualifyHavingRankRelTrait) node).getClauseName());
       break;
+    case "CTEScopeTrait":
+      map = jsonBuilder().map();
+      map.put("isCTEScope", ((CTEScopeTrait) node).isCTEScope());
+      break;
+    case "CTEDefinationTrait":
+      map = jsonBuilder().map();
+      map.put("isCTEDefination", ((CTEDefinationTrait) node).isCTEDefination());
+      map.put("cteName", ((CTEDefinationTrait) node).getCteName());
+      break;
     default:
       throw new UnsupportedOperationException("unknown trait " + node);
     }
@@ -826,6 +837,15 @@ public class RelJson {
     case "GroupByWithQualifyHavingRankRelTrait":
       String clauseName = get(map, "clauseName");
       trait = new GroupByWithQualifyHavingRankRelTrait(clauseName);
+      break;
+    case "CTEScopeTrait":
+      Boolean isCTEScope = get(map, "isCTEScope");
+      trait = new CTEScopeTrait(isCTEScope);
+      break;
+    case "CTEDefinationTrait":
+      Boolean isCTEDefination = get(map, "isCTEDefination");
+      String cteName = get(map, "cteName");
+      trait = new CTEDefinationTrait(isCTEDefination, cteName);
       break;
     default:
       throw new UnsupportedOperationException("unknown trait " + traitName);
