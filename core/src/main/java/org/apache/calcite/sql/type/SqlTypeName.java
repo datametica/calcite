@@ -146,7 +146,7 @@ public enum SqlTypeName {
   SERIAL(PrecScale.NO_NO, false, Types.INTEGER, SqlTypeFamily.NUMERIC),
   DOUBLE_PRECISION(PrecScale.NO_NO, false, Types.FLOAT, SqlTypeFamily.NUMERIC);
 
-  public static final int MAX_DATETIME_PRECISION = 3;
+  public static final int MAX_DATETIME_PRECISION = 6;
 
   // Minimum and default interval precisions are  defined by SQL2003
   // Maximum interval precisions are implementation dependent,
