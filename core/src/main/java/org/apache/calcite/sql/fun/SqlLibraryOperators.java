@@ -70,6 +70,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.NETEZZA;
 import static org.apache.calcite.sql.fun.SqlLibrary.ORACLE;
 import static org.apache.calcite.sql.fun.SqlLibrary.POSTGRESQL;
+import static org.apache.calcite.sql.fun.SqlLibrary.REDSHIFT;
 import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.SQL_SERVER;
@@ -3298,6 +3299,33 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.family(SqlTypeFamily.DATETIME,
               SqlTypeFamily.STRING), SqlFunctionCategory.SYSTEM);
+
+  /**
+   * The "TRUNC(value [, integer])" function (Redshift);
+   * truncates a number to a specified decimal precision or
+   * a TIMESTAMP to a DATE.
+   *
+   * <p>{@code TRUNC(number [, precision])} removes fractional digits,
+   * while {@code TRUNC(timestamp)} drops the time part.
+   *
+   * <p>Docs:
+   * <a href="https://docs.aws.amazon.com/redshift/latest/dg/r_TRUNC_date.html">Redshift TRUNC</a>.
+   */
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction REDSHIFT_TRUNC =
+      new SqlFunction(
+          "TRUNC",
+          SqlKind.OTHER_FUNCTION,
+          opBinding -> {
+            RelDataType firstArgType = opBinding.getOperandType(0);
+            if (firstArgType.getSqlTypeName() == SqlTypeName.TIMESTAMP) {
+              return opBinding.getTypeFactory().createSqlType(SqlTypeName.DATE);
+            }
+            return firstArgType;
+          },
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC_OPTIONAL_INTEGER, OperandTypes.DATETIME),
+          SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction SNOWFLAKE_DATE_TRUNC =
