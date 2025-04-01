@@ -128,6 +128,7 @@ public abstract class RelDataTypeSystemImpl implements RelDataTypeSystem {
     case TIME_WITH_LOCAL_TIME_ZONE:
     case TIMESTAMP:
     case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+    case TIMESTAMP_WITH_TIME_ZONE:
       return SqlTypeName.MAX_DATETIME_PRECISION;
     case INTERVAL_YEAR:
     case INTERVAL_YEAR_MONTH:
