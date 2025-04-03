@@ -7533,6 +7533,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSFSql));
   }
 
+  @Test public void testIsNumericFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode isNumericNode =
+        builder.call(SqlLibraryOperators.ISNUMERIC,
+            builder.literal(123.45));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(isNumericNode, "isNumericValue"))
+        .build();
+    final String expectedSql = "SELECT ISNUMERIC(123.45) AS [isNumericValue]\n"
+        + "FROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testCurrentDatabaseFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode currentDatabase =
@@ -7864,6 +7879,39 @@ class RelToSqlConverterDMTest {
     HepPlanner hepPlanner = new HepPlanner(builder.build());
     RuleSet rules = RuleSets.ofList(CoreRules.FILTER_EXTRACT_INNER_JOIN_RULE);
     sql(query).withBigQuery().optimize(rules, hepPlanner).ok(expect);
+  }
+
+  @Test void testConversionOfFilterWithCrossJoinAndFilterHasBetweenOperator() {
+    final RelBuilder builder = foodmartRelBuilder();
+    RelNode leftTable = builder.scan("employee").build();
+    RelNode rightTable = builder.scan("reserve_employee").build();
+    RelNode join = builder.push(leftTable).push(rightTable).join(JoinRelType.INNER).build();
+    RelNode filteredRel = builder.push(join)
+        .filter(
+            builder.call(SqlLibraryOperators.BETWEEN, builder.field(11),
+            builder.call(SqlStdOperatorTable.DIVIDE, builder.field(11),
+                builder.literal(100)), builder.field(28)))
+        .build();
+
+    // Projection
+    RelNode relNode = builder.push(filteredRel)
+        .project(builder.field(1))
+        .build();
+
+    // Applying rel optimization
+    Collection<RelOptRule> rules = new ArrayList<>();
+    rules.add((FilterExtractInnerJoinRule.Config.DEFAULT).toRule());
+    HepProgram hepProgram = new HepProgramBuilder().addRuleCollection(rules).build();
+    HepPlanner hepPlanner = new HepPlanner(hepProgram);
+    hepPlanner.setRoot(relNode);
+    RelNode optimizedRel = hepPlanner.findBestExp();
+
+    final String expectedSql = "SELECT employee.full_name\n"
+        + "FROM foodmart.employee\n"
+        + "INNER JOIN foodmart.reserve_employee ON TRUE\n"
+        + "WHERE employee.salary BETWEEN employee.salary / 100 AND reserve_employee.salary";
+
+    assertThat(toSql(optimizedRel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 
   @Test void testConversionOfFilterWithCrossJoinToFilterWithInnerJoinWithOneConditionInFilter() {
@@ -9533,6 +9581,22 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
   }
 
+  @Test public void testIsoFormats() {
+    final RelBuilder builder = relBuilder();
+
+    final RexNode toCharNodeIsoFormat =
+        builder.call(SqlLibraryOperators.FORMAT_DATE,
+            builder.literal(SqlDateTimeFormat.FOURDIGITISOYEAR.value + "@" + SqlDateTimeFormat.ISOWEEK.value),
+            builder.call(CURRENT_DATE));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(toCharNodeIsoFormat)
+        .build();
+    final String expectedBQQuery = "SELECT FORMAT_DATE('%G%V', CURRENT_DATE) AS `$f0`\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQQuery));
+  }
+
   @Test public void testToDateforOracle() {
     RelBuilder builder = relBuilder().scan("EMP");
     final RexNode oracleToDateCall =
@@ -10508,6 +10572,22 @@ class RelToSqlConverterDMTest {
         + "(1234.6 AS NUMERIC), 0), 1234.67\n"
         + "FROM foodmart.salary";
     sql(query).withBigQuery().ok(expected);
+  }
+
+  @Test public void testMsSqlDateNameFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode isNumericNode =
+        builder.call(SqlLibraryOperators.DATENAME,
+            builder.literal(DAY),
+            builder.call(GETDATE));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(isNumericNode, "datename"))
+        .build();
+    final String expectedSFSql = "SELECT DATENAME(DAY, GETDATE) AS [datename]\n"
+        + "FROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSFSql));
   }
 
   @Test public void testQuoteInStringLiterals() {
@@ -11523,6 +11603,24 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQQuery));
   }
 
+  @Test public void testEditDistanceFunctionWithSixArgs() {
+    final RelBuilder builder = relBuilder();
+    final RexNode editDistanceRex =
+        builder.call(SqlLibraryOperators.EDIT_DISTANCE, builder.literal("PHONE"),
+            builder.literal("FONE"),
+            builder.literal(1),
+            builder.literal(0),
+            builder.literal(1),
+            builder.literal(0));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(editDistanceRex)
+        .build();
+    final String expectedBQQuery = "SELECT EDIT_DISTANCE('PHONE', 'FONE', 1, 0, 1, 0) AS `$f0`"
+        + "\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQQuery));
+  }
+
   @Test public void testEditDistanceFunctionWithThreeArgs() {
     final RelBuilder builder = relBuilder();
     final RexNode editDistanceRex =
@@ -11651,35 +11749,21 @@ class RelToSqlConverterDMTest {
         isLinux(expectedSnowFlakeQuery));
   }
 
-  @Test public void testForRegexpReplaceWithReplaceStringAsNull() {
-    final RelBuilder builder = relBuilder();
-    final RexNode regexpReplaceRex =
-        builder.call(SqlLibraryOperators.REGEXP_REPLACE, builder.literal("Calcite"), builder.literal("ac"),
-                builder.literal(null), builder.literal(1), builder.literal(0), builder.literal("i"));
-    final RelNode root = builder
-        .scan("EMP")
-        .project(builder.alias(regexpReplaceRex, "regexpReplace"))
-        .build();
-
-    final String expectedBiqQuery = "SELECT "
-        + "REGEXP_REPLACE('Calcite', '(?i)ac', NULL) AS regexpReplace\n"
-        + "FROM scott.EMP";
-
-    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
-  }
-
   @Test public void testForRegexpReplaceWithReplaceString() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpReplaceRex =
-        builder.call(SqlLibraryOperators.REGEXP_REPLACE, builder.literal("Calcite"), builder.literal("te"),
-                builder.literal("me"), builder.literal(1), builder.literal(0), builder.literal("i"));
+        builder.call(
+            SqlLibraryOperators.createUDFSqlFunction("REGEXP_REPLACE_UDF", ReturnTypes.VARCHAR_NULLABLE),
+            builder.literal("Calcite"), builder.literal("te"),
+                builder.literal("me"), builder.literal(1), builder.literal(0),
+            builder.literal("i"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(regexpReplaceRex, "regexpReplace"))
         .build();
 
     final String expectedBiqQuery = "SELECT "
-        + "REGEXP_REPLACE('Calcite', '(?i)te', 'me') AS regexpReplace\n"
+        + "udf_schema.REGEXP_REPLACE_UDF('Calcite', 'te', 'me', 1, 0, 'i') AS regexpReplace\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -11688,15 +11772,18 @@ class RelToSqlConverterDMTest {
   @Test public void testForRegexpReplaceWithReplaceStringAsEmpty() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpReplaceRex =
-        builder.call(SqlLibraryOperators.REGEXP_REPLACE, builder.literal("Calcite"), builder.literal("ac"),
-                builder.literal(""), builder.literal(1), builder.literal(0), builder.literal("i"));
+        builder.call(
+            SqlLibraryOperators.createUDFSqlFunction("REGEXP_REPLACE_UDF", ReturnTypes.VARCHAR_NULLABLE),
+            builder.literal("Calcite"), builder.literal("ac"),
+                builder.literal(""), builder.literal(1), builder.literal(0),
+            builder.literal("i"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(regexpReplaceRex, "regexpReplace"))
         .build();
 
     final String expectedBiqQuery = "SELECT "
-        + "REGEXP_REPLACE('Calcite', '(?i)ac', '') AS regexpReplace\n"
+        + "udf_schema.REGEXP_REPLACE_UDF('Calcite', 'ac', '', 1, 0, 'i') AS regexpReplace\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -12597,6 +12684,22 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigquery));
   }
 
+  @Test public void testTeradataJsonExtractFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode =
+        builder.call(SqlLibraryOperators.JSONEXTRACT, builder.literal("{\"name\": \"Bob\",\"Jane\"}"),
+        builder.literal("$.name"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json_data"))
+        .build();
+    final String expectedTeraDataQuery = "SELECT JSONEXTRACT('{\"name\": \"Bob\",\"Jane\"}', '$"
+        + ".name') AS \"json_data\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeraDataQuery));
+  }
+
   @Test public void testFloorFunctionForSnowflake() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 =
@@ -12912,5 +13015,33 @@ class RelToSqlConverterDMTest {
         + "FROM foodmart.employee\nGROUP BY 1, 2";
 
     assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testErrorMessageFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode errorMessage =
+        builder.call(SqlLibraryOperators.ERROR_MESSAGE);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(errorMessage, "errorMessage"))
+        .build();
+    final String expectedSql = "SELECT ERROR_MESSAGE() AS [errorMessage]"
+        + "\nFROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testErrorMessageIdFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode errorMessageId =
+        builder.call(SqlLibraryOperators.ERROR_MESSAGE_ID);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(errorMessageId, "errorMessageId"))
+        .build();
+    final String expectedSql = "SELECT @@ERROR.MESSAGE AS errorMessageId"
+        + "\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 }
