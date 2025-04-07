@@ -1312,7 +1312,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction CONCAT3 =
       new SqlFunction("||",
           SqlKind.CONCAT,
-          ReturnTypes.ARG0_NULLABLE,
+          ReturnTypes.MULTIVALENT_STRING_SUM_PRECISION_NULLABLE,
           null,
           OperandTypes.or(OperandTypes.STRING_NUMERIC_OPTIONAL_STRING,
               OperandTypes.NUMERIC_STRING_OPTIONAL_STRING),
@@ -1668,6 +1668,13 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction ARRAY_LENGTH =
       SqlBasicFunction.create(SqlKind.ARRAY_LENGTH,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_START_INDEX(array)" function. */
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction ARRAY_START_INDEX =
+      SqlBasicFunction.create(SqlKind.ARRAY_START_INDEX,
           ReturnTypes.INTEGER_NULLABLE,
           OperandTypes.ARRAY);
 
@@ -3652,16 +3659,12 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.NUMERIC);
 
-  @LibraryOperator(libraries = {BIG_QUERY, ORACLE})
-  public static final SqlFunction EDIT_DISTANCE =
-      new SqlFunction("EDIT_DISTANCE",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER_NULLABLE, null,
-          OperandTypes.family(
-              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
-                  SqlTypeFamily.INTEGER),
-              number -> number == 2),
-          SqlFunctionCategory.NUMERIC);
+  /**
+   * The EDIT_DISTANCE(string1, string2 [, ci, cd, cs, ct ])
+   * measures the similarity between two strings.
+   * */
+  @LibraryOperator(libraries = {BIG_QUERY, ORACLE, TERADATA})
+  public static final SqlFunction EDIT_DISTANCE = new SqlEditDistanceFunction();
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_UUID =

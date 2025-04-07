@@ -2755,6 +2755,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgres));
   }
 
+  @Test public void testArrayStartIndexFunction() {
+    final RelBuilder builder = relBuilder();
+    RexNode array =
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal(0), builder.literal(1), builder.literal(2));
+    RexNode arrayStartIndexCall =
+        builder.call(SqlLibraryOperators.ARRAY_START_INDEX, array);
+    RelNode root = builder
+        .push(LogicalValues.createOneRow(builder.getCluster()))
+        .project(arrayStartIndexCall)
+        .build();
+    final String expectedPostgres = "SELECT ARRAY_START_INDEX(ARRAY[0, 1, 2]) AS \"$f0\"";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgres));
+  }
+
   @Test public void testHostFunction() {
     final RelBuilder builder = relBuilder();
     RexNode hostCall = builder.call(SqlLibraryOperators.HOST, builder.literal("127.0.0.1"));
@@ -7881,6 +7896,39 @@ class RelToSqlConverterDMTest {
     sql(query).withBigQuery().optimize(rules, hepPlanner).ok(expect);
   }
 
+  @Test void testConversionOfFilterWithCrossJoinAndFilterHasBetweenOperator() {
+    final RelBuilder builder = foodmartRelBuilder();
+    RelNode leftTable = builder.scan("employee").build();
+    RelNode rightTable = builder.scan("reserve_employee").build();
+    RelNode join = builder.push(leftTable).push(rightTable).join(JoinRelType.INNER).build();
+    RelNode filteredRel = builder.push(join)
+        .filter(
+            builder.call(SqlLibraryOperators.BETWEEN, builder.field(11),
+            builder.call(SqlStdOperatorTable.DIVIDE, builder.field(11),
+                builder.literal(100)), builder.field(28)))
+        .build();
+
+    // Projection
+    RelNode relNode = builder.push(filteredRel)
+        .project(builder.field(1))
+        .build();
+
+    // Applying rel optimization
+    Collection<RelOptRule> rules = new ArrayList<>();
+    rules.add((FilterExtractInnerJoinRule.Config.DEFAULT).toRule());
+    HepProgram hepProgram = new HepProgramBuilder().addRuleCollection(rules).build();
+    HepPlanner hepPlanner = new HepPlanner(hepProgram);
+    hepPlanner.setRoot(relNode);
+    RelNode optimizedRel = hepPlanner.findBestExp();
+
+    final String expectedSql = "SELECT employee.full_name\n"
+        + "FROM foodmart.employee\n"
+        + "INNER JOIN foodmart.reserve_employee ON TRUE\n"
+        + "WHERE employee.salary BETWEEN employee.salary / 100 AND reserve_employee.salary";
+
+    assertThat(toSql(optimizedRel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
   @Test void testConversionOfFilterWithCrossJoinToFilterWithInnerJoinWithOneConditionInFilter() {
     String query =
         "select *\n"
@@ -11551,6 +11599,24 @@ class RelToSqlConverterDMTest {
         .project(editDistanceRex)
         .build();
     final String expectedBQQuery = "SELECT EDIT_DISTANCE('abc', 'xyz') AS `$f0`"
+        + "\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQQuery));
+  }
+
+  @Test public void testEditDistanceFunctionWithSixArgs() {
+    final RelBuilder builder = relBuilder();
+    final RexNode editDistanceRex =
+        builder.call(SqlLibraryOperators.EDIT_DISTANCE, builder.literal("PHONE"),
+            builder.literal("FONE"),
+            builder.literal(1),
+            builder.literal(0),
+            builder.literal(1),
+            builder.literal(0));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(editDistanceRex)
+        .build();
+    final String expectedBQQuery = "SELECT EDIT_DISTANCE('PHONE', 'FONE', 1, 0, 1, 0) AS `$f0`"
         + "\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQQuery));
   }
