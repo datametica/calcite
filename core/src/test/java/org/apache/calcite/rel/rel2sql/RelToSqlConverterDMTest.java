@@ -13028,4 +13028,24 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testAgeInYearsFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexLiteral timestampLiteral1 =
+        builder.getRexBuilder().makeTimestampLiteral(
+            new TimestampString(2022, 2, 18, 8, 23, 45), 0);
+    final RexLiteral timestampLiteral2 =
+        builder.getRexBuilder().makeTimestampLiteral(
+            new TimestampString(2023, 4, 18, 8, 23, 45), 0);
+    final RexNode ageInYearsNode =
+        builder.call(SqlLibraryOperators.AGE_IN_YEARS, timestampLiteral1, timestampLiteral2);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(ageInYearsNode)
+        .build();
+    final String expectedVerticaSql = "SELECT AGE_IN_YEARS(TIMESTAMP '2022-02-18 08:23:45', TIMESTAMP "
+        + "'2023-04-18 08:23:45') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedVerticaSql));
+  }
 }
