@@ -956,9 +956,17 @@ public class SqlPrettyWriter implements SqlWriter {
   }
 
   private void maybeWhitespace(String s) {
-    if (tooLong(s) || (needWhitespace && needWhitespaceBefore(s))) {
+    if (tooLong(s) || (needWhitespace && needWhitespaceBefore(s) && needWhitespaceBefore())) {
       whiteSpace();
     }
+  }
+
+  protected boolean needWhitespaceBefore() {
+    if (buf.isEmpty()) {
+      return false;
+    }
+    String lastChar = buf.substring(buf.length() - 1);
+    return !lastChar.equals("[");
   }
 
   private static boolean needWhitespaceBefore(String s) {
