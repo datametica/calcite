@@ -2783,4 +2783,10 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
       return floor ? SqlStdOperatorTable.FLOOR : SqlStdOperatorTable.CEIL;
     }
   }
+
+  /**
+   * The <code>CURRENT_USER_ID</code> function.
+   */
+  public static final SqlFunction CURRENT_USER_ID =
+      new SqlStringContextVariable("CURRENT_USER_ID");
 }

@@ -13083,4 +13083,18 @@ class RelToSqlConverterDMTest {
         + "FROM [scott].[EMP]";
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedMsSqlQuery));
   }
+
+  @Test public void testCurrentUserIdFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode rex =
+        builder.literal(
+            builder.call(SqlStdOperatorTable.CURRENT_USER_ID).toString().replace("()",
+                ""));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(rex)
+        .build();
+    final String expectedQuery = "SELECT 'CURRENT_USER_ID' AS \"$f0\"\nFROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedQuery));
+  }
 }
