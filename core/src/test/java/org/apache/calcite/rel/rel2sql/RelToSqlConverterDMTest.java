@@ -12954,6 +12954,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedMsSqlQuery));
   }
 
+  @Test public void testRedshiftNvlFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode nvlCall =
+        builder.call(SqlLibraryOperators.REDSHIFT_NVL, builder.literal(null), builder.literal(10),
+            builder.literal(100));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(nvlCall, "COALLESC"))
+        .build();
+
+    final String expectedSql = "SELECT 10 AS \"COALLESC\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testCollateFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode collateRexNode =
