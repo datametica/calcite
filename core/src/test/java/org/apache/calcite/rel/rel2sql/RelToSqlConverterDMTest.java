@@ -13011,6 +13011,34 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testInetAtonTranslationToBigQuery() {
+    final RelBuilder builder = relBuilder();
+    RexNode ipLiteral = builder.literal("209.207.224.40");
+    RexNode functionRex = builder.call(SqlLibraryOperators.INET_ATON, ipLiteral);
+    RexNode regexMatch = builder.call(
+        SqlLibraryOperators.REGEXP_CONTAINS,
+        ipLiteral,
+        builder.literal("^(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])){3}$"));
+    RexNode ipFromString = builder.call(SqlLibraryOperators.NET_IP_FROM_STRING, ipLiteral);
+    RexNode ipv4ToInt64 = builder.call(SqlLibraryOperators.NET_IPV4_TO_INT64, ipFromString);
+    RexNode ifExpr = builder.call(SqlLibraryOperators.IF, regexMatch, ipv4ToInt64, builder.literal(null));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(functionRex)
+        .project(builder.alias(ifExpr, "inet_aton_value"))
+        .build();
+
+    final String expectedSql =
+        "SELECT IF(REGEXP_CONTAINS('209.207.224.40', "
+            + "r'^(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])){3}$'), "
+            + "NET.IPV4_TO_INT64(NET.IP_FROM_STRING('209.207.224.40')), "
+            + "NULL) AS inet_aton_value"
+            + "\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+
   @Test public void testErrorMessageFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode errorMessage =
