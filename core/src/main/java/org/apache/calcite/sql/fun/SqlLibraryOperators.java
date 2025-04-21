@@ -3187,6 +3187,18 @@ public abstract class SqlLibraryOperators {
           OperandTypes.INTEGER,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction HASHAMP =
+      new SqlFunction(
+          "HASHAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.or(
+              OperandTypes.INTEGER, OperandTypes.family(SqlTypeFamily.DECIMAL,
+              SqlTypeFamily.NULL)),
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction HASH =
       new SqlFunction(
