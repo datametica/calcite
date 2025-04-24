@@ -2327,6 +2327,15 @@ public abstract class SqlImplementor {
             relInput.getRowType());
       }
 
+      @Nullable SubQueryAliasTrait subQueryAliasTraitDef =
+          rel.getTraitSet().getTrait(SubQueryAliasTraitDef.instance);
+
+      if (rel instanceof Project && relInput instanceof Filter
+          && relInput.getTraitSet().contains(subQueryAliasTraitDef)
+          && clauses.contains(Clause.QUALIFY)) {
+        return true;
+      }
+
       // If old and new clause are equal and belong to below set,
       // then new SELECT wrap is not required
       final Set<Clause> nonWrapSet = ImmutableSet.of(Clause.SELECT);
