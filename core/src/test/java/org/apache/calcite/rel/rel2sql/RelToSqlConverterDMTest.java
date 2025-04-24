@@ -13129,4 +13129,17 @@ class RelToSqlConverterDMTest {
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testFloat8Function() {
+    final RelBuilder builder = relBuilder();
+    final RexNode floatFunction =
+        builder.call(SqlLibraryOperators.FLOAT8, relBuilder().literal(10));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(floatFunction, "result"))
+        .build();
+    final String expectedSql = "SELECT FLOAT8(10) AS \"result\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedSql));
+  }
 }
