@@ -33,7 +33,7 @@ public class ExceptionLoggingAspect extends RuntimeException {
   public static final String REL_EXPRESSION = "relExpression";
   public static final String ROOT_METHOD_SIGNATURE = "rootMethodSignature";
   public static final String ROOT_METHOD_ARGS = "rootMethodArgs";
-  public static final String FAILING_MODULE= "failingModule";
+  public static final String FAILING_MODULE = "failingModule";
   public static final String FAILURE_STAGE = "failureStage";
   public static final String SOURCE_SCRIPT = "sourceScript";
 
