@@ -28,16 +28,20 @@ import java.util.Map;
 public class ExceptionLoggingAspect extends RuntimeException {
 
   public static final String REL_NODE = "relNode";
-  public static final String METHOD_CALL = "methodCall";
+  public static final String METHOD_CALL_STACK = "methodCall";
   public static final String SQL_EXPRESSION = "sqlExpression";
   public static final String REL_EXPRESSION = "relExpression";
+  public static final String ROOT_METHOD_SIG_ARG = "rootMethodSigArg";
+  public static final String FAILING_MODULE= "failingModule";
+  public static final String FAILURE_STAGE = "failureStage";
+  public static final String SOURCE_SCRIPT = "sourceScript";
 
   public Map<String, List<String>> details;
 
   public ExceptionLoggingAspect() {
     details = new HashMap<>();
     details.put(REL_NODE, new ArrayList<String>());
-    details.put(METHOD_CALL, new ArrayList<String>());
+    details.put(METHOD_CALL_STACK, new ArrayList<String>());
     details.put(SQL_EXPRESSION, new ArrayList<String>());
     details.put(REL_EXPRESSION, new ArrayList<String>());
   }
@@ -49,7 +53,7 @@ public class ExceptionLoggingAspect extends RuntimeException {
 
   // Getting populated from calcite as well as raven
   public List<String> getMethodCallExceptionDetails() {
-    return details.get(METHOD_CALL);
+    return details.get(METHOD_CALL_STACK);
   }
 
   // Getting populated from raven
