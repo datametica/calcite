@@ -31,7 +31,8 @@ public class ExceptionLoggingAspect extends RuntimeException {
   public static final String METHOD_CALL_STACK = "methodCall";
   public static final String SQL_EXPRESSION = "sqlExpression";
   public static final String REL_EXPRESSION = "relExpression";
-  public static final String ROOT_METHOD_SIG_ARG = "rootMethodSigArg";
+  public static final String ROOT_METHOD_SIGNATURE = "rootMethodSignature";
+  public static final String ROOT_METHOD_ARGS = "rootMethodArgs";
   public static final String FAILING_MODULE= "failingModule";
   public static final String FAILURE_STAGE = "failureStage";
   public static final String SOURCE_SCRIPT = "sourceScript";
@@ -44,6 +45,11 @@ public class ExceptionLoggingAspect extends RuntimeException {
     details.put(METHOD_CALL_STACK, new ArrayList<String>());
     details.put(SQL_EXPRESSION, new ArrayList<String>());
     details.put(REL_EXPRESSION, new ArrayList<String>());
+    details.put(ROOT_METHOD_SIGNATURE, new ArrayList<String>());
+    details.put(ROOT_METHOD_ARGS, new ArrayList<String>());
+    details.put(FAILING_MODULE, new ArrayList<String>());
+    details.put(FAILURE_STAGE, new ArrayList<String>());
+    details.put(SOURCE_SCRIPT, new ArrayList<String>());
   }
 
   // Getting populated from calcite
@@ -66,8 +72,34 @@ public class ExceptionLoggingAspect extends RuntimeException {
     return details.get(REL_EXPRESSION);
   }
 
+  // Getting populated from raven
+  public List<String> getRootMethodSignature() {
+    return details.get(ROOT_METHOD_SIGNATURE);
+  }
+
+  // Getting populated from raven
+  public List<String> getRootMethodArgs() {
+    return details.get(ROOT_METHOD_ARGS);
+  }
+
+  // Getting populated from raven
+  public List<String> getFailingModule() {
+    return details.get(FAILING_MODULE);
+  }
+
+  // Getting populated from raven
+  public List<String> getFailureStage() {
+    return details.get(FAILURE_STAGE);
+  }
+
+  // Getting populated from raven
+  public List<String> getSourceScript() {
+    return details.get(SOURCE_SCRIPT);
+  }
+
   public void clear() {
     details.forEach((key, value) -> value.clear());
     details.clear();
   }
+
 }
