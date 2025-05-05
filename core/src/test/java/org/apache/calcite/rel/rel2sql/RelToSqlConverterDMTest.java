@@ -13186,11 +13186,10 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
   }
 
-  @Test
-  public void testRotateleft() {
+  @Test public void testRotateleft() {
     final RelBuilder builder = relBuilder();
-    final RexNode formatDateRexNode = builder.call(SqlLibraryOperators.ROTATELEFT,
-        builder.literal(2), builder.literal(5));
+    final RexNode formatDateRexNode =
+        builder.call(SqlLibraryOperators.ROTATELEFT, builder.literal(2), builder.literal(5));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(formatDateRexNode, "FD"))
