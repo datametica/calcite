@@ -27,6 +27,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -182,5 +183,25 @@ public class RelRecordType extends RelDataTypeImpl implements Serializable {
     private Object readResolve() {
       return new RelRecordType(fields);
     }
+  }
+
+  @Override public int hashCode() {
+    return Objects.hash(this.digest, this.fieldList);
+  }
+
+  @Override public boolean equals(@Nullable Object obj) {
+    if (!super.equals(obj)) {
+      return false;
+    }
+    RelRecordType relRecordType = (RelRecordType) obj;
+    if (this.fieldList.size() != relRecordType.fieldList.size()) {
+      return false;
+    }
+    for (int i = 0; i < this.fieldList.size(); i++) {
+      if (!(this.fieldList.get(i).equals(relRecordType.fieldList.get(i)))) {
+        return false;
+      }
+    }
+    return true;
   }
 }
