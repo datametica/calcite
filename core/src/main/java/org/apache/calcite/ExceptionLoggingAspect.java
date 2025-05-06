@@ -36,6 +36,8 @@ public class ExceptionLoggingAspect extends RuntimeException {
   public static final String FAILING_MODULE = "failingModule";
   public static final String FAILURE_STAGE = "failureStage";
   public static final String SOURCE_SCRIPT = "sourceScript";
+  public static final String EXCEPTION_MSG = "exceptionMsg";
+
 
   public Map<String, List<String>> details;
 
@@ -50,6 +52,7 @@ public class ExceptionLoggingAspect extends RuntimeException {
     details.put(FAILING_MODULE, new ArrayList<String>());
     details.put(FAILURE_STAGE, new ArrayList<String>());
     details.put(SOURCE_SCRIPT, new ArrayList<String>());
+    details.put(EXCEPTION_MSG, new ArrayList<String>());
   }
 
   // Getting populated from calcite
@@ -95,6 +98,11 @@ public class ExceptionLoggingAspect extends RuntimeException {
   // Getting populated from raven
   public List<String> getSourceScript() {
     return details.get(SOURCE_SCRIPT);
+  }
+
+  // Getting populated from raven
+  public List<String> getExceptionMsg() {
+    return details.get(EXCEPTION_MSG);
   }
 
   public void clear() {
