@@ -9741,6 +9741,23 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
   }
 
+  @Test public void testAddMonthsForSpark() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode intervalLiteral =
+        relBuilder.call(SqlStdOperatorTable.UNARY_MINUS, relBuilder.literal(1));
+    final RexNode addMonthsCall =
+        relBuilder.call(new SqlAddMonths(false),
+            relBuilder.call(CURRENT_DATE), intervalLiteral);
+    RelNode root = relBuilder
+        .project(addMonthsCall)
+        .build();
+
+    final String expectedSparkSql = "SELECT ADD_MONTHS(CURRENT_DATE, -1) $f0\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkSql));
+  }
+
   @Test public void testCurrentTimestampWithTimeZone() {
     final RelBuilder builder = relBuilder().scan("EMP");
     RelDataType relDataType =
