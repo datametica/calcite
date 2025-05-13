@@ -37,7 +37,6 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -75,8 +74,7 @@ public abstract class RelDataTypeFactoryImpl implements RelDataTypeFactory {
    * Global cache for RelDataType.
    */
   @SuppressWarnings("BetaApi")
-  private static final Interner<RelDataType> DATATYPE_CACHE =
-      Interners.newWeakInterner();
+  private static final Interner<RelDataType> DATATYPE_CACHE = new CustomRelDataTypeInterner();
 
   private static RelDataType keyToType(Key key) {
     final ImmutableList.Builder<RelDataTypeField> list =
