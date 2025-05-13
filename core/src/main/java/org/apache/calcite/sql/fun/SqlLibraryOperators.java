@@ -591,6 +591,32 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlBasicFunction NORMALIZE =
+      SqlBasicFunction.create("NORMALIZE", ReturnTypes.CURSOR,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction STR_TO_TIMESTAMP =
+      new SqlFunction("STR_TO_TIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_NULLABLE,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction ROTATELEFT =
+      new SqlFunction(
+          "ROTATELEFT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.NUMERIC);
+
   /** The "REGEXP_REPLACE(value, regexp, rep [, pos [, occurrence [, matchType]]])"
    * function. Replaces all substrings of value that match regexp with
    * {@code rep} and returns modified value. */
@@ -1675,6 +1701,13 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction ARRAY_START_INDEX =
       SqlBasicFunction.create(SqlKind.ARRAY_START_INDEX,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_LAST_INDEX(array)" function. */
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction ARRAY_LAST_INDEX =
+      SqlBasicFunction.create(SqlKind.ARRAY_LAST_INDEX,
           ReturnTypes.INTEGER_NULLABLE,
           OperandTypes.ARRAY);
 
@@ -3659,6 +3692,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction WIDTH_BUCKET =
+      new SqlFunction("WIDTH_BUCKET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.NUMERIC);
   /**
    * The EDIT_DISTANCE(string1, string2 [, ci, cd, cs, ct ])
    * measures the similarity between two strings.
@@ -3808,6 +3849,35 @@ public abstract class SqlLibraryOperators {
           OperandTypes.NILADIC,
           SqlFunctionCategory.SYSTEM)
           .withFunctionType(SqlFunctionCategory.SYSTEM).withSyntax(SqlSyntax.FUNCTION_ID);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction OBJECT_ID =
+      new SqlFunction(
+          "OBJECT_ID",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction MSSQL_FORMAT =
+      new SqlFunction(
+          "FORMAT",
+          SqlKind.FORMAT,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.ANY_STRING_OPTIONAL_STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction STR =
+      new SqlFunction("STR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC, OperandTypes.NUMERIC_INTEGER,
+              OperandTypes.NUMERIC_INTEGER_INTEGER), SqlFunctionCategory.STRING);
 
   public static SqlFunction createUDFSqlFunction(String funcName,
       SqlReturnTypeInference returnType) {
@@ -3982,6 +4052,18 @@ public abstract class SqlLibraryOperators {
               SqlTypeFamily.DATETIME_INTERVAL, SqlTypeFamily.BOOLEAN),
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction HASHAMP =
+      new SqlFunction(
+          "HASHAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.or(
+              OperandTypes.INTEGER, OperandTypes.family(SqlTypeFamily.DECIMAL,
+                  SqlTypeFamily.NULL)),
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_ARRAY =
       new SqlFunction("GENERATE_ARRAY", SqlKind.OTHER, ReturnTypes.TO_ARRAY, null,
@@ -4059,4 +4141,35 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE, MYSQL, POSTGRESQL})
+  public static final SqlFunction ST_ASTEXT =
+      new SqlFunction(
+          "ST_ASTEXT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR,
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.GEOGRAPHY),
+              OperandTypes.family(SqlTypeFamily.GEO)),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE})
+  public static final SqlFunction ST_GEOGFROMTEXT =
+      new SqlFunction(
+          "ST_GEOGFROMTEXT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.family(SqlTypeFamily.STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
+  public static final SqlFunction ST_GEOMETRY =
+      new SqlFunction(
+          "ST_GEOMETRY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOMETRY,
+          null,
+          OperandTypes.family(SqlTypeFamily.STRING),
+          SqlFunctionCategory.SYSTEM);
 }

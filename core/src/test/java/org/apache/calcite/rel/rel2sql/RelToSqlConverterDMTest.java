@@ -83,6 +83,7 @@ import org.apache.calcite.sql.dialect.HiveSqlDialect;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
 import org.apache.calcite.sql.dialect.MssqlSqlDialect;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
+import org.apache.calcite.sql.fun.BQRangeSessionizeTableFunction;
 import org.apache.calcite.sql.fun.SqlAddMonths;
 import org.apache.calcite.sql.fun.SqlLibrary;
 import org.apache.calcite.sql.fun.SqlLibraryOperatorTableFactory;
@@ -2770,6 +2771,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgres));
   }
 
+  @Test public void testArrayLastIndexFunction() {
+    final RelBuilder builder = relBuilder();
+    RexNode array =
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal(0), builder.literal(1), builder.literal(2));
+    RexNode arrayStartIndexCall =
+        builder.call(SqlLibraryOperators.ARRAY_LAST_INDEX, array);
+    RelNode root = builder
+        .push(LogicalValues.createOneRow(builder.getCluster()))
+        .project(arrayStartIndexCall)
+        .build();
+    final String expectedPostgres = "SELECT ARRAY_LAST_INDEX(ARRAY[0, 1, 2]) AS \"$f0\"";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgres));
+  }
+
   @Test public void testHostFunction() {
     final RelBuilder builder = relBuilder();
     RexNode hostCall = builder.call(SqlLibraryOperators.HOST, builder.literal("127.0.0.1"));
@@ -4638,40 +4654,35 @@ class RelToSqlConverterDMTest {
         + "(ORDER BY \"department_id\" ASC) \n"
         + "from \"foodmart\".\"employee\" \n"
         + "GROUP by \"first_name\", \"department_id\"";
-    final String expected = "SELECT first_name, department_id_number, ROW_NUMBER() "
+    final String expected = "SELECT first_name, COUNT(*) department_id_number, ROW_NUMBER() "
         + "OVER (ORDER BY department_id IS NULL, department_id), SUM(department_id) "
         + "OVER (ORDER BY department_id IS NULL, department_id "
         + "RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
-        + "FROM (SELECT first_name, department_id, COUNT(*) department_id_number\n"
         + "FROM foodmart.employee\n"
-        + "GROUP BY first_name, department_id) t0";
-    final String expectedSpark = "SELECT first_name, department_id_number, ROW_NUMBER() "
+        + "GROUP BY first_name, department_id";
+    final String expectedSpark = "SELECT first_name, COUNT(*) department_id_number, ROW_NUMBER() "
         + "OVER (ORDER BY department_id NULLS LAST), SUM(department_id) "
         + "OVER (ORDER BY department_id NULLS LAST "
         + "RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
-        + "FROM (SELECT first_name, department_id, COUNT(*) department_id_number\n"
         + "FROM foodmart.employee\n"
-        + "GROUP BY first_name, department_id) t0";
-    final String expectedBQ = "SELECT first_name, department_id_number, "
-        + "ROW_NUMBER() OVER (ORDER BY department_id IS NULL, department_id), SUM(department_id) "
+        + "GROUP BY first_name, department_id";
+    final String expectedBQ = "SELECT first_name, COUNT(*) AS department_id_number, ROW_NUMBER() "
+        + "OVER (ORDER BY department_id IS NULL, department_id), SUM(department_id) "
         + "OVER (ORDER BY department_id IS NULL, department_id "
         + "RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
-        + "FROM (SELECT first_name, department_id, COUNT(*) AS department_id_number\n"
         + "FROM foodmart.employee\n"
-        + "GROUP BY first_name, department_id) AS t0";
-    final String expectedSnowFlake = "SELECT \"first_name\", \"department_id_number\", "
+        + "GROUP BY first_name, department_id";
+    final String expectedSnowFlake = "SELECT \"first_name\", COUNT(*) AS \"department_id_number\", "
         + "ROW_NUMBER() OVER (ORDER BY \"department_id\"), SUM(\"department_id\") "
         + "OVER (ORDER BY \"department_id\" RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
-        + "FROM (SELECT \"first_name\", \"department_id\", COUNT(*) AS \"department_id_number\"\n"
         + "FROM \"foodmart\".\"employee\"\n"
-        + "GROUP BY \"first_name\", \"department_id\") AS \"t0\"";
-    final String mssql = "SELECT [first_name], [department_id_number], ROW_NUMBER()"
+        + "GROUP BY \"first_name\", \"department_id\"";
+    final String mssql = "SELECT [first_name], COUNT(*) AS [department_id_number], ROW_NUMBER()"
         + " OVER (ORDER BY CASE WHEN [department_id] IS NULL THEN 1 ELSE 0 END,"
         + " [department_id]), SUM([department_id]) OVER (ORDER BY CASE WHEN [department_id] IS NULL"
         + " THEN 1 ELSE 0 END, [department_id] RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)\n"
-        + "FROM (SELECT [first_name], [department_id], COUNT(*) AS [department_id_number]\n"
         + "FROM [foodmart].[employee]\n"
-        + "GROUP BY [first_name], [department_id]) AS [t0]";
+        + "GROUP BY [first_name], [department_id]";
     sql(query)
       .withHive()
       .ok(expected)
@@ -10653,6 +10664,61 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTDQuery));
   }
 
+  @Test public void testBQSessionizeTableFunction() {
+    final RelBuilder builder = foodmartRelBuilder();
+    final RelNode subQueryNode = builder
+        .scan("employee")
+        .project(builder.field("department_id"),
+            builder.alias(
+                builder.call(PERIOD_CONSTRUCTOR, builder.field("hire_date"),
+                builder.field("end_date")), "period_col"))
+        .build();
+    final Map<String, RelDataType> columnDefinition = new HashMap<>();
+    subQueryNode.getRowType().getFieldList().forEach(col ->
+        columnDefinition.put(col.getName(), col.getType()));
+    final RelNode root = builder
+        .push(subQueryNode)
+        .functionScan(new BQRangeSessionizeTableFunction(columnDefinition), 1,
+            builder.literal("period_col"),
+            builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+                builder.literal("department_id")))
+        .build();
+
+    final String expectedTDQuery = "SELECT *\n"
+        + "FROM RANGE_SESSIONIZE((SELECT department_id, RANGE(hire_date, end_date) AS period_col\n"
+        + "FROM foodmart.employee), 'period_col', ARRAY['department_id'])";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedTDQuery));
+  }
+
+  @Test public void testStrTimestampFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 =
+        builder.call(SqlLibraryOperators.STR_TO_TIMESTAMP, builder.literal("2009-03-20 12:25:50"),
+            builder.literal("yyyy-MM-dd HH24:MI:SS"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseTSNode1, "timestamp_value"))
+        .build();
+    final String expectedBiqQuery =
+        "SELECT STR_TO_TIMESTAMP('2009-03-20 12:25:50', 'yyyy-MM-dd HH24:MI:SS') AS timestamp_value\n"
+            + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testRotateleft() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatDateRexNode =
+        builder.call(SqlLibraryOperators.ROTATELEFT, builder.literal(2), builder.literal(5));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatDateRexNode, "FD"))
+        .build();
+    final String expectedSql = "SELECT ROTATELEFT(2, 5) AS \"FD\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testSimpleStrtokFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode strtokNode =
@@ -11410,6 +11476,19 @@ class RelToSqlConverterDMTest {
         .build();
     final String expectedSFQuery = "SELECT ZEROIFNULL(5) AS \"$f0\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSFQuery));
+  }
+
+  @Test public void testWidthBucketFunction() {
+    final RelBuilder builder = relBuilder();
+    RelNode root = builder
+        .scan("EMP")
+        .project(
+            builder.call(SqlLibraryOperators.WIDTH_BUCKET, builder.field("SAL"),
+                builder.literal(30000), builder.literal(100000), builder.literal(5)))
+        .build();
+    final String expectedTeradataQuery = "SELECT WIDTH_BUCKET(\"SAL\", 30000, 100000, 5) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradataQuery));
   }
 
   @Test public void testOracleNChrFunction() {
@@ -13043,5 +13122,108 @@ class RelToSqlConverterDMTest {
         + "\nFROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testObjectIdFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode objectId =
+        builder.call(SqlLibraryOperators.OBJECT_ID, builder.literal("#schema1.table1"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(objectId, "objectId"))
+        .build();
+    final String expectedSql = "SELECT OBJECT_ID('#schema1.table1') AS [objectId]"
+        + "\nFROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testMsSqlFormatFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatIntegerPaddingRexNode =
+        builder.call(SqlLibraryOperators.MSSQL_FORMAT,
+            builder.literal("1234"), builder.literal("00000"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(formatIntegerPaddingRexNode)
+        .build();
+
+    final String expectedPostgresQuery = "SELECT FORMAT('1234', '00000') AS [$f0]"
+        + "\nFROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedPostgresQuery));
+  }
+
+  @Test public void testSTRFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode strNode =
+        builder.call(SqlLibraryOperators.STR, builder.literal(-123.45), builder.literal(8),
+            builder.literal(1));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(strNode, "Result"))
+        .build();
+
+    final String expectedMsSqlQuery = "SELECT STR(-123.45, 8, 1) AS [Result]\n"
+        + "FROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedMsSqlQuery));
+  }
+
+  @Test public void testDateAddWithMinusInterval() {
+    final RelBuilder builder = relBuilder();
+    RexBuilder rexBuilder = builder.getRexBuilder();
+    RelDataTypeFactory typeFactory = builder.getTypeFactory();
+
+    RexNode concatYear =
+        builder.call(SqlStdOperatorTable.CONCAT,
+        builder.literal("19"),
+        builder.literal("25"));
+
+    RexNode castYear =
+        rexBuilder.makeAbstractCast(typeFactory.createSqlType(SqlTypeName.INTEGER),
+        concatYear);
+
+    RexNode baseDate =
+        builder.call(SqlLibraryOperators.DATE,
+        castYear,
+        builder.literal(1),
+        builder.literal(1));
+
+
+    RexNode castDay =
+        rexBuilder.makeAbstractCast(typeFactory.createSqlType(SqlTypeName.INTEGER),
+        builder.literal("087"));
+
+    RexNode intervalExpr =
+        builder.call(SqlStdOperatorTable.MINUS,
+        castDay,
+        builder.literal(1));
+
+    RexNode dateAdd =
+        builder.call(SqlLibraryOperators.DATE_ADD,
+        baseDate,
+        intervalExpr);
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dateAdd, "JULIANDATE"))
+        .build();
+
+    final String expectedSql = "SELECT "
+        + "DATE_ADD(DATE(CAST('19' || '25' AS INT64), 1, 1), INTERVAL (87 - 1) DAY) AS JULIANDATE\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testHashamp() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatDateRexNode = builder.call(SqlLibraryOperators.HASHAMP, builder.scan("EMP").field(0));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatDateRexNode, "FD"))
+        .build();
+    final String expectedSql = "SELECT HASHAMP(\"EMPNO\") AS \"FD\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
   }
 }
