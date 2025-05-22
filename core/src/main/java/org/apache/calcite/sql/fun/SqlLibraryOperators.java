@@ -70,6 +70,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.NETEZZA;
 import static org.apache.calcite.sql.fun.SqlLibrary.ORACLE;
 import static org.apache.calcite.sql.fun.SqlLibrary.POSTGRESQL;
+import static org.apache.calcite.sql.fun.SqlLibrary.REDSHIFT;
 import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.SQL_SERVER;
@@ -1201,6 +1202,10 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {HIVE, SPARK, SNOWFLAKE, TERADATA})
   public static final SqlFunction ADD_MONTHS =
       new SqlAddMonths(false);
+
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction REDSHIFT_ADD_MONTHS =
+      new SqlAddMonths(true);
 
   /** The "DAYNAME(datetime)" function; returns the name of the day of the week,
    * in the current locale, of a TIMESTAMP or DATE argument. */
