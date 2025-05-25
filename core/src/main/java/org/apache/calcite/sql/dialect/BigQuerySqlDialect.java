@@ -2251,7 +2251,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   @Override public void unparseSqlIntervalQualifier(
-          SqlWriter writer, SqlIntervalQualifier qualifier, RelDataTypeSystem typeSystem) {
+      SqlWriter writer, SqlIntervalQualifier qualifier, RelDataTypeSystem typeSystem) {
     final String start = validate(qualifier.timeUnitRange.startUnit).name();
     if (qualifier.timeUnitRange.endUnit == null) {
       writer.keyword(start);

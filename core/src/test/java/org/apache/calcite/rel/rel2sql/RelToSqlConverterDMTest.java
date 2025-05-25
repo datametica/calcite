@@ -2771,6 +2771,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgres));
   }
 
+  @Test public void testArrayLastIndexFunction() {
+    final RelBuilder builder = relBuilder();
+    RexNode array =
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal(0), builder.literal(1), builder.literal(2));
+    RexNode arrayStartIndexCall =
+        builder.call(SqlLibraryOperators.ARRAY_LAST_INDEX, array);
+    RelNode root = builder
+        .push(LogicalValues.createOneRow(builder.getCluster()))
+        .project(arrayStartIndexCall)
+        .build();
+    final String expectedPostgres = "SELECT ARRAY_LAST_INDEX(ARRAY[0, 1, 2]) AS \"$f0\"";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedPostgres));
+  }
+
   @Test public void testHostFunction() {
     final RelBuilder builder = relBuilder();
     RexNode hostCall = builder.call(SqlLibraryOperators.HOST, builder.literal("127.0.0.1"));
@@ -5396,7 +5411,7 @@ class RelToSqlConverterDMTest {
     final String expectedSpark = "SELECT CAST(DATE_FORMAT(CAST(birth_date AS TIMESTAMP), "
         + "'yyyy-MM-dd HH:mm:ss.SSS') AS TIMESTAMP)\nFROM foodmart.employee";
     final String expectedBigQuery = "SELECT CAST(FORMAT_TIMESTAMP('%F %H:%M:%E3S', CAST"
-        + "(birth_date AS DATETIME)) AS DATETIME)\n"
+        + "(birth_date AS TIMESTAMP)) AS DATETIME)\n"
         + "FROM foodmart.employee";
     sql(query)
         .withHive()
@@ -10686,7 +10701,7 @@ class RelToSqlConverterDMTest {
         .project(builder.alias(parseTSNode1, "timestamp_value"))
         .build();
     final String expectedBiqQuery =
-        "SELECT PARSE_DATETIME('%F %H:%M:%S', '2009-03-20 12:25:50') AS timestamp_value\n"
+        "SELECT STR_TO_TIMESTAMP('2009-03-20 12:25:50', 'yyyy-MM-dd HH24:MI:SS') AS timestamp_value\n"
             + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
