@@ -1384,6 +1384,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       writer.endFunCall(substringFrame);
       break;
     case "TO_TIMESTAMP":
+    case "STR_TO_TIMESTAMP":
       if (call.getOperandList().size() == 1) {
         SqlCall timestampSecondsCall =
             TIMESTAMP_SECONDS.createCall(SqlParserPos.ZERO, new SqlNode[] { call.operand(0) });
