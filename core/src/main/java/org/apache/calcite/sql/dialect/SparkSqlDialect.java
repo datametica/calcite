@@ -600,9 +600,21 @@ public class SparkSqlDialect extends SqlDialect {
         unparseIntervalOperandCall(call, writer, leftPrec, rightPrec);
       }
       break;
+    case OTHER_FUNCTION:
+    case MINUS:
+      unparseDateSubCallForOtherFunctions(writer, call, leftPrec, rightPrec);
+      break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
+  }
+
+  private void unparseDateSubCallForOtherFunctions(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlWriter.Frame ifFrame = writer.startFunCall("DATE_SUB");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(",");
+    unparseOtherFunction(writer, call.operand(1), leftPrec, rightPrec);
+    writer.endFunCall(ifFrame);
   }
 
   private void unparseUnaryOperators(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {

@@ -63,6 +63,7 @@ import java.util.stream.IntStream;
 import static org.apache.calcite.sql.fun.SqlLibrary.ALL;
 import static org.apache.calcite.sql.fun.SqlLibrary.BIG_QUERY;
 import static org.apache.calcite.sql.fun.SqlLibrary.CALCITE;
+import static org.apache.calcite.sql.fun.SqlLibrary.DATABRICKS;
 import static org.apache.calcite.sql.fun.SqlLibrary.DB2;
 import static org.apache.calcite.sql.fun.SqlLibrary.HIVE;
 import static org.apache.calcite.sql.fun.SqlLibrary.MSSQL;
@@ -3022,6 +3023,20 @@ public abstract class SqlLibraryOperators {
         new SqlFunction("DAYNUMBER_OF_CALENDAR", SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {DATABRICKS})
+  public static final SqlFunction DAYOFWEEK =
+      new SqlFunction("DAYOFWEEK", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null, OperandTypes.family(SqlTypeFamily.DATETIME),
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_WEEK_BEGIN =
+      new SqlFunction("TD_WEEK_BEGIN", SqlKind.OTHER_FUNCTION, ReturnTypes.ARG0_NULLABLE, null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.DATETIME),
+              OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER),
+              OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER,
+                  SqlTypeFamily.CHARACTER)), SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction DATE_DIFF =
