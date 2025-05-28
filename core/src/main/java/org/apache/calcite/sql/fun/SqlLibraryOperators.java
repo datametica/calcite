@@ -3023,6 +3023,13 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_MONTH_BEGIN =
+      new SqlFunction("TD_MONTH_BEGIN", SqlKind.OTHER_FUNCTION, ReturnTypes.ARG0_NULLABLE, null,
+      OperandTypes.or(OperandTypes.family(SqlTypeFamily.DATETIME),
+      OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER)),
+      SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction DATE_DIFF =
       new SqlFunction("DATE_DIFF", SqlKind.OTHER_FUNCTION,
