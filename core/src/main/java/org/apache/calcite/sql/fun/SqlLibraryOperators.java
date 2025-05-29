@@ -3027,7 +3027,8 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction TD_MONTH_BEGIN =
       new SqlFunction("TD_MONTH_BEGIN", SqlKind.OTHER_FUNCTION, ReturnTypes.ARG0_NULLABLE, null,
       OperandTypes.or(OperandTypes.family(SqlTypeFamily.DATETIME),
-      OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER)),
+      OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER),
+      OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)),
       SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {BIG_QUERY})
