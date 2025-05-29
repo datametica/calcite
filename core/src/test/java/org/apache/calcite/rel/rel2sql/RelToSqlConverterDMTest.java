@@ -9137,6 +9137,20 @@ class RelToSqlConverterDMTest {
         isLinux(expectedBigQuery));
   }
 
+  @Test public void testDayOfWeekWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dayOfWeekRexNode =
+        builder.call(SqlLibraryOperators.DAYOFWEEK, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dayOfWeekRexNode, "DayOfWeek"))
+        .build();
+    final String expectedDatabricks =
+        "SELECT DAYOFWEEK('2023-02-22') AS DayOfWeek\n"
+            + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.DATABRICKS.getDialect()), isLinux(expectedDatabricks));
+  }
 
   @Test public void testNextDayFunctionWithDate() {
     final RelBuilder builder = relBuilder();
@@ -10275,6 +10289,22 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTDQuery));
   }
+
+  @Test public void testTdWeekBeginWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdWeekBeginRexNode =
+        builder.call(SqlLibraryOperators.TD_WEEK_BEGIN, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdWeekBeginRexNode, "week_begin"))
+        .build();
+    final String expectedDatabricks =
+        "SELECT TD_WEEK_BEGIN('2023-02-22') AS \"week_begin\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedDatabricks));
+  }
+
 
   @Test void testBloatedProjects() {
     final RelBuilder builder = relBuilder();

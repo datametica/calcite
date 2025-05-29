@@ -604,7 +604,6 @@ public class SparkSqlDialect extends SqlDialect {
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
   }
-
   private void unparseUnaryOperators(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     assert call.operandCount() == 1;
     SqlOperator operator = call.getOperator();
