@@ -9266,6 +9266,22 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSpark));
   }
 
+  @Test public void testTdMonthBeginWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdWeekBeginRexNode =
+        builder.call(SqlLibraryOperators.TD_MONTH_BEGIN, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdWeekBeginRexNode, "month_begin"))
+        .build();
+    final String expectedTeradata =
+        "SELECT TD_MONTH_BEGIN('2023-02-22') AS \"month_begin\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradata));
+  }
+
+
   @Test public void testNextDayFunctionWithFriday() {
     final RelBuilder builder = relBuilder();
     final RexNode nextDayRexNode =
