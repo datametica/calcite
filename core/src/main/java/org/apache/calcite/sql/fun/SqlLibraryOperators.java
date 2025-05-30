@@ -4191,4 +4191,12 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.GEOMETRY_GEOMETRY,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {VERTICA})
+  public static final SqlFunction LOCALTIMESTAMP =
+      new SqlFunction("LOCALTIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_NULLABLE, null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.TIMEDATE);
 }
