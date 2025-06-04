@@ -13266,4 +13266,30 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedRedshiftSql));
   }
+  @Test public void testMonthNumberOfCalender() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dbNameRexNode = builder.call(SqlLibraryOperators.MONTHNUMBER_OF_CALENDAR, builder.call(CURRENT_DATE));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dbNameRexNode, "result"))
+        .build();
+
+    final String expectedMsSqlQuery = "SELECT MONTHNUMBER_OF_CALENDAR(CURRENT_DATE) AS \"result\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedMsSqlQuery));
+  }
+
+  @Test public void testTdMonthOfCalender() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dbNameRexNode = builder.call(SqlLibraryOperators.TD_MONTH_OF_CALENDAR, builder.call(CURRENT_DATE));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dbNameRexNode, "result"))
+        .build();
+
+    final String expectedMsSqlQuery = "SELECT TD_MONTH_OF_CALENDAR(CURRENT_DATE) AS \"result\"\n"
+        +
+        "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedMsSqlQuery));
+  }
 }
