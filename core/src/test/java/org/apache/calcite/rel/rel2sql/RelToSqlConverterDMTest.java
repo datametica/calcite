@@ -13028,6 +13028,32 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedMsSqlQuery));
   }
 
+  @Test public void testQuarterNumberOfCalender() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dbNameRexNode = builder.call(SqlLibraryOperators.QUARTERNUMBER_OF_CALENDAR, builder.call(CURRENT_DATE));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dbNameRexNode, "result"))
+        .build();
+
+    final String expectedMsSqlQuery = "SELECT QUARTERNUMBER_OF_CALENDAR(CAST(GETDATE() AS DATE)) AS [result]\n"
+        + "FROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedMsSqlQuery));
+  }
+
+  @Test public void testTdQuarterOfCalender() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dbNameRexNode = builder.call(SqlLibraryOperators.TD_QUARTER_OF_CALENDAR, builder.call(CURRENT_DATE));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dbNameRexNode, "result"))
+        .build();
+
+    final String expectedMsSqlQuery = "SELECT TD_QUARTER_OF_CALENDAR(CURRENT_DATE) AS \"result\"\n" +
+        "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedMsSqlQuery));
+  }
+
   @Test public void testNvl2Function() {
     final RelBuilder builder = relBuilder();
     final RexNode nvl2Call =
