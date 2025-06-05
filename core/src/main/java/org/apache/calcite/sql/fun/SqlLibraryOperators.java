@@ -1628,12 +1628,27 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction JSON_EXTRACT_SCALAR =
+      new SqlFunction("JSON_EXTRACT_SCALAR", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction JSON_EXTRACT_ARRAY =
       new SqlFunction("JSON_EXTRACT_ARRAY",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.VARCHAR.andThen(SqlTypeTransforms.TO_ARRAY),
           null,
           OperandTypes.or(STRING_JSON, STRING_OPTIONAL_STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction JSON_QUERY_ARRAY =
+      new SqlFunction("JSON_QUERY_ARRAY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR.andThen(SqlTypeTransforms.TO_ARRAY),
+          null,
+          OperandTypes.STRING_OPTIONAL_STRING,
           SqlFunctionCategory.SYSTEM);
 
   /** The "ARRAY_DISTINCT(array)" function. */
@@ -1719,6 +1734,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.INTEGER_NULLABLE,
           OperandTypes.ARRAY_INTEGER);
 
+  /** The "JSON_ARRAY_LENGTH(array, boolean)" function. */
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction JSON_ARRAY_LENGTH =
+      SqlBasicFunction.create(SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.BOOLEAN));
   /**
    * The "APPROX_QUANTILES([DISTINCT] expression, number)" function.
    */
