@@ -4191,4 +4191,18 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.GEOMETRY_GEOMETRY,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction MONTHNUMBER_OF_CALENDAR =
+      new SqlFunction("MONTHNUMBER_OF_CALENDAR", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null,  OperandTypes.or(OperandTypes.family(SqlTypeFamily.DATETIME),
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER)),
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_MONTH_OF_CALENDAR =
+      new SqlFunction("TD_MONTH_OF_CALENDAR", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null, OperandTypes.or(OperandTypes.family(SqlTypeFamily.DATETIME),
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.CHARACTER)),
+          SqlFunctionCategory.TIMEDATE);
 }
