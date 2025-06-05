@@ -1734,7 +1734,9 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.INTEGER_NULLABLE,
           OperandTypes.ARRAY_INTEGER);
 
-  /** The "JSON_ARRAY_LENGTH(array, boolean)" function. */
+  /**
+   * The "JSON_ARRAY_LENGTH(array, boolean)" function.
+   */
   @LibraryOperator(libraries = {REDSHIFT})
   public static final SqlFunction JSON_ARRAY_LENGTH =
       new SqlFunction("JSON_ARRAY_LENGTH",
@@ -1743,8 +1745,8 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.or(
               OperandTypes.family(SqlTypeFamily.STRING),
-              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.BOOLEAN)
-          ),SqlFunctionCategory.SYSTEM);
+              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.BOOLEAN)),
+          SqlFunctionCategory.SYSTEM);
 
   /**
    * The "APPROX_QUANTILES([DISTINCT] expression, number)" function.
