@@ -13300,4 +13300,19 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedRedshiftSql));
   }
+
+  @Test public void testJsonArrayLengthFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode =
+        builder.call(SqlLibraryOperators.JSON_ARRAY_LENGTH, builder.literal("[{\"name\": \"Bob\", \"age\": \"thirty\"}]"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json_array_length"))
+        .build();
+    final String expectedTeradataQuery = "SELECT JSON_ARRAY_LENGTH('[{\"name\": \"Bob\", \"age\": "
+        + "\"thirty\"}]') AS \"json_array_length\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedTeradataQuery));
+  }
 }
