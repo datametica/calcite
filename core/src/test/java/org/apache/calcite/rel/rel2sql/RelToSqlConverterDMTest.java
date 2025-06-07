@@ -13270,7 +13270,9 @@ class RelToSqlConverterDMTest {
   @Test public void testJsonArrayLengthFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode jsonCheckNode =
-        builder.call(SqlLibraryOperators.JSON_ARRAY_LENGTH, builder.literal("[{\"name\": \"Bob\", \"age\": \"thirty\"}]"));
+        builder.call(
+            SqlLibraryOperators.JSON_ARRAY_LENGTH, builder.literal("[{\"name\": \"Bob\","
+           + " \"age\": \"thirty\"}]"));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(jsonCheckNode, "json_array_length"))
@@ -13282,11 +13284,10 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedTeradataQuery));
   }
 
-  @Test
-  public void testRedshiftTruncFunctionRelToSql() {
+  @Test public void testRedshiftTruncFunctionRelToSql() {
     final RelBuilder builder = relBuilder();
-    final RexNode truncTimestampNode = builder.call(SqlLibraryOperators.REDSHIFT_TRUNC,
-        builder.call(CURRENT_TIMESTAMP));
+    final RexNode truncTimestampNode =
+        builder.call(SqlLibraryOperators.REDSHIFT_TRUNC, builder.call(CURRENT_TIMESTAMP));
 
     final RelNode root = builder
         .scan("EMP")
