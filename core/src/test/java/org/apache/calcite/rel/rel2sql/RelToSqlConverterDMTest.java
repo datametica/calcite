@@ -13266,4 +13266,39 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedRedshiftSql));
   }
+
+  @Test public void testJsonArrayLengthFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode =
+        builder.call(SqlLibraryOperators.JSON_ARRAY_LENGTH, builder.literal("[{\"name\": \"Bob\", \"age\": \"thirty\"}]"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json_array_length"))
+        .build();
+    final String expectedTeradataQuery = "SELECT JSON_ARRAY_LENGTH('[{\"name\": \"Bob\", \"age\": "
+        + "\"thirty\"}]') AS \"json_array_length\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedTeradataQuery));
+  }
+
+  @Test
+  public void testRedshiftTruncFunctionRelToSql() {
+    final RelBuilder builder = relBuilder();
+    final RexNode truncTimestampNode = builder.call(SqlLibraryOperators.REDSHIFT_TRUNC,
+        builder.call(CURRENT_TIMESTAMP));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(truncTimestampNode, "TRUNC_DATE"))
+        .build();
+    final String expectedSql = "SELECT TRUNC(CURRENT_TIMESTAMP) AS \"TRUNC_DATE\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedRedshiftSql = "SELECT TRUNC(CURRENT_TIMESTAMP) AS "
+        + "\"TRUNC_DATE\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedRedshiftSql));
+  }
+
 }
