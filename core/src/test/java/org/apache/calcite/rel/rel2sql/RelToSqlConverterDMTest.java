@@ -13284,7 +13284,7 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedTeradataQuery));
   }
 
-  @Test public void testRedshiftTruncFunctionRelToSql() {
+  @Test public void testRedshiftTruncFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode truncTimestampNode =
         builder.call(SqlLibraryOperators.REDSHIFT_TRUNC, builder.call(CURRENT_TIMESTAMP));
@@ -13299,6 +13299,23 @@ class RelToSqlConverterDMTest {
         + "\"TRUNC_DATE\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedRedshiftSql));
+  }
+
+  @Test public void testRedshiftDateDiffFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode parseTSNode1 =
+        builder.call(SqlLibraryOperators.REDSHIFT_DATE_DIFF, builder.literal(MONTH),
+            builder.literal("1994-07-21"),
+            builder.literal("1993-07-21"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(parseTSNode1, "date_diff_value"))
+        .build();
+    final String expectedRedshiftSql =
+        "SELECT DATE_DIFF(MONTH, '1994-07-21', '1993-07-21') AS "
+            + "\"date_diff_value\"\nFROM \"scott\".\"EMP\"";
+
     assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedRedshiftSql));
   }
 
