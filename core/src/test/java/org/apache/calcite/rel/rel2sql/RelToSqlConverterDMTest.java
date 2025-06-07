@@ -13310,11 +13310,11 @@ class RelToSqlConverterDMTest {
             builder.literal("1993-07-21"));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.alias(parseTSNode1, "date_diff_value"))
+        .project(builder.alias(parseTSNode1, "datediff_value"))
         .build();
     final String expectedRedshiftSql =
-        "SELECT DATE_DIFF(MONTH, '1994-07-21', '1993-07-21') AS "
-            + "\"date_diff_value\"\nFROM \"scott\".\"EMP\"";
+        "SELECT DATEDIFF(MONTH, '1994-07-21', '1993-07-21') AS "
+            + "\"datediff_value\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedRedshiftSql));
   }
