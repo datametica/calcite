@@ -1372,7 +1372,10 @@ public enum SqlKind {
   /**
    * format standard function.
    */
-  FORMAT;
+  FORMAT,
+
+  /** {@code DATEDIFF} function (Redshift semantics). */
+  REDSHIFT_DATEDIFF;
 
   //~ Static fields/initializers ---------------------------------------------
 
