@@ -76,6 +76,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.SQL_SERVER;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
+import static org.apache.calcite.sql.fun.SqlLibrary.REDSHIFT;
 import static org.apache.calcite.sql.type.OperandTypes.ANY_STRING_OR_STRING_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
@@ -272,6 +273,14 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.LEAST_RESTRICTIVE
               .andThen(SqlTypeTransforms.TO_NULLABLE_ALL),
           OperandTypes.SAME_SAME);
+
+  /** The "NVL(value, value,..)" function. */
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlBasicFunction REDSHIFT_NVL =
+      SqlBasicFunction.create(SqlKind.NVL,
+          ReturnTypes.LEAST_RESTRICTIVE
+              .andThen(SqlTypeTransforms.TO_NULLABLE_ALL),
+          OperandTypes.AT_LEAST_ONE_SAME_VARIADIC);
 
   /** The "NVL2(value, value, value)" function. */
   @LibraryOperator(libraries = {ORACLE, SPARK})
