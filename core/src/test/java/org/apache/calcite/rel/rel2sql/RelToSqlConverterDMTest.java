@@ -13305,7 +13305,7 @@ class RelToSqlConverterDMTest {
   @Test public void testRedshiftDateDiffFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode parseTSNode1 =
-        builder.call(SqlLibraryOperators.REDSHIFT_DATE_DIFF, builder.literal(MONTH),
+        builder.call(SqlLibraryOperators.REDSHIFT_DATEDIFF, builder.literal(MONTH),
             builder.literal("1994-07-21"),
             builder.literal("1993-07-21"));
     final RelNode root = builder

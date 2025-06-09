@@ -4233,9 +4233,10 @@ public abstract class SqlLibraryOperators {
           OperandTypes.or(OperandTypes.NUMERIC_OPTIONAL_INTEGER, OperandTypes.DATETIME),
           SqlFunctionCategory.SYSTEM);
 
+  /** Redshift "DATEDIFF(datepart string, datetime,datetime)" function. */
   @LibraryOperator(libraries = {REDSHIFT})
-  public static final SqlFunction REDSHIFT_DATE_DIFF =
-      new SqlFunction("DATEDIFF", SqlKind.OTHER_FUNCTION,
+  public static final SqlFunction REDSHIFT_DATEDIFF =
+      new SqlFunction("DATEDIFF", SqlKind.REDSHIFT_DATEDIFF,
           ReturnTypes.INTEGER, null,
           OperandTypes.or(OperandTypes.ANY_STRING_STRING, OperandTypes.ANY_DATETIME_DATETIME),
           SqlFunctionCategory.TIMEDATE);
