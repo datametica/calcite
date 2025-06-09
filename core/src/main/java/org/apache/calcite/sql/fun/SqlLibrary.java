@@ -85,6 +85,10 @@ public enum SqlLibrary {
   SQL_SERVER("SQL_SERVER", "sqlserver"),
   /** A collection of operators that are in REDSHIFT but not in standard SQL. */
   REDSHIFT("REDSHIFT", "redshift");
+  SQL_SERVER("SQL_SERVER", "sqlserver"),
+  /** A collection of operators that are in VERTICA but not in standard SQL. */
+  VERTICA("VERTICA", "vertica");
+
 
   /** Map from {@link Enum#name() name} and {@link #fun} to library. */
   public static final Map<String, SqlLibrary> MAP;

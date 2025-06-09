@@ -76,6 +76,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.SQL_SERVER;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
+import static org.apache.calcite.sql.fun.SqlLibrary.VERTICA;
 import static org.apache.calcite.sql.type.OperandTypes.ANY_STRING_OR_STRING_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
@@ -272,6 +273,30 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.LEAST_RESTRICTIVE
               .andThen(SqlTypeTransforms.TO_NULLABLE_ALL),
           OperandTypes.SAME_SAME);
+
+  /** The "INET_ATON(string)" function. */
+  @LibraryOperator(libraries = {VERTICA})
+  public static final SqlFunction INET_ATON =
+      SqlBasicFunction.create("INET_ATON",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  /** The "NET.IPV4_TO_INT64(string)" function. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction NET_IPV4_TO_INT64 =
+      SqlBasicFunction.create("NET.IPV4_TO_INT64",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  /** The "NET.IP_FROM_STRING(string)" function. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction NET_IP_FROM_STRING =
+      SqlBasicFunction.create("NET.IP_FROM_STRING",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
 
   /** The "NVL2(value, value, value)" function. */
   @LibraryOperator(libraries = {ORACLE, SPARK})
