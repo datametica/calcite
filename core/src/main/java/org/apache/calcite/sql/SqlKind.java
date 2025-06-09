@@ -249,6 +249,9 @@ public enum SqlKind {
   /** {@code WITHIN DISTINCT} operator. */
   WITHIN_DISTINCT,
 
+  /** {@code RANGE_SESSIONIZE} operator. */
+  RANGE_SESSIONIZE,
+
   /** Window specification. */
   WINDOW,
 
@@ -808,6 +811,9 @@ public enum SqlKind {
 
   /** {@code ARRAY_START_INDEX} function (Spark semantics). */
   ARRAY_START_INDEX,
+
+  /** {@code ARRAY_LAST_INDEX} function (Spark semantics). */
+  ARRAY_LAST_INDEX,
 
   /** {@code LEN} function (Spark semantics). */
   LEN,

@@ -70,6 +70,7 @@ import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.NETEZZA;
 import static org.apache.calcite.sql.fun.SqlLibrary.ORACLE;
 import static org.apache.calcite.sql.fun.SqlLibrary.POSTGRESQL;
+import static org.apache.calcite.sql.fun.SqlLibrary.REDSHIFT;
 import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.SQL_SERVER;
@@ -615,6 +616,32 @@ public abstract class SqlLibraryOperators {
               .andThen(SqlTypeTransforms.TO_ARRAY),
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlBasicFunction NORMALIZE =
+      SqlBasicFunction.create("NORMALIZE", ReturnTypes.CURSOR,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction STR_TO_TIMESTAMP =
+      new SqlFunction("STR_TO_TIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_NULLABLE,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction ROTATELEFT =
+      new SqlFunction(
+          "ROTATELEFT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.NUMERIC);
 
   /** The "REGEXP_REPLACE(value, regexp, rep [, pos [, occurrence [, matchType]]])"
    * function. Replaces all substrings of value that match regexp with
@@ -1700,6 +1727,13 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction ARRAY_START_INDEX =
       SqlBasicFunction.create(SqlKind.ARRAY_START_INDEX,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_LAST_INDEX(array)" function. */
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction ARRAY_LAST_INDEX =
+      SqlBasicFunction.create(SqlKind.ARRAY_LAST_INDEX,
           ReturnTypes.INTEGER_NULLABLE,
           OperandTypes.ARRAY);
 
@@ -3684,6 +3718,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction WIDTH_BUCKET =
+      new SqlFunction("WIDTH_BUCKET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.NUMERIC);
   /**
    * The EDIT_DISTANCE(string1, string2 [, ci, cd, cs, ct ])
    * measures the similarity between two strings.
@@ -4036,6 +4078,18 @@ public abstract class SqlLibraryOperators {
               SqlTypeFamily.DATETIME_INTERVAL, SqlTypeFamily.BOOLEAN),
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction HASHAMP =
+      new SqlFunction(
+          "HASHAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.or(
+              OperandTypes.INTEGER, OperandTypes.family(SqlTypeFamily.DECIMAL,
+                  SqlTypeFamily.NULL)),
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_ARRAY =
       new SqlFunction("GENERATE_ARRAY", SqlKind.OTHER, ReturnTypes.TO_ARRAY, null,
@@ -4143,5 +4197,23 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.GEOMETRY,
           null,
           OperandTypes.family(SqlTypeFamily.STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction ST_POINT =
+      new SqlFunction("ST_POINT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOMETRY,
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC_NUMERIC, STRING_STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction ST_DISTANCE =
+      new SqlFunction("ST_DISTANCE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DECIMAL_NULLABLE,
+          null,
+          OperandTypes.GEOMETRY_GEOMETRY,
           SqlFunctionCategory.SYSTEM);
 }
