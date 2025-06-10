@@ -1250,7 +1250,6 @@ public abstract class SqlUtil {
     return containsCall(node, callPredicate);
   }
 
-
   /**
    * Returns whether a given node contains a {@link SqlKind#DEFAULT} expression.
    *
