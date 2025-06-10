@@ -1250,6 +1250,7 @@ public abstract class SqlUtil {
     return containsCall(node, callPredicate);
   }
 
+
   /**
    * Returns whether a given node contains a {@link SqlKind#DEFAULT} expression.
    *
@@ -1261,6 +1262,11 @@ public abstract class SqlUtil {
     return containsCall(node, callPredicate);
   }
 
+  public static boolean containsErrorOperator(SqlNode node) {
+    final Predicate<SqlCall> callPredicate =
+        call -> call.getOperator().getName().equalsIgnoreCase("ERROR");
+    return containsCall(node, callPredicate);
+  }
   /**
    * Returns whether an AST tree contains a call to an aggregate function.
    *
