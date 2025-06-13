@@ -166,6 +166,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.MONTHNUMBER_OF_YEAR
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PERIOD_CONSTRUCTOR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.PERIOD_INTERSECT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.QUARTERNUMBER_OF_YEAR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.REDSHIFT_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SAFE_OFFSET;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRUE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.USING;
@@ -3581,6 +3582,25 @@ class RelToSqlConverterDMTest {
         + "HOURS\nFROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test
+  public void testRedshiftTruncFunctionRelToSql() {
+    final RelBuilder builder = relBuilder();
+    final RexNode truncTimestampNode = builder.call(REDSHIFT_TRUNC,
+        builder.call(CURRENT_TIMESTAMP));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(truncTimestampNode, "TRUNC_DATE"))
+        .build();
+    final String expectedSql = "SELECT TRUNC(CURRENT_TIMESTAMP) AS \"TRUNC_DATE\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedRedshiftSql = "SELECT TRUNC(CURRENT_TIMESTAMP) AS "
+        + "\"TRUNC_DATE\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedRedshiftSql));
   }
 
   @Test public void testDateDiffFunctionRelToSql() {
