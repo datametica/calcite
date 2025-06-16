@@ -113,6 +113,8 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.DDMONYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DDYYYYMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E3;
 import static org.apache.calcite.sql.SqlDateTimeFormat.E4;
+import static org.apache.calcite.sql.SqlDateTimeFormat.FORMAT_QQYY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.FORMAT_QQYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FOURDIGITISOYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FOURDIGITYEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.FRACTIONFIVE;
@@ -332,6 +334,8 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(YYMMDDHH24MISS, "%y%m%d%H%M%S");
         put(ISOWEEK, "%V");
         put(FOURDIGITISOYEAR, "%G");
+        put(FORMAT_QQYY, "%Q%Q%y");
+        put(FORMAT_QQYYYY, "%Q%Q%Y");
 
       }};
 
@@ -520,17 +524,21 @@ public class BigQuerySqlDialect extends SqlDialect {
           return super.getTargetFunc(call);
         }
       case TIMESTAMP:
-        switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+        RexNode secondOperand = call.getOperands().get(1);
+        switch (secondOperand.getType().getSqlTypeName()) {
         case INTERVAL_DAY:
         case INTERVAL_MINUTE:
         case INTERVAL_SECOND:
         case INTERVAL_HOUR:
         case INTERVAL_MONTH:
         case INTERVAL_YEAR:
-          if (call.op.kind == SqlKind.MINUS) {
-            return SqlLibraryOperators.DATETIME_SUB;
+          if (secondOperand.getKind() == SqlKind.SCALAR_QUERY) {
+            return call.op.kind == SqlKind.MINUS ? MINUS : PLUS;
           }
-          return SqlLibraryOperators.DATETIME_ADD;
+          return call.op.kind == SqlKind.MINUS
+              ? SqlLibraryOperators.DATETIME_SUB : SqlLibraryOperators.DATETIME_ADD;
+        case INTERVAL_DAY_SECOND:
+          return call.op.kind == SqlKind.MINUS ? MINUS : PLUS;
         }
       case TIMESTAMP_WITH_TIME_ZONE:
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
@@ -1170,6 +1178,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseDivideIntervalCall(call.operand(1), writer, leftPrec, rightPrec);
       break;
     case IDENTIFIER:
+    case SCALAR_QUERY:
       call.operand(1).unparse(writer, leftPrec, rightPrec);
       break;
     case OTHER_FUNCTION:
@@ -1582,9 +1591,44 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "GENERATE_SQLERRM":
       writer.literal("@@error.message");
       break;
+    case "ST_DISTANCE":
+      unparseStDistance(writer, call);
+      break;
+    case "ST_POINT":
+      unparseStPoint(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseStPoint(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlWriter.Frame frame = writer.startFunCall("ST_GEOGPOINT");
+    for (SqlNode operand : call.getOperandList()) {
+      writer.sep(",");
+      operand.unparse(writer, leftPrec, rightPrec);
+    }
+    writer.endFunCall(frame);
+  }
+
+  private void unparseStDistance(SqlWriter writer, SqlCall call) {
+    final SqlWriter.Frame frame = writer.startFunCall("foodmart.calculatedistancegeography");
+
+    writeCoordinate(writer, "ST_X", call.operand(0));
+    writer.print(",");
+    writeCoordinate(writer, "ST_Y", call.operand(0));
+    writer.print(",");
+    writeCoordinate(writer, "ST_X", call.operand(1));
+    writer.print(",");
+    writeCoordinate(writer, "ST_Y", call.operand(1));
+
+    writer.endFunCall(frame);
+  }
+
+  private void writeCoordinate(SqlWriter writer, String function, SqlNode operand) {
+    SqlWriter.Frame f = writer.startFunCall(function);
+    operand.unparse(writer, 0, 0);
+    writer.endFunCall(f);
   }
 
   private void unparseSafeDivde(SqlWriter writer, SqlCall call,
