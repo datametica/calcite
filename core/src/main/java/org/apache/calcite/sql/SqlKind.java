@@ -249,6 +249,9 @@ public enum SqlKind {
   /** {@code WITHIN DISTINCT} operator. */
   WITHIN_DISTINCT,
 
+  /** {@code RANGE_SESSIONIZE} operator. */
+  RANGE_SESSIONIZE,
+
   /** Window specification. */
   WINDOW,
 
@@ -476,6 +479,15 @@ public enum SqlKind {
 
   /** {@code NVL} function (Oracle). */
   NVL,
+
+  /** {@code NVL} function (Redshift). */
+  REDSHIFT_NVL,
+
+  /** {@code CONVERT} function (Redshift). */
+  REDSHIFT_CONVERT,
+
+  /** {@code TRUNC} function (Redshift). */
+  REDSHIFT_TRUNC,
 
   /** {@code NVL} function (Oracle, Vertica and Spark). */
   NVL2,
@@ -805,6 +817,15 @@ public enum SqlKind {
 
   /** {@code ARRAY_LENGTH} function (Spark semantics). */
   ARRAY_LENGTH,
+
+  /** {@code ARRAY_START_INDEX} function (Spark semantics). */
+  ARRAY_START_INDEX,
+
+  /** {@code ARRAY_LAST_INDEX} function (Spark semantics). */
+  ARRAY_LAST_INDEX,
+
+  /** {@code LEN} function (Spark semantics). */
+  LEN,
 
   /** {@code ARRAY_MAX} function (Spark semantics). */
   ARRAY_MAX,

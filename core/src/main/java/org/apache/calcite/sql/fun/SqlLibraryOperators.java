@@ -70,12 +70,15 @@ import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.NETEZZA;
 import static org.apache.calcite.sql.fun.SqlLibrary.ORACLE;
 import static org.apache.calcite.sql.fun.SqlLibrary.POSTGRESQL;
+import static org.apache.calcite.sql.fun.SqlLibrary.REDSHIFT;
 import static org.apache.calcite.sql.fun.SqlLibrary.SNOWFLAKE;
 import static org.apache.calcite.sql.fun.SqlLibrary.SPARK;
 import static org.apache.calcite.sql.fun.SqlLibrary.SQL_SERVER;
 import static org.apache.calcite.sql.fun.SqlLibrary.STANDARD;
 import static org.apache.calcite.sql.fun.SqlLibrary.TERADATA;
+import static org.apache.calcite.sql.fun.SqlLibrary.VERTICA;
 import static org.apache.calcite.sql.type.OperandTypes.ANY_STRING_OR_STRING_STRING;
+import static org.apache.calcite.sql.type.OperandTypes.BINARY_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
 import static org.apache.calcite.sql.type.OperandTypes.JSON_STRING;
@@ -86,6 +89,7 @@ import static org.apache.calcite.sql.type.OperandTypes.STRING_JSON;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_OPTIONAL_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_BOOLEAN;
+import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.family;
 import static org.apache.calcite.util.Static.RESOURCE;
 
@@ -271,6 +275,46 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.LEAST_RESTRICTIVE
               .andThen(SqlTypeTransforms.TO_NULLABLE_ALL),
           OperandTypes.SAME_SAME);
+
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlBasicFunction REDSHIFT_NVL =
+      SqlBasicFunction.create(SqlKind.REDSHIFT_NVL,
+          ReturnTypes.LEAST_RESTRICTIVE
+              .andThen(SqlTypeTransforms.TO_NULLABLE_ALL),
+          OperandTypes.AT_LEAST_ONE_SAME_VARIADIC).withName("NVL");
+
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction JSON_EXTRACT_ARRAY_ELEMENT_TEXT =
+      new SqlFunction("JSON_EXTRACT_ARRAY_ELEMENT_TEXT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.STRING_INTEGER,
+          SqlFunctionCategory.STRING);
+
+  /** The "INET_ATON(string)" function. */
+  @LibraryOperator(libraries = {VERTICA})
+  public static final SqlFunction INET_ATON =
+      SqlBasicFunction.create("INET_ATON",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  /** The "NET.IPV4_TO_INT64(string)" function. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction NET_IPV4_TO_INT64 =
+      SqlBasicFunction.create("NET.IPV4_TO_INT64",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
+
+  /** The "NET.IP_FROM_STRING(string)" function. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction NET_IP_FROM_STRING =
+      SqlBasicFunction.create("NET.IP_FROM_STRING",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.STRING,
+          SqlFunctionCategory.STRING);
 
   /** The "NVL2(value, value, value)" function. */
   @LibraryOperator(libraries = {ORACLE, SPARK})
@@ -590,6 +634,32 @@ public abstract class SqlLibraryOperators {
               .andThen(SqlTypeTransforms.TO_ARRAY),
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlBasicFunction NORMALIZE =
+      SqlBasicFunction.create("NORMALIZE", ReturnTypes.CURSOR,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction STR_TO_TIMESTAMP =
+      new SqlFunction("STR_TO_TIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_NULLABLE,
+          null,
+          OperandTypes.STRING_STRING,
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction ROTATELEFT =
+      new SqlFunction(
+          "ROTATELEFT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER),
+          SqlFunctionCategory.NUMERIC);
 
   /** The "REGEXP_REPLACE(value, regexp, rep [, pos [, occurrence [, matchType]]])"
    * function. Replaces all substrings of value that match regexp with
@@ -1312,7 +1382,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction CONCAT3 =
       new SqlFunction("||",
           SqlKind.CONCAT,
-          ReturnTypes.ARG0_NULLABLE,
+          ReturnTypes.MULTIVALENT_STRING_SUM_PRECISION_NULLABLE,
           null,
           OperandTypes.or(OperandTypes.STRING_NUMERIC_OPTIONAL_STRING,
               OperandTypes.NUMERIC_STRING_OPTIONAL_STRING),
@@ -1668,6 +1738,20 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction ARRAY_LENGTH =
       SqlBasicFunction.create(SqlKind.ARRAY_LENGTH,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_START_INDEX(array)" function. */
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction ARRAY_START_INDEX =
+      SqlBasicFunction.create(SqlKind.ARRAY_START_INDEX,
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.ARRAY);
+
+  /** The "ARRAY_LAST_INDEX(array)" function. */
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction ARRAY_LAST_INDEX =
+      SqlBasicFunction.create(SqlKind.ARRAY_LAST_INDEX,
           ReturnTypes.INTEGER_NULLABLE,
           OperandTypes.ARRAY);
 
@@ -3652,16 +3736,20 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.NUMERIC);
 
-  @LibraryOperator(libraries = {BIG_QUERY, ORACLE})
-  public static final SqlFunction EDIT_DISTANCE =
-      new SqlFunction("EDIT_DISTANCE",
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction WIDTH_BUCKET =
+      new SqlFunction("WIDTH_BUCKET",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER_NULLABLE, null,
-          OperandTypes.family(
-              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
-                  SqlTypeFamily.INTEGER),
-              number -> number == 2),
+          OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER),
           SqlFunctionCategory.NUMERIC);
+  /**
+   * The EDIT_DISTANCE(string1, string2 [, ci, cd, cs, ct ])
+   * measures the similarity between two strings.
+   * */
+  @LibraryOperator(libraries = {BIG_QUERY, ORACLE, TERADATA})
+  public static final SqlFunction EDIT_DISTANCE = new SqlEditDistanceFunction();
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_UUID =
@@ -3805,6 +3893,35 @@ public abstract class SqlLibraryOperators {
           OperandTypes.NILADIC,
           SqlFunctionCategory.SYSTEM)
           .withFunctionType(SqlFunctionCategory.SYSTEM).withSyntax(SqlSyntax.FUNCTION_ID);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction OBJECT_ID =
+      new SqlFunction(
+          "OBJECT_ID",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction MSSQL_FORMAT =
+      new SqlFunction(
+          "FORMAT",
+          SqlKind.FORMAT,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.ANY_STRING_OPTIONAL_STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction STR =
+      new SqlFunction("STR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC, OperandTypes.NUMERIC_INTEGER,
+              OperandTypes.NUMERIC_INTEGER_INTEGER), SqlFunctionCategory.STRING);
 
   public static SqlFunction createUDFSqlFunction(String funcName,
       SqlReturnTypeInference returnType) {
@@ -3979,6 +4096,18 @@ public abstract class SqlLibraryOperators {
               SqlTypeFamily.DATETIME_INTERVAL, SqlTypeFamily.BOOLEAN),
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction HASHAMP =
+      new SqlFunction(
+          "HASHAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.or(
+              OperandTypes.INTEGER, OperandTypes.family(SqlTypeFamily.DECIMAL,
+                  SqlTypeFamily.NULL)),
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_ARRAY =
       new SqlFunction("GENERATE_ARRAY", SqlKind.OTHER, ReturnTypes.TO_ARRAY, null,
@@ -4006,6 +4135,82 @@ public abstract class SqlLibraryOperators {
           .withOperandTypeInference(InferTypes.FIRST_KNOWN)
           .withOperandHandler(
               OperandHandlers.of(SqlLibraryOperators::transformConvert));
+
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction REDSHIFT_CONVERT =
+      SqlBasicFunction.create(SqlKind.REDSHIFT_CONVERT,
+              ReturnTypes.andThen(SqlLibraryOperators::transformConvert,
+                  SqlCastFunction.returnTypeInference(false)),
+                  OperandTypes.ANY)
+          .withName("CONVERT")
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withOperandTypeInference(InferTypes.FIRST_KNOWN)
+          .withOperandHandler(
+              OperandHandlers.of(SqlLibraryOperators::transformConvert));
+
+  /**
+   * The "TRUNC(value [, integer])" function (Redshift);
+   * truncates a number to a specified decimal precision or
+   * a TIMESTAMP to a DATE.
+   *
+   * <p>{@code TRUNC(number [, precision])} removes fractional digits,
+   * while {@code TRUNC(timestamp)} drops the time part.
+   *
+   * <p>Docs:
+   * <a href="https://docs.aws.amazon.com/redshift/latest/dg/r_TRUNC_date.html">Redshift TRUNC</a>.
+   */
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction REDSHIFT_TRUNC =
+      new SqlFunction(
+          "TRUNC",
+          SqlKind.REDSHIFT_TRUNC,
+          opBinding -> {
+            RelDataType firstArgType = opBinding.getOperandType(0);
+            if (firstArgType.getSqlTypeName() == SqlTypeName.TIMESTAMP) {
+              return opBinding.getTypeFactory().createSqlType(SqlTypeName.DATE);
+            }
+            return firstArgType;
+          },
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC_OPTIONAL_INTEGER, OperandTypes.DATETIME),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {VERTICA})
+  public static final SqlFunction AGE_IN_YEARS =
+      new SqlFunction("AGE_IN_YEARS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.or(OperandTypes.DATETIME,
+              OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME)),
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction ENCODE =
+      new SqlFunction("ENCODE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR,
+          null,
+          BINARY_STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction DIGEST =
+      new SqlFunction("DIGEST",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARBINARY,
+          null,
+          STRING_STRING,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction JSON_EXTRACT_PATH_TEXT =
+      new SqlFunction("JSON_EXTRACT_PATH_TEXT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR,
+          null,
+          STRING_STRING_STRING,
+          SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {SQL_SERVER})
   public static final SqlFunction OBJECT_SCHEMA_NAME =
@@ -4056,4 +4261,53 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE, MYSQL, POSTGRESQL})
+  public static final SqlFunction ST_ASTEXT =
+      new SqlFunction(
+          "ST_ASTEXT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR,
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.GEOGRAPHY),
+              OperandTypes.family(SqlTypeFamily.GEO)),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE})
+  public static final SqlFunction ST_GEOGFROMTEXT =
+      new SqlFunction(
+          "ST_GEOGFROMTEXT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.family(SqlTypeFamily.STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
+  public static final SqlFunction ST_GEOMETRY =
+      new SqlFunction(
+          "ST_GEOMETRY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOMETRY,
+          null,
+          OperandTypes.family(SqlTypeFamily.STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction ST_POINT =
+      new SqlFunction("ST_POINT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOMETRY,
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC_NUMERIC, STRING_STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction ST_DISTANCE =
+      new SqlFunction("ST_DISTANCE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DECIMAL_NULLABLE,
+          null,
+          OperandTypes.GEOMETRY_GEOMETRY,
+          SqlFunctionCategory.SYSTEM);
 }

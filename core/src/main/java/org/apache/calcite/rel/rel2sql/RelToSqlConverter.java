@@ -22,6 +22,7 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEDefinationTraitDef;
+import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelOptSamplingParameters;
@@ -97,6 +98,7 @@ import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
+import org.apache.calcite.sql.fun.BQRangeSessionizeTableFunction;
 import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
@@ -571,7 +573,7 @@ public class RelToSqlConverter extends SqlImplementor
       final Builder builder = x.builder(e);
       builder.setQualify(builder.context.toSql(null, e.getCondition()));
       result = builder.result();
-    } else if (input instanceof Aggregate) {
+    } else if (input instanceof Aggregate && !isDistinctTrait(input)) {
       final Aggregate aggregate = (Aggregate) input;
       final boolean ignoreClauses = aggregate.getInput() instanceof Project;
       final Result x =
@@ -583,9 +585,15 @@ public class RelToSqlConverter extends SqlImplementor
               builder.context.toSql(null, e.getCondition())));
       result = builder.result();
     } else {
-      final Result x = visitInput(e, 0, Clause.WHERE);
-      parseCorrelTable(e, x);
+      Result x = visitInput(e, 0, Clause.WHERE);
       final Builder builder = x.builder(e);
+      Set<String> resultAliasKeySet = x.aliases.keySet();
+      String builderAliasKeySet = builder.select.getFrom() != null
+          ?  SqlValidatorUtil.alias(builder.select.getFrom()) : null;
+      if (!resultAliasKeySet.contains(builderAliasKeySet)) {
+        x = x.resetAlias();
+      }
+      parseCorrelTable(e, x);
       SqlNode filterNode = builder.context.toSql(null, e.getCondition());
       UnpivotRelToSqlUtil unpivotRelToSqlUtil = new UnpivotRelToSqlUtil();
       if (dialect.supportsUnpivot()
@@ -605,6 +613,10 @@ public class RelToSqlConverter extends SqlImplementor
       result = updateCTEResult(e, result);
     }
     return adjustResultWithSubQueryAlias(e, result);
+  }
+
+  private boolean isDistinctTrait(RelNode input) {
+    return input.getTraitSet().stream().anyMatch(trait -> trait instanceof DistinctTrait);
   }
 
   SqlNode createUnpivotSqlNodeWithExcludeNulls(SqlSelect sqlNode) {
@@ -782,7 +794,11 @@ public class RelToSqlConverter extends SqlImplementor
 
       PivotRelToSqlUtil pivotUtil = new PivotRelToSqlUtil(POS);
       SqlNode pivotSelect = pivotUtil.buildSqlPivotNode(e, builder, selectList, aggregateInClauseFieldList);
-      return result(pivotSelect, ImmutableList.of(Clause.SELECT), e, null);
+      Result pivotResult = result(pivotSelect, ImmutableList.of(Clause.SELECT), e, null);
+      if (CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(e.getTraitSet())) {
+        pivotResult = updateCTEResult(e, pivotResult);
+      }
+      return pivotResult;
     }
     Result result = builder.result();
     if (CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(e.getTraitSet())) {
@@ -828,6 +844,10 @@ public class RelToSqlConverter extends SqlImplementor
     // Adding Alias in InClause and remove(return false) column from selectlist
     if (nestedCall instanceof SqlBasicCall && ((SqlBasicCall) nestedCall).getOperator().kind == SqlKind.AS) {
       SqlNode asNestedCall = ((SqlBasicCall) nestedCall).getOperandList().get(0);
+      if (asNestedCall instanceof SqlBasicCall
+          && ((SqlBasicCall) asNestedCall).getOperator() == SqlStdOperatorTable.LOWER) {
+        asNestedCall = ((SqlBasicCall) asNestedCall).getOperandList().get(0);
+      }
       String nestedCallString = asNestedCall.toString().replaceAll("'", "").toLowerCase();
       for (String aggName : aggNames) {
         if (aggName.replaceAll("'", "").startsWith(nestedCallString)) {
@@ -837,9 +857,20 @@ public class RelToSqlConverter extends SqlImplementor
       }
     }
 
-    String nestedCallString = nestedCall.toString().replaceAll("'", "").toLowerCase();
+    String nestedCallString;
+    if (nestedCall instanceof SqlBasicCall) {
+      SqlBasicCall basicCall = (SqlBasicCall) nestedCall;
+      SqlNode operand = basicCall.getOperandList().get(0);
+      if (operand instanceof SqlBasicCall
+          && ((SqlBasicCall) operand).getOperator() == SqlStdOperatorTable.LOWER) {
+        operand = ((SqlBasicCall) operand).getOperandList().get(0);
+      }
+      nestedCallString = requireNonNull(((SqlLiteral) operand).toValue()).toLowerCase();
+    } else {
+      nestedCallString = requireNonNull(((SqlLiteral) nestedCall).toValue()).toLowerCase();
+    }
     for (String aggName : aggNames) {
-      if (aggName.replaceAll("'", "").startsWith(nestedCallString)) {
+      if (aggName.replaceAll("'", "").toLowerCase().contains(nestedCallString)) {
         aggregateInClauseFieldList.add(nestedCall);
         return false;
       }
@@ -956,7 +987,8 @@ public class RelToSqlConverter extends SqlImplementor
 
     Optional<PivotRelTrait> pivotRelTrait =
         Optional.ofNullable(e.getTraitSet().getTrait(PivotRelTraitDef.instance));
-    if (pivotRelTrait.isPresent() && pivotRelTrait.get().hasSubquery()) {
+    if (pivotRelTrait.isPresent() && pivotRelTrait.get().hasSubquery()
+        && (e.getAggCallList().isEmpty() || pivotRelTrait.get().isPivotRel())) {
       return true;
     }
     if (!e.getAggCallList().isEmpty()) {
@@ -1795,6 +1827,9 @@ public class RelToSqlConverter extends SqlImplementor
     for (int i = 0; i < inputSize; i++) {
       final Result x = visitInput(e, i);
       inputSqlNodes.add(x.asStatement());
+      if (e.getCall().isA(SqlKind.RANGE_SESSIONIZE)) {
+        return createRangeSessionizeResult(e, x.node, tableFunctionScanContext(inputSqlNodes));
+      }
     }
     final Context context = tableFunctionScanContext(inputSqlNodes);
     SqlNode callNode = context.toSql(null, e.getCall());
@@ -1841,6 +1876,29 @@ public class RelToSqlConverter extends SqlImplementor
       result.add(new SqlIdentifier(fieldName, POS));
     });
     return result;
+  }
+
+  public Result createRangeSessionizeResult(TableFunctionScan tableFunctionScan,
+      SqlNode inputNode, Context tableFunContext) {
+    List<RelDataTypeField> fieldList = tableFunctionScan.getRowType().getFieldList();
+    final List<SqlNode> operandList = new ArrayList<>();
+    operandList.add(inputNode);
+    List<RexNode> operands = ((RexCall) tableFunctionScan.getCall()).operands;
+    for (RexNode operand : operands) {
+      operandList.add(tableFunContext.toSql(null, operand));
+    }
+    Map<String, RelDataType> tableFunctionRowType = new LinkedHashMap<>();
+    for (RelDataTypeField relDataTypeField : fieldList) {
+      tableFunctionRowType.put(relDataTypeField.getName(), relDataTypeField.getType());
+    }
+    SqlNode tableRef = new BQRangeSessionizeTableFunction(tableFunctionRowType)
+            .createCall(null, POS, operandList);
+    SqlNode select =
+        new SqlSelect(SqlParserPos.ZERO, null, null, tableRef,
+            null, null, null, null, null, null,
+            null, SqlNodeList.EMPTY);
+
+    return result(select, ImmutableList.of(Clause.SELECT), tableFunctionScan, tableFunctionRowType);
   }
 
   @Override public void addSelect(List<SqlNode> selectList, SqlNode node,
