@@ -25,7 +25,7 @@ public class PivotRelTrait implements RelTrait {
   private boolean hasSubquery;
   private String pivotAlias;
 
-  public PivotRelTrait(boolean isPivotRel, boolean hasSubquery, String pivotAlias, int extraFieldCountFromInputRel) {
+  public PivotRelTrait(boolean isPivotRel, boolean hasSubquery, String pivotAlias) {
     this.isPivotRel = isPivotRel;
     this.hasSubquery = hasSubquery;
     this.pivotAlias = pivotAlias;
