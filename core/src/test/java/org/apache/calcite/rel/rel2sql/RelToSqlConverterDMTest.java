@@ -8197,6 +8197,38 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqQuery));
   }
 
+  @Test public void testJsonExtractScalarFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode =
+        builder.call(
+            SqlLibraryOperators.JSON_EXTRACT_SCALAR, builder.literal("{\"name\": "
+                + "\"Bob\", \"age\": \"thirty\"}"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json_data"))
+        .build();
+    final String expectedBqQuery = "SELECT "
+        + "JSON_EXTRACT_SCALAR('{\"name\": \"Bob\", \"age\": \"thirty\"}') AS json_data\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqQuery));
+  }
+
+  @Test public void testJsonQueryArrayFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode =
+        builder.call(SqlLibraryOperators.JSON_QUERY_ARRAY, builder.literal("{\"name\": \"Bob\", \"age\": \"thirty\"}"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json_data"))
+        .build();
+    final String expectedBqQuery = "SELECT "
+        + "JSON_QUERY_ARRAY('{\"name\": \"Bob\", \"age\": \"thirty\"}') AS json_data\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqQuery));
+  }
+
   @Test public void testToCharWithSingleOperand() {
     final RelBuilder builder = relBuilder();
     final RexNode toCharNode =
