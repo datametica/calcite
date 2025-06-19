@@ -74,6 +74,7 @@ import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDelete;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlHint;
@@ -822,7 +823,7 @@ public class RelToSqlConverter extends SqlImplementor
     if (firstOperand instanceof SqlBasicCall && firstOperand.getKind() == SqlKind.IS_TRUE) {
       firstOperand = ((SqlBasicCall) firstOperand).operand(0);
     }
-    if (firstOperand instanceof SqlIdentifier) {
+    if (firstOperand instanceof SqlIdentifier || firstOperand instanceof SqlCharStringLiteral) {
       return true;
     }
 
