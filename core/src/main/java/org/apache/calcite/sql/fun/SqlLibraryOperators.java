@@ -4212,6 +4212,13 @@ public abstract class SqlLibraryOperators {
           STRING_STRING_STRING,
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction REDSHIFT_JSON_EXTRACT_PATH_TEXT =
+      new SqlFunction("JSON_EXTRACT_PATH_TEXT", SqlKind.REDSHIFT_JSON_EXTRACT_PATH_TEXT,
+          ReturnTypes.VARCHAR, null,
+          OperandTypes.or(OperandTypes.STRING_STRING, OperandTypes.STRING_STRING_STRING),
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {SQL_SERVER})
   public static final SqlFunction OBJECT_SCHEMA_NAME =
       new SqlFunction(

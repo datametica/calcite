@@ -12974,6 +12974,24 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedSql));
   }
 
+
+  @Test public void testRedshiftJsonExtractTextFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonCheckNode =
+        builder.call(
+            SqlLibraryOperators.REDSHIFT_JSON_EXTRACT_PATH_TEXT, builder.literal("{\"f2\": 1"
+                + ", \"f4\":{\"f6\":2}}"), builder.literal("f6"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonCheckNode, "json"))
+        .build();
+    final String expectedBqQuery = "SELECT JSON_EXTRACT_PATH_TEXT('{\"f2\": 1, \"f4\":{\"f6\":2}}', 'f6') AS \"json\""
+        + "\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.REDSHIFT.getDialect()), isLinux(expectedBqQuery));
+  }
+
   @Test public void testDigestFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode objectId =
