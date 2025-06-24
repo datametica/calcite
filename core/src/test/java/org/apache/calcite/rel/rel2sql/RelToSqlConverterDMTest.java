@@ -172,6 +172,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.USING;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_CALENDAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.WEEKNUMBER_OF_YEAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.YEARNUMBER_OF_CALENDAR;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.LOCALTIMESTAMP;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.COLUMN_LIST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CURRENT_DATE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
@@ -13428,5 +13429,36 @@ class RelToSqlConverterDMTest {
     final String expectedTDSql = "SELECT FORMAT_DATE('%Q%Q%Y', CURRENT_DATE) AS format_date\nFROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedTDSql));
+  }
+
+  @Test public void testLocalTime() {
+    final RelBuilder builder = relBuilder();
+    final RexNode localTimeNode =
+        builder.call(SqlLibraryOperators.LOCALTIME);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(localTimeNode, "LocalTime"))
+        .build();
+    final String expectedBq =
+        "SELECT LOCALTIME() AS \"LocalTime\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedBq));
+  }
+
+  @Test public void testVerticaLocalTimestampFunctionRelToSql() {
+    final RelBuilder builder = relBuilder();
+    RelDataType relDataType =
+        builder.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
+    final RexNode localTimestampRexNode =
+        builder.getRexBuilder().makeCall(relDataType,
+            LOCALTIMESTAMP, Collections.singletonList(builder.literal(0)));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(localTimestampRexNode, "LT"))
+        .build();
+    final String expectedVerticaSql = "SELECT LOCALTIMESTAMP(0) AS \"LT\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedVerticaSql));
   }
 }

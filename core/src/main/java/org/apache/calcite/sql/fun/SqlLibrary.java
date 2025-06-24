@@ -85,6 +85,8 @@ public enum SqlLibrary {
   SQL_SERVER("SQL_SERVER", "sqlserver"),
   /** A collection of operators that are in REDSHIFT but not in standard SQL. */
   REDSHIFT("REDSHIFT", "redshift"),
+  /** A collection of operators that are in DATABRICKS but not in standard SQL. */
+  DATABRICKS("DATABRICKS", "databricks"),
   /** A collection of operators that are in VERTICA but not in standard SQL. */
   VERTICA("VERTICA", "vertica");
 
