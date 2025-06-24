@@ -88,7 +88,8 @@ public enum SqlLibrary {
   /** A collection of operators that are in DATABRICKS but not in standard SQL. */
   DATABRICKS("DATABRICKS", "databricks"),
   /** A collection of operators that are in VERTICA but not in standard SQL. */
-  VERTICA("v", "vertica");
+  VERTICA("VERTICA", "vertica");
+
 
   /** Map from {@link Enum#name() name} and {@link #fun} to library. */
   public static final Map<String, SqlLibrary> MAP;
