@@ -1109,6 +1109,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.VARIADIC,
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {VERTICA})
+  public static final SqlFunction LOCALTIMESTAMP =
+      new SqlFunction("LOCALTIMESTAMP",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP_NULLABLE, null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {SQL_SERVER, SPARK})
   public static final SqlFunction GETDATE =
       new SqlCurrentTimestampFunction("GETDATE", SqlTypeName.TIMESTAMP);

@@ -13443,4 +13443,21 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedBq));
   }
+
+  @Test public void testVerticaLocalTimestampFunctionRelToSql() {
+    final RelBuilder builder = relBuilder();
+    RelDataType relDataType =
+        builder.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
+    final RexNode localTimestampRexNode =
+        builder.getRexBuilder().makeCall(relDataType,
+            LOCALTIMESTAMP, Collections.singletonList(builder.literal(0)));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(localTimestampRexNode, "LT"))
+        .build();
+    final String expectedVerticaSql = "SELECT LOCALTIMESTAMP(0) AS \"LT\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedVerticaSql));
+  }
 }
