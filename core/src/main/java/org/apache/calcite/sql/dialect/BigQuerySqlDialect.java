@@ -419,10 +419,6 @@ public class BigQuerySqlDialect extends SqlDialect {
     unparseFetchUsingLimit(writer, offset, fetch);
   }
 
-  @Override public boolean supportsIdenticalTableAndColumnName() {
-    return false;
-  }
-
   @Override public boolean supportsQualifyClause() {
     return true;
   }
