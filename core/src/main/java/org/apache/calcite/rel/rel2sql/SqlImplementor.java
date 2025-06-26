@@ -2074,7 +2074,7 @@ public abstract class SqlImplementor {
         return true;
       }
       if (expectedClauses.contains(Clause.QUALIFY)
-          && rel.getInput(0) instanceof Aggregate) {
+          && (rel.getInput(0) instanceof Aggregate || rel.getInput(0) instanceof Project)) {
         return true;
       }
       return false;
@@ -2474,6 +2474,11 @@ public abstract class SqlImplementor {
             && clauses.contains(Clause.QUALIFY)) {
           return true;
         }
+        if (relInput instanceof LogicalFilter
+            && clauses.contains(Clause.QUALIFY)
+            && hasFieldsUsedInFilterWhichIsNotUsedInAggregation(agg)) {
+          return true;
+        }
       }
 
       if (rel instanceof LogicalProject
@@ -2637,6 +2642,18 @@ public abstract class SqlImplementor {
       return isGrpCallNotUsedInFinalProjection(grpList, selectList, rel);
     }
 
+    boolean hasFieldsUsedInFilterWhichIsNotUsedInAggregation(Aggregate aggregate) {
+      SqlSelect sqlSelect = (SqlSelect) node;
+      List<SqlNode> qualifyColumnList = new ArrayList<>();
+      sqlSelect.getQualify().accept(new SqlBasicVisitor<SqlNode>() {
+        @Override public SqlNode visit(SqlIdentifier id) {
+          qualifyColumnList.add(id);
+          return id;
+        }
+      });
+      return isGrpCallNotUsedInAggregation(qualifyColumnList, aggregate);
+    }
+
     boolean hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection(Project project) {
       SqlSelect sqlSelect = (SqlSelect) node;
       SqlNodeList selectList = sqlSelect.getSelectList();
@@ -2659,7 +2676,7 @@ public abstract class SqlImplementor {
         && grpCall.equals(selectCall.operand(1).toString());
     }
 
-    boolean grpCallPresentInFinalProjection(String grpCall, Project rel) {
+    boolean grpCallPresentInFinalProjection(String grpCall, RelNode rel) {
       List<String> projFieldList = rel.getRowType().getFieldNames();
       for (String finalProj : projFieldList) {
         if (grpCall.equals(finalProj)) {
@@ -2684,6 +2701,16 @@ public abstract class SqlImplementor {
               }
             }
           }
+        }
+      }
+      return false;
+    }
+
+    private boolean isGrpCallNotUsedInAggregation(List<SqlNode> columnList, Aggregate aggregate) {
+      for (SqlNode grpNode : columnList) {
+        String grpCall = ((SqlIdentifier) grpNode).names.get(0);
+        if (!grpCallPresentInFinalProjection(grpCall, aggregate)) {
+          return true;
         }
       }
       return false;
