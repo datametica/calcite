@@ -1671,12 +1671,27 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction JSON_EXTRACT_SCALAR =
+      new SqlFunction("JSON_EXTRACT_SCALAR", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE, null,
+          OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction JSON_EXTRACT_ARRAY =
       new SqlFunction("JSON_EXTRACT_ARRAY",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.VARCHAR.andThen(SqlTypeTransforms.TO_ARRAY),
           null,
           OperandTypes.or(STRING_JSON, STRING_OPTIONAL_STRING),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction JSON_QUERY_ARRAY =
+      new SqlFunction("JSON_QUERY_ARRAY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR.andThen(SqlTypeTransforms.TO_ARRAY),
+          null,
+          OperandTypes.STRING_OPTIONAL_STRING,
           SqlFunctionCategory.SYSTEM);
 
   /** The "ARRAY_DISTINCT(array)" function. */
