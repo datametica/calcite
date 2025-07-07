@@ -618,8 +618,6 @@ public class RelJson {
       map.put("isPivotRel", ((PivotRelTrait) node).isPivotRel());
       map.put("hasSubquery", ((PivotRelTrait) node).hasSubquery());
       map.put("pivotAlias", ((PivotRelTrait) node).getPivotAlias());
-      map.put("extraFieldCountFromInputRel",
-          ((PivotRelTrait) node).getExtraFieldCountFromInputRel());
       break;
     case "InnerJoinTrait":
       map = jsonBuilder().map();
@@ -820,8 +818,7 @@ public class RelJson {
       Boolean isPivotRel = get(map, "isPivotRel");
       Boolean hasSubquery = get(map, "hasSubquery");
       String pivotAlias = get(map, "pivotAlias");
-      Integer extraFieldCountFromInputRel = get(map, "extraFieldCountFromInputRel");
-      trait = new PivotRelTrait(isPivotRel, hasSubquery, pivotAlias, extraFieldCountFromInputRel);
+      trait = new PivotRelTrait(isPivotRel, hasSubquery, pivotAlias);
       break;
     case "InnerJoinTrait":
       Boolean preserveInnerJoin = get(map, "preserveInnerJoin");
