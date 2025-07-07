@@ -123,8 +123,15 @@ public abstract class TableScan
   }
 
   @Override public RelWriter explainTerms(RelWriter pw) {
-    return super.explainTerms(pw)
-        .item("table", table.getQualifiedName());
+    if (getTraitSet().size() <= 2) {
+      return super.explainTerms(pw)
+          .item("table", table.getQualifiedName());
+    } else {
+      return super.explainTerms(pw)
+          .item("table", table.getQualifiedName())
+          .item("traitSet", getTraitSet());
+    }
+
   }
 
   /**
