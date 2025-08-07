@@ -3985,11 +3985,11 @@ public abstract class SqlLibraryOperators {
       ReturnTypes.TO_ARRAY,
       null,
       OperandTypes.STRING,
-      SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION);
+      SqlFunctionCategory.USER_DEFINED_FUNCTION);
 
   @LibraryOperator(libraries = {REDSHIFT})
   public static final SqlFunction IDENTITY =
-      new OracleSqlTableFunction("IDENTITY",
+      new SqlFunction("IDENTITY",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER,
           null,
