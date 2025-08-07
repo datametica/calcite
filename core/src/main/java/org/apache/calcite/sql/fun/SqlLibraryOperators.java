@@ -3987,6 +3987,15 @@ public abstract class SqlLibraryOperators {
       OperandTypes.STRING,
       SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION);
 
+  @LibraryOperator(libraries = {REDSHIFT})
+  public static final SqlFunction IDENTITY =
+      new OracleSqlTableFunction("IDENTITY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER,
+          null,
+          OperandTypes.INTEGER_INTEGER_STRING,
+          SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION);
+
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction IN_NUMBER =
       new OracleSqlTableFunction("IN_NUMBER",
