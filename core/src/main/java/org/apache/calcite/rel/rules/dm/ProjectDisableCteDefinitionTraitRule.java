@@ -24,12 +24,11 @@ import org.apache.calcite.rel.rules.TransformationRule;
 import org.immutables.value.Value;
 
 /**
- * Rule that removes isCTEDefinition=true trait from LogicalProject
- * above LogicalAggregate.
+ * Rule that removes isCTEDefinition=true trait from LogicalProject.
  */
 @Value.Enclosing
-public class ProjectRemoveCteDefinitionTraitRule
-    extends RelRule<ProjectRemoveCteDefinitionTraitRule.Config>
+public class ProjectDisableCteDefinitionTraitRule
+    extends RelRule<ProjectDisableCteDefinitionTraitRule.Config>
     implements TransformationRule {
 
   private RuleMatchExtension extension;
@@ -37,7 +36,7 @@ public class ProjectRemoveCteDefinitionTraitRule
   /**
    * Creates the rule.
    */
-  protected ProjectRemoveCteDefinitionTraitRule(Config config) {
+  protected ProjectDisableCteDefinitionTraitRule(Config config) {
     super(config);
   }
 
@@ -54,15 +53,15 @@ public class ProjectRemoveCteDefinitionTraitRule
    */
   @Value.Immutable
   public interface Config extends RelRule.Config {
-    Config DEFAULT = ImmutableProjectRemoveCteDefinitionTraitRule.Config.of()
+    Config DEFAULT = ImmutableProjectDisableCteDefinitionTraitRule.Config.of()
         .withOperandSupplier(b ->
             b.operand(LogicalProject.class).anyInputs()
         )
-        .withDescription("ProjectRemoveCTEDefinitionTraitRule")
+        .withDescription("ProjectDisableCteDefinitionTraitRule")
         .as(Config.class);
 
-    @Override default ProjectRemoveCteDefinitionTraitRule toRule() {
-      return new ProjectRemoveCteDefinitionTraitRule(this);
+    @Override default ProjectDisableCteDefinitionTraitRule toRule() {
+      return new ProjectDisableCteDefinitionTraitRule(this);
     }
   }
 }
