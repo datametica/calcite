@@ -1529,11 +1529,13 @@ public class RelToSqlConverter extends SqlImplementor
     if (CTERelToSqlUtil.isCteScopeTrait(e.getTraitSet())) {
       List<SqlNode> sqlWithItemNodes =
           CTERelToSqlUtil.fetchSqlWithItemNodes(result.node, new ArrayList<>());
-      SqlNodeList sqlNodeList = new SqlNodeList(sqlWithItemNodes, POS);
+      if (!sqlWithItemNodes.isEmpty()) {
+        SqlNodeList sqlNodeList = new SqlNodeList(sqlWithItemNodes, POS);
 
-      SqlNode sqlWithNode = updateSqlWithNode(result);
-      final SqlWith sqlWith = new SqlWith(POS, sqlNodeList, sqlWithNode);
-      result = this.result(sqlWith, ImmutableList.of(), e, null);
+        SqlNode sqlWithNode = updateSqlWithNode(result);
+        final SqlWith sqlWith = new SqlWith(POS, sqlNodeList, sqlWithNode);
+        result = this.result(sqlWith, ImmutableList.of(), e, null);
+      }
     }
     if (CTERelToSqlUtil.isCteDefinationTrait(e.getTraitSet())) {
       CTEDefinationTrait cteDefinationTrait = e.getTraitSet().getTrait(CTEDefinationTraitDef.instance);
