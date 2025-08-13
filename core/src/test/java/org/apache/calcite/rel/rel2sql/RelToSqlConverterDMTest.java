@@ -7893,8 +7893,8 @@ class RelToSqlConverterDMTest {
     String query =
         "select \"test\" from \"foodmart\".\"test\"";
     final String expectedBQSql =
-        "SELECT test.test\n"
-            + "FROM foodmart.test AS test";
+        "SELECT test\n"
+            + "FROM foodmart.test";
     sqlTest(query)
         .withBigQuery()
         .ok(expectedBQSql);
