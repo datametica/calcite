@@ -2196,6 +2196,10 @@ public abstract class RelOptUtil {
     }
 
     // Add more condition to make sure that type is mismatched
+    if (type1.getSqlTypeName().equals(type2.getSqlTypeName())) {
+      return litmus.succeed();
+    }
+
     if (!type1.equals(type2) && !type1.toString().equals(type2.toString())) {
       return litmus.fail("type mismatch:\n{}:\n{}\n{}:\n{}",
           desc1, type1.getFullTypeString(),
