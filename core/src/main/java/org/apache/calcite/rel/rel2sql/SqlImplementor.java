@@ -2096,8 +2096,7 @@ public abstract class SqlImplementor {
         return true;
       }
       if (expectedClauses.contains(Clause.QUALIFY)
-          && (rel.getInput(0) instanceof Aggregate || isQualifyFieldsContainsNestedAggregation()
-          || isQualifyFilter(rel))) {
+          && dialect.getConformance().isHavingAlias()) {
         return true;
       }
       return false;
