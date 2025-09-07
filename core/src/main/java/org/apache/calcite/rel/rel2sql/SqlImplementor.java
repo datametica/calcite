@@ -3087,14 +3087,7 @@ public abstract class SqlImplementor {
     }
 
     public void setQualify(SqlNode node) {
-      assert clauses.contains(Clause.QUALIFY);
-      if (select.getFrom() instanceof SqlWith) {
-        if (((SqlWith) select.getFrom()).body instanceof SqlSelect) {
-          ((SqlSelect) ((SqlWith) select.getFrom()).body).setQualify(node);
-        }
-      } else {
-        select.setQualify(node);
-      }
+      select.setQualify(node);
     }
 
     public void setOrderBy(SqlNodeList nodeList) {
