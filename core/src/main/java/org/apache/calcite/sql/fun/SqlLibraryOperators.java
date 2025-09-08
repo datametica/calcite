@@ -4453,4 +4453,12 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.STRING),
               OperandTypes.family(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.STRING)),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction JSON =
+      new SqlFunction("JSON",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.JSON, null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
 }

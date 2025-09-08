@@ -13761,4 +13761,18 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testJsonFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonNode =
+        builder.call(SqlLibraryOperators.JSON, builder.literal("{\"name\":\"Alice\",\"age\":25}"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonNode, "inventory_state"))
+        .build();
+    final String expectedTDSql = "SELECT JSON('{\"name\":\"Alice\",\"age\":25}') AS \"inventory_state\""
+        + "\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTDSql));
+  }
 }
