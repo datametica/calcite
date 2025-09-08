@@ -1419,6 +1419,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       break;
     case DateTimestampFormatUtil.WEEKNUMBER_OF_YEAR:
     case DateTimestampFormatUtil.ISO_WEEKOFYEAR:
+    case DateTimestampFormatUtil.ISO_YEAROFWEEK:
     case DateTimestampFormatUtil.YEARNUMBER_OF_CALENDAR:
     case DateTimestampFormatUtil.MONTHNUMBER_OF_YEAR:
     case DateTimestampFormatUtil.QUARTERNUMBER_OF_YEAR:

@@ -40,6 +40,7 @@ public class DateTimestampFormatUtil {
 
   public static final String WEEKNUMBER_OF_YEAR = "WEEKNUMBER_OF_YEAR";
   public static final String ISO_WEEKOFYEAR = "ISOWEEK";
+  public static final String ISO_YEAROFWEEK = "ISOYEAR";
   public static final String YEARNUMBER_OF_CALENDAR = "YEARNUMBER_OF_CALENDAR";
   public static final String MONTHNUMBER_OF_YEAR = "MONTHNUMBER_OF_YEAR";
   public static final String QUARTERNUMBER_OF_YEAR = "QUARTERNUMBER_OF_YEAR";
@@ -63,6 +64,9 @@ public class DateTimestampFormatUtil {
       break;
     case ISO_WEEKOFYEAR:
       extractCall = unparseWeekNumber(call.operand(0), DateTimeUnit.ISOWEEK);
+      break;
+    case ISO_YEAROFWEEK:
+      extractCall = unparseWeekNumber(call.operand(0), DateTimeUnit.ISOYEAR);
       break;
     case YEARNUMBER_OF_CALENDAR:
       extractCall = unparseWeekNumber(call.operand(0), DateTimeUnit.YEAR);
@@ -184,6 +188,7 @@ public class DateTimestampFormatUtil {
     DAY("DAY"),
     WEEK("WEEK"),
     ISOWEEK("ISOWEEK"),
+    ISOYEAR("ISOYEAR"),
     DAYOFYEAR("DAYOFYEAR"),
     MONTH("MONTH"),
     MONTHOFYEAR("MONTHOFYEAR"),

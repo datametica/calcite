@@ -4453,4 +4453,16 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.STRING),
               OperandTypes.family(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.STRING)),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ISO_WEEKOFYEAR =
+      new SqlFunction("ISOWEEK", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ISO_YEAROFWEEK =
+      new SqlFunction("ISOYEAR", SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
+          SqlFunctionCategory.TIMEDATE);
 }
