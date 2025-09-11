@@ -3807,7 +3807,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("REGEXP_COUNT", SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER_NULLABLE,
           null,
-          OperandTypes.STRING_STRING_OPTIONAL_INTEGER_OPTIONAL_INTEGER,
+          OperandTypes.STRING_STRING_OPTIONAL_INTEGER_OPTIONAL_STRING,
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {POSTGRESQL})
