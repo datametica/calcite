@@ -56,7 +56,7 @@ public class SqlDelegatingConformance implements SqlConformance {
   }
 
   @Override public boolean isQualifyAlias() {
-    return delegate.isHavingAlias();
+    return delegate.isQualifyAlias();
   }
 
   @Override public boolean isSortByOrdinal() {

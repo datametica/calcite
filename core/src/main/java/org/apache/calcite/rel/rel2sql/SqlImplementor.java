@@ -2096,7 +2096,7 @@ public abstract class SqlImplementor {
         return true;
       }
       if (expectedClauses.contains(Clause.QUALIFY)
-          && dialect.getConformance().isHavingAlias()) {
+          && dialect.getConformance().isQualifyAlias()) {
         return true;
       }
       return false;
