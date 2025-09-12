@@ -13780,4 +13780,30 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.VERTICA.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testISOWeek() {
+    final RelBuilder builder = relBuilder();
+    final RexNode trunc =
+        builder.call(SqlLibraryOperators.ISO_WEEKOFYEAR, builder.call(CURRENT_DATE));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(trunc, "FD"))
+        .build();
+    final String expectedSql = "SELECT EXTRACT(ISOWEEK FROM CURRENT_DATE) AS FD\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testISOYear() {
+    final RelBuilder builder = relBuilder();
+    final RexNode trunc =
+        builder.call(SqlLibraryOperators.ISO_YEAROFWEEK, builder.call(CURRENT_DATE));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(trunc, "FD"))
+        .build();
+    final String expectedSql = "SELECT EXTRACT(ISOYEAR FROM CURRENT_DATE) AS FD\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
 }
