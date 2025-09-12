@@ -121,7 +121,6 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
-import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.NlsString;
@@ -166,7 +165,6 @@ import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -2102,22 +2100,6 @@ public abstract class SqlImplementor {
       return false;
     }
 
-    public boolean isQualifyFilter(RelNode relNode) {
-      if (!(relNode instanceof LogicalFilter)) {
-        return false;
-      }
-      LogicalFilter filter = (LogicalFilter) relNode;
-      RexNode condition = filter.getCondition();
-      if (condition instanceof RexCall) {
-        for (RexNode operand : ((RexCall) condition).getOperands()) {
-          if (operand instanceof RexOver) {
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-
     private boolean hasAnalyticalFunctionInAggregate(Aggregate rel) {
       boolean present = false;
       if (node instanceof SqlSelect) {
@@ -2140,26 +2122,6 @@ public abstract class SqlImplementor {
         }
       }
       return present;
-    }
-
-    private boolean isQualifyFieldsContainsNestedAggregation() {
-      if (node instanceof SqlSelect) {
-        SqlNodeList selectList = ((SqlSelect) node).getSelectList();
-        Pair<List<SqlNode>, List<SqlNode>> aggregateAndAnalyticalNodes =
-            getAggregateAndAnalyticalNodes(selectList);
-        if (!aggregateAndAnalyticalNodes.left.isEmpty()
-            && !aggregateAndAnalyticalNodes.right.isEmpty()) {
-          Set<String> aggregateFunctionAlias =
-              getAggregateAliases(aggregateAndAnalyticalNodes.left);
-          Set<String> analyticalFunctionColumns =
-              getAnalyticalFunctionAggregateColumns(aggregateAndAnalyticalNodes.right);
-          return aggregateFunctionAlias.stream()
-              .anyMatch(alias ->
-                  analyticalFunctionColumns.stream()
-                      .anyMatch(column -> column.equals(alias)));
-        }
-      }
-      return false;
     }
 
     private boolean hasAliasUsedInHavingClause() {
@@ -2227,70 +2189,6 @@ public abstract class SqlImplementor {
         }
       }
       return aliases;
-    }
-
-    private Pair<List<SqlNode>, List<SqlNode>> getAggregateAndAnalyticalNodes(SqlNodeList selectList) {
-      List<SqlNode> aggregateNodes = new ArrayList<>();
-      List<SqlNode> analyticalNodes = new ArrayList<>();
-      selectList.forEach(
-          node -> node.accept(new SqlBasicVisitor<SqlNode>() {
-            @Override public SqlNode visit(SqlCall call) {
-              if (call.isA(ImmutableSet.of(SqlKind.AS))) {
-                SqlNode node = call.getOperandList().get(0);
-                if (node instanceof SqlBasicCall
-                    && ((SqlBasicCall) node).getOperator() instanceof SqlAggFunction) {
-                  aggregateNodes.add(call);
-                }
-                if (node.isA(ImmutableSet.of(SqlKind.OVER))) {
-                  analyticalNodes.add(node);
-                }
-              }
-              return call;
-            }
-          }));
-
-      return new Pair<>(aggregateNodes, analyticalNodes);
-    }
-
-    private Set<String> getAggregateAliases(List<SqlNode> sqlNodes) {
-      return sqlNodes.stream()
-          .map(node -> (SqlBasicCall) node)
-          .filter(this::isAggregateWithSelfAlias)
-          .map(call -> ((SqlIdentifier) call.getOperandList().get(1)).names.get(0))
-          .collect(Collectors.toSet());
-    }
-
-    private boolean isAggregateWithSelfAlias(SqlBasicCall call) {
-      SqlNode aggExpr = call.getOperandList().get(0);
-      String alias = ((SqlIdentifier) call.getOperandList().get(1)).names.get(0);
-      Stream<String> names = collectColumnNamesFromAggregate(aggExpr);
-      return names.anyMatch(name -> name.equals(alias));
-    }
-
-    private Set<String> getAnalyticalFunctionAggregateColumns(List<SqlNode> sqlNodes) {
-      return sqlNodes.stream()
-          .flatMap(this::extractAggregateNodes)
-          .flatMap(this::collectColumnNamesFromAggregate)
-          .collect(Collectors.toSet());
-    }
-
-    private Stream<SqlNode> extractAggregateNodes(SqlNode node) {
-      List<SqlNode> aggregateNodes = new ArrayList<>();
-      node.accept(new SqlShuttle() {
-        @Override public SqlNode visit(SqlCall call) {
-          if (call.getOperator() instanceof SqlAggFunction) {
-            aggregateNodes.add(call);
-          }
-          return super.visit(call);
-        }
-      });
-      return aggregateNodes.stream();
-    }
-
-    private Stream<String> collectColumnNamesFromAggregate(SqlNode aggregateNode) {
-      RelToSqlUtils.SqlColumnNameCollector collector = new RelToSqlUtils.SqlColumnNameCollector();
-      aggregateNode.accept(collector);
-      return collector.getNames().stream();
     }
 
     private boolean hasAnalyticalFunctionInWhenClauseOfCase(SqlCall call) {
