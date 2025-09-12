@@ -166,6 +166,16 @@ public enum SqlConformanceEnum implements SqlConformance {
     }
   }
 
+  @Override public boolean isQualifyAlias() {
+    switch (this) {
+    case BABEL:
+    case BIG_QUERY:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   @Override public boolean isSortByOrdinal() {
     switch (this) {
     case DEFAULT:
