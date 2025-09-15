@@ -854,14 +854,12 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
 
-  @Test public void testChainComparison() {
+  @Test void testChainComparison() {
     final RelBuilder builder = relBuilder().scan("EMP");
     final RexNode firstNode = builder.equals(builder.call(CURRENT_DATE),
         builder.call(CURRENT_TIMESTAMP));
     final RexNode finalNode = builder.equals(firstNode, builder.field(0));
-    final RelNode root = builder
-        .scan("EMP").project(finalNode)
-        .build();
+    final RelNode root = builder.scan("EMP").project(finalNode).build();
     final String expectedSql = "SELECT CURRENT_DATE = CURRENT_TIMESTAMP = \"EMPNO\" AS \"$f0\"\n"
         + "FROM \"scott\".\"EMP\"";
     final String expectedBigQuery = "SELECT (CURRENT_DATE = CURRENT_DATETIME()) = EMPNO AS `$f0`\n"

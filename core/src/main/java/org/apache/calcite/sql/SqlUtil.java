@@ -452,10 +452,14 @@ public abstract class SqlUtil {
             (operator instanceof SqlSetOperator)
                 ? SqlWriter.FrameTypeEnum.SETOP
                 : SqlWriter.FrameTypeEnum.SIMPLE);
-    boolean braces = needBraces(call, writer);
-    if (braces) writer.print("(");
-    call.operand(0).unparse(writer, leftPrec, operator.getLeftPrec());
-    if (braces) writer.print(")");
+    boolean brackets = needBrackets(call, writer);
+    if (brackets) {
+      writer.print("(");
+      call.operand(0).unparse(writer, leftPrec, operator.getLeftPrec());
+      writer.print(")");
+    } else {
+      call.operand(0).unparse(writer, leftPrec, operator.getLeftPrec());
+    }
     final boolean needsSpace = operator.needsSpace();
     writer.setNeedWhitespace(needsSpace);
     writer.sep(operator.getName());
@@ -464,7 +468,7 @@ public abstract class SqlUtil {
     writer.endList(frame);
   }
 
-  private static boolean needBraces(SqlCall call, SqlWriter writer) {
+  private static boolean needBrackets(SqlCall call, SqlWriter writer) {
     return writer.getDialect() instanceof BigQuerySqlDialect && call.operand(0) instanceof SqlBasicCall
         && COMPARISON_OPERATORS.contains(call.getOperator().getName())
         && COMPARISON_OPERATORS.contains(((SqlBasicCall) call.operand(0)).getOperator().getName());
