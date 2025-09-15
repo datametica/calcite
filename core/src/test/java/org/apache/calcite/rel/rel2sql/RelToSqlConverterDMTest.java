@@ -856,10 +856,12 @@ class RelToSqlConverterDMTest {
 
   @Test void testChainComparison() {
     final RelBuilder builder = relBuilder().scan("EMP");
-    final RexNode firstNode = builder.equals(builder.call(CURRENT_DATE),
-        builder.call(CURRENT_TIMESTAMP));
-    final RexNode finalNode = builder.equals(firstNode, builder.field(0));
-    final RelNode root = builder.scan("EMP").project(finalNode).build();
+    final RexNode comparisonNode =
+        builder.equals(builder.call(CURRENT_DATE), builder.call(CURRENT_TIMESTAMP));
+    final RexNode nestedComparisonNode =
+        builder.equals(comparisonNode, builder.field(0));
+    final RelNode root =
+        builder.scan("EMP").project(nestedComparisonNode).build();
     final String expectedSql = "SELECT CURRENT_DATE = CURRENT_TIMESTAMP = \"EMPNO\" AS \"$f0\"\n"
         + "FROM \"scott\".\"EMP\"";
     final String expectedBigQuery = "SELECT (CURRENT_DATE = CURRENT_DATETIME()) = EMPNO AS `$f0`\n"
