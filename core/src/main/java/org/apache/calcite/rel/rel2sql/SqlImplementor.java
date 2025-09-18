@@ -959,7 +959,7 @@ public abstract class SqlImplementor {
      */
     public SqlNode toSql(@Nullable RexProgram program, RexNode rex, @Nullable CommentTrait traitSet) {
       SqlNode result = toSql(program, rex);
-      Comment comment = traitSet.getComments().get(rex);
+      List<Comment> comment = traitSet.getComments().get(rex);
       if (comment != null) {
         return new SqlCommentNode(comment, result, POS);
       }

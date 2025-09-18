@@ -75,7 +75,7 @@ public class CommentTraitDef extends RelTraitDef<CommentTrait> {
    * @return a CommentTrait with an empty map
    */
   @Override public CommentTrait getDefault() {
-    return new CommentTrait(Map.of());
+    return new CommentTrait(java.util.Collections.emptyMap(), java.util.Collections.emptyList());
   }
 
   /**

@@ -19,6 +19,8 @@ package org.apache.calcite.plan;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.Comment;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,15 +36,17 @@ public class CommentTrait implements RelTrait {
   /**
    * Map of RexNode expressions to their associated comments.
    */
-  private final Map<RexNode, Comment> comments;
+  private final Map<RexNode, List<Comment>> comments;
+  private final List<Comment> commentList;
 
   /**
    * Creates a CommentTrait with the given comments map.
    *
    * @param comments Map from RexNode to comment string
    */
-  public CommentTrait(Map<RexNode, Comment> comments) {
+  public CommentTrait(@Nullable Map<RexNode, List<Comment>> comments, @Nullable List<Comment> commentList) {
     this.comments = comments;
+    this.commentList = commentList;
   }
 
   /**
@@ -50,8 +54,12 @@ public class CommentTrait implements RelTrait {
    *
    * @return Map from RexNode to comment string
    */
-  public Map<RexNode, Comment> getComments() {
+  public Map<RexNode, List<Comment>> getComments() {
     return comments;
+  }
+
+  public List<Comment> getCommentList() {
+    return commentList;
   }
 
   @Override public RelTraitDef getTraitDef() {

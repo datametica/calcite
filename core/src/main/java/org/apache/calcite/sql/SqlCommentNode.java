@@ -27,51 +27,47 @@ import org.apache.calcite.util.Litmus;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.List;
+
 /**
  * Represents a SQL node that wraps another node with a comment.
  * The comment is rendered as a SQL comment when unparsing.
  */
 public class SqlCommentNode extends SqlNode {
 
-  private final Comment comment;
+  private final List<Comment> comments;
   private final SqlNode innerNode;
 
-  public SqlCommentNode(Comment comment, SqlNode innerNode, SqlParserPos pos) {
+  public SqlCommentNode(List<Comment> comments, SqlNode innerNode, SqlParserPos pos) {
     super(pos);
-    this.comment = comment;
+    this.comments = comments;
     this.innerNode = innerNode;
   }
 
-  @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-    //todo : handle different comment types;
+  @Override
+  public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
 
-   // writer.literal("/* " + comment + " */ ");
-    //innerNode.unparse(writer, leftPrec, rightPrec);
-
-    String commentText = comment.getComment();
-    CommentType type = comment.getCommentType();
-    AnchorToken anchor = comment.getAnchorToken();
-
-    String commentPrefix;
-    String commentSuffix = "";
-
-    // Determine comment style
-    if (type == CommentType.SINGLE) {
-      commentPrefix = "-- ";
-      commentSuffix = System.lineSeparator();
-    } else {
-      commentPrefix = "/* ";
-      commentSuffix = " */ ";
+    if (comments != null) {
+      for (Comment comment : comments) {
+        if (comment.getAnchorToken() == AnchorToken.LEFT) {
+          String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
+          String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() : " */ ";
+          writer.literal(prefix + comment.getComment() + suffix);
+        }
+      }
     }
-
-    if (anchor == AnchorToken.LEFT) {
-      writer.literal(commentPrefix + commentText + commentSuffix);
-      innerNode.unparse(writer, leftPrec, rightPrec);
-    } else {
-      innerNode.unparse(writer, leftPrec, rightPrec);
-      writer.literal(commentPrefix + commentText + commentSuffix);
+    innerNode.unparse(writer, leftPrec, rightPrec);
+    if (comments != null) {
+      for (Comment comment : comments) {
+        if (comment.getAnchorToken() == AnchorToken.RIGHT) {
+          String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
+          String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() : " */ ";
+          writer.literal(prefix + comment.getComment() + suffix);
+        }
+      }
     }
   }
+
 
   @Override public SqlNode clone(SqlParserPos pos) {
     return null;
