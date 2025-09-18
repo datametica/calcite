@@ -24,6 +24,7 @@ import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEDefinationTraitDef;
 import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.CTEScopeTraitDef;
+import org.apache.calcite.plan.CommentTrait;
 import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.DistinctTraitDef;
 import org.apache.calcite.plan.PivotRelTrait;
@@ -87,6 +88,7 @@ import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCommentNode;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlFieldAccess;
@@ -123,6 +125,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
@@ -941,6 +944,26 @@ public abstract class SqlImplementor {
 
         return callToSql(program, (RexCall) rex, false);
       }
+    }
+
+    /**
+     * Converts an expression from {@link RexNode} to {@link SqlNode} format, with an optional comment.
+     *
+     * <p>If the comment is not null or empty, the resulting SqlNode will be wrapped in a SqlCommentNode
+     * with the comment string.</p>
+     *
+     * @param program Required only if {@code rex} contains {@link RexLocalRef}
+     * @param rex Expression to convert
+     * @param traitSet Optional comment to attach to the resulting SqlNode
+     * @return SqlNode representing the expression, possibly wrapped in a SqlCommentNode
+     */
+    public SqlNode toSql(@Nullable RexProgram program, RexNode rex, @Nullable CommentTrait traitSet) {
+      SqlNode result = toSql(program, rex);
+      Comment comment = traitSet.getComments().get(rex);
+      if (comment != null) {
+        return new SqlCommentNode(comment, result, POS);
+      }
+      return result;
     }
 
     private SqlNode getSqlNodeByName(Context correlAliasContext, RexFieldAccess lastAccess) {

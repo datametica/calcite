@@ -22,6 +22,8 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEDefinationTraitDef;
+import org.apache.calcite.plan.CommentTrait;
+import org.apache.calcite.plan.CommentTraitDef;
 import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.PivotRelTraitDef;
@@ -672,10 +674,17 @@ public class RelToSqlConverter extends SqlImplementor
       if ((!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
         final List<SqlNode> selectList = new ArrayList<>();
-
         List<String> pivotColumnAliases = extractAliasesFromPivot(x);
         for (RexNode ref : e.getProjects()) {
-          SqlNode sqlExpr = builder.context.toSql(null, ref);
+          SqlNode sqlExpr;
+          if (e.getTraitSet().getTrait(CommentTraitDef.INSTANCE) != null) {
+            CommentTrait commentTrait = e.getTraitSet().getTrait(CommentTraitDef.INSTANCE);
+            assert commentTrait != null;
+            sqlExpr = builder.context.toSql(null, ref, commentTrait);
+          } else {
+            sqlExpr = builder.context.toSql(null, ref);
+          }
+
           RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
           if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
