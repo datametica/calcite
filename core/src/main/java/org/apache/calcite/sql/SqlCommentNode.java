@@ -44,8 +44,7 @@ public class SqlCommentNode extends SqlNode {
     this.innerNode = innerNode;
   }
 
-  @Override
-  public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+  @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
 
     if (comments != null) {
       for (Comment comment : comments) {

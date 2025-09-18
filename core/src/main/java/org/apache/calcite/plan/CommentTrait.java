@@ -19,7 +19,8 @@ package org.apache.calcite.plan;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.Comment;
 
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.util.List;
 import java.util.Map;
 

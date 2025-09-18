@@ -18,8 +18,6 @@ package org.apache.calcite.plan;
 
 import org.apache.calcite.rel.RelNode;
 
-import java.util.Map;
-
 /**
  * Definition of the {@link CommentTrait} for use in the query planner.
  *
