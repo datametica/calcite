@@ -20,7 +20,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
-import org.apache.calcite.util.AnchorToken;
+import org.apache.calcite.util.AnchorType;
 import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.CommentType;
 import org.apache.calcite.util.Litmus;
@@ -48,7 +48,7 @@ public class SqlCommentNode extends SqlNode {
 
     if (comments != null) {
       for (Comment comment : comments) {
-        if (comment.getAnchorToken() == AnchorToken.LEFT) {
+        if (comment.getAnchorType() == AnchorType.LEFT) {
           String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
           String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() : " */ ";
           writer.literal(prefix + comment.getComment() + suffix);
@@ -58,7 +58,7 @@ public class SqlCommentNode extends SqlNode {
     innerNode.unparse(writer, leftPrec, rightPrec);
     if (comments != null) {
       for (Comment comment : comments) {
-        if (comment.getAnchorToken() == AnchorToken.RIGHT) {
+        if (comment.getAnchorType() == AnchorType.RIGHT) {
           String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
           String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() : " */ ";
           writer.literal(prefix + comment.getComment() + suffix);

@@ -23,7 +23,7 @@ package org.apache.calcite.util;
  *   <li>{@link #RIGHT} - The comment is anchored to the right of the SQL node.</li>
  * </ul>
  */
-public enum AnchorToken {
+public enum AnchorType {
   /**
    * The comment is anchored to the left of the SQL node.
    */

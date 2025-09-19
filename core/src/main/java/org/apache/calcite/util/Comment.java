@@ -33,7 +33,7 @@ public class Comment {
   /**
    * The anchor position of the comment (left or right of the SQL node).
    */
-  AnchorToken anchorToken;
+  AnchorType anchorType;
   /**
    * The type of the comment (single-line or multi-line).
    */
@@ -43,12 +43,12 @@ public class Comment {
    * Constructs a Comment instance with the specified text, anchor position, and type.
    *
    * @param comment     the text of the comment
-   * @param anchorToken the anchor position of the comment
+   * @param anchorType the anchor position of the comment
    * @param commentType the type of the comment
    */
-  public Comment(String comment, AnchorToken anchorToken, CommentType commentType) {
+  public Comment(String comment, AnchorType anchorType, CommentType commentType) {
     this.comment = comment;
-    this.anchorToken = anchorToken;
+    this.anchorType = anchorType;
     this.commentType = commentType;
   }
 
@@ -75,17 +75,17 @@ public class Comment {
    *
    * @return the anchor position
    */
-  public AnchorToken getAnchorToken() {
-    return anchorToken;
+  public AnchorType getAnchorType() {
+    return anchorType;
   }
 
   /**
    * Sets the anchor position of the comment.
    *
-   * @param anchorToken the new anchor position
+   * @param anchorType the new anchor position
    */
-  public void setAnchorToken(AnchorToken anchorToken) {
-    this.anchorToken = anchorToken;
+  public void setAnchorType(AnchorType anchorType) {
+    this.anchorType = anchorType;
   }
 
   /**
