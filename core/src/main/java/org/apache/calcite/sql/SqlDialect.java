@@ -1792,6 +1792,7 @@ public class SqlDialect {
     NEOVIEW("Neoview", null, NullCollation.HIGH),
     SYBASE("Sybase", null, NullCollation.HIGH),
     TERADATA("Teradata", "\"", NullCollation.HIGH),
+    TRINO("Trino", "\"", NullCollation.LAST),
     HSQLDB("Hsqldb", null, NullCollation.HIGH),
     VERTICA("Vertica", "\"", NullCollation.HIGH),
     SQLSTREAM("SQLstream", "\"", NullCollation.HIGH),
