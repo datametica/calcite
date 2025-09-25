@@ -107,6 +107,7 @@ import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlTableRef;
+import org.apache.calcite.sql.SqlUnnestOperator;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
@@ -868,6 +869,10 @@ public abstract class SqlImplementor {
         } else {
           final RexCall call = (RexCall) rex;
           final List<SqlNode> cols = toSql(program, call.operands);
+          if (cols.size() == 2 && cols.get(1) instanceof SqlBasicCall
+              && ((SqlBasicCall) cols.get(1)).getOperator() instanceof SqlUnnestOperator) {
+            return call.getOperator().createCall(POS, cols.get(0), cols.get(1));
+          }
           return call.getOperator().createCall(POS, cols.get(0),
                   new SqlNodeList(cols.subList(1, cols.size()), POS));
         }
