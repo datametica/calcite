@@ -356,7 +356,7 @@ public abstract class RelOptUtil {
       RelDataType rowType1,
       RelDataType rowType2,
       boolean compareNames) {
-    if (rowType1 == rowType2) {
+    if (rowType1.equals(rowType2)) {
       return true;
     }
     if (compareNames) {
@@ -2242,7 +2242,7 @@ public abstract class RelOptUtil {
       RelDataType sourceType,
       final String targetDesc,
       RelDataType targetType) {
-    if (sourceType == targetType) {
+    if (sourceType.equals(targetType)) {
       return "";
     }
 
