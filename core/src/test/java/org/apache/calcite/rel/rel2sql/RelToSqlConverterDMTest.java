@@ -21,20 +21,27 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEScopeTrait;
+import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
 import org.apache.calcite.plan.QualifyRelTrait;
 import org.apache.calcite.plan.QualifyRelTraitDef;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.TableAliasTrait;
 import org.apache.calcite.plan.ViewChildProjectRelTrait;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelShuttleImpl;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.externalize.RelJsonReader;
+import org.apache.calcite.rel.externalize.RelJsonWriter;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalFilter;
@@ -119,6 +126,7 @@ import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.TestUtil;
 import org.apache.calcite.util.TimestampString;
 
 import com.google.common.collect.ImmutableList;
@@ -129,6 +137,7 @@ import com.google.common.collect.Lists;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
@@ -13629,6 +13638,142 @@ class RelToSqlConverterDMTest {
         + "\nFROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test void relToJson() {
+    final RelBuilder builder = relBuilder();
+    final RelNode base = builder
+        .scan("EMP")
+        .project(
+            builder.alias(
+                builder.call(SqlStdOperatorTable.UPPER, builder.field("ENAME")), "EMPNO"),
+            builder.field("EMPNO")
+        )
+        .sort(1)
+        .project(builder.field(0))
+        .build();
+
+
+    //converting RelNode to RelJson
+    RelJsonWriter relJsonWriter = new RelJsonWriter();
+    base.explain(relJsonWriter);
+    final String relJson = relJsonWriter.asString();
+    System.out.println("RelJson::" + relJson);
+
+    // Find the schema. If there are no tables in the plan, we won't need one.
+    final RelOptSchema[] schemas = {null};
+    base.accept(new RelShuttleImpl() {
+      @Override public RelNode visit(TableScan scan) {
+        schemas[0] = scan.getTable().getRelOptSchema();
+        return super.visit(scan);
+      }
+    });
+    //Converting string json back to RelNode
+    Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+      final RelJsonReader reader =
+          new RelJsonReader(cluster, schemas[0], rootSchema);
+      try {
+        RelNode x = reader.read(relJson);
+        assert x != null;
+        assert x.explain().equals(base.explain());
+      } catch (IOException e) {
+        throw TestUtil.rethrow(e);
+      }
+      return null;
+    });
+  }
+
+
+  @Test void relToJsonWithTrait() {
+    final RelBuilder builder = relBuilder();
+    final RelNode base = builder
+        .scan("EMP")
+        .project(
+            builder.alias(
+                builder.call(SqlStdOperatorTable.UPPER, builder.field("ENAME")), "EMPNO"),
+            builder.field("EMPNO")
+        )
+        .sort(1)
+        .project(builder.field(0))
+        .build();
+
+    // add a trait
+    DistinctTrait distinctTrait = new DistinctTrait(true);
+    distinctTrait.setEvaluatedStruct(false);
+    RelTraitSet traitSet1 = base.getTraitSet().plus(distinctTrait);
+    RelNode base1 = base.copy(traitSet1, base.getInputs());
+
+    //converting RelNode to RelJson
+    RelJsonWriter relJsonWriter = new RelJsonWriter();
+    base1.explain(relJsonWriter);
+    final String relJson = relJsonWriter.asString();
+    System.out.println("RelJson::" + relJson);
+
+    // Find the schema. If there are no tables in the plan, we won't need one.
+    final RelOptSchema[] schemas = {null};
+    base1.accept(new RelShuttleImpl() {
+      @Override public RelNode visit(TableScan scan) {
+        schemas[0] = scan.getTable().getRelOptSchema();
+        return super.visit(scan);
+      }
+    });
+    //Converting string json back to RelNode
+    Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+      final RelJsonReader reader =
+          new RelJsonReader(cluster, schemas[0], rootSchema);
+      try {
+        RelNode x = reader.read(relJson);
+        assert x != null;
+        assert x.getTraitSet().size() == 3;
+        assert x.getTraitSet().get(2).getTraitDef().getSimpleName().equals("DistinctTrait");
+      } catch (IOException e) {
+        throw TestUtil.rethrow(e);
+      }
+      return null;
+    });
+  }
+
+
+  @Test void relToJsonWithTableAliasTrait() {
+    final RelBuilder builder = relBuilder();
+    final RelNode base = builder
+        .scan("EMP")
+        .build();
+
+
+    // add a trait
+    TableAliasTrait tableAliasTrait = new TableAliasTrait("EMP1");
+    RelTraitSet traitSet1 = base.getTraitSet().plus(tableAliasTrait);
+    RelNode base1 = base.copy(traitSet1, base.getInputs());
+
+    //converting RelNode to RelJson
+    RelJsonWriter relJsonWriter = new RelJsonWriter();
+    base1.explain(relJsonWriter);
+    final String relJson = relJsonWriter.asString();
+    System.out.println("RelJson::" + relJson);
+
+    // Find the schema. If there are no tables in the plan, we won't need one.
+    final RelOptSchema[] schemas = {null};
+    base1.accept(new RelShuttleImpl() {
+      @Override public RelNode visit(TableScan scan) {
+        schemas[0] = scan.getTable().getRelOptSchema();
+        return super.visit(scan);
+      }
+    });
+    //Converting string json back to RelNode
+    Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+      final RelJsonReader reader =
+          new RelJsonReader(cluster, schemas[0], rootSchema);
+      try {
+        RelNode x = reader.read(relJson);
+        assert x != null;
+        assert x.getTraitSet().size() == 3;
+        assert x.getTraitSet().get(2).getTraitDef().getSimpleName().equals("TableAliasTrait");
+      } catch (IOException e) {
+        throw TestUtil.rethrow(e);
+      }
+      return null;
+    });
   }
 
   @Test public void testObjectIdFunction() {

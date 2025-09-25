@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.rel.externalize;
 
-import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
@@ -138,7 +137,17 @@ public class RelJsonReader {
       }
 
       @Override public RelTraitSet getTraitSet() {
-        return cluster.traitSetOf(Convention.NONE);
+        final LinkedHashMap relTraits = (LinkedHashMap) jsonRel.get("traitSet");
+        if (relTraits != null) {
+          RelTraitSet traitSet = cluster.traitSet();
+          for (Object relTrait : relTraits.keySet()) {
+            String traitName = (String) relTrait;
+            Map<String, Object> traitProperties = (Map<String, Object>) relTraits.get(relTrait);
+            return traitSet.plus(relJson.toTrait(traitName, traitProperties));
+          }
+        }
+        return cluster.traitSet();
+
       }
 
       @Override public RelOptTable getTable(String table) {
