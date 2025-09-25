@@ -10749,6 +10749,26 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testRegexpExtractAllFunctionWithColumnAsDelimiter() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode regexpExtractAllRex =
+        builder.call(SqlLibraryOperators.REGEXP_EXTRACT_ALL,
+        builder.literal("user@snowflake.com"), builder.literal("."));
+    final RexNode regexpExtractAllWithColumnRex =
+        builder.call(SqlLibraryOperators.REGEXP_EXTRACT_ALL,
+        builder.literal("user@snowflake.com"), builder.field("ENAME"));
+    final RelNode root = builder
+        .project(regexpExtractAllRex, regexpExtractAllWithColumnRex)
+        .build();
+
+    final String expectedBiqQuery = "SELECT "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com', r'[^.]+') AS `$f0`, "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com', r'[^'|| ENAME ||']+') AS `$f1`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testStringLiteralsWithInvalidEscapeSequences() {
     final RelBuilder builder = relBuilder();
     final RexNode literal1 = builder.literal("Datam\\etica");
@@ -12008,7 +12028,7 @@ class RelToSqlConverterDMTest {
         .build();
 
     final String expectedBiqQuery = "SELECT "
-        + "REGEXP_EXTRACT_ALL('TERADATA-BIGQUERY-SPARK-ORACLE', '[^-]+')[SAFE_OFFSET(2)] AS ss";
+        + "REGEXP_EXTRACT_ALL('TERADATA-BIGQUERY-SPARK-ORACLE', r'[^[^-]+]+')[SAFE_OFFSET(2)] AS ss";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }

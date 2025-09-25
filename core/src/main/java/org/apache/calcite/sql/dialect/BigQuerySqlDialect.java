@@ -1505,6 +1505,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "REGEXP_REPLACE":
       unparseRegexpReplace(writer, call, leftPrec, rightPrec);
       break;
+    case "REGEXP_EXTRACT_ALL":
+      unparseRegexpExtractAll(writer, call, leftPrec, rightPrec);
+      break;
     case "REGEXP_INSTR":
       unparseRegexpInstr(writer, call, leftPrec, rightPrec);
       break;
@@ -2085,17 +2088,22 @@ public class BigQuerySqlDialect extends SqlDialect {
     }
   }
 
-  public void unparseRegexpExtractAll(SqlWriter writer, SqlCall call,
-      int leftPrec, int rightPrec) {
-    SqlWriter.Frame regexpExtractAllFrame = writer.startFunCall("REGEXP_EXTRACT_ALL");
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
-    writer.print(", r");
-    if (call.operand(1) instanceof SqlCharStringLiteral) {
-      unparseRegexLiteral(writer, call.operand(1));
+  public void unparseRegexpExtractAll(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlWriter.Frame regexpReplaceFrame = writer.startFunCall("REGEXP_EXTRACT_ALL");
+    List<SqlNode> operandList = call.getOperandList();
+    operandList.get(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(",");
+    writer.print("r'[^");
+    if (operandList.get(1) instanceof SqlCharStringLiteral) {
+      String pattern = ((SqlCharStringLiteral) operandList.get(1)).toValue();
+      writer.print(pattern);
     } else {
-      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.print("'|| ");
+      operandList.get(1).unparse(writer, leftPrec, rightPrec);
+      writer.print("||'");
     }
-    writer.endFunCall(regexpExtractAllFrame);
+    writer.print("]+'");
+    writer.endFunCall(regexpReplaceFrame);
   }
 
   private void unparseCot(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
