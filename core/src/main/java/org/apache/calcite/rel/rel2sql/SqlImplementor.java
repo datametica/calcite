@@ -124,14 +124,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
-import org.apache.calcite.util.DateString;
-import org.apache.calcite.util.NlsString;
-import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.RangeSets;
-import org.apache.calcite.util.Sarg;
-import org.apache.calcite.util.TimeString;
-import org.apache.calcite.util.TimestampString;
-import org.apache.calcite.util.Util;
+import org.apache.calcite.util.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -391,7 +384,7 @@ public abstract class SqlImplementor {
   /**
    * Converts a {@link RexNode} condition into a {@link SqlNode}.
    *
-   * @param node            Join condition
+   * @param join            Join condition
    * @param leftContext     Left context
    * @param rightContext    Right context
    *
