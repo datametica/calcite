@@ -3232,6 +3232,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NULL, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER)),
       SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction STRTOK_TO_ARRAY =
+      new SqlFunction("STRTOK_TO_ARRAY",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.ARG0_NULLABLE.andThen(SqlTypeTransforms.TO_ARRAY),
+      null,
+      STRING_OPTIONAL_STRING,
+      SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction TIME_SUB =
       new SqlFunction("TIME_SUB",

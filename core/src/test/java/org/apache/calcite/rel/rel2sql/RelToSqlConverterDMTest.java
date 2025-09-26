@@ -11161,6 +11161,22 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testStrtokToArrayFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode strtokToArrayNode =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(".@"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(strtokToArrayNode)
+        .build();
+
+    final String expectedBiqQuery = "SELECT REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^.@]+') AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testStrtokWithCastFunctionAsThirdArgument() {
     final RelBuilder builder = relBuilder();
     final RexNode lengthFunRexNode =
