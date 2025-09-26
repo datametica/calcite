@@ -50,6 +50,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Window;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalIntersect;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -396,9 +397,10 @@ public abstract class SqlImplementor {
    *
    * @return SqlNode that represents the condition
    */
-  public static SqlNode convertConditionToSqlNode(RexNode node,
+  public static SqlNode convertConditionToSqlNode(Join join,
       Context leftContext,
       Context rightContext) {
+    RexNode node = join.getCondition();
     if (node.isAlwaysTrue()) {
       return SqlLiteral.createBoolean(true, POS);
     }
@@ -407,7 +409,9 @@ public abstract class SqlImplementor {
     }
     final Context joinContext =
         leftContext.implementor().joinContext(leftContext, rightContext);
-    return joinContext.toSql(null, node);
+    SqlNode joinNode = joinContext.toSql(null, node);
+    joinNode.setCommentList(SqlCommentUtil.getCommentsInMap(join, node));
+    return joinNode;
   }
 
   /** Removes cast from string.
@@ -475,6 +479,7 @@ public abstract class SqlImplementor {
         || aliases instanceof LinkedHashMap
         || aliases instanceof ImmutableMap
         : "must use a Map implementation that preserves order";
+    SqlCommentUtil.addCommentToSqlNode(node, rel);
     final @Nullable String alias2 = SqlValidatorUtil.alias(node);
     final String alias3 = alias2 != null ? alias2 : "t";
     String alias4 =
@@ -698,6 +703,7 @@ public abstract class SqlImplementor {
     final SqlDialect dialect;
     final int fieldCount;
     private final boolean ignoreCast;
+    private RelNode relNode;
 
     protected Context(SqlDialect dialect, int fieldCount) {
       this(dialect, fieldCount, false);
@@ -707,6 +713,14 @@ public abstract class SqlImplementor {
       this.dialect = dialect;
       this.fieldCount = fieldCount;
       this.ignoreCast = ignoreCast;
+    }
+
+    public RelNode getRelNode() {
+      return relNode;
+    }
+
+    public void setRelNode(RelNode relNode) {
+      this.relNode = relNode;
     }
 
     public abstract SqlNode field(int ordinal);
@@ -764,7 +778,11 @@ public abstract class SqlImplementor {
         return toSql(program, requireNonNull(program, "program").getExprList().get(index));
 
       case INPUT_REF:
-        return field(((RexInputRef) rex).getIndex());
+        SqlNode sqlNode = field(((RexInputRef) rex).getIndex());
+        if (relNode != null) {
+          sqlNode.setCommentList(SqlCommentUtil.getCommentsInMap(relNode, rex));
+        }
+        return sqlNode;
 
       case FIELD_ACCESS:
         final Deque<RexFieldAccess> accesses = new ArrayDeque<>();
@@ -3064,6 +3082,7 @@ public abstract class SqlImplementor {
       this.clauses = ImmutableList.copyOf(clauses);
       this.select = requireNonNull(select, "select");
       this.context = requireNonNull(context, "context");
+      this.context.setRelNode(this.rel);
       this.anon = anon;
       this.aliases = aliases;
     }

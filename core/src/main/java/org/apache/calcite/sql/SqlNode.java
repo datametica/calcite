@@ -25,16 +25,13 @@ import org.apache.calcite.sql.validate.SqlMoniker;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Util;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collector;
 
@@ -54,6 +51,8 @@ public abstract class SqlNode implements Cloneable {
 
   protected final SqlParserPos pos;
 
+  protected Set<Comment> commentList = new HashSet<>();
+
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -63,6 +62,14 @@ public abstract class SqlNode implements Cloneable {
    */
   SqlNode(SqlParserPos pos) {
     this.pos = Objects.requireNonNull(pos, "pos");
+  }
+
+  public Set<Comment> getCommentList() {
+    return commentList;
+  }
+
+  public void setCommentList(Set<Comment> commentSet) {
+    this.commentList.addAll(commentSet);
   }
 
   //~ Methods ----------------------------------------------------------------

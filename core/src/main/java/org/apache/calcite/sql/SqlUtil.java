@@ -419,6 +419,10 @@ public abstract class SqlUtil {
     }
 
     if (!unparsedAsFunc) {
+      writeCommentsToWriter(writer,
+          identifier.commentList.stream()
+              .filter(comment -> comment.getAnchorType() == AnchorType.LEFT).collect(Collectors.toSet()),
+          AnchorType.LEFT);
       for (int i = 0; i < identifier.names.size(); i++) {
         writer.sep(".");
         final String name = identifier.names.get(i);
@@ -430,11 +434,26 @@ public abstract class SqlUtil {
           writer.identifier(name, pos.isQuoted());
         }
       }
+      writeCommentsToWriter(writer,
+          identifier.commentList.stream()
+              .filter(comment -> comment.getAnchorType() == AnchorType.RIGHT).collect(Collectors.toSet()),
+          AnchorType.RIGHT);
     }
     if (null != identifier.getCollation()) {
       identifier.getCollation().unparse(writer);
     }
     writer.endList(frame);
+  }
+
+  public static void writeCommentsToWriter(SqlWriter sqlWriter, Set<Comment> comments, AnchorType anchorType) {
+    for (Comment comment :comments) {
+      if (comment.getAnchorType() == anchorType) {
+        String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
+        String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() :
+            " */";
+        sqlWriter.literal(prefix + comment.getComment() + suffix);
+      }
+    }
   }
 
   public static void unparseBinarySyntax(

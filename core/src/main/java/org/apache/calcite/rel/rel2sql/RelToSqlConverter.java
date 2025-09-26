@@ -22,6 +22,8 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEDefinationTraitDef;
+import org.apache.calcite.plan.CommentTrait;
+import org.apache.calcite.plan.CommentTraitDef;
 import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.PivotRelTraitDef;
@@ -147,6 +149,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import static org.apache.calcite.rex.RexLiteral.stringValue;
 
@@ -345,7 +348,7 @@ public class RelToSqlConverter extends SqlImplementor
       }
     } else {
       sqlCondition =
-          convertConditionToSqlNode(e.getCondition(), leftContext,
+          convertConditionToSqlNode(e, leftContext,
               rightContext);
 
       ProjectExpansionUtil projectExpansionUtil = new ProjectExpansionUtil();
@@ -414,7 +417,7 @@ public class RelToSqlConverter extends SqlImplementor
 
     SqlSelect sqlSelect;
     SqlNode sqlCondition =
-        convertConditionToSqlNode(e.getCondition(), leftContext, rightContext);
+        convertConditionToSqlNode(e, leftContext, rightContext);
     if (leftResult.neededAlias != null) {
       sqlSelect = leftResult.subSelect();
     } else {
@@ -672,10 +675,10 @@ public class RelToSqlConverter extends SqlImplementor
       if ((!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
         final List<SqlNode> selectList = new ArrayList<>();
-
         List<String> pivotColumnAliases = extractAliasesFromPivot(x);
         for (RexNode ref : e.getProjects()) {
           SqlNode sqlExpr = builder.context.toSql(null, ref);
+          sqlExpr.setCommentList(SqlCommentUtil.getCommentsInMap(e, ref));
           RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
           if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
