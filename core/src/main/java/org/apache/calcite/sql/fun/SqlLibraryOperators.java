@@ -791,6 +791,30 @@ public abstract class SqlLibraryOperators {
           .withSyntax(SqlSyntax.ORDERED_FUNCTION)
           .withAllowsNullTreatment(true);
 
+  /**
+   * Creates a new instance of {@link SqlFunction} representing the "ARRAY_UNIQUE_AGG"
+   * Snowflake function.
+   * This function overrides the default unparse method to print "ARRAY_AGG" with "DISTINCT".
+   */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction ARRAY_UNIQUE_AGG =
+      new SqlAggFunction("ARRAY_UNIQUE_AGG",
+          null,
+          SqlKind.ARRAY_UNIQUE_AGG,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.ANY,
+          SqlFunctionCategory.SYSTEM, false, false, Optionality.OPTIONAL) {
+        @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+          writer.print(ARRAY_AGG.getName());
+          final SqlWriter.Frame parenthesisFrame = writer.startList("(", ")");
+          writer.keyword("DISTINCT");
+          SqlNode operand = call.getOperandList().get(0);
+          operand.unparse(writer, leftPrec, rightPrec);
+          writer.endList(parenthesisFrame);
+        }
+      };
+
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlAggFunction JSON_AGG =
       SqlBasicAggFunction
@@ -1804,6 +1828,13 @@ public abstract class SqlLibraryOperators {
       SqlBasicFunction.create(SqlKind.ARRAY_POSITION,
           ReturnTypes.BIGINT_NULLABLE,
           OperandTypes.ARRAY_ELEMENT);
+
+  /** The "ARRAY_POSITION(array, element)" function. */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_ARRAY_POSITION =
+      SqlBasicFunction.create(SqlKind.ARRAY_POSITION,
+          ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.family(SqlTypeFamily.VARIANT, SqlTypeFamily.ARRAY));
 
   /** The "ARRAY_PREPEND(array, element)" function. */
   @LibraryOperator(libraries = {SPARK})
@@ -2978,6 +3009,10 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction SPLIT_TO_TABLE =
       new SplitToTableFunction();
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction GENERATOR =
+      new GeneratorTableFunction();
+
   /** The "TO_VARCHAR(numeric, string)" function; casts string
    * Format first_operand to specified in second operand. */
   @LibraryOperator(libraries = {SNOWFLAKE})
@@ -3574,7 +3609,7 @@ public abstract class SqlLibraryOperators {
               ImmutableList.of(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING)),
           SqlFunctionCategory.TIMEDATE);
 
-  @LibraryOperator(libraries = {ORACLE, MYSQL, SNOWFLAKE})
+  @LibraryOperator(libraries = {ORACLE, MYSQL})
   public static final SqlFunction REGEXP_LIKE =
       new SqlFunction("REGEXP_LIKE",
           SqlKind.OTHER_FUNCTION,
@@ -3775,7 +3810,9 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction REGEXP_COUNT =
       new SqlFunction("REGEXP_COUNT", SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER_NULLABLE,
-          null, OperandTypes.STRING_STRING, SqlFunctionCategory.STRING);
+          null,
+          OperandTypes.STRING_STRING_OPTIONAL_INTEGER_OPTIONAL_INTEGER,
+          SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {POSTGRESQL})
   public static final SqlBasicFunction REGEXP_SPLIT_TO_ARRAY =
@@ -4453,6 +4490,19 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.STRING),
               OperandTypes.family(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.STRING)),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_REGEXP_LIKE =
+      new SqlFunction("REGEXP_LIKE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN_NULLABLE,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+                  SqlTypeFamily.STRING),
+              // Allow 2 or 3 arguments
+              number -> number == 2),
+          SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction JSON =
