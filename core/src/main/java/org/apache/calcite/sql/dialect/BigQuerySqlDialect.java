@@ -1436,7 +1436,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseStrtok(writer, call, leftPrec, rightPrec);
       break;
     case "STRTOK_TO_ARRAY":
-      unparseStrtokToArray(writer, call, leftPrec, rightPrec);
+      unparseRegexpExtractAllForStrtok(writer, call, leftPrec, rightPrec);
       break;
     case "DAYOFMONTH":
       SqlNode daySymbolLiteral = SqlLiteral.createSymbol(TimeUnit.DAY, SqlParserPos.ZERO);
@@ -2156,10 +2156,6 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.print("[OFFSET ( ");
     unparseStrtokOffsetValue(writer, leftPrec, rightPrec, call.operand(2));
     writer.print(") ]");
-  }
-
-  private void unparseStrtokToArray(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    unparseRegexpExtractAllForStrtok(writer, call, leftPrec, rightPrec);
   }
 
   private void unparseStrtokOffsetValue(SqlWriter writer, int leftPrec, int rightPrec,
