@@ -27,12 +27,15 @@ import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlJoin;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSetOperator;
+import org.apache.calcite.sql.SqlUnpivot;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
+import org.apache.calcite.sql.fun.SqlCase;
 
 import java.util.Arrays;
 import java.util.List;
@@ -114,6 +117,9 @@ public class CTERelToSqlUtil {
       if (((SqlWith) sqlNode).withList.size() > 0) {
         fetchSqlWithItems(((SqlWith) sqlNode).withList.get(0), sqlNodes);
       }
+    } else if (sqlNode instanceof SqlUnpivot) {
+      SqlUnpivot unpivot = (SqlUnpivot) sqlNode;
+      fetchSqlWithItems(unpivot.query, sqlNodes);
     }
   }
 
@@ -151,6 +157,8 @@ public class CTERelToSqlUtil {
       fetchFromSqlWithItemNode(sqlNode, sqlNodes);
     } else if (sqlNode instanceof SqlPivot) {
       fetchFromSqlWithItemNode(((SqlPivot) sqlNode).query, sqlNodes);
+    } else if (sqlNode instanceof SqlCase) {
+      fetchSqlWithSelectList(((SqlCase) sqlNode).getWhenOperands(), sqlNodes);
     }
   }
 
@@ -172,21 +180,25 @@ public class CTERelToSqlUtil {
    * This method fetches sqlNodes from SqlWithItem node and add it to sqlNodes list.
    */
   public static void addSqlWithItemNode(SqlWithItem sqlWithItem, List<SqlNode> sqlNodes) {
-    if (sqlNodes.isEmpty()) {
-      sqlNodes.add(sqlWithItem);
-    } else {
-      boolean status = false;
-      for (SqlNode sqlWithItemNode : sqlNodes) {
-        if (((SqlWithItem) sqlWithItemNode).name.toString()
-            .equalsIgnoreCase(sqlWithItem.name.toString())) {
-          status = true;
-          break;
+    if (sqlWithItem.query instanceof SqlWith) {
+      SqlWith innerWith = (SqlWith) sqlWithItem.query;
+      sqlNodes.removeIf(node -> {
+        SqlWithItem existingNode = (SqlWithItem) node;
+        for (SqlNode innerNode : innerWith.withList) {
+          if (innerNode.equals(existingNode)) {
+            return true;
+          }
         }
-      }
-      if (!status) {
-        sqlNodes.add(sqlWithItem);
+        return false;
+      });
+    }
+    for (SqlNode sqlWithItemNode : sqlNodes) {
+      if (((SqlWithItem) sqlWithItemNode).name.toString()
+          .equalsIgnoreCase(sqlWithItem.name.toString())) {
+        return;
       }
     }
+    sqlNodes.add(sqlWithItem);
   }
 
   /**
@@ -237,6 +249,14 @@ public class CTERelToSqlUtil {
       } else {
         ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
       }
+    } else if (fromNode instanceof SqlUnpivot
+        && ((SqlUnpivot) fromNode).query instanceof SqlWithItem) {
+      SqlIdentifier identifier = ((SqlWithItem) ((SqlUnpivot) fromNode).query).name;
+      SqlUnpivot unpivot = (SqlUnpivot) fromNode;
+      SqlUnpivot unpivotNode =
+          new SqlUnpivot(unpivot.getParserPosition(), identifier, unpivot.includeNulls,
+              unpivot.measureList, unpivot.axisList, unpivot.inList);
+      ((SqlSelect) sqlNode).setFrom(unpivotNode);
     }
   }
 
@@ -287,17 +307,21 @@ public class CTERelToSqlUtil {
 
   public static void updateNode(SqlNode sqlNode) {
     SqlBasicCall basicCall = (SqlBasicCall) sqlNode;
-    if (basicCall.getOperator() instanceof SqlBinaryOperator) {
+    if (basicCall.getOperator() instanceof SqlBinaryOperator
+        || basicCall.getOperator().getKind() == SqlKind.BETWEEN) {
       for (SqlNode operand : basicCall.getOperandList()) {
         if (operand instanceof SqlBasicCall) {
           handleBasicCallOperand((SqlBasicCall) operand);
         } else if (operand instanceof SqlSelect) {
           updateSqlNode(operand);
+        } else if (operand instanceof SqlCase) {
+          ((SqlCase) operand).getWhenOperands().forEach(CTERelToSqlUtil::processBasicCall);
         }
       }
     } else {
-      SqlNode operand = basicCall.operand(0);
-      handleOperand(sqlNode, operand);
+      for (SqlNode operand : basicCall.getOperandList()) {
+        handleOperand(sqlNode, operand);
+      }
     }
   }
 
@@ -318,6 +342,8 @@ public class CTERelToSqlUtil {
       if (identifier != null) {
         ((SqlBasicCall) parentNode).setOperand(0, identifier);
       }
+    } else if (operand instanceof SqlCase) {
+      ((SqlCase) operand).getWhenOperands().forEach(CTERelToSqlUtil::processBasicCall);
     }
   }
 
