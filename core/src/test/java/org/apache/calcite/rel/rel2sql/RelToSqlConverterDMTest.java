@@ -11162,16 +11162,23 @@ class RelToSqlConverterDMTest {
   }
 
   @Test public void testStrtokToArrayFunction() {
-    final RelBuilder builder = relBuilder();
+    final RelBuilder builder = relBuilder().scan("EMP");
     final RexNode strtokToArrayNode =
         builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
             builder.literal(".@"));
+    final RexNode strtokToArrayNodeWithFunction =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.call(SqlLibraryOperators.LENGTH, builder.literal(".@")));
+    final RexNode strtokToArrayNodeWithColumn =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.field(1));
     final RelNode root = builder
-        .scan("EMP")
-        .project(strtokToArrayNode)
+        .project(strtokToArrayNode, strtokToArrayNodeWithFunction, strtokToArrayNodeWithColumn)
         .build();
 
-    final String expectedBiqQuery = "SELECT REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^.@]+') AS `$f0`\n"
+    final String expectedBiqQuery = "SELECT REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^.@]+') AS `$f0`, "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^' || LENGTH('.@') || ']+') AS `$f1`, "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^' || ENAME || ']+') AS `$f2`\n"
         + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));

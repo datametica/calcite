@@ -2798,10 +2798,16 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseRegexPatternForStrtok(SqlWriter writer, SqlCall call) {
     SqlNode secondOperand = call.operand(1);
-    String pattern = (secondOperand instanceof SqlCharStringLiteral)
-        ? "r'[^" + ((SqlCharStringLiteral) secondOperand).toValue() + "]+'"
-        : secondOperand.toString();
-    writer.print(pattern);
+    if (secondOperand instanceof SqlCharStringLiteral) {
+      String pattern = "r'[^" + ((SqlCharStringLiteral) secondOperand).toValue() + "]+'";
+      writer.print(pattern);
+    } else if (secondOperand instanceof SqlLiteral) {
+      writer.print(secondOperand.toString());
+    } else {
+      writer.print("r'[^' || ");
+      secondOperand.unparse(writer, 0, 0);
+      writer.print("|| ']+'");
+    }
   }
 
   private void unparseEditDistanceForThreeArgs(SqlWriter writer, SqlCall call, int leftPrec,
