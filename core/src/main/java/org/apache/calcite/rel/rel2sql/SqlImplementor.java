@@ -869,7 +869,7 @@ public abstract class SqlImplementor {
         } else {
           final RexCall call = (RexCall) rex;
           final List<SqlNode> cols = toSql(program, call.operands);
-          if (isInClauseWithUnnest(cols)) {
+          if (isInClauseWithUnnest(rex, cols)) {
             return call.getOperator().createCall(POS, cols.get(0), cols.get(1));
           }
           return call.getOperator().createCall(POS, cols.get(0),
@@ -1568,9 +1568,13 @@ public abstract class SqlImplementor {
     }
   }
 
-  private static boolean isInClauseWithUnnest(List<SqlNode> cols) {
-    return cols.size() == 2 && cols.get(1) instanceof SqlBasicCall
-        && ((SqlBasicCall) cols.get(1)).getOperator() instanceof SqlUnnestOperator;
+  private static boolean isInClauseWithUnnest(RexNode rex, List<SqlNode> cols) {
+    return rex.getKind() == SqlKind.IN && isUnnestOperand(cols.get(1));
+  }
+
+  private static boolean isUnnestOperand(SqlNode sqlNode) {
+    return sqlNode instanceof SqlBasicCall
+        && ((SqlBasicCall) sqlNode).getOperator() instanceof SqlUnnestOperator;
   }
 
   private static boolean isNodeMatching(SqlNode node, RexFieldAccess lastAccess) {
