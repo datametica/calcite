@@ -1569,10 +1569,10 @@ public abstract class SqlImplementor {
   }
 
   private static boolean isInClauseWithUnnest(RexNode rex, List<SqlNode> cols) {
-    return rex.getKind() == SqlKind.IN && isUnnestOperand(cols.get(1));
+    return rex.getKind() == SqlKind.IN && isUnnestNode(cols.get(1));
   }
 
-  private static boolean isUnnestOperand(SqlNode sqlNode) {
+  private static boolean isUnnestNode(SqlNode sqlNode) {
     return sqlNode instanceof SqlBasicCall
         && ((SqlBasicCall) sqlNode).getOperator() instanceof SqlUnnestOperator;
   }
