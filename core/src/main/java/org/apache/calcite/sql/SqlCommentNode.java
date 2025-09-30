@@ -27,7 +27,6 @@ import org.apache.calcite.util.Litmus;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.List;
 import java.util.Set;
 
 /**

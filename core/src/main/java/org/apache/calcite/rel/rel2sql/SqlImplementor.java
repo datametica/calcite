@@ -19,21 +19,7 @@ package org.apache.calcite.rel.rel2sql;
 import org.apache.calcite.config.CalciteSystemProperty;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
-import org.apache.calcite.plan.AdditionalProjectionTraitDef;
-import org.apache.calcite.plan.CTEDefinationTrait;
-import org.apache.calcite.plan.CTEDefinationTraitDef;
-import org.apache.calcite.plan.CTEScopeTrait;
-import org.apache.calcite.plan.CTEScopeTraitDef;
-import org.apache.calcite.plan.DistinctTrait;
-import org.apache.calcite.plan.DistinctTraitDef;
-import org.apache.calcite.plan.PivotRelTrait;
-import org.apache.calcite.plan.PivotRelTraitDef;
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.RelTrait;
-import org.apache.calcite.plan.SubQueryAliasTrait;
-import org.apache.calcite.plan.SubQueryAliasTraitDef;
-import org.apache.calcite.plan.TableAliasTrait;
-import org.apache.calcite.plan.TableAliasTraitDef;
+import org.apache.calcite.plan.*;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelCollation;
@@ -45,12 +31,12 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Window;
-import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalIntersect;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -762,6 +748,14 @@ public abstract class SqlImplementor {
      * @param rex Expression to convert
      */
     public SqlNode toSql(@Nullable RexProgram program, RexNode rex) {
+      SqlNode sqlNode = toSql2(program, rex);
+      if (relNode != null) {
+        sqlNode.setCommentList(SqlCommentUtil.getCommentsInMap(relNode, rex));
+      }
+      return sqlNode;
+    }
+
+    private SqlNode toSql2(@Nullable RexProgram program, RexNode rex) {
       final RexSubQuery subQuery;
       final SqlNode sqlSubQuery;
       final RexLiteral literal;
@@ -771,11 +765,7 @@ public abstract class SqlImplementor {
         return toSql(program, requireNonNull(program, "program").getExprList().get(index));
 
       case INPUT_REF:
-        SqlNode sqlNode = field(((RexInputRef) rex).getIndex());
-        if (relNode != null) {
-          sqlNode.setCommentList(SqlCommentUtil.getCommentsInMap(relNode, rex));
-        }
-        return sqlNode;
+        return field(((RexInputRef) rex).getIndex());
 
       case FIELD_ACCESS:
         final Deque<RexFieldAccess> accesses = new ArrayDeque<>();
@@ -880,7 +870,7 @@ public abstract class SqlImplementor {
           final RexCall call = (RexCall) rex;
           final List<SqlNode> cols = toSql(program, call.operands);
           return call.getOperator().createCall(POS, cols.get(0),
-                  new SqlNodeList(cols.subList(1, cols.size()), POS));
+              new SqlNodeList(cols.subList(1, cols.size()), POS));
         }
 
       case SEARCH:
@@ -3264,11 +3254,25 @@ public abstract class SqlImplementor {
   }
 
   private boolean isLogicalFilterWithSelectAndTableScan(SqlNode node, RelNode rel) {
-    return node instanceof SqlSelect && rel instanceof LogicalFilter
-        && ((LogicalFilter) rel).getInput() instanceof LogicalTableScan
-        && ((LogicalFilter) rel).getInput().getTraitSet().size() > 2
+    if (!(node instanceof SqlSelect) || !(rel instanceof LogicalFilter)) {
+      return false;
+    }
+
+    RelNode input = ((LogicalFilter) rel).getInput();
+    if (!(input instanceof LogicalTableScan)) {
+      return false;
+    }
+
+    RelTraitSet traits = input.getTraitSet();
+
+    // Adjust threshold based on comment trait
+    int requiredSize = (traits.getTrait(CommentTraitDef.INSTANCE) != null) ? 3 : 2;
+
+    return traits.size() > requiredSize
         && "sstupdate".equals(
-        requireNonNull(((LogicalFilter) rel).getInput()
-            .getTraitSet().getTrait(TableAliasTraitDef.instance)).getStatementType());
+        requireNonNull(
+            traits.getTrait(TableAliasTraitDef.instance))
+        .getStatementType());
   }
+
 }

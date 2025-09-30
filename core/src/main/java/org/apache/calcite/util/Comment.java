@@ -81,20 +81,17 @@ public class Comment {
     return commentType;
   }
 
-  @Override
-  public boolean equals(Object o) {
+  @Override public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) return false;
     Comment comment1 = (Comment) o;
     return Objects.equals(comment, comment1.comment);
   }
 
-  @Override
-  public int hashCode() {
+  @Override public int hashCode() {
     return Objects.hashCode(comment);
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return "Comment{" +
         "comment='" + comment + '\'' +
         ", anchorType=" + anchorType +

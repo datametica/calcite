@@ -22,8 +22,6 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEDefinationTraitDef;
-import org.apache.calcite.plan.CommentTrait;
-import org.apache.calcite.plan.CommentTraitDef;
 import org.apache.calcite.plan.DistinctTrait;
 import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.PivotRelTraitDef;
@@ -121,6 +119,7 @@ import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Permutation;
 import org.apache.calcite.util.ReflectUtil;
 import org.apache.calcite.util.ReflectiveVisitor;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
@@ -149,7 +148,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.calcite.util.SqlCommentUtil;
 
 import static org.apache.calcite.rex.RexLiteral.stringValue;
 
@@ -1545,6 +1543,8 @@ public class RelToSqlConverter extends SqlImplementor
     List<SqlNode> orderByList = Expressions.list();
     for (RelFieldCollation field : e.getCollation().getFieldCollations()) {
       builder.addOrderItem(orderByList, field);
+      orderByList.get(orderByList.size() - 1)
+          .setCommentList(SqlCommentUtil.getCommentsInMap(e, field));
     }
     if (!orderByList.isEmpty()) {
       builder.setOrderBy(new SqlNodeList(orderByList, POS));
