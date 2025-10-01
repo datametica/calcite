@@ -13146,7 +13146,7 @@ class RelToSqlConverterDMTest {
         .project(parseTSNode1)
         .build();
     final String expectedSql =
-        "SELECT ARRAY_AGG(DISTINCT \"ENAME\") AS "
+        "SELECT ARRAY_AGG(DISTINCT \"ENAME\" IGNORE NULLS) AS "
             + "\"$f0\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
