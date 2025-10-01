@@ -8011,8 +8011,7 @@ class RelToSqlConverterDMTest {
 
     final String expectedSql = "SELECT employee.full_name\n"
         + "FROM foodmart.employee\n"
-        + "INNER JOIN foodmart.reserve_employee ON TRUE\n"
-        + "WHERE employee.salary BETWEEN employee.salary / 100 AND reserve_employee.salary";
+        + "INNER JOIN foodmart.reserve_employee ON employee.salary BETWEEN employee.salary / 100 AND reserve_employee.salary";
 
     assertThat(toSql(optimizedRel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
