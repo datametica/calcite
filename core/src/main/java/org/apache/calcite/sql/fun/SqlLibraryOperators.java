@@ -4503,4 +4503,27 @@ public abstract class SqlLibraryOperators {
               // Allow 2 or 3 arguments
               number -> number == 2),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction TIMESTAMP_FROM_PARTS =
+      SqlBasicFunction.create(
+              "TIMESTAMP_FROM_PARTS",
+              ReturnTypes.TIMESTAMP_NULLABLE,
+              OperandTypes.family(
+                  SqlTypeFamily.DATE, SqlTypeFamily.TIME),
+              SqlFunctionCategory.TIMEDATE)
+          .withKind(SqlKind.OTHER_FUNCTION);
+
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction IS_INTEGER =
+      new SqlFunction(
+          "IS_INTEGER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.VARIANT),
+          OperandTypes.family(SqlTypeFamily.NUMERIC)),
+          SqlFunctionCategory.NUMERIC);
+
 }
