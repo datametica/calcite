@@ -1436,7 +1436,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseStrtok(writer, call, leftPrec, rightPrec);
       break;
     case "STRTOK_TO_ARRAY":
-      unparseRegexpExtractAllForStrtok(writer, call, leftPrec, rightPrec);
+      unparseRegexpExtractAllForStrtokToArray(writer, call, leftPrec, rightPrec);
       break;
     case "DAYOFMONTH":
       SqlNode daySymbolLiteral = SqlLiteral.createSymbol(TimeUnit.DAY, SqlParserPos.ZERO);
@@ -2790,6 +2790,29 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.print(", ");
     unparseRegexPatternForStrtok(writer, call);
     writer.endFunCall(regexpExtractAllFrame);
+  }
+
+  public void unparseRegexpExtractAllForStrtokToArray(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
+    if (call.operand(1) instanceof SqlLiteral) {
+      if (call.operand(1).toString().equalsIgnoreCase("''")) {
+        final SqlWriter.Frame frame = writer.startList(" [", "]");
+        call.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.endList(frame);
+      } else {
+        unparseRegexpExtractAllForStrtok(writer, call, leftPrec, rightPrec);
+      }
+    } else {
+      SqlWriter.Frame ifFrame = writer.startFunCall("IF");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.print("= '', ");
+      final SqlWriter.Frame frame = writer.startList("[", "]");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.endList(frame);
+      writer.sep(",");
+      unparseRegexpExtractAllForStrtok(writer, call, leftPrec, rightPrec);
+      writer.endFunCall(ifFrame);
+    }
   }
 
   private void unparseRegexPatternForStrtok(SqlWriter writer, SqlCall call) {
