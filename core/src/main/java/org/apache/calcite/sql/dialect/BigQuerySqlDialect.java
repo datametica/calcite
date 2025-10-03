@@ -1435,6 +1435,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "STRTOK":
       unparseStrtok(writer, call, leftPrec, rightPrec);
       break;
+    case "STRTOK_TO_ARRAY":
+      unparseRegexpExtractAllForStrtokToArray(writer, call, leftPrec, rightPrec);
+      break;
     case "DAYOFMONTH":
       SqlNode daySymbolLiteral = SqlLiteral.createSymbol(TimeUnit.DAY, SqlParserPos.ZERO);
       SqlCall extractCall =
@@ -2789,12 +2792,41 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.endFunCall(regexpExtractAllFrame);
   }
 
+  public void unparseRegexpExtractAllForStrtokToArray(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
+    if (call.operand(1) instanceof SqlLiteral) {
+      if (call.operand(1).toString().equalsIgnoreCase("''")) {
+        final SqlWriter.Frame frame = writer.startList(" [", "]");
+        call.operand(0).unparse(writer, leftPrec, rightPrec);
+        writer.endList(frame);
+      } else {
+        unparseRegexpExtractAllForStrtok(writer, call, leftPrec, rightPrec);
+      }
+    } else {
+      SqlWriter.Frame ifFrame = writer.startFunCall("IF");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.print("= '', ");
+      final SqlWriter.Frame frame = writer.startList("[", "]");
+      call.operand(0).unparse(writer, leftPrec, rightPrec);
+      writer.endList(frame);
+      writer.sep(",");
+      unparseRegexpExtractAllForStrtok(writer, call, leftPrec, rightPrec);
+      writer.endFunCall(ifFrame);
+    }
+  }
+
   private void unparseRegexPatternForStrtok(SqlWriter writer, SqlCall call) {
     SqlNode secondOperand = call.operand(1);
-    String pattern = (secondOperand instanceof SqlCharStringLiteral)
-        ? "r'[^" + ((SqlCharStringLiteral) secondOperand).toValue() + "]+'"
-        : secondOperand.toString();
-    writer.print(pattern);
+    if (secondOperand instanceof SqlCharStringLiteral) {
+      String pattern = "r'[^" + ((SqlCharStringLiteral) secondOperand).toValue() + "]+'";
+      writer.print(pattern);
+    } else if (secondOperand instanceof SqlLiteral) {
+      writer.print(secondOperand.toString());
+    } else {
+      writer.print("r'[^' || ");
+      secondOperand.unparse(writer, 0, 0);
+      writer.print("|| ']+'");
+    }
   }
 
   private void unparseEditDistanceForThreeArgs(SqlWriter writer, SqlCall call, int leftPrec,
