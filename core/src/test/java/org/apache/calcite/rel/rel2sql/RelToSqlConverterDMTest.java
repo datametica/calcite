@@ -13827,10 +13827,11 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
-  @Test public void testBoolOrAggFunction() {
+  @Test
+  public void testBoolOrAggFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode boolOrAgg =
-         builder.call(SqlLibraryOperators.BOOLOR_AGG,  builder.literal("EMPNO"));
+        builder.call(SqlLibraryOperators.BOOLOR_AGG, builder.literal("EMPNO"));
 
     final RelNode root = builder
         .scan("EMP")
@@ -13839,6 +13840,6 @@ class RelToSqlConverterDMTest {
     final String expectedSql =
         "SELECT BOOLOR_AGG('EMPNO') AS \"bool_or_agg\"\nFROM \"scott\".\"EMP\"";
 
-    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 }
