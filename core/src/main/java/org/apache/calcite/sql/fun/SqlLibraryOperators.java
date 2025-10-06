@@ -811,6 +811,7 @@ public abstract class SqlLibraryOperators {
           writer.keyword("DISTINCT");
           SqlNode operand = call.getOperandList().get(0);
           operand.unparse(writer, leftPrec, rightPrec);
+          writer.keyword("IGNORE NULLS");
           writer.endList(parenthesisFrame);
         }
       };

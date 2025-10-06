@@ -107,6 +107,7 @@ import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlTableRef;
+import org.apache.calcite.sql.SqlUnnestOperator;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
@@ -868,6 +869,9 @@ public abstract class SqlImplementor {
         } else {
           final RexCall call = (RexCall) rex;
           final List<SqlNode> cols = toSql(program, call.operands);
+          if (isInClauseWithUnnest(rex, cols)) {
+            return call.getOperator().createCall(POS, cols.get(0), cols.get(1));
+          }
           return call.getOperator().createCall(POS, cols.get(0),
                   new SqlNodeList(cols.subList(1, cols.size()), POS));
         }
@@ -1562,6 +1566,15 @@ public abstract class SqlImplementor {
             op(SqlStdOperatorTable.LESS_THAN, upper));
       }
     }
+  }
+
+  private static boolean isInClauseWithUnnest(RexNode rex, List<SqlNode> cols) {
+    return rex.getKind() == SqlKind.IN && isUnnestNode(cols.get(1));
+  }
+
+  private static boolean isUnnestNode(SqlNode sqlNode) {
+    return sqlNode instanceof SqlBasicCall
+        && ((SqlBasicCall) sqlNode).getOperator() instanceof SqlUnnestOperator;
   }
 
   private static boolean isNodeMatching(SqlNode node, RexFieldAccess lastAccess) {

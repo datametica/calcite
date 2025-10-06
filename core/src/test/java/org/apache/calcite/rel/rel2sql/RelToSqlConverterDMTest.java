@@ -9199,9 +9199,12 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(createRexNode, "array_contains"))
         .build();
+    final String expectedQuery = "SELECT 'ABC' IN UNNEST(ARRAY['ABC', 'XYZ']) AS \"array_contains\"\n"
+        + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT 'ABC' IN UNNEST(ARRAY['ABC', 'XYZ']) "
         + "AS array_contains\n"
         + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedQuery));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
@@ -13146,7 +13149,7 @@ class RelToSqlConverterDMTest {
         .project(parseTSNode1)
         .build();
     final String expectedSql =
-        "SELECT ARRAY_AGG(DISTINCT \"ENAME\") AS "
+        "SELECT ARRAY_AGG(DISTINCT \"ENAME\" IGNORE NULLS) AS "
             + "\"$f0\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
