@@ -20,11 +20,16 @@ import org.apache.calcite.plan.CommentTrait;
 import org.apache.calcite.plan.CommentTraitDef;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.type.BasicSqlType;
 
 import java.util.*;
 
@@ -62,6 +67,10 @@ public class SqlCommentUtil {
   }
 
   public static Set<Comment> getCommentsInMap(RelNode relNode, RelFieldCollation field) {
+    return getCommentsInMap(relNode, field.getFieldIndex());
+  }
+
+  public static Set<Comment> getCommentsInMap(RelNode relNode, int targetIndex) {
     CommentTrait commentTrait = relNode.getTraitSet().getTrait(CommentTraitDef.INSTANCE);
     if (commentTrait == null) {
       return Collections.emptySet();
@@ -70,8 +79,6 @@ public class SqlCommentUtil {
     Map<RexNode, Set<Comment>> rexNodeCommentListMap = commentTrait.getCommentsMap();
     Set<Comment> result = new HashSet<>();
 
-    // Step 1: find RexInputRef for this field index
-    int targetIndex = field.getFieldIndex();
     RexInputRef targetRef = null;
     for (RexNode node : rexNodeCommentListMap.keySet()) {
       if (node instanceof RexInputRef) {
@@ -110,4 +117,31 @@ public class SqlCommentUtil {
     return result;
   }
 
+  public static void updateRexNodeInputRef(Integer oldIndex, Integer newIndex, RelNode relNode) {
+    CommentTrait commentTrait = relNode.getTraitSet().getTrait(CommentTraitDef.INSTANCE);
+    if (commentTrait != null) {
+
+      Map<RexNode, Set<Comment>> map = commentTrait.getCommentsMap();
+      Map<RexNode, Set<Comment>> updates = new HashMap<>();
+      for (Map.Entry<RexNode, Set<Comment>> entry : new HashMap<>(map).entrySet()) {
+        RexNode key = entry.getKey();
+        if (key instanceof RexInputRef && ((RexInputRef) key).getIndex() == oldIndex) {
+          updates.put(new RexInputRef(newIndex, key.getType()), entry.getValue());
+          map.remove(key); // safe because we’re iterating over copy
+        }
+      }
+      map.putAll(updates);
+    }
+  }
+
+  public static void unparseSqlComment(SqlWriter writer, SqlNode sqlNode, boolean isUnparsingInBegin) {
+    for (Comment comment : sqlNode.getCommentList()) {
+      if (comment.getAnchorType() == (isUnparsingInBegin ? AnchorType.LEFT : AnchorType.RIGHT)) {
+        String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
+        String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() :
+            " */";
+        writer.literal(prefix + comment.getComment() + suffix);
+      }
+    }
+  }
 }

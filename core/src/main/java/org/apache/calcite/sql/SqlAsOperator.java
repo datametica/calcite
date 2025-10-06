@@ -28,6 +28,7 @@ import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import java.util.List;
@@ -72,6 +73,7 @@ public class SqlAsOperator extends SqlSpecialOperator {
       int leftPrec,
       int rightPrec) {
     assert call.operandCount() >= 2;
+    SqlCommentUtil.unparseSqlComment(writer, call, true);
     final SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.AS);
     if (call.operand(0) instanceof SqlCharStringLiteral) {
       call.operand(0).unparse(writer, leftPrec, rightPrec);
@@ -95,6 +97,7 @@ public class SqlAsOperator extends SqlSpecialOperator {
       writer.endList(frame1);
     }
     writer.endList(frame);
+    SqlCommentUtil.unparseSqlComment(writer, call, false);
   }
 
   public String unquoteStringLiteral(String val) {

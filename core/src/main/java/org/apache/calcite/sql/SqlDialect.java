@@ -474,14 +474,7 @@ public class SqlDialect {
 
   public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
-    for (Comment comment : call.getCommentList()) {
-      if (comment.getAnchorType() == AnchorType.LEFT) {
-        String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
-        String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() :
-                " */";
-        writer.literal(prefix + comment.getComment() + suffix);
-      }
-    }
+    SqlCommentUtil.unparseSqlComment(writer, call, true);
     SqlOperator operator = call.getOperator();
     switch (call.getKind()) {
     case ROW:
@@ -502,14 +495,7 @@ public class SqlDialect {
     default:
       operator.unparse(writer, call, leftPrec, rightPrec);
     }
-    for (Comment comment : call.getCommentList()) {
-      if (comment.getAnchorType() == AnchorType.RIGHT) {
-        String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
-        String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() :
-                " */";
-        writer.literal(prefix + comment.getComment() + suffix);
-      }
-    }
+    SqlCommentUtil.unparseSqlComment(writer, call, false);
   }
 
   protected void unparseDivideInteger(final SqlWriter writer,

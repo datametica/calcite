@@ -19,10 +19,13 @@ package org.apache.calcite.rex;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
 
+import org.apache.calcite.util.Comment;
+
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Collection;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
@@ -41,6 +44,21 @@ import static java.util.Objects.requireNonNull;
  * <p>All sub-classes of RexNode are immutable.
  */
 public abstract class RexNode {
+
+  @Nullable
+  private Set<Comment> comment;
+
+  public @Nullable Set<Comment> getComment() {
+    return comment;
+  }
+
+  public void setComment(Set<Comment> comment) {
+    this.comment = comment;
+  }
+
+  public RexNode copy(RexNode rexNode) {
+
+  }
 
   //~ Instance fields --------------------------------------------------------
 

@@ -1079,6 +1079,8 @@ public class RelToSqlConverter extends SqlImplementor
     final List<SqlNode> groupKeys = new ArrayList<>();
     for (int key : groupList) {
       groupKeys.add(getGroupBySqlNode(builder, key));
+      groupKeys.get(groupKeys.size() - 1)
+          .setCommentList(SqlCommentUtil.getCommentsInMap(aggregate, key));
     }
 
     for (int key : sortedGroupList) {
