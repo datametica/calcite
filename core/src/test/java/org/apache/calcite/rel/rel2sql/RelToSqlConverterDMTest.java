@@ -11164,6 +11164,40 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testStrtokToArrayFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode strtokToArrayNode =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(".@"));
+    final RexNode strtokToArrayNodeWithFunction =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.call(SqlStdOperatorTable.SUBSTRING, builder.field(2), builder.literal(2)));
+    final RexNode strtokToArrayNodeWithColumn =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.field(1));
+    final RexNode strtokToArrayWithNull =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(null));
+    final RexNode strtokToArrayWithEmptySpace =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(""));
+    final RelNode root = builder
+        .project(strtokToArrayNode, strtokToArrayNodeWithFunction, strtokToArrayNodeWithColumn,
+            strtokToArrayWithNull, strtokToArrayWithEmptySpace)
+        .build();
+
+    final String expectedBiqQuery = "SELECT REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^.@]+') AS `$f0`, "
+        + "IF(SUBSTR(JOB, 2) = '', ['user@snowflake.com'], "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^' || SUBSTR(JOB, 2) || ']+')) AS `$f1`, "
+        + "IF(ENAME = '', ['user@snowflake.com'], "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^' || ENAME || ']+')) AS `$f2`, "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , NULL) AS `$f3`,  "
+        + "[ 'user@snowflake.com'] AS `$f4`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testStrtokWithCastFunctionAsThirdArgument() {
     final RelBuilder builder = relBuilder();
     final RexNode lengthFunRexNode =
