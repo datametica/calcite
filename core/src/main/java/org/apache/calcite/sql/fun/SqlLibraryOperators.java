@@ -4503,4 +4503,22 @@ public abstract class SqlLibraryOperators {
               // Allow 2 or 3 arguments
               number -> number == 2),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction LEAST_IGNORE_NULLS =
+      new SqlFunction("LEAST_IGNORE_NULLS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.LEAST_RESTRICTIVE.andThen(SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.SAME_VARIADIC,
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction GREATEST_IGNORE_NULLS =
+      new SqlFunction("GREATEST_IGNORE_NULLS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.LEAST_RESTRICTIVE.andThen(SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.SAME_VARIADIC,
+          SqlFunctionCategory.NUMERIC);
 }

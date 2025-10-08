@@ -13835,4 +13835,32 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testLeastIgnoreNulls() {
+    final RelBuilder builder = relBuilder();
+    final RexNode node =
+        builder.call(SqlLibraryOperators.LEAST_IGNORE_NULLS, builder.literal(10),
+            builder.literal(20), builder.literal(null));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(node, "result"))
+        .build();
+    final String expectedSql = "SELECT LEAST_IGNORE_NULLS(10, 20, NULL) AS \"result\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testGreatestIgnoreNulls() {
+    final RelBuilder builder = relBuilder();
+    final RexNode node =
+        builder.call(SqlLibraryOperators.GREATEST_IGNORE_NULLS, builder.literal("10"),
+            builder.literal(null), builder.literal("-10"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(node, "result"))
+        .build();
+    final String expectedSql = "SELECT GREATEST_IGNORE_NULLS('10', NULL, '-10') AS \"result\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
 }
