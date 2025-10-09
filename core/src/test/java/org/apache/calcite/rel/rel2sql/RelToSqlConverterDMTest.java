@@ -9199,9 +9199,12 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(createRexNode, "array_contains"))
         .build();
+    final String expectedQuery = "SELECT 'ABC' IN UNNEST(ARRAY['ABC', 'XYZ']) AS \"array_contains\"\n"
+        + "FROM \"scott\".\"EMP\"";
     final String expectedBiqQuery = "SELECT 'ABC' IN UNNEST(ARRAY['ABC', 'XYZ']) "
         + "AS array_contains\n"
         + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedQuery));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
@@ -11157,6 +11160,40 @@ class RelToSqlConverterDMTest {
 
     final String expectedBiqQuery = "SELECT REGEXP_EXTRACT_ALL('TERADATA BIGQUERY SPARK ORACLE' , "
         + "r'[^ ]+') [OFFSET ( STRPOS('ABC', 'B') -1 ) ] AS aa";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testStrtokToArrayFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode strtokToArrayNode =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(".@"));
+    final RexNode strtokToArrayNodeWithFunction =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.call(SqlStdOperatorTable.SUBSTRING, builder.field(2), builder.literal(2)));
+    final RexNode strtokToArrayNodeWithColumn =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.field(1));
+    final RexNode strtokToArrayWithNull =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(null));
+    final RexNode strtokToArrayWithEmptySpace =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(""));
+    final RelNode root = builder
+        .project(strtokToArrayNode, strtokToArrayNodeWithFunction, strtokToArrayNodeWithColumn,
+            strtokToArrayWithNull, strtokToArrayWithEmptySpace)
+        .build();
+
+    final String expectedBiqQuery = "SELECT REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^.@]+') AS `$f0`, "
+        + "IF(SUBSTR(JOB, 2) = '', ['user@snowflake.com'], "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^' || SUBSTR(JOB, 2) || ']+')) AS `$f1`, "
+        + "IF(ENAME = '', ['user@snowflake.com'], "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^' || ENAME || ']+')) AS `$f2`, "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , NULL) AS `$f3`,  "
+        + "[ 'user@snowflake.com'] AS `$f4`\n"
+        + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
@@ -13146,7 +13183,7 @@ class RelToSqlConverterDMTest {
         .project(parseTSNode1)
         .build();
     final String expectedSql =
-        "SELECT ARRAY_AGG(DISTINCT \"ENAME\") AS "
+        "SELECT ARRAY_AGG(DISTINCT \"ENAME\" IGNORE NULLS) AS "
             + "\"$f0\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));

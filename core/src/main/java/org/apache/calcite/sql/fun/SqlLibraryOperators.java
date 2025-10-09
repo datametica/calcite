@@ -811,6 +811,7 @@ public abstract class SqlLibraryOperators {
           writer.keyword("DISTINCT");
           SqlNode operand = call.getOperandList().get(0);
           operand.unparse(writer, leftPrec, rightPrec);
+          writer.keyword("IGNORE NULLS");
           writer.endList(parenthesisFrame);
         }
       };
@@ -3230,6 +3231,15 @@ public abstract class SqlLibraryOperators {
       null,
       OperandTypes.or(OperandTypes.STRING_STRING_INTEGER,
           OperandTypes.family(SqlTypeFamily.NULL, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER)),
+      SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction STRTOK_TO_ARRAY =
+      new SqlFunction("STRTOK_TO_ARRAY",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.ARG0_NULLABLE.andThen(SqlTypeTransforms.TO_ARRAY),
+      null,
+      STRING_OPTIONAL_STRING,
       SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {BIG_QUERY})
