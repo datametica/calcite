@@ -3992,12 +3992,16 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlFunction DIV0 =
-      new SqlFunction("DIV0",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DECIMAL, null,
-          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
-          SqlFunctionCategory.NUMERIC);
+  public static final SqlBasicFunction DIV0 =
+      SqlBasicFunction.create(SqlKind.OTHER_FUNCTION, ReturnTypes.DECIMAL,
+              OperandTypes.NUMERIC_NUMERIC)
+          .withName("DIV0")
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction DIV0NULL =
+      SqlLibraryOperators.DIV0.withName("DIV0NULL");
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction TO_CLOB =
