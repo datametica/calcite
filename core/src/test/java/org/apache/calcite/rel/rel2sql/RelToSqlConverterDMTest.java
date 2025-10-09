@@ -8011,8 +8011,7 @@ class RelToSqlConverterDMTest {
 
     final String expectedSql = "SELECT employee.full_name\n"
         + "FROM foodmart.employee\n"
-        + "INNER JOIN foodmart.reserve_employee ON TRUE\n"
-        + "WHERE employee.salary BETWEEN employee.salary / 100 AND reserve_employee.salary";
+        + "INNER JOIN foodmart.reserve_employee ON employee.salary BETWEEN employee.salary / 100 AND reserve_employee.salary";
 
     assertThat(toSql(optimizedRel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
@@ -8237,6 +8236,34 @@ class RelToSqlConverterDMTest {
         + "\"scott\".\"EMP\"";
 
     assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testTimestampFromParts() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timestampFromParts =
+        builder.call(SqlLibraryOperators.TIMESTAMP_FROM_PARTS,
+            builder.call(SqlStdOperatorTable.CURRENT_DATE),
+            builder.call(SqlStdOperatorTable.CURRENT_TIME));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(timestampFromParts, "timestampVal")).build();
+
+    final String expectedSql = "SELECT TIMESTAMP_FROM_PARTS(CURRENT_DATE, CURRENT_TIME) AS \"timestampVal\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testSnowflakeIsInteger() {
+    final RelBuilder builder = relBuilder();
+    final RexNode isIntegerNode =
+        builder.call(SqlLibraryOperators.IS_INTEGER, builder.literal(123.45));
+    final RelNode root = builder.scan("EMP")
+        .project(isIntegerNode).build();
+
+    final String expectedSql = "SELECT IS_INTEGER(123.45) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testJsonCheckFunction() {
@@ -12197,13 +12224,14 @@ class RelToSqlConverterDMTest {
     final RelBuilder builder = relBuilder();
     RexNode div0Rex =
         builder.call(SqlLibraryOperators.DIV0, builder.literal(120), builder.literal(0));
-
+    RexNode div0NullRex =
+            builder.call(SqlLibraryOperators.DIV0NULL, builder.literal(120), builder.literal(null));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.alias(div0Rex, "Result"))
+        .project(builder.alias(div0Rex, "Result"), builder.alias(div0NullRex, "Result1"))
         .build();
-    final String expectedSnowFlakeQuery =
-        "SELECT DIV0(120, 0) AS \"Result\"\nFROM \"scott\".\"EMP\"";
+    final String expectedSnowFlakeQuery = "SELECT DIV0(120, 0) AS \"Result\", "
+        + "DIV0NULL(120, NULL) AS \"Result1\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
         isLinux(expectedSnowFlakeQuery));

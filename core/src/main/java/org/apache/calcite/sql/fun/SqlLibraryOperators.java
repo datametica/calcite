@@ -3992,12 +3992,16 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlFunction DIV0 =
-      new SqlFunction("DIV0",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DECIMAL, null,
-          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
-          SqlFunctionCategory.NUMERIC);
+  public static final SqlBasicFunction DIV0 =
+      SqlBasicFunction.create(SqlKind.OTHER_FUNCTION, ReturnTypes.DECIMAL,
+              OperandTypes.NUMERIC_NUMERIC)
+          .withName("DIV0")
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction DIV0NULL =
+      SqlLibraryOperators.DIV0.withName("DIV0NULL");
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction TO_CLOB =
@@ -4513,4 +4517,27 @@ public abstract class SqlLibraryOperators {
               // Allow 2 or 3 arguments
               number -> number == 2),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction TIMESTAMP_FROM_PARTS =
+      SqlBasicFunction.create(
+              "TIMESTAMP_FROM_PARTS",
+              ReturnTypes.TIMESTAMP_NULLABLE,
+              OperandTypes.family(
+                  SqlTypeFamily.DATE, SqlTypeFamily.TIME),
+              SqlFunctionCategory.TIMEDATE)
+          .withKind(SqlKind.OTHER_FUNCTION);
+
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction IS_INTEGER =
+      new SqlFunction(
+          "IS_INTEGER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.VARIANT),
+          OperandTypes.family(SqlTypeFamily.NUMERIC)),
+          SqlFunctionCategory.NUMERIC);
+
 }

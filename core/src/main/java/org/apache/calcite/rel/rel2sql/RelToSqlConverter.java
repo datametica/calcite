@@ -1262,6 +1262,9 @@ public class RelToSqlConverter extends SqlImplementor
     Result result = setOpToSql(e.all
         ? SqlStdOperatorTable.EXCEPT_ALL
         : SqlStdOperatorTable.EXCEPT, e);
+    if (CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(e.getTraitSet())) {
+      result = updateCTEResult(e, result);
+    }
     return adjustResultWithSubQueryAlias(e, result);
   }
 
