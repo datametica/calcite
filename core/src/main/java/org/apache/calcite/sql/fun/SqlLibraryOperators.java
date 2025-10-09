@@ -4513,4 +4513,12 @@ public abstract class SqlLibraryOperators {
               // Allow 2 or 3 arguments
               number -> number == 2),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction JSON =
+      new SqlFunction("JSON",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.JSON, null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
 }
