@@ -12222,10 +12222,10 @@ class RelToSqlConverterDMTest {
 
   @Test public void testDiv0() {
     final RelBuilder builder = relBuilder();
-    RexNode div0Rex = builder.call(SqlLibraryOperators.DIV0,
-        builder.literal(120), builder.literal(0));
-    RexNode div0NullRex = builder.call(SqlLibraryOperators.DIV0NULL,
-            builder.literal(120), builder.literal(null));
+    RexNode div0Rex =
+        builder.call(SqlLibraryOperators.DIV0, builder.literal(120), builder.literal(0));
+    RexNode div0NullRex =
+            builder.call(SqlLibraryOperators.DIV0NULL, builder.literal(120), builder.literal(null));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(div0Rex, "Result"), builder.alias(div0NullRex, "Result1"))
