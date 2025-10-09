@@ -159,6 +159,7 @@ public class CTERelToSqlUtil {
       fetchFromSqlWithItemNode(((SqlPivot) sqlNode).query, sqlNodes);
     } else if (sqlNode instanceof SqlCase) {
       fetchSqlWithSelectList(((SqlCase) sqlNode).getWhenOperands(), sqlNodes);
+      fetchSqlWithSelectList(((SqlCase) sqlNode).getThenOperands(), sqlNodes);
     }
   }
 
@@ -344,6 +345,7 @@ public class CTERelToSqlUtil {
       }
     } else if (operand instanceof SqlCase) {
       ((SqlCase) operand).getWhenOperands().forEach(CTERelToSqlUtil::processBasicCall);
+      ((SqlCase) operand).getThenOperands().forEach(CTERelToSqlUtil::processBasicCall);
     }
   }
 
