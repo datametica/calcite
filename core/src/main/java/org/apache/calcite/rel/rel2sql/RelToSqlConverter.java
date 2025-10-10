@@ -2079,7 +2079,7 @@ public class RelToSqlConverter extends SqlImplementor
             String name = identifier.names.get(0);
             boolean isMatch = selectListAliases.stream().anyMatch(alias -> alias.equals(name))
                 && tableFieldNames.stream().anyMatch(alias -> alias.equals(name));
-            if (isMatch && Boolean.FALSE.equals(groupByColumnPresentInSelect.get(name))) {
+            if (isMatch && groupByColumnPresentInSelect.get(name) != Boolean.TRUE) {
               return new SqlIdentifier(Arrays.asList(tableAlias, name), node.getParserPosition());
             }
           }
