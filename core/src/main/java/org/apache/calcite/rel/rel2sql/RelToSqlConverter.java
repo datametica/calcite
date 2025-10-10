@@ -2038,27 +2038,48 @@ public class RelToSqlConverter extends SqlImplementor
         }
       }
       List<SqlNode> groupList =
-          createGroupByList(sqlSelect.getGroup(), selectListAliases, tableFieldNames, tableAlias);
+          createGroupByList(sqlSelect, selectListAliases, tableFieldNames, tableAlias);
       SqlNode node =
           new SqlSelect(sqlSelect.getParserPosition(), null, sqlSelect.getSelectList(),
-          sqlSelect.getFrom(), sqlSelect.getWhere(), new SqlNodeList(groupList, SqlParserPos.ZERO),
-          sqlSelect.getHaving(), sqlSelect.getWindowList(), sqlSelect.getQualify(),
-          sqlSelect.getOrderList(), sqlSelect.getOffset(), sqlSelect.getFetch(), sqlSelect.getHints());
+              sqlSelect.getFrom(), sqlSelect.getWhere(), new SqlNodeList(groupList,
+              SqlParserPos.ZERO),
+              sqlSelect.getHaving(), sqlSelect.getWindowList(), sqlSelect.getQualify(),
+              sqlSelect.getOrderList(), sqlSelect.getOffset(), sqlSelect.getFetch(),
+              sqlSelect.getHints());
       return result(node, result.clauses, result.neededAlias, result.neededType, result.aliases);
     }
     return result;
   }
 
-  private List<SqlNode> createGroupByList(SqlNodeList groupList,
+  private static boolean isFromAliased(SqlSelect sqlSelect) {
+    return sqlSelect.getFrom() instanceof SqlBasicCall
+        && ((SqlBasicCall) sqlSelect.getFrom()).getOperator().kind == SqlKind.AS;
+  }
+
+  public HashMap<String, Boolean> createGroupByColumnAliasMap(List<String> selectListAliases,
+      SqlNodeList groupList) {
+    HashMap<String, Boolean> map = new HashMap<>();
+    for (SqlNode node : groupList) {
+      if (node instanceof SqlIdentifier) {
+        String name = ((SqlIdentifier) node).getSimple();
+        map.put(name, selectListAliases.contains(name));
+      }
+    }
+    return map;
+  }
+
+  private List<SqlNode> createGroupByList(SqlSelect sqlSelect,
       List<String> selectListAliases, List<String> tableFieldNames, String tableAlias) {
-    return groupList.getList().stream()
+    HashMap<String, Boolean> groupByColumnPresentInSelect = isFromAliased(sqlSelect)
+        ? new HashMap<>() : createGroupByColumnAliasMap(selectListAliases, sqlSelect.getGroup());
+    return sqlSelect.getGroup().getList().stream()
         .map(node -> {
           if (node instanceof SqlIdentifier) {
             SqlIdentifier identifier = (SqlIdentifier) node;
             String name = identifier.names.get(0);
             boolean isMatch = selectListAliases.stream().anyMatch(alias -> alias.equals(name))
                 && tableFieldNames.stream().anyMatch(alias -> alias.equals(name));
-            if (isMatch) {
+            if (isMatch && groupByColumnPresentInSelect.get(name) != Boolean.TRUE) {
               return new SqlIdentifier(Arrays.asList(tableAlias, name), node.getParserPosition());
             }
           }
