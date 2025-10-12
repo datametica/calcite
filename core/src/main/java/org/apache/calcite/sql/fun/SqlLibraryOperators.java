@@ -4564,4 +4564,15 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(SqlTypeFamily.JSON, SqlTypeFamily.STRING),
               OperandTypes.family(SqlTypeFamily.VARIANT, SqlTypeFamily.STRING)),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction IS_INTEGER =
+      new SqlFunction(
+          "IS_INTEGER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.VARIANT),
+              OperandTypes.family(SqlTypeFamily.NUMERIC)),
+          SqlFunctionCategory.NUMERIC);
 }

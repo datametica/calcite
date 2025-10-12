@@ -13868,7 +13868,8 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(regexpLikeNode, "regexpLike"))
         .build();
-    final String expectedSql = "SELECT REGEXP_LIKE('abc123', 'abc[0-9]+') AS \"regexpLike\"\nFROM \"scott\".\"EMP\"";
+    final String expectedSql = "SELECT REGEXP_LIKE('abc123', 'abc[0-9]+') AS \"regexpLike\"\n"
+        + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
@@ -13882,7 +13883,8 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(node, "result"))
         .build();
-    final String expectedSql = "SELECT LEAST_IGNORE_NULLS(10, 20, NULL) AS \"result\"\nFROM \"scott\".\"EMP\"";
+    final String expectedSql = "SELECT LEAST_IGNORE_NULLS(10, 20, NULL) AS \"result\"\n"
+        + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
@@ -13896,7 +13898,21 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(node, "result"))
         .build();
-    final String expectedSql = "SELECT GREATEST_IGNORE_NULLS('10', NULL, '-10') AS \"result\"\nFROM \"scott\".\"EMP\"";
+    final String expectedSql = "SELECT GREATEST_IGNORE_NULLS('10', NULL, '-10') AS \"result\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSnowflakeIsInteger() {
+    final RelBuilder builder = relBuilder();
+    final RexNode isIntegerNode =
+        builder.call(SqlLibraryOperators.IS_INTEGER, builder.literal(123.45));
+    final RelNode root = builder.scan("EMP")
+        .project(isIntegerNode).build();
+
+    final String expectedSql = "SELECT IS_INTEGER(123.45) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
