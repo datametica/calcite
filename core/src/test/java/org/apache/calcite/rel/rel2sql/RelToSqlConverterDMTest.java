@@ -13916,4 +13916,37 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testRegexpSubStrAll() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpLikeNode =
+        builder.call(SqlLibraryOperators.REGEXP_SUBSTR_ALL, builder.literal("a1_a2a3_a4A5a6"),
+            builder.literal("a[[:digit:]]"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpLikeNode, "regexpLike"))
+        .build();
+    final String expectedSql = "SELECT REGEXP_SUBSTR_ALL('a1_a2a3_a4A5a6', 'a[[:digit:]]') AS \"regexpLike\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSnowflakeGet() {
+    final RelBuilder builder = relBuilder();
+    RexNode arrayNode =
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal(0), builder.literal(1), builder.literal(2));
+
+    final RexNode regexpLikeNode =
+        builder.call(SqlLibraryOperators.SNOWFLAKE_GET, arrayNode, builder.literal(1));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpLikeNode, "regexpLike"))
+        .build();
+    final String expectedSql = "SELECT GET(ARRAY[0, 1, 2], 1) AS \"regexpLike\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
 }
