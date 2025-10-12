@@ -4531,4 +4531,33 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.SAME_VARIADIC,
           SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction REGEXP_SUBSTR_ALL =
+      new SqlFunction("REGEXP_SUBSTR_ALL",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+                  SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+                  SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
+              number -> number >= 2 && number <= 5),
+          SqlFunctionCategory.STRING);
+
+  /**
+   * The "GET(array/map/object/variant, index/key)" function.
+   */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_GET =
+      new SqlFunction("GET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER),
+              OperandTypes.family(SqlTypeFamily.MAP, SqlTypeFamily.STRING),
+              OperandTypes.family(SqlTypeFamily.JSON, SqlTypeFamily.STRING),
+              OperandTypes.family(SqlTypeFamily.VARIANT, SqlTypeFamily.STRING)),
+          SqlFunctionCategory.STRING);
 }
