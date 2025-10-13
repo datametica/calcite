@@ -13949,4 +13949,36 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testTimestampFromParts() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timestampFromParts =
+        builder.call(SqlLibraryOperators.TIMESTAMP_FROM_PARTS,
+            builder.call(SqlStdOperatorTable.CURRENT_DATE),
+            builder.call(SqlStdOperatorTable.CURRENT_TIME));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(timestampFromParts, "timestampVal")).build();
+
+    final String expectedSql = "SELECT TIMESTAMP_FROM_PARTS(CURRENT_DATE, CURRENT_TIME) AS \"timestampVal\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testTimestampTzFromParts() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timestampFromParts =
+        builder.call(SqlLibraryOperators.TIMESTAMP_TZ_FROM_PARTS,
+            builder.literal(2002), builder.literal(6), builder.literal(21),
+            builder.literal(10), builder.literal(50), builder.literal(9999),
+            builder.literal(10), builder.literal("America/New_York"));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(timestampFromParts, "timestampVal")).build();
+
+    final String expectedSql = "SELECT TIMESTAMP_TZ_FROM_PARTS(2002, 6, 21, 10, "
+        + "50, 9999, 10, 'America/New_York') AS \"timestampVal\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
 }

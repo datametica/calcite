@@ -4575,4 +4575,26 @@ public abstract class SqlLibraryOperators {
           OperandTypes.or(OperandTypes.family(SqlTypeFamily.VARIANT),
               OperandTypes.family(SqlTypeFamily.NUMERIC)),
           SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SqlLibrary.SNOWFLAKE})
+  public static final SqlFunction TIMESTAMP_FROM_PARTS =
+      SqlBasicFunction.create(
+              "TIMESTAMP_FROM_PARTS",
+              ReturnTypes.TIMESTAMP_NULLABLE,
+              OperandTypes.or(
+                  OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.TIME),
+                  OperandTypes
+                      .INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER),
+              SqlFunctionCategory.TIMEDATE)
+          .withKind(SqlKind.OTHER_FUNCTION);
+
+  @LibraryOperator(libraries = {SqlLibrary.SNOWFLAKE})
+  public static final SqlFunction TIMESTAMP_TZ_FROM_PARTS =
+      SqlBasicFunction.create(
+              "TIMESTAMP_TZ_FROM_PARTS",
+              ReturnTypes.TIMESTAMP_WITH_TIME_ZONE_NULLABLE,
+              OperandTypes
+                  .INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER_OPTIONAL_STRING,
+              SqlFunctionCategory.TIMEDATE)
+          .withKind(SqlKind.OTHER_FUNCTION);
 }
