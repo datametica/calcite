@@ -79,7 +79,7 @@ class ProjectExpansionUtil {
     return columnsUsed;
   }
 
-  private List<SqlIdentifier> collectSqlIdentifiers(List<SqlNode> sqlNodes) {
+  List<SqlIdentifier> collectSqlIdentifiers(List<SqlNode> sqlNodes) {
     List<SqlIdentifier> sqlIdentifiers = new ArrayList<>();
 
     for (SqlNode sqlNode : sqlNodes) {

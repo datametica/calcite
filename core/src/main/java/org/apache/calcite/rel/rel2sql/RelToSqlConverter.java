@@ -739,7 +739,7 @@ public class RelToSqlConverter extends SqlImplementor
    * Create {@link SqlUnpivot} type of SqlNode.
    */
   private SqlUnpivot createUnpivotSqlNodeWithIncludeNulls(Project projectRel,
-      SqlImplementor.Builder builder, UnpivotRelToSqlUtil unpivotRelToSqlUtil) {
+      Builder builder, UnpivotRelToSqlUtil unpivotRelToSqlUtil) {
     RelNode leftRelOfJoin = ((LogicalJoin) projectRel.getInput(0)).getLeft();
     SqlNode query = dispatch(leftRelOfJoin).asStatement();
     LogicalValues valuesRel = unpivotRelToSqlUtil.getLogicalValuesRel(projectRel);
@@ -2000,7 +2000,7 @@ public class RelToSqlConverter extends SqlImplementor
     }
   }
 
-  private SqlNode updateSqlWithNode(SqlImplementor.Result result) {
+  private SqlNode updateSqlWithNode(Result result) {
     SqlSelect sqlSelect = null;
     if (result.node instanceof SqlSelect) {
       sqlSelect = (SqlSelect) result.node;
@@ -2079,12 +2079,38 @@ public class RelToSqlConverter extends SqlImplementor
             String name = identifier.names.get(0);
             boolean isMatch = selectListAliases.stream().anyMatch(alias -> alias.equals(name))
                 && tableFieldNames.stream().anyMatch(alias -> alias.equals(name));
-            if (isMatch && groupByColumnPresentInSelect.get(name) != Boolean.TRUE) {
+            if (isMatch && (groupByColumnPresentInSelect.get(name) != Boolean.TRUE
+                || isAliasReusedAsColumnInProjection(sqlSelect.getSelectList(), name))) {
               return new SqlIdentifier(Arrays.asList(tableAlias, name), node.getParserPosition());
             }
           }
           return node;
         }).collect(Collectors.toList());
+  }
+
+  private static boolean isAliasReusedAsColumnInProjection(SqlNodeList sqlNodeList, String name) {
+    for (SqlNode sqlNode : sqlNodeList) {
+      if (isAliasWithDifferentName(sqlNode, name)) {
+        ProjectExpansionUtil expansionUtil = new ProjectExpansionUtil();
+        List<SqlNode> list = Collections.singletonList(sqlNode);
+        List<SqlIdentifier> sqlIdentifiers = expansionUtil.collectSqlIdentifiers(list);
+        for (SqlIdentifier sqlIdentifier : sqlIdentifiers) {
+          if (sqlIdentifier.names.contains(name)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  private static boolean isAliasWithDifferentName(SqlNode sqlNode, String name) {
+    if (sqlNode.getKind() == SqlKind.AS) {
+      SqlCall call = (SqlCall) sqlNode;
+      SqlIdentifier alias = call.operand(1);
+      return !alias.names.get(0).equals(name);
+    }
+    return false;
   }
 
   private List<String> getTableFieldNames(RelNode relNode, String tableName) {
