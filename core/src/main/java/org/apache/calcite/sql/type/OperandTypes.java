@@ -1024,7 +1024,7 @@ public abstract class OperandTypes {
       INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER =
       family(
           ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
-              SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+              SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
           number -> number == 6 || number == 7);
 
   public static final SqlSingleOperandTypeChecker
@@ -1032,7 +1032,7 @@ public abstract class OperandTypes {
       family(
           ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
               SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
-              SqlTypeFamily.STRING),
+              SqlTypeFamily.INTEGER, SqlTypeFamily.STRING),
           number -> number >= 6 && number <= 8);
 
   public static final SqlSingleOperandTypeChecker NULL_STRING_INTEGER =
