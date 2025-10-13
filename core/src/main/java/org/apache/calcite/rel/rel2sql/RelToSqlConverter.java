@@ -739,7 +739,7 @@ public class RelToSqlConverter extends SqlImplementor
    * Create {@link SqlUnpivot} type of SqlNode.
    */
   private SqlUnpivot createUnpivotSqlNodeWithIncludeNulls(Project projectRel,
-      Builder builder, UnpivotRelToSqlUtil unpivotRelToSqlUtil) {
+      SqlImplementor.Builder builder, UnpivotRelToSqlUtil unpivotRelToSqlUtil) {
     RelNode leftRelOfJoin = ((LogicalJoin) projectRel.getInput(0)).getLeft();
     SqlNode query = dispatch(leftRelOfJoin).asStatement();
     LogicalValues valuesRel = unpivotRelToSqlUtil.getLogicalValuesRel(projectRel);
@@ -2000,7 +2000,7 @@ public class RelToSqlConverter extends SqlImplementor
     }
   }
 
-  private SqlNode updateSqlWithNode(Result result) {
+  private SqlNode updateSqlWithNode(SqlImplementor.Result result) {
     SqlSelect sqlSelect = null;
     if (result.node instanceof SqlSelect) {
       sqlSelect = (SqlSelect) result.node;
@@ -2041,11 +2041,9 @@ public class RelToSqlConverter extends SqlImplementor
           createGroupByList(sqlSelect, selectListAliases, tableFieldNames, tableAlias);
       SqlNode node =
           new SqlSelect(sqlSelect.getParserPosition(), null, sqlSelect.getSelectList(),
-              sqlSelect.getFrom(), sqlSelect.getWhere(), new SqlNodeList(groupList,
-              SqlParserPos.ZERO),
-              sqlSelect.getHaving(), sqlSelect.getWindowList(), sqlSelect.getQualify(),
-              sqlSelect.getOrderList(), sqlSelect.getOffset(), sqlSelect.getFetch(),
-              sqlSelect.getHints());
+          sqlSelect.getFrom(), sqlSelect.getWhere(), new SqlNodeList(groupList, SqlParserPos.ZERO),
+          sqlSelect.getHaving(), sqlSelect.getWindowList(), sqlSelect.getQualify(),
+          sqlSelect.getOrderList(), sqlSelect.getOffset(), sqlSelect.getFetch(), sqlSelect.getHints());
       return result(node, result.clauses, result.neededAlias, result.neededType, result.aliases);
     }
     return result;
