@@ -2026,8 +2026,7 @@ public class RelToSqlConverter extends SqlImplementor
 
   Result createResultWithModifiedGroupList(RelNode e, SqlSelect sqlSelect, Result result) {
     String tableAlias = SqlValidatorUtil.alias(sqlSelect.getFrom());
-    List<String> tableFieldNames = tableAlias != null
-        ? getTableFieldNames(e, tableAlias) : Collections.emptyList();
+    List<String> tableFieldNames = fetchFieldNames(e, sqlSelect, tableAlias);
     if (tableAlias != null && !tableFieldNames.isEmpty()) {
       List<String> selectListAliases = new ArrayList<>();
       for (SqlNode node : sqlSelect.getSelectList()) {
@@ -2047,6 +2046,24 @@ public class RelToSqlConverter extends SqlImplementor
       return result(node, result.clauses, result.neededAlias, result.neededType, result.aliases);
     }
     return result;
+  }
+
+  private List<String> fetchFieldNames(RelNode e, SqlSelect sqlSelect, String tableAlias) {
+    if (sqlSelect.getFrom() instanceof SqlBasicCall) {
+      SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlSelect.getFrom();
+      if (sqlBasicCall.getOperator().kind == SqlKind.AS && sqlBasicCall.operand(0) instanceof SqlWithItem) {
+        SqlWithItem sqlWithItem = sqlBasicCall.operand(0);
+        List<String> tableFieldNames = new ArrayList<>();
+        if (sqlWithItem.query instanceof SqlSelect) {
+          SqlNodeList sqlNodeList = ((SqlSelect) sqlWithItem.query).getSelectList();
+          for (SqlNode sqlNode : sqlNodeList) {
+            tableFieldNames.add(SqlValidatorUtil.alias(sqlNode));
+          }
+          return tableFieldNames;
+        }
+      }
+    }
+    return tableAlias != null ? getTableFieldNames(e, tableAlias) : Collections.emptyList();
   }
 
   private static boolean isFromAliased(SqlSelect sqlSelect) {
