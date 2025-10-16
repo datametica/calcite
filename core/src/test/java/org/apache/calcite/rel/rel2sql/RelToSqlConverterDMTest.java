@@ -12735,6 +12735,20 @@ class RelToSqlConverterDMTest {
   @Test void testForRegressionInterceptFunction() {
     final RelBuilder builder = relBuilder().scan("EMP");
     final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlLibraryOperators.REGR_INTERCEPT, builder.literal(12),
+            builder.literal(25));
+    final RelNode rel = builder
+        .aggregate(relBuilder().groupKey(), aggCall)
+        .build();
+    final String expectedBigQuery = "SELECT REGR_INTERCEPT(12, 25) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(rel, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  @Test void testForModeFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
         builder.aggregateCall(SqlStdOperatorTable.MODE, builder.field(1));
     final RelNode rel = builder
         .aggregate(relBuilder().groupKey(), aggCall)
