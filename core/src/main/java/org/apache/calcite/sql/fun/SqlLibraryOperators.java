@@ -4515,3 +4515,4 @@ public abstract class SqlLibraryOperators {
           OperandTypes.BOOLEAN,
           SqlFunctionCategory.SYSTEM);
 }
+
