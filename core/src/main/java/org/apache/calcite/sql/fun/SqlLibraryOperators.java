@@ -3233,6 +3233,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NULL, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER)),
       SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction STRTOK_TO_ARRAY =
+      new SqlFunction("STRTOK_TO_ARRAY",
+      SqlKind.OTHER_FUNCTION,
+      ReturnTypes.ARG0_NULLABLE.andThen(SqlTypeTransforms.TO_ARRAY),
+      null,
+      STRING_OPTIONAL_STRING,
+      SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction TIME_SUB =
       new SqlFunction("TIME_SUB",
@@ -3983,12 +3992,16 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlFunction DIV0 =
-      new SqlFunction("DIV0",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DECIMAL, null,
-          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
-          SqlFunctionCategory.NUMERIC);
+  public static final SqlBasicFunction DIV0 =
+      SqlBasicFunction.create(SqlKind.OTHER_FUNCTION, ReturnTypes.DECIMAL,
+              OperandTypes.NUMERIC_NUMERIC)
+          .withName("DIV0")
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction DIV0NULL =
+      SqlLibraryOperators.DIV0.withName("DIV0NULL");
 
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction TO_CLOB =
@@ -4504,6 +4517,86 @@ public abstract class SqlLibraryOperators {
               // Allow 2 or 3 arguments
               number -> number == 2),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction LEAST_IGNORE_NULLS =
+      new SqlFunction("LEAST_IGNORE_NULLS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.LEAST_RESTRICTIVE.andThen(SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.SAME_VARIADIC,
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction GREATEST_IGNORE_NULLS =
+      new SqlFunction("GREATEST_IGNORE_NULLS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.LEAST_RESTRICTIVE.andThen(SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.SAME_VARIADIC,
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction REGEXP_SUBSTR_ALL =
+      new SqlFunction("REGEXP_SUBSTR_ALL",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+                  SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+                  SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
+              number -> number >= 2 && number <= 5),
+          SqlFunctionCategory.STRING);
+
+  /**
+   * The "GET(array/map/object/variant, index/key)" function.
+   */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_GET =
+      new SqlFunction("GET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER),
+              OperandTypes.family(SqlTypeFamily.MAP, SqlTypeFamily.STRING),
+              OperandTypes.family(SqlTypeFamily.JSON, SqlTypeFamily.STRING),
+              OperandTypes.family(SqlTypeFamily.VARIANT, SqlTypeFamily.STRING)),
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction IS_INTEGER =
+      new SqlFunction(
+          "IS_INTEGER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.VARIANT),
+              OperandTypes.family(SqlTypeFamily.NUMERIC)),
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SqlLibrary.SNOWFLAKE})
+  public static final SqlFunction TIMESTAMP_FROM_PARTS =
+      SqlBasicFunction.create(
+              "TIMESTAMP_FROM_PARTS",
+              ReturnTypes.TIMESTAMP_NULLABLE,
+              OperandTypes.or(
+                  OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.TIME),
+                  OperandTypes
+                      .INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER),
+              SqlFunctionCategory.TIMEDATE)
+          .withKind(SqlKind.OTHER_FUNCTION);
+
+  @LibraryOperator(libraries = {SqlLibrary.SNOWFLAKE})
+  public static final SqlFunction TIMESTAMP_TZ_FROM_PARTS =
+      SqlBasicFunction.create(
+              "TIMESTAMP_TZ_FROM_PARTS",
+              ReturnTypes.TIMESTAMP_WITH_TIME_ZONE_NULLABLE,
+              OperandTypes
+                  .INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER_OPTIONAL_STRING,
+              SqlFunctionCategory.TIMEDATE)
+          .withKind(SqlKind.OTHER_FUNCTION);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlBasicAggFunction BOOLOR_AGG =

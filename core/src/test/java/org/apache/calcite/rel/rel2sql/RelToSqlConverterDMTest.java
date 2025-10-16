@@ -8011,8 +8011,7 @@ class RelToSqlConverterDMTest {
 
     final String expectedSql = "SELECT employee.full_name\n"
         + "FROM foodmart.employee\n"
-        + "INNER JOIN foodmart.reserve_employee ON TRUE\n"
-        + "WHERE employee.salary BETWEEN employee.salary / 100 AND reserve_employee.salary";
+        + "INNER JOIN foodmart.reserve_employee ON employee.salary BETWEEN employee.salary / 100 AND reserve_employee.salary";
 
     assertThat(toSql(optimizedRel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
@@ -11164,6 +11163,40 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testStrtokToArrayFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode strtokToArrayNode =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(".@"));
+    final RexNode strtokToArrayNodeWithFunction =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.call(SqlStdOperatorTable.SUBSTRING, builder.field(2), builder.literal(2)));
+    final RexNode strtokToArrayNodeWithColumn =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.field(1));
+    final RexNode strtokToArrayWithNull =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(null));
+    final RexNode strtokToArrayWithEmptySpace =
+        builder.call(SqlLibraryOperators.STRTOK_TO_ARRAY, builder.literal("user@snowflake.com"),
+            builder.literal(""));
+    final RelNode root = builder
+        .project(strtokToArrayNode, strtokToArrayNodeWithFunction, strtokToArrayNodeWithColumn,
+            strtokToArrayWithNull, strtokToArrayWithEmptySpace)
+        .build();
+
+    final String expectedBiqQuery = "SELECT REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^.@]+') AS `$f0`, "
+        + "IF(SUBSTR(JOB, 2) = '', ['user@snowflake.com'], "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^' || SUBSTR(JOB, 2) || ']+')) AS `$f1`, "
+        + "IF(ENAME = '', ['user@snowflake.com'], "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , r'[^' || ENAME || ']+')) AS `$f2`, "
+        + "REGEXP_EXTRACT_ALL('user@snowflake.com' , NULL) AS `$f3`,  "
+        + "[ 'user@snowflake.com'] AS `$f4`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testStrtokWithCastFunctionAsThirdArgument() {
     final RelBuilder builder = relBuilder();
     final RexNode lengthFunRexNode =
@@ -12163,13 +12196,14 @@ class RelToSqlConverterDMTest {
     final RelBuilder builder = relBuilder();
     RexNode div0Rex =
         builder.call(SqlLibraryOperators.DIV0, builder.literal(120), builder.literal(0));
-
+    RexNode div0NullRex =
+            builder.call(SqlLibraryOperators.DIV0NULL, builder.literal(120), builder.literal(null));
     final RelNode root = builder
         .scan("EMP")
-        .project(builder.alias(div0Rex, "Result"))
+        .project(builder.alias(div0Rex, "Result"), builder.alias(div0NullRex, "Result1"))
         .build();
-    final String expectedSnowFlakeQuery =
-        "SELECT DIV0(120, 0) AS \"Result\"\nFROM \"scott\".\"EMP\"";
+    final String expectedSnowFlakeQuery = "SELECT DIV0(120, 0) AS \"Result\", "
+        + "DIV0NULL(120, NULL) AS \"Result1\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
         isLinux(expectedSnowFlakeQuery));
@@ -13834,7 +13868,51 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(regexpLikeNode, "regexpLike"))
         .build();
-    final String expectedSql = "SELECT REGEXP_LIKE('abc123', 'abc[0-9]+') AS \"regexpLike\"\nFROM \"scott\".\"EMP\"";
+    final String expectedSql = "SELECT REGEXP_LIKE('abc123', 'abc[0-9]+') AS \"regexpLike\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testLeastIgnoreNulls() {
+    final RelBuilder builder = relBuilder();
+    final RexNode node =
+        builder.call(SqlLibraryOperators.LEAST_IGNORE_NULLS, builder.literal(10),
+            builder.literal(20), builder.literal(null));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(node, "result"))
+        .build();
+    final String expectedSql = "SELECT LEAST_IGNORE_NULLS(10, 20, NULL) AS \"result\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testGreatestIgnoreNulls() {
+    final RelBuilder builder = relBuilder();
+    final RexNode node =
+        builder.call(SqlLibraryOperators.GREATEST_IGNORE_NULLS, builder.literal("10"),
+            builder.literal(null), builder.literal("-10"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(node, "result"))
+        .build();
+    final String expectedSql = "SELECT GREATEST_IGNORE_NULLS('10', NULL, '-10') AS \"result\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSnowflakeIsInteger() {
+    final RelBuilder builder = relBuilder();
+    final RexNode isIntegerNode =
+        builder.call(SqlLibraryOperators.IS_INTEGER, builder.literal(123.45));
+    final RelNode root = builder.scan("EMP")
+        .project(isIntegerNode).build();
+
+    final String expectedSql = "SELECT IS_INTEGER(123.45) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
@@ -13852,5 +13930,70 @@ class RelToSqlConverterDMTest {
         "SELECT BOOLOR_AGG('EMPNO') AS \"bool_or_agg\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testRegexpSubStrAll() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpLikeNode =
+        builder.call(SqlLibraryOperators.REGEXP_SUBSTR_ALL, builder.literal("a1_a2a3_a4A5a6"),
+            builder.literal("a[[:digit:]]"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpLikeNode, "regexpSubst"))
+        .build();
+    final String expectedSql = "SELECT REGEXP_SUBSTR_ALL('a1_a2a3_a4A5a6', 'a[[:digit:]]') AS \"regexpSubst\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSnowflakeGet() {
+    final RelBuilder builder = relBuilder();
+    RexNode arrayNode =
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal(0), builder.literal(1), builder.literal(2));
+
+    final RexNode regexpLikeNode =
+        builder.call(SqlLibraryOperators.SNOWFLAKE_GET, arrayNode, builder.literal(1));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpLikeNode, "getArray"))
+        .build();
+    final String expectedSql = "SELECT GET(ARRAY[0, 1, 2], 1) AS \"getArray\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testTimestampFromParts() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timestampFromParts =
+        builder.call(SqlLibraryOperators.TIMESTAMP_FROM_PARTS,
+            builder.call(SqlStdOperatorTable.CURRENT_DATE),
+            builder.call(SqlStdOperatorTable.CURRENT_TIME));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(timestampFromParts, "timestampVal")).build();
+
+    final String expectedSql = "SELECT TIMESTAMP_FROM_PARTS(CURRENT_DATE, CURRENT_TIME) AS \"timestampVal\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testTimestampTzFromParts() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timestampFromParts =
+        builder.call(SqlLibraryOperators.TIMESTAMP_TZ_FROM_PARTS,
+            builder.literal(2002), builder.literal(6), builder.literal(21),
+            builder.literal(10), builder.literal(50), builder.literal(9999),
+            builder.literal(10), builder.literal("America/New_York"));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(timestampFromParts, "timestampVal")).build();
+
+    final String expectedSql = "SELECT TIMESTAMP_TZ_FROM_PARTS(2002, 6, 21, 10, "
+        + "50, 9999, 10, 'America/New_York') AS \"timestampVal\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
   }
 }
