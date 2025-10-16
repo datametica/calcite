@@ -813,6 +813,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case MOD:
       unparseModFunction(writer, call, leftPrec, rightPrec);
       break;
+    case MODE:
+      unparseModeFunction(writer, call, leftPrec, rightPrec);
+      break;
     case CAST:
       String firstOperand = call.operand(1).toString();
       if (firstOperand.equals("`TIMESTAMP`")) {
@@ -900,6 +903,16 @@ public class BigQuerySqlDialect extends SqlDialect {
     List<SqlNode> modifiedNodes = getModifiedModOperands(call.getOperandList());
     SqlCall modFunctionCall = MOD.createCall(SqlParserPos.ZERO, modifiedNodes);
     MOD.unparse(writer, modFunctionCall, leftPrec, rightPrec);
+  }
+
+  private void unparseModeFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    writer.print("IF(APPROX_TOP_COUNT(");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(", 1)[OFFSET(0)].value IS NULL, APPROX_TOP_COUNT(");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(", 2)[OFFSET(1)].value, APPROX_TOP_COUNT(");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(", 1)[OFFSET(0)].value)");
   }
 
   private List<SqlNode> getModifiedModOperands(List<SqlNode> operandList) {
