@@ -4506,13 +4506,10 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlBoolOrAggFunction BOOLOR_AGG =
-      new SqlBoolOrAggFunction(
-          "BOOLOR_AGG",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.BOOLEAN_NULLABLE,
-          null,
-          OperandTypes.BOOLEAN,
-          SqlFunctionCategory.SYSTEM);
+  public static final SqlBasicAggFunction BOOLOR_AGG =
+      SqlBasicAggFunction
+          .create("BOOLOR_AGG", SqlKind.BOOLOR_AGG,
+              ReturnTypes.BOOLEAN_NULLABLE,
+              OperandTypes.BOOLEAN)
+          .withFunctionType(SqlFunctionCategory.SYSTEM);
 }
-
