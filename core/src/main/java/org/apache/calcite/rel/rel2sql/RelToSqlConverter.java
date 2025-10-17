@@ -2048,10 +2048,12 @@ public class RelToSqlConverter extends SqlImplementor
     return result;
   }
 
-  private List<String> fetchFieldNames(RelNode e, SqlSelect sqlSelect, String tableAlias) {
-    if (sqlSelect.getFrom() instanceof SqlBasicCall) {
-      SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlSelect.getFrom();
-      if (sqlBasicCall.getOperator().kind == SqlKind.AS && sqlBasicCall.operand(0) instanceof SqlWithItem) {
+  private List<String> fetchFieldNames(RelNode relNode, SqlSelect sqlSelect, String tableAlias) {
+    SqlNode fromNode = sqlSelect.getFrom();
+    if (fromNode instanceof SqlBasicCall) {
+      SqlBasicCall sqlBasicCall = (SqlBasicCall) fromNode;
+      if (sqlBasicCall.getOperator().kind == SqlKind.AS
+          && sqlBasicCall.operand(0) instanceof SqlWithItem) {
         SqlWithItem sqlWithItem = sqlBasicCall.operand(0);
         List<String> tableFieldNames = new ArrayList<>();
         if (sqlWithItem.query instanceof SqlSelect) {
@@ -2063,15 +2065,16 @@ public class RelToSqlConverter extends SqlImplementor
         }
       }
     }
-    return tableAlias != null ? getTableFieldNames(e, tableAlias) : Collections.emptyList();
+    return tableAlias != null ? getTableFieldNames(relNode, tableAlias) : Collections.emptyList();
   }
 
   private static boolean isFromAliased(SqlSelect sqlSelect) {
-    return sqlSelect.getFrom() instanceof SqlBasicCall
-        && ((SqlBasicCall) sqlSelect.getFrom()).getOperator().kind == SqlKind.AS;
+    SqlNode fromNode = sqlSelect.getFrom();
+    return fromNode instanceof SqlBasicCall
+        && ((SqlBasicCall) fromNode).getOperator().kind == SqlKind.AS;
   }
 
-  public HashMap<String, Boolean> createGroupByColumnAliasMap(List<String> selectListAliases,
+  public Map<String, Boolean> createGroupByColumnAliasMap(List<String> selectListAliases,
       SqlNodeList groupList) {
     HashMap<String, Boolean> map = new HashMap<>();
     for (SqlNode node : groupList) {
@@ -2085,7 +2088,7 @@ public class RelToSqlConverter extends SqlImplementor
 
   private List<SqlNode> createGroupByList(SqlSelect sqlSelect,
       List<String> selectListAliases, List<String> tableFieldNames, String tableAlias) {
-    HashMap<String, Boolean> groupByColumnPresentInSelect = isFromAliased(sqlSelect)
+    Map<String, Boolean> groupByColumnPresentInSelect = isFromAliased(sqlSelect)
         ? new HashMap<>() : createGroupByColumnAliasMap(selectListAliases, sqlSelect.getGroup());
     return sqlSelect.getGroup().getList().stream()
         .map(node -> {
@@ -2107,8 +2110,8 @@ public class RelToSqlConverter extends SqlImplementor
     for (SqlNode sqlNode : sqlNodeList) {
       if (isAliasWithDifferentName(sqlNode, name)) {
         ProjectExpansionUtil expansionUtil = new ProjectExpansionUtil();
-        List<SqlNode> list = Collections.singletonList(sqlNode);
-        List<SqlIdentifier> sqlIdentifiers = expansionUtil.collectSqlIdentifiers(list);
+        List<SqlIdentifier> sqlIdentifiers =
+            expansionUtil.collectSqlIdentifiers(Collections.singletonList(sqlNode));
         for (SqlIdentifier sqlIdentifier : sqlIdentifiers) {
           if (sqlIdentifier.names.contains(name)) {
             return true;
@@ -2120,12 +2123,13 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   private static boolean isAliasWithDifferentName(SqlNode sqlNode, String name) {
-    if (sqlNode.getKind() == SqlKind.AS) {
-      SqlCall call = (SqlCall) sqlNode;
-      SqlIdentifier alias = call.operand(1);
-      return !alias.names.get(0).equals(name);
+    if (sqlNode.getKind() != SqlKind.AS) {
+      return false;
     }
-    return false;
+
+    SqlCall aliasCall = (SqlCall) sqlNode;
+    SqlIdentifier alias = aliasCall.operand(1);
+    return !alias.names.get(0).equals(name);
   }
 
   private List<String> getTableFieldNames(RelNode relNode, String tableName) {
