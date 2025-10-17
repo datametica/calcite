@@ -13917,6 +13917,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testBoolOrAggFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode boolOrAgg =
+        builder.call(SqlLibraryOperators.BOOLOR_AGG, builder.literal("EMPNO"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(boolOrAgg, "bool_or_agg"))
+        .build();
+    final String expectedSql =
+        "SELECT BOOLOR_AGG('EMPNO') AS \"bool_or_agg\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testRegexpSubStrAll() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpLikeNode =

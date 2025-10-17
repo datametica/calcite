@@ -4632,4 +4632,12 @@ public abstract class SqlLibraryOperators {
                   .INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER_OPTIONAL_STRING,
               SqlFunctionCategory.TIMEDATE)
           .withKind(SqlKind.OTHER_FUNCTION);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlBasicAggFunction BOOLOR_AGG =
+      SqlBasicAggFunction
+          .create("BOOLOR_AGG", SqlKind.BOOLOR_AGG,
+              ReturnTypes.BOOLEAN_NULLABLE,
+              OperandTypes.BOOLEAN)
+          .withFunctionType(SqlFunctionCategory.SYSTEM);
 }
