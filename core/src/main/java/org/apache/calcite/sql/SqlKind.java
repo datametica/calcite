@@ -1106,6 +1106,9 @@ public enum SqlKind {
   /** The {@code AVG} aggregate function. */
   AVG,
 
+  /** The {@code BOOLOR_AGG} aggregate function. */
+  BOOLOR_AGG,
+
   /** The {@code STDDEV_POP} aggregate function. */
   STDDEV_POP,
 
