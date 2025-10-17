@@ -12761,6 +12761,26 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(rel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
 
+  @Test void testForModeFunctionWithFunctionOperand() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlStdOperatorTable.MODE,
+            builder.cast(
+                builder.call(SqlLibraryOperators.IF,
+                builder.call(EQUALS, builder.field(1), builder.literal(2)), builder.literal(2),
+                builder.literal(3)), SqlTypeName.DECIMAL));
+    final RelNode rel = builder
+        .aggregate(relBuilder().groupKey(), aggCall)
+        .build();
+    final String expectedBigQuery = "SELECT IF(APPROX_TOP_COUNT(IF(ENAME = 2, 2, 3) , 1)[OFFSET"
+        + "(0)].value IS NULL, "
+        + "APPROX_TOP_COUNT(IF(ENAME = 2, 2, 3) , 2)[OFFSET(1)].value, "
+        + "APPROX_TOP_COUNT(IF(ENAME = 2, 2, 3) , 1)[OFFSET(0)].value) AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(rel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
   @Test public void testUserDefinedType() {
     RelBuilder builder = relBuilder();
     RelDataTypeFactory typeFactory = builder.getTypeFactory();

@@ -907,12 +907,40 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private void unparseModeFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     writer.print("IF(APPROX_TOP_COUNT(");
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    unparseOperand(writer, call, leftPrec, rightPrec);
     writer.print(", 1)[OFFSET(0)].value IS NULL, APPROX_TOP_COUNT(");
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    unparseOperand(writer, call, leftPrec, rightPrec);
     writer.print(", 2)[OFFSET(1)].value, APPROX_TOP_COUNT(");
-    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    unparseOperand(writer, call, leftPrec, rightPrec);
     writer.print(", 1)[OFFSET(0)].value)");
+  }
+
+  private static void unparseOperand(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlNode operand = call.operand(0);
+
+    if (isCastOfIf(operand)) {
+      SqlBasicCall castCall = (SqlBasicCall) operand;
+      SqlBasicCall ifCall = castCall.operand(0);
+      ifCall.unparse(writer, leftPrec, rightPrec);
+    } else {
+      operand.unparse(writer, leftPrec, rightPrec);
+    }
+  }
+
+  private static boolean isCastOfIf(SqlNode node) {
+    if (!(node instanceof SqlBasicCall)) {
+      return false;
+    }
+    SqlBasicCall castCall = (SqlBasicCall) node;
+    if (castCall.getOperator().kind != SqlKind.CAST) {
+      return false;
+    }
+    SqlNode innerOperand = castCall.operand(0);
+    if (!(innerOperand instanceof SqlBasicCall)) {
+      return false;
+    }
+    SqlBasicCall innerCall = (SqlBasicCall) innerOperand;
+    return innerCall.getOperator() == SqlLibraryOperators.IF;
   }
 
   private List<SqlNode> getModifiedModOperands(List<SqlNode> operandList) {
