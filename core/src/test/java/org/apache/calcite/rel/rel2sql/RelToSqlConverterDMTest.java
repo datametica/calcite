@@ -13981,4 +13981,52 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root), isLinux(expectedSql));
   }
+
+  @Test public void testTimeSliceFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timeSliceFunction = builder.call(SqlLibraryOperators.TIME_SLICE,
+        builder.getRexBuilder().makeDateLiteral(new DateString("1970-01-01")), builder.literal(8),
+        builder.literal("MONTH"), builder.literal("START"));
+    final RelNode root = builder.scan("EMP").project(builder.alias(timeSliceFunction,
+        "timesliceValue")).build();
+
+    final String expectedSql = "SELECT TIME_SLICE(DATE '1970-01-01', 8, 'MONTH', 'START') AS " +
+        "\"timesliceValue\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testDatetimeBucket() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timeStampBucketFunction = builder.call(SqlLibraryOperators.DATETIME_BUCKET,
+        builder.getRexBuilder().makeTimestampLiteral(
+            new TimestampString(2022, 2, 18, 8, 23, 45), 0),
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(8),
+            new SqlIntervalQualifier(MICROSECOND, null, SqlParserPos.ZERO)));
+    final RelNode root = builder.scan("EMP").project(builder.alias(timeStampBucketFunction,
+        "timeStampBucketValue")).build();
+
+    final String expectedSql = "SELECT TIMESTAMP_BUCKET(TIMESTAMP '2022-02-18 08:23:45', INTERVAL" +
+        " '0" +
+        ".008' MICROSECOND) AS " +
+        "\"timeStampBucketValue\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testDateBucket() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dateBucketFunction = builder.call(SqlLibraryOperators.DATE_BUCKET,
+        builder.getRexBuilder().makeDateLiteral(new DateString("1970-01-01")),
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(8),
+            new SqlIntervalQualifier(MICROSECOND, null, SqlParserPos.ZERO)));
+    final RelNode root = builder.scan("EMP").project(builder.alias(dateBucketFunction,
+        "dateBucketValue")).build();
+
+    final String expectedSql = "SELECT DATE_BUCKET(DATE '1970-01-01', INTERVAL '0.008' " +
+        "MICROSECOND) AS " + "\"dateBucketValue\"\nFROM \"scott\"" +
+        ".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
 }
