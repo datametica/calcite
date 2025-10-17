@@ -61,6 +61,7 @@ import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.SqlParserUtil;
+import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.BasicSqlTypeWithFormat;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -199,6 +200,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.RAND;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ROUND;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.SESSION_USER;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.TAN;
+import static org.apache.calcite.sql.pretty.SqlPrettyWriter.config;
 import static org.apache.calcite.util.Util.isNumericLiteral;
 import static org.apache.calcite.util.Util.removeLeadingAndTrailingSingleQuotes;
 
@@ -906,18 +908,18 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private void unparseModeFunction(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    SqlPrettyWriter sqlPrettyWriter =
+        new SqlPrettyWriter(writer.getDialect(), config(), new StringBuilder());
+    unparseOperandForMode(sqlPrettyWriter, call, leftPrec, rightPrec);
     writer.print("IF(APPROX_TOP_COUNT(");
-    unparseOperand(writer, call, leftPrec, rightPrec);
-    writer.print(", 1)[OFFSET(0)].value IS NULL, APPROX_TOP_COUNT(");
-    unparseOperand(writer, call, leftPrec, rightPrec);
-    writer.print(", 2)[OFFSET(1)].value, APPROX_TOP_COUNT(");
-    unparseOperand(writer, call, leftPrec, rightPrec);
-    writer.print(", 1)[OFFSET(0)].value)");
+    writer.print(sqlPrettyWriter + " , 1)[OFFSET(0)].value IS NULL, APPROX_TOP_COUNT(");
+    writer.print(sqlPrettyWriter + " , 2)[OFFSET(1)].value, APPROX_TOP_COUNT(");
+    writer.print(sqlPrettyWriter + " , 1)[OFFSET(0)].value)");
   }
 
-  private static void unparseOperand(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+  private static void unparseOperandForMode(SqlWriter writer, SqlCall call, int leftPrec,
+      int rightPrec) {
     SqlNode operand = call.operand(0);
-
     if (isCastOfIf(operand)) {
       SqlBasicCall castCall = (SqlBasicCall) operand;
       SqlBasicCall ifCall = castCall.operand(0);
