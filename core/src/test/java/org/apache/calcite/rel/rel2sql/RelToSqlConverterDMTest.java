@@ -14005,17 +14005,17 @@ class RelToSqlConverterDMTest {
         builder.call(
             SqlLibraryOperators.DATETIME_BUCKET, builder.getRexBuilder().makeTimestampLiteral(
             new TimestampString(2022, 2, 18, 8, 23, 45), 0),
-        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(8),
-            new SqlIntervalQualifier(MICROSECOND, null, SqlParserPos.ZERO)));
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(8000),
+            new SqlIntervalQualifier(SECOND, null, SqlParserPos.ZERO)));
     final RelNode root = builder.
             scan("EMP")
             .project(builder.alias(timeStampBucketFunction, "timeStampBucketValue")).build();
 
-    final String expectedSql = "SELECT TIMESTAMP_BUCKET(TIMESTAMP '2022-02-18 08:23:45', INTERVAL"
-        + " '0.008' MICROSECOND) AS \"timeStampBucketValue\"\n"
-        + "FROM \"scott\".\"EMP\"";
+    final String expectedSql = "SELECT DATETIME_BUCKET(CAST('2022-02-18 08:23:45' AS DATETIME), "
+        + "INTERVAL 8 SECOND) AS timeStampBucketValue\n"
+        + "FROM scott.EMP";
 
-    assertThat(toSql(root), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testDateBucket() {
@@ -14023,16 +14023,16 @@ class RelToSqlConverterDMTest {
     final RexNode dateBucketFunction =
         builder.call(SqlLibraryOperators.DATE_BUCKET,
             builder.getRexBuilder().makeDateLiteral(new DateString("1970-01-01")),
-        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(8),
-            new SqlIntervalQualifier(MICROSECOND, null, SqlParserPos.ZERO)));
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(86400000L),
+            new SqlIntervalQualifier(DAY, null, SqlParserPos.ZERO)));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(dateBucketFunction, "dateBucketValue")).build();
 
-    final String expectedSql = "SELECT DATE_BUCKET(DATE '1970-01-01', INTERVAL '0.008' "
-        + "MICROSECOND) AS \"dateBucketValue\"\n"
-        + "FROM \"scott\".\"EMP\"";
+    final String expectedSql = "SELECT DATE_BUCKET(DATE '1970-01-01', "
+        + "INTERVAL 1 DAY) AS dateBucketValue\n"
+        + "FROM scott.EMP";
 
-    assertThat(toSql(root), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 }

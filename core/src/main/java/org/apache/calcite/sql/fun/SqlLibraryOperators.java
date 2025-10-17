@@ -3907,14 +3907,14 @@ public abstract class SqlLibraryOperators {
 
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction DATETIME_BUCKET =
-      new SqlFunction("TIMESTAMP_BUCKET",
+      new SqlFunction("DATETIME_BUCKET",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIMESTAMP,
           null,
           OperandTypes.or(
-              OperandTypes.sequence("'TIMESTAMP_BUCKET(TIMESTAMP, INTERVAL)'",
+              OperandTypes.sequence("'DATETIME_BUCKET(DATETIME, INTERVAL)'",
                   OperandTypes.TIMESTAMP, OperandTypes.INTERVAL),
-              OperandTypes.sequence("'TIMESTAMP_BUCKET(TIMESTAMP, INTERVAL, TIMESTAMP)'",
+              OperandTypes.sequence("'DATETIME_BUCKET(DATETIME, INTERVAL, DATETIME)'",
                   OperandTypes.TIMESTAMP, OperandTypes.INTERVAL, OperandTypes.TIMESTAMP)),
           SqlFunctionCategory.TIMEDATE);
 
