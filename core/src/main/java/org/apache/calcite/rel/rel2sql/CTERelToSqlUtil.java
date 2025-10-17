@@ -83,7 +83,7 @@ public class CTERelToSqlUtil {
     } else if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlSelect).getFrom() != null) {
       fetchSqlWithItems(((SqlSelect) sqlSelect).getFrom(), sqlNodes);
     }
-    if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlSelect).getSelectList() != null) {
+    if (sqlSelect instanceof SqlSelect && !((SqlSelect) sqlSelect).getSelectList().isEmpty()) {
       fetchSqlWithSelectList(((SqlSelect) sqlSelect).getSelectList(), sqlNodes);
     }
     if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlSelect).getWhere() != null) {
@@ -223,7 +223,7 @@ public class CTERelToSqlUtil {
         if (whereNode instanceof SqlBasicCall) {
           updateNode(whereNode);
         }
-        if (sqlSelect.getSelectList() != null) {
+        if (!sqlSelect.getSelectList().isEmpty()) {
           sqlSelect.getSelectList().stream().filter(item -> item instanceof SqlBasicCall)
               .forEach(CTERelToSqlUtil::updateNode);
         }

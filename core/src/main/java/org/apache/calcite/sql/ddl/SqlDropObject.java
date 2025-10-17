@@ -23,6 +23,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import com.google.common.collect.ImmutableList;
 
@@ -47,11 +48,13 @@ public abstract class SqlDropObject extends SqlDrop {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.keyword(getOperator().getName()); // "DROP TABLE" etc.
     if (ifExists) {
       writer.keyword("IF EXISTS");
     }
     name.unparse(writer, leftPrec, rightPrec);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   public void execute(CalcitePrepare.Context context) {

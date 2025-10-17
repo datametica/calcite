@@ -17,10 +17,12 @@
 package org.apache.calcite.rex;
 
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.util.Comment;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Reference to a range of columns.
@@ -61,6 +63,15 @@ public class RexRangeRef extends RexNode {
     this.offset = offset;
   }
 
+  RexRangeRef(
+      RelDataType rangeType,
+      int offset,
+      Set<Comment> comments) {
+    super(comments);
+    this.type = rangeType;
+    this.offset = offset;
+  }
+
   //~ Methods ----------------------------------------------------------------
 
   @Override public RelDataType getType() {
@@ -92,5 +103,9 @@ public class RexRangeRef extends RexNode {
 
   @Override public String toString() {
     return "offset(" + offset + ")";
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexRangeRef(type, offset, comments);
   }
 }

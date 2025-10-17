@@ -41,7 +41,10 @@ import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
+import org.apache.calcite.util.AnchorType;
 import org.apache.calcite.util.BarfingInvocationHandler;
+import org.apache.calcite.util.Comment;
+import org.apache.calcite.util.CommentType;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.Glossary;
 import org.apache.calcite.util.Litmus;
@@ -71,6 +74,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -435,6 +439,16 @@ public abstract class SqlUtil {
       identifier.getCollation().unparse(writer);
     }
     writer.endList(frame);
+  }
+
+  public static void writeCommentsToWriter(SqlWriter sqlWriter, Set<Comment> comments, AnchorType anchorType) {
+    for (Comment comment :comments) {
+      if (comment.getAnchorType() == anchorType) {
+        String prefix = comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
+        String suffix = comment.getCommentType() == CommentType.SINGLE ? System.lineSeparator() : " */";
+        sqlWriter.literal(prefix + comment.getComment() + suffix);
+      }
+    }
   }
 
   public static void unparseBinarySyntax(
@@ -818,7 +832,7 @@ public abstract class SqlUtil {
       }
       final SqlNodeList fields = select.getSelectList();
 
-      assert fields != null : "fields must not be null in " + select;
+      assert !fields.isEmpty() : "fields must not be null in " + select;
       // Range check the index to avoid index out of range.  This
       // could be expanded to actually check to see if the select
       // list is a "*"

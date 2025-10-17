@@ -18,6 +18,7 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.TimestampWithTimeZoneString;
 
 import com.google.common.base.Preconditions;
@@ -62,6 +63,8 @@ public class SqlTimestampWithTimezoneLiteral extends SqlAbstractDateTimeLiteral 
       SqlWriter writer,
       int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.getDialect().unparseDateTimeLiteral(writer, this, leftPrec, rightPrec);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 }
