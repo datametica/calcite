@@ -1061,16 +1061,10 @@ public abstract class OperandTypes {
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,
               SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER), i -> i == 2 || i == 3 || i == 4);
 
-  public static final SqlSingleOperandTypeChecker DATE_INTEGER_STRING_OPTIONAL_STRING =
+  public static final SqlSingleOperandTypeChecker DATETIME_INTEGER_STRING_OPTIONAL_STRING =
       family(
-          ImmutableList.of(SqlTypeFamily.DATE, SqlTypeFamily.INTEGER, SqlTypeFamily.STRING,
+          ImmutableList.of(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER, SqlTypeFamily.STRING,
               SqlTypeFamily.STRING),
-          number -> number == 3);
-
-  public static final SqlSingleOperandTypeChecker TIMESTAMP_INTEGER_STRING_OPTIONAL_STRING =
-      family(
-          ImmutableList.of(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.INTEGER,
-              SqlTypeFamily.STRING, SqlTypeFamily.STRING),
           number -> number == 3);
 
   public static final SqlSingleOperandTypeChecker STRING_INTEGER =

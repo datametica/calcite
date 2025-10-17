@@ -82,7 +82,6 @@ import static org.apache.calcite.sql.type.OperandTypes.ANY_STRING_OR_STRING_STRI
 import static org.apache.calcite.sql.type.OperandTypes.BINARY_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTEGER;
 import static org.apache.calcite.sql.type.OperandTypes.DATETIME_INTERVAL;
-import static org.apache.calcite.sql.type.OperandTypes.DATE_INTEGER_STRING_OPTIONAL_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.JSON_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_DATETIME;
@@ -92,7 +91,6 @@ import static org.apache.calcite.sql.type.OperandTypes.STRING_OPTIONAL_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_BOOLEAN;
 import static org.apache.calcite.sql.type.OperandTypes.STRING_STRING_STRING;
-import static org.apache.calcite.sql.type.OperandTypes.TIMESTAMP_INTEGER_STRING_OPTIONAL_STRING;
 import static org.apache.calcite.sql.type.OperandTypes.family;
 import static org.apache.calcite.util.Static.RESOURCE;
 
@@ -3913,7 +3911,8 @@ public abstract class SqlLibraryOperators {
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIMESTAMP,
           null,
-          OperandTypes.or(OperandTypes.sequence("'TIMESTAMP_BUCKET(TIMESTAMP, INTERVAL)'",
+          OperandTypes.or(
+              OperandTypes.sequence("'TIMESTAMP_BUCKET(TIMESTAMP, INTERVAL)'",
                   OperandTypes.TIMESTAMP, OperandTypes.INTERVAL),
               OperandTypes.sequence("'TIMESTAMP_BUCKET(TIMESTAMP, INTERVAL, TIMESTAMP)'",
                   OperandTypes.TIMESTAMP, OperandTypes.INTERVAL, OperandTypes.TIMESTAMP)),
@@ -3925,7 +3924,8 @@ public abstract class SqlLibraryOperators {
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.DATE,
           null,
-          OperandTypes.or(OperandTypes.sequence("'DATE_BUCKET(DATE, INTERVAL)'",
+          OperandTypes.or(
+              OperandTypes.sequence("'DATE_BUCKET(DATE, INTERVAL)'",
                   OperandTypes.DATE, OperandTypes.INTERVAL),
               OperandTypes.sequence("'DATE_BUCKET(DATE, INTERVAL, DATE)'",
                   OperandTypes.DATE, OperandTypes.INTERVAL, OperandTypes.DATE)),
@@ -3937,8 +3937,7 @@ public abstract class SqlLibraryOperators {
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIMESTAMP,
           null,
-          OperandTypes.or(DATE_INTEGER_STRING_OPTIONAL_STRING,
-              TIMESTAMP_INTEGER_STRING_OPTIONAL_STRING),
+          OperandTypes.DATETIME_INTEGER_STRING_OPTIONAL_STRING,
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {TERADATA})
