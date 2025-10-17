@@ -14050,4 +14050,20 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testDayOfWeekIso() {
+    final RelBuilder builder = relBuilder();
+    final RexBuilder rexBuilder = builder.getRexBuilder();
+    final DateString dateString = new DateString(2025, 10, 6);
+
+    final RexNode dateLiteral = rexBuilder.makeDateLiteral(dateString);
+    final RexNode dowIso = builder.call(SqlLibraryOperators.DAYOFWEEKISO, dateLiteral);
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dowIso, "dow_iso"))
+        .build();
+    final String expectedSql = "SELECT DAYOFWEEKISO(DATE '2025-10-06') AS \"dow_iso\"\nFROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
 }

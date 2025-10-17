@@ -4640,4 +4640,14 @@ public abstract class SqlLibraryOperators {
               ReturnTypes.BOOLEAN_NULLABLE,
               OperandTypes.BOOLEAN)
           .withFunctionType(SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction DAYOFWEEKISO =
+      new SqlFunction(
+          "DAYOFWEEKISO",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.DATE_OR_TIMESTAMP,
+          SqlFunctionCategory.TIMEDATE);
 }
