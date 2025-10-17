@@ -14,36 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.rex;
-
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.util.Comment;
-
-import java.util.Set;
+package org.apache.calcite.util;
 
 /**
- * Variable which references ordinal in an ORDER BY clause.
+ * Specifies the anchor position for a SQL comment.
+ * <ul>
+ *   <li>{@link #LEFT} - The comment is anchored to the left of the SQL node.</li>
+ *   <li>{@link #RIGHT} - The comment is anchored to the right of the SQL node.</li>
+ * </ul>
  */
-public class RexOrdinalRef extends RexInputRef {
-
-  RexOrdinalRef(int index, RelDataType type) {
-    super(index, type);
-  }
-
-  RexOrdinalRef(int index, RelDataType type, Set<Comment> comments) {
-    super(index, type, comments);
-  }
-
-  public static RexOrdinalRef of(RexInputRef inputRef) {
-    return new RexOrdinalRef(inputRef.getIndex(), inputRef.getType());
-  }
-
-  @Override public SqlKind getKind() {
-    return SqlKind.ORDINAL_REF;
-  }
-
-  @Override public RexNode copy(Set<Comment> comments) {
-    return new RexOrdinalRef(index, type, comments);
-  }
+public enum AnchorType {
+  /**
+   * The comment is anchored to the left of the SQL node.
+   */
+  LEFT,
+  /**
+   * The comment is anchored to the right of the SQL node.
+   */
+  RIGHT
 }

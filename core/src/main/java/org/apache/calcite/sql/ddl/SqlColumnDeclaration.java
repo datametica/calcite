@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import com.google.common.collect.ImmutableList;
 
@@ -67,6 +68,7 @@ public class SqlColumnDeclaration extends SqlCall {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     name.unparse(writer, 0, 0);
     dataType.unparse(writer, 0, 0);
     if (Boolean.FALSE.equals(dataType.getNullable())) {
@@ -89,6 +91,7 @@ public class SqlColumnDeclaration extends SqlCall {
         throw new AssertionError("unexpected: " + strategy);
       }
     }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   static void exp(SqlWriter writer, SqlNode expression) {

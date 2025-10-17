@@ -19,6 +19,7 @@ package org.apache.calcite.sql;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.BitString;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import java.util.List;
@@ -63,7 +64,10 @@ public class SqlBinaryStringLiteral extends SqlAbstractStringLiteral {
       SqlWriter writer,
       int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.literal("X'" + getValueNonNull().toHexString() + "'");
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
+
   }
 
   @Override protected SqlAbstractStringLiteral concat1(List<SqlLiteral> literals) {

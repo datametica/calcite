@@ -28,6 +28,8 @@ import org.apache.calcite.sql.type.ReturnTypes;
 
 import com.google.common.collect.ImmutableList;
 
+import org.apache.calcite.util.SqlCommentUtil;
+
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
@@ -64,9 +66,11 @@ public class SqlCommit extends SqlCall {
   }
 
   @Override public void unparse(final SqlWriter writer, final int leftPrec, final int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.keyword("COMMIT");
     if (this.chain.symbolValue(AndChain.class) == AndChain.AND_CHAIN) {
       writer.literal("AND CHAIN");
     }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 }

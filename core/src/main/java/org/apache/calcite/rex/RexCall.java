@@ -23,6 +23,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Sarg;
@@ -33,6 +34,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
@@ -77,6 +79,22 @@ public class RexCall extends RexNode {
       RelDataType type,
       SqlOperator operator,
       List<? extends RexNode> operands) {
+    this.type = requireNonNull(type, "type");
+    this.op = requireNonNull(operator, "operator");
+    this.operands = ImmutableList.copyOf(operands);
+    this.nodeCount = RexUtil.nodeCount(1, this.operands);
+    assert operator.getKind() != null : operator;
+    assert operator.validRexOperands(operands.size(), Litmus.THROW) : this;
+    // since we're using RexCall in 'IN' SqlKind, added this instanceof RexCall
+    assert operator.kind != SqlKind.IN || this instanceof RexSubQuery || this instanceof RexCall;
+  }
+
+  protected RexCall(
+      RelDataType type,
+      SqlOperator operator,
+      List<? extends RexNode> operands,
+      Set<Comment> comments) {
+    super(comments);
     this.type = requireNonNull(type, "type");
     this.op = requireNonNull(operator, "operator");
     this.operands = ImmutableList.copyOf(operands);
@@ -298,5 +316,9 @@ public class RexCall extends RexNode {
       hash = RexNormalize.hashCode(this.op, this.operands);
     }
     return hash;
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexCall(this.type, this.getOperator(), this.getOperands(), comments);
   }
 }

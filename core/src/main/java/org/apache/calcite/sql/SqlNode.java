@@ -25,6 +25,7 @@ import org.apache.calcite.sql.validate.SqlMoniker;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Util;
 
@@ -32,11 +33,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 /**
  * A <code>SqlNode</code> is a SQL parse tree.
@@ -54,6 +59,8 @@ public abstract class SqlNode implements Cloneable {
 
   protected final SqlParserPos pos;
 
+  protected Set<Comment> commentList = new HashSet<>();
+
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -63,6 +70,20 @@ public abstract class SqlNode implements Cloneable {
    */
   SqlNode(SqlParserPos pos) {
     this.pos = Objects.requireNonNull(pos, "pos");
+  }
+
+  public Set<Comment> getCommentList() {
+    return commentList.stream()
+        .sorted(Comparator.comparing(Comment::getComment))
+        .collect(Collectors.toCollection(LinkedHashSet::new));
+  }
+
+  public void updateCommentSet(Set<Comment> commentSet) {
+    this.commentList.addAll(commentSet);
+  }
+
+  public void setCommentList(Set<Comment> commentSet) {
+    this.commentList = commentSet;
   }
 
   //~ Methods ----------------------------------------------------------------

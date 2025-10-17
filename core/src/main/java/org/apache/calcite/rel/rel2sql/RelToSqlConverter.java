@@ -119,6 +119,7 @@ import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Permutation;
 import org.apache.calcite.util.ReflectUtil;
 import org.apache.calcite.util.ReflectiveVisitor;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
@@ -345,7 +346,7 @@ public class RelToSqlConverter extends SqlImplementor
       }
     } else {
       sqlCondition =
-          convertConditionToSqlNode(e.getCondition(), leftContext,
+          convertConditionToSqlNode(e, leftContext,
               rightContext);
 
       ProjectExpansionUtil projectExpansionUtil = new ProjectExpansionUtil();
@@ -414,7 +415,7 @@ public class RelToSqlConverter extends SqlImplementor
 
     SqlSelect sqlSelect;
     SqlNode sqlCondition =
-        convertConditionToSqlNode(e.getCondition(), leftContext, rightContext);
+        convertConditionToSqlNode(e, leftContext, rightContext);
     if (leftResult.neededAlias != null) {
       sqlSelect = leftResult.subSelect();
     } else {
@@ -627,7 +628,7 @@ public class RelToSqlConverter extends SqlImplementor
           (filterNode, x.node)) {
         SqlNode sqlUnpivot = createUnpivotSqlNodeWithExcludeNulls((SqlSelect) x.node);
         SqlNode select =
-            new SqlSelect(SqlParserPos.ZERO, null, null, sqlUnpivot,
+            new SqlSelect(SqlParserPos.ZERO, null, SqlNodeList.EMPTY, sqlUnpivot,
                 null, null, null, null, null, null, null, SqlNodeList.EMPTY);
         result = result(select, ImmutableList.of(Clause.SELECT), e, null);
       } else {
@@ -672,10 +673,10 @@ public class RelToSqlConverter extends SqlImplementor
       if ((!isStar(e.getProjects(), e.getInput().getRowType(), e.getRowType())
           || style.isExpandProjection()) && !unpivotRelToSqlUtil.isStarInUnPivot(e, x)) {
         final List<SqlNode> selectList = new ArrayList<>();
-
         List<String> pivotColumnAliases = extractAliasesFromPivot(x);
         for (RexNode ref : e.getProjects()) {
           SqlNode sqlExpr = builder.context.toSql(null, ref);
+          sqlExpr.updateCommentSet(SqlCommentUtil.getCommentsInMap(e, ref));
           RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
           if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
@@ -705,7 +706,7 @@ public class RelToSqlConverter extends SqlImplementor
         && !dialect.supportsIdenticalColumnAliasAndGroupByColumnName()) {
       SqlSelect selectNode = (SqlSelect) result.node;
       if (selectNode.getGroup() != null && !(selectNode.getFrom() instanceof SqlJoin)
-          && selectNode.getSelectList() != null) {
+          && !selectNode.getSelectList().isEmpty()) {
         result = createResultWithModifiedGroupList(e, selectNode, result);
       }
     }
@@ -1078,6 +1079,8 @@ public class RelToSqlConverter extends SqlImplementor
     final List<SqlNode> groupKeys = new ArrayList<>();
     for (int key : groupList) {
       groupKeys.add(getGroupBySqlNode(builder, key));
+      groupKeys.get(groupKeys.size() - 1)
+          .updateCommentSet(SqlCommentUtil.getCommentsInMap(aggregate, key));
     }
 
     for (int key : sortedGroupList) {
@@ -1131,7 +1134,7 @@ public class RelToSqlConverter extends SqlImplementor
       isGroupByAlias = false;
     }
 
-    if (builder.select.getSelectList() == null || !isGroupByAlias) {
+    if (builder.select.getSelectList().isEmpty() || !isGroupByAlias) {
       return builder.context.field(key);
     } else {
       return builder.context.field(key, true);
@@ -1156,7 +1159,7 @@ public class RelToSqlConverter extends SqlImplementor
   private boolean isAliasNotRequiredInGroupBy(Builder builder, int key) {
     if (builder.context.field(key).getKind() == SqlKind.LITERAL
         && dialect.getConformance().isGroupByOrdinal()) {
-      if (builder.select.getSelectList() != null) {
+      if (!builder.select.getSelectList().isEmpty()) {
         Optional<SqlNode> aliasNode = getAliasSqlNode(builder.select.getSelectList().get(key));
         return !aliasNode.isPresent();
       }
@@ -1529,7 +1532,7 @@ public class RelToSqlConverter extends SqlImplementor
     final Result x =
         visitInput(e, 0, Clause.ORDER_BY, Clause.OFFSET, Clause.FETCH);
     final Builder builder = x.builder(e);
-    if (stack.size() != 1 && (builder.select.getSelectList() == null
+    if (stack.size() != 1 && (builder.select.getSelectList().isEmpty()
         || builder.select.getSelectList().equals(SqlNodeList.SINGLETON_STAR))) {
       // Generates explicit column names instead of start(*) for
       // non-root order by to avoid ambiguity.
@@ -1542,6 +1545,8 @@ public class RelToSqlConverter extends SqlImplementor
     List<SqlNode> orderByList = Expressions.list();
     for (RelFieldCollation field : e.getCollation().getFieldCollations()) {
       builder.addOrderItem(orderByList, field);
+      orderByList.get(orderByList.size() - 1)
+          .updateCommentSet(SqlCommentUtil.getCommentsInMap(e, field));
     }
     if (!orderByList.isEmpty()) {
       builder.setOrderBy(new SqlNodeList(orderByList, POS));
@@ -1905,7 +1910,7 @@ public class RelToSqlConverter extends SqlImplementor
     }
 
     SqlNode select =
-        new SqlSelect(SqlParserPos.ZERO, null, null, tableFunctionCall,
+        new SqlSelect(SqlParserPos.ZERO, null, SqlNodeList.EMPTY, tableFunctionCall,
             null, null, null, null, null, null, null, SqlNodeList.EMPTY);
     Map<String, RelDataType> aliasesMap = new HashMap<>();
     RelDataTypeField relDataTypeField = fieldList.get(0);
@@ -1950,7 +1955,7 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNode tableRef = new BQRangeSessionizeTableFunction(tableFunctionRowType)
             .createCall(null, POS, operandList);
     SqlNode select =
-        new SqlSelect(SqlParserPos.ZERO, null, null, tableRef,
+        new SqlSelect(SqlParserPos.ZERO, null, SqlNodeList.EMPTY, tableRef,
             null, null, null, null, null, null,
             null, SqlNodeList.EMPTY);
 

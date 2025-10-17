@@ -18,6 +18,7 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -53,12 +54,14 @@ public class SqlDescribeTable extends SqlCall {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.keyword("DESCRIBE");
     writer.keyword("TABLE");
     table.unparse(writer, leftPrec, rightPrec);
     if (column != null) {
       column.unparse(writer, leftPrec, rightPrec);
     }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @SuppressWarnings("assignment.type.incompatible")

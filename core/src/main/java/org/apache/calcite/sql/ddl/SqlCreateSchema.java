@@ -25,6 +25,7 @@ import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import java.util.List;
 import java.util.Objects;
@@ -50,6 +51,7 @@ public class SqlCreateSchema extends SqlCreate {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     if (getReplace()) {
       writer.keyword("CREATE OR REPLACE");
     } else {
@@ -60,5 +62,6 @@ public class SqlCreateSchema extends SqlCreate {
       writer.keyword("IF NOT EXISTS");
     }
     name.unparse(writer, leftPrec, rightPrec);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 }
