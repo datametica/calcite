@@ -4519,15 +4519,51 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
-  public static final SqlFunction TIMESTAMP_FROM_PARTS =
-      SqlBasicFunction.create(
-              "TIMESTAMP_FROM_PARTS",
-              ReturnTypes.TIMESTAMP_NULLABLE,
-              OperandTypes.family(
-                  SqlTypeFamily.DATE, SqlTypeFamily.TIME),
-              SqlFunctionCategory.TIMEDATE)
-          .withKind(SqlKind.OTHER_FUNCTION);
+  public static final SqlFunction LEAST_IGNORE_NULLS =
+      new SqlFunction("LEAST_IGNORE_NULLS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.LEAST_RESTRICTIVE.andThen(SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.SAME_VARIADIC,
+          SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction GREATEST_IGNORE_NULLS =
+      new SqlFunction("GREATEST_IGNORE_NULLS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.LEAST_RESTRICTIVE.andThen(SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.SAME_VARIADIC,
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction REGEXP_SUBSTR_ALL =
+      new SqlFunction("REGEXP_SUBSTR_ALL",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
+                  SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+                  SqlTypeFamily.STRING, SqlTypeFamily.INTEGER),
+              number -> number >= 2 && number <= 5),
+          SqlFunctionCategory.STRING);
+
+  /**
+   * The "GET(array/map/object/variant, index/key)" function.
+   */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_GET =
+      new SqlFunction("GET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TO_ARRAY,
+          null,
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER),
+              OperandTypes.family(SqlTypeFamily.MAP, SqlTypeFamily.STRING),
+              OperandTypes.family(SqlTypeFamily.JSON, SqlTypeFamily.STRING),
+              OperandTypes.family(SqlTypeFamily.VARIANT, SqlTypeFamily.STRING)),
+          SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction IS_INTEGER =
@@ -4537,7 +4573,28 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.BOOLEAN,
           null,
           OperandTypes.or(OperandTypes.family(SqlTypeFamily.VARIANT),
-          OperandTypes.family(SqlTypeFamily.NUMERIC)),
+              OperandTypes.family(SqlTypeFamily.NUMERIC)),
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {SqlLibrary.SNOWFLAKE})
+  public static final SqlFunction TIMESTAMP_FROM_PARTS =
+      SqlBasicFunction.create(
+              "TIMESTAMP_FROM_PARTS",
+              ReturnTypes.TIMESTAMP_NULLABLE,
+              OperandTypes.or(
+                  OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.TIME),
+                  OperandTypes
+                      .INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER),
+              SqlFunctionCategory.TIMEDATE)
+          .withKind(SqlKind.OTHER_FUNCTION);
+
+  @LibraryOperator(libraries = {SqlLibrary.SNOWFLAKE})
+  public static final SqlFunction TIMESTAMP_TZ_FROM_PARTS =
+      SqlBasicFunction.create(
+              "TIMESTAMP_TZ_FROM_PARTS",
+              ReturnTypes.TIMESTAMP_WITH_TIME_ZONE_NULLABLE,
+              OperandTypes
+                  .INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER_OPTIONAL_STRING,
+              SqlFunctionCategory.TIMEDATE)
+          .withKind(SqlKind.OTHER_FUNCTION);
 }

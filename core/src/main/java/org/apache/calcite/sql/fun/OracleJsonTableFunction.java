@@ -30,7 +30,7 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import java.util.Map;
 
 /**
- * Teradata s JSON_TABLE function.
+ * Oracle JSON_TABLE function.
  */
 public class OracleJsonTableFunction extends SqlFunction implements SqlTableFunction {
 
