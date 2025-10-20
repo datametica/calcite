@@ -4650,4 +4650,13 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.DATE_OR_TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction CONDITIONAL_TRUE_EVENT =
+      SqlBasicAggFunction
+          .create("CONDITIONAL_TRUE_EVENT",
+              SqlKind.WINDOW,
+              ReturnTypes.INTEGER_NULLABLE,
+              OperandTypes.BOOLEAN)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
 }

@@ -14066,4 +14066,24 @@ class RelToSqlConverterDMTest {
     final String expectedSql = "SELECT DAYOFWEEKISO(DATE '2025-10-06') AS \"dow_iso\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testSnowflakeConditionalTrueEvent() {
+    RelBuilder builder = relBuilder().scan("EMP");
+    RexNode ratioToReport =
+        builder.call(SqlLibraryOperators.CONDITIONAL_TRUE_EVENT, builder.field(0));
+    final RexNode overCall = builder.getRexBuilder()
+        .makeOver(ratioToReport.getType(), SqlLibraryOperators.CONDITIONAL_TRUE_EVENT,
+            ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+            RexWindowBounds.UNBOUNDED_PRECEDING,
+            RexWindowBounds.CURRENT_ROW,
+            true, true, false, false, false);
+    RelNode root = builder
+        .project(overCall)
+        .build();
+    final String expactedOracleSql =
+        "SELECT CONDITIONAL_TRUE_EVENT() OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) \"$f0\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expactedOracleSql));
+  }
 }
