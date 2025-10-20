@@ -24,6 +24,7 @@ import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Litmus;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -203,11 +204,13 @@ public class SqlDataTypeSpec extends SqlNode {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     typeNameSpec.unparse(writer, leftPrec, rightPrec);
     if (formatLiteral != null) {
       writer.keyword("FORMAT");
       formatLiteral.unparse(writer, leftPrec, rightPrec);
     }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @Override public void validate(SqlValidator validator, SqlValidatorScope scope) {

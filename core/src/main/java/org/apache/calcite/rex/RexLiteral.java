@@ -33,6 +33,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.IntervalSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.CompositeList;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
@@ -65,6 +66,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TimeZone;
 
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
@@ -237,6 +239,20 @@ public class RexLiteral extends RexNode {
     this.digest = computeDigest(RexDigestIncludeType.OPTIONAL);
   }
 
+  RexLiteral(
+      @Nullable Comparable value,
+      RelDataType type,
+      SqlTypeName typeName,
+      Set<Comment> comments) {
+    super(comments);
+    this.value = value;
+    this.type = requireNonNull(type, "type");
+    this.typeName = requireNonNull(typeName, "typeName");
+    Preconditions.checkArgument(valueMatchesType(value, typeName, true));
+    Preconditions.checkArgument((value == null) == type.isNullable());
+    Preconditions.checkArgument(typeName != SqlTypeName.ANY);
+    this.digest = computeDigest(RexDigestIncludeType.OPTIONAL);
+  }
   //~ Methods ----------------------------------------------------------------
 
   /**
@@ -1239,5 +1255,9 @@ public class RexLiteral extends RexNode {
 
   @Override public <R, P> R accept(RexBiVisitor<R, P> visitor, P arg) {
     return visitor.visitLiteral(this, arg);
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexLiteral(value, type, typeName, comments);
   }
 }

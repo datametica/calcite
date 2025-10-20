@@ -16,34 +16,29 @@
  */
 package org.apache.calcite.rex;
 
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.Comment;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Variable which references ordinal in an ORDER BY clause.
+ * Abstract base class for nodes that can hold comments in the Rex tree.
  */
-public class RexOrdinalRef extends RexInputRef {
+public abstract class CommentNode {
 
-  RexOrdinalRef(int index, RelDataType type) {
-    super(index, type);
+  private final Set<Comment> comment;
+
+  public Set<Comment> getComment() {
+    return comment;
   }
 
-  RexOrdinalRef(int index, RelDataType type, Set<Comment> comments) {
-    super(index, type, comments);
+  CommentNode() {
+    this.comment = new HashSet<>();
   }
 
-  public static RexOrdinalRef of(RexInputRef inputRef) {
-    return new RexOrdinalRef(inputRef.getIndex(), inputRef.getType());
+  CommentNode(Set<Comment> comment) {
+    this.comment = comment;
   }
 
-  @Override public SqlKind getKind() {
-    return SqlKind.ORDINAL_REF;
-  }
-
-  @Override public RexNode copy(Set<Comment> comments) {
-    return new RexOrdinalRef(index, type, comments);
-  }
+  public abstract RexNode copy(Set<Comment> comments);
 }

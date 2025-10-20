@@ -17,6 +17,7 @@
 package org.apache.calcite.sql;
 
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -40,12 +41,14 @@ public abstract class SqlAlter extends SqlCall {
   }
 
   @Override public final void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     String scope = this.scope;
     if (scope != null) {
       writer.keyword("ALTER");
       writer.keyword(scope);
     }
     unparseAlterOperation(writer, leftPrec, rightPrec);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   protected abstract void unparseAlterOperation(SqlWriter writer, int leftPrec, int rightPrec);

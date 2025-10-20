@@ -43,6 +43,7 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.format.FormatModel;
@@ -476,6 +477,7 @@ public class SqlDialect {
 
   public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, call, true);
     SqlOperator operator = call.getOperator();
     switch (call.getKind()) {
     case ROW:
@@ -496,6 +498,7 @@ public class SqlDialect {
     default:
       operator.unparse(writer, call, leftPrec, rightPrec);
     }
+    SqlCommentUtil.unparseSqlComment(writer, call, false);
   }
 
   protected void unparseDivideInteger(final SqlWriter writer,

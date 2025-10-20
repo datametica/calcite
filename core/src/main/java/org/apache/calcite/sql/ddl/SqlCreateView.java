@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -58,6 +59,7 @@ public class SqlCreateView extends SqlCreate {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     if (getReplace()) {
       writer.keyword("CREATE OR REPLACE");
     } else {
@@ -76,5 +78,6 @@ public class SqlCreateView extends SqlCreate {
     writer.keyword("AS");
     writer.newlineAndIndent();
     query.unparse(writer, 0, 0);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 }
