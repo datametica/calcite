@@ -14069,10 +14069,10 @@ class RelToSqlConverterDMTest {
 
   @Test public void testSnowflakeConditionalTrueEvent() {
     RelBuilder builder = relBuilder().scan("EMP");
-    RexNode ratioToReport =
+    RexNode conditionalTrueEvent =
         builder.call(SqlLibraryOperators.CONDITIONAL_TRUE_EVENT, builder.field(0));
     final RexNode overCall = builder.getRexBuilder()
-        .makeOver(ratioToReport.getType(), SqlLibraryOperators.CONDITIONAL_TRUE_EVENT,
+        .makeOver(conditionalTrueEvent.getType(), SqlLibraryOperators.CONDITIONAL_TRUE_EVENT,
             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
             RexWindowBounds.UNBOUNDED_PRECEDING,
             RexWindowBounds.CURRENT_ROW,

@@ -4655,7 +4655,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction CONDITIONAL_TRUE_EVENT =
       SqlBasicAggFunction
           .create("CONDITIONAL_TRUE_EVENT",
-              SqlKind.WINDOW,
+              SqlKind.CONDITIONAL_TRUE_EVENT,
               ReturnTypes.INTEGER_NULLABLE,
               OperandTypes.BOOLEAN)
           .withFunctionType(SqlFunctionCategory.NUMERIC);
