@@ -3905,6 +3905,41 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.NUMERIC),
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction DATETIME_BUCKET =
+      new SqlFunction("DATETIME_BUCKET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP,
+          null,
+          OperandTypes.or(
+              OperandTypes.sequence("'DATETIME_BUCKET(DATETIME, INTERVAL)'",
+                  OperandTypes.TIMESTAMP, OperandTypes.INTERVAL),
+              OperandTypes.sequence("'DATETIME_BUCKET(DATETIME, INTERVAL, DATETIME)'",
+                  OperandTypes.TIMESTAMP, OperandTypes.INTERVAL, OperandTypes.TIMESTAMP)),
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction DATE_BUCKET =
+      new SqlFunction("DATE_BUCKET",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DATE,
+          null,
+          OperandTypes.or(
+              OperandTypes.sequence("'DATE_BUCKET(DATE, INTERVAL)'",
+                  OperandTypes.DATE, OperandTypes.INTERVAL),
+              OperandTypes.sequence("'DATE_BUCKET(DATE, INTERVAL, DATE)'",
+                  OperandTypes.DATE, OperandTypes.INTERVAL, OperandTypes.DATE)),
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction TIME_SLICE =
+      new SqlFunction("TIME_SLICE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.TIMESTAMP,
+          null,
+          OperandTypes.DATETIME_INTEGER_STRING_OPTIONAL_STRING,
+          SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction WIDTH_BUCKET =
       new SqlFunction("WIDTH_BUCKET",
@@ -4597,4 +4632,22 @@ public abstract class SqlLibraryOperators {
                   .INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER_OPTIONAL_STRING,
               SqlFunctionCategory.TIMEDATE)
           .withKind(SqlKind.OTHER_FUNCTION);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlBasicAggFunction BOOLOR_AGG =
+      SqlBasicAggFunction
+          .create("BOOLOR_AGG", SqlKind.BOOLOR_AGG,
+              ReturnTypes.BOOLEAN_NULLABLE,
+              OperandTypes.BOOLEAN)
+          .withFunctionType(SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction DAYOFWEEKISO =
+      new SqlFunction(
+          "DAYOFWEEKISO",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER_NULLABLE,
+          null,
+          OperandTypes.DATE_OR_TIMESTAMP,
+          SqlFunctionCategory.TIMEDATE);
 }
