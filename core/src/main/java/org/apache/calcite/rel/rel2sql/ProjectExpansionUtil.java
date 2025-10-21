@@ -27,12 +27,14 @@ import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 
 import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
@@ -79,7 +81,7 @@ class ProjectExpansionUtil {
     return columnsUsed;
   }
 
-  private List<SqlIdentifier> collectSqlIdentifiers(List<SqlNode> sqlNodes) {
+  List<SqlIdentifier> collectSqlIdentifiers(List<SqlNode> sqlNodes) {
     List<SqlIdentifier> sqlIdentifiers = new ArrayList<>();
 
     for (SqlNode sqlNode : sqlNodes) {
@@ -102,6 +104,12 @@ class ProjectExpansionUtil {
         sqlIdentifiers.add((SqlIdentifier) operand);
       } else if (operand instanceof SqlBasicCall) {
         collectSqlIdentifiersFromCall((SqlBasicCall) operand, sqlIdentifiers);
+      } else if (operand instanceof SqlCase) {
+        SqlCase sqlCase = (SqlCase) operand;
+        sqlIdentifiers.addAll(collectSqlIdentifiers(sqlCase.getWhenOperands()));
+        sqlIdentifiers.addAll(collectSqlIdentifiers(sqlCase.getThenOperands()));
+        sqlIdentifiers.addAll(
+            collectSqlIdentifiers(Collections.singletonList(sqlCase.getElseOperand())));
       }
     }
   }
