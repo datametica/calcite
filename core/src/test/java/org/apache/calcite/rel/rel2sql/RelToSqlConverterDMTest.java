@@ -14069,21 +14069,26 @@ class RelToSqlConverterDMTest {
 
   @Test public void testSnowflakeConditionalTrueEvent() {
     RelBuilder builder = relBuilder().scan("EMP");
-    RexNode conditionalTrueEvent =
-        builder.call(SqlLibraryOperators.CONDITIONAL_TRUE_EVENT, builder.field(0));
-    final RexNode overCall = builder.getRexBuilder()
-        .makeOver(conditionalTrueEvent.getType(), SqlLibraryOperators.CONDITIONAL_TRUE_EVENT,
-            ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
-            RexWindowBounds.UNBOUNDED_PRECEDING,
-            RexWindowBounds.CURRENT_ROW,
-            true, true, false, false, false);
-    RelNode root = builder
-        .project(overCall)
-        .build();
-    final String expactedOracleSql =
-        "SELECT CONDITIONAL_TRUE_EVENT() OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) \"$f0\"\n"
-            + "FROM \"scott\".\"EMP\"";
+    RexNode eventOperand =
+        builder.call(SqlStdOperatorTable.GREATER_THAN, builder.field("SAL"), builder.literal(80000));
+    RexNode aggregateCall =
+        builder.aggregateCall(SqlLibraryOperators.CONDITIONAL_TRUE_EVENT, eventOperand
+        )
+        .over()
+        .orderBy(builder.field("DEPTNO"))
+        .rowsUnbounded()
+        .allowPartial(true)
+        .nullWhenCountZero(false)
+        .as("conditional_true_event");
 
-    assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expactedOracleSql));
+    RelNode root = builder
+        .project(aggregateCall)
+        .build();
+
+    final String expactedSnowflakeSql = "SELECT CONDITIONAL_TRUE_EVENT(\"SAL\" > 80000) "
+        + "OVER (ORDER BY \"DEPTNO\" RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS \"conditional_true_event\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expactedSnowflakeSql));
   }
 }
