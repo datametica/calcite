@@ -14031,4 +14031,74 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root), isLinux(expectedSql));
   }
+
+  @Test public void testTimeSliceFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timeSliceFunction =
+        builder.call(SqlLibraryOperators.
+                TIME_SLICE, builder.getRexBuilder().makeDateLiteral(new DateString("1970-01-01")),
+            builder.literal(8),
+        builder.literal("MONTH"), builder.literal("START"));
+    final RelNode root =
+        builder.scan("EMP").project(builder.alias(timeSliceFunction, "timeSlice")).build();
+
+    final String expectedSql = "SELECT TIME_SLICE(DATE '1970-01-01', 8, 'MONTH', 'START') AS "
+        + "\"timeSlice\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testDatetimeBucket() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timeStampBucketFunction =
+        builder.call(
+            SqlLibraryOperators.DATETIME_BUCKET, builder.getRexBuilder().makeTimestampLiteral(
+            new TimestampString(2022, 2, 18, 8, 23, 45), 0),
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(8000),
+            new SqlIntervalQualifier(SECOND, null, SqlParserPos.ZERO)));
+    final RelNode root = builder.
+            scan("EMP")
+            .project(builder.alias(timeStampBucketFunction, "timeStampBucketValue")).build();
+
+    final String expectedSql = "SELECT DATETIME_BUCKET(CAST('2022-02-18 08:23:45' AS DATETIME), "
+        + "INTERVAL 8 SECOND) AS timeStampBucketValue\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testDateBucket() {
+    final RelBuilder builder = relBuilder();
+    final RexNode dateBucketFunction =
+        builder.call(SqlLibraryOperators.DATE_BUCKET,
+            builder.getRexBuilder().makeDateLiteral(new DateString("1970-01-01")),
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(86400000L),
+            new SqlIntervalQualifier(DAY, null, SqlParserPos.ZERO)));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dateBucketFunction, "dateBucketValue")).build();
+
+    final String expectedSql = "SELECT DATE_BUCKET(DATE '1970-01-01', "
+        + "INTERVAL 1 DAY) AS dateBucketValue\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testDayOfWeekIso() {
+    final RelBuilder builder = relBuilder();
+    final RexBuilder rexBuilder = builder.getRexBuilder();
+    final DateString dateString = new DateString(2025, 10, 6);
+
+    final RexNode dateLiteral = rexBuilder.makeDateLiteral(dateString);
+    final RexNode dowIso = builder.call(SqlLibraryOperators.DAYOFWEEKISO, dateLiteral);
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(dowIso, "dow_iso"))
+        .build();
+    final String expectedSql = "SELECT DAYOFWEEKISO(DATE '2025-10-06') AS \"dow_iso\"\nFROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
 }
