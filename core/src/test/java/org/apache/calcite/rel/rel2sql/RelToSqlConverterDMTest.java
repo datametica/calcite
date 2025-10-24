@@ -14066,4 +14066,17 @@ class RelToSqlConverterDMTest {
     final String expectedSql = "SELECT DAYOFWEEKISO(DATE '2025-10-06') AS \"dow_iso\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testOrOperatorWithIsNullasOperand() {
+    final RelBuilder builder = relBuilder().scan("DEPT");
+    final RexNode isNullNode = builder.isNull(builder.field("DNAME"));
+    final RexNode equalNode = builder.equals(builder.field("DNAME"), builder.literal("tokyo"));
+    final RexNode conditionNode = builder.call(SqlStdOperatorTable.OR, isNullNode, equalNode);
+    RelNode filterNode = builder.filter(conditionNode).build();
+    final String expectedSql = "SELECT *\n"
+        + "FROM \"scott\".\"DEPT\"\n"
+        + "WHERE \"DNAME\" IS NULL OR \"DNAME\" = 'tokyo'";
+
+    assertThat(toSql(filterNode), isLinux(expectedSql));
+  }
 }
