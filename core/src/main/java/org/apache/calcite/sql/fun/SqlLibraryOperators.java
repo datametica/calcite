@@ -4650,4 +4650,20 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.DATE_OR_TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction BASE64_ENCODE =
+      new SqlFunction(
+          "BASE64_ENCODE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000,
+          null,
+          OperandTypes.or(
+              OperandTypes.family(
+                  ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
+                  n -> n >= 0 && n <= 2),
+              OperandTypes.family(
+                  ImmutableList.of(SqlTypeFamily.BINARY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
+                  n -> n >= 0 && n <= 2)),
+          SqlFunctionCategory.STRING);
 }

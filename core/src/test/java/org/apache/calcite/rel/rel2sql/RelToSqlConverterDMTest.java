@@ -14079,4 +14079,20 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(filterNode), isLinux(expectedSql));
   }
+
+  @Test public void testBase64EncodeFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64Encode =
+        builder.call(SqlLibraryOperators.BASE64_ENCODE, builder.literal("HELLO"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64Encode, "encoded_value"))
+        .build();
+
+    final String expectedSql =
+        "SELECT BASE64_ENCODE('HELLO') AS \"encoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
 }
