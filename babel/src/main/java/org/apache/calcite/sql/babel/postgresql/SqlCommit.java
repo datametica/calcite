@@ -25,10 +25,9 @@ import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import com.google.common.collect.ImmutableList;
-
-import org.apache.calcite.util.SqlCommentUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
