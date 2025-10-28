@@ -4652,6 +4652,15 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction CONDITIONAL_TRUE_EVENT =
+      SqlBasicAggFunction
+          .create("CONDITIONAL_TRUE_EVENT",
+              SqlKind.CONDITIONAL_TRUE_EVENT,
+              ReturnTypes.INTEGER_NULLABLE,
+              OperandTypes.BOOLEAN)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
   public static final SqlFunction BASE64_ENCODE =
       new SqlFunction(
           "BASE64_ENCODE",

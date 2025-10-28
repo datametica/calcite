@@ -14067,6 +14067,31 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testSnowflakeConditionalTrueEvent() {
+    RelBuilder builder = relBuilder().scan("EMP");
+    RexNode eventOperand =
+        builder.call(SqlStdOperatorTable.GREATER_THAN, builder.field("SAL"), builder.literal(80000));
+    RexNode aggregateCall =
+        builder.aggregateCall(SqlLibraryOperators.CONDITIONAL_TRUE_EVENT, eventOperand
+        )
+        .over()
+        .orderBy(builder.field("DEPTNO"))
+        .rowsUnbounded()
+        .allowPartial(true)
+        .nullWhenCountZero(false)
+        .as("conditional_true_event");
+
+    RelNode root = builder
+        .project(aggregateCall)
+        .build();
+
+    final String expactedSnowflakeSql = "SELECT CONDITIONAL_TRUE_EVENT(\"SAL\" > 80000) "
+        + "OVER (ORDER BY \"DEPTNO\" RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS \"conditional_true_event\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expactedSnowflakeSql));
+  }
+
   @Test public void testOrOperatorWithIsNullasOperand() {
     final RelBuilder builder = relBuilder().scan("DEPT");
     final RexNode isNullNode = builder.isNull(builder.field("DNAME"));
