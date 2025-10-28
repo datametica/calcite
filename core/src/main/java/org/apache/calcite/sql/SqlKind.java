@@ -1205,6 +1205,9 @@ public enum SqlKind {
   /** The {@code ROW_NUMBER} window function. */
   CUME_DIST,
 
+  /** The {@code CONDITIONAL_TRUE_EVENT} window function. */
+  CONDITIONAL_TRUE_EVENT,
+
   /** The {@code DESCRIPTOR(column_name, ...)}. */
   DESCRIPTOR,
 
