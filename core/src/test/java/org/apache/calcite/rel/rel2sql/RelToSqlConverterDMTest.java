@@ -11638,7 +11638,8 @@ class RelToSqlConverterDMTest {
   @Test public void testToHexFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode toHexFunction =
-        builder.call(SqlLibraryOperators.TO_HEX, builder.call(SqlLibraryOperators.MD5, builder.literal("snowflake")));
+        builder.call(SqlLibraryOperators.TO_HEX,
+            builder.call(SqlLibraryOperators.MD5, builder.literal("snowflake")));
 
     final RelNode root = builder
         .scan("EMP")
@@ -11650,6 +11651,21 @@ class RelToSqlConverterDMTest {
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testMd5NumberLower64Function() {
+    final RelBuilder builder = relBuilder();
+    final RexNode md5Function =
+            builder.call(SqlLibraryOperators.MD5_NUMBER_LOWER64, builder.literal("snowflake"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(md5Function, "md5_hashed"))
+        .build();
+    final String expectedSql = "SELECT MD5_NUMBER_LOWER64('snowflake') AS \"md5_hashed\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testJsonObjectFunction() {

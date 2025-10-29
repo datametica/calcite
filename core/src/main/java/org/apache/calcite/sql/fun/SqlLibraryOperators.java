@@ -2734,6 +2734,13 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING.or(OperandTypes.BINARY),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction MD5_NUMBER_LOWER64 =
+      SqlBasicFunction.create("MD5_NUMBER_LOWER64",
+          ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.STRING.or(OperandTypes.BINARY),
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {BIG_QUERY, MYSQL, POSTGRESQL, SPARK})
   public static final SqlFunction SHA1 =
       SqlBasicFunction.create("SHA1",
