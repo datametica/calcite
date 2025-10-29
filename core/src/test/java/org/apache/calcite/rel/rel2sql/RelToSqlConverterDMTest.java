@@ -6048,7 +6048,7 @@ class RelToSqlConverterDMTest {
             + " PARSE_DATETIME('%Y%m%d', '20155308') AS date6,"
             + " PARSE_DATETIME('%F%I:%m:%S', '2009-03-2021:25:50') AS timestamp3,"
             + " PARSE_DATETIME('%F%I:%m:%S', '2009-03-2007:25:50') AS timestamp4, "
-            + "PARSE_DATETIME('%F%I:%m:%S %Z', '2009-03-20 12:25:50.222') AS timestamp5, "
+            + "PARSE_DATETIME('%F%I:%m:%S %z', '2009-03-20 12:25:50.222') AS timestamp5, "
             + "PARSE_DATETIME('%FT%I:%m:%S', '2012-05-09T04:12:12') AS timestamp6,"
             + " PARSE_DATETIME('%Y- %m-%d  %I: -%m:%S', '2015- 09-11  09: -07:23') AS timestamp7,"
             + " PARSE_DATETIME('%Y- %m-%d%I: -%m:%S', '2015- 09-1109: -07:23') AS timestamp8,"
