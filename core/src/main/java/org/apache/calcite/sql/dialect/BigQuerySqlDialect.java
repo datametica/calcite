@@ -299,7 +299,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(FRACTIONSIX, "6S");
         put(FRACTIONNINE, "9S");
         put(AMPM, "%p");
-        put(TIMEZONE, "%Z");
+        put(TIMEZONE, "%z");
         put(YYYYMM, "%Y%m");
         put(MMYY, "%m%y");
         put(MONTH_NAME, "%B");
