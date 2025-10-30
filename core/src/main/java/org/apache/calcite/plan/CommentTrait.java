@@ -22,6 +22,7 @@ import org.apache.calcite.util.Comment;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,7 +40,7 @@ public class CommentTrait implements RelTrait {
    * Map of RexNode expressions to their associated comments.
    */
   private final Map<RexNode, Set<Comment>> rexNodeCommentListMap;
-  private final Set<Comment> commentSet = new HashSet<>();
+  private final Set<Comment> commentSet = new LinkedHashSet<>();
 
   /**
    * Creates a CommentTrait with the given comments map.

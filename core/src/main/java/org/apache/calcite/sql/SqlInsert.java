@@ -21,6 +21,8 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.ImmutableNullableList;
 
+import org.apache.calcite.util.SqlCommentUtil;
+
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 
@@ -150,6 +152,7 @@ public class SqlInsert extends SqlCall {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     final SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.SELECT);
     writer.sep(isUpsert() ? "UPSERT INTO" : "INSERT INTO");
     final int opLeft = getOperator().getLeftPrec();
@@ -161,6 +164,7 @@ public class SqlInsert extends SqlCall {
     writer.newlineAndIndent();
     source.unparse(writer, 0, 0);
     writer.endList(frame);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @Override public void validate(SqlValidator validator, SqlValidatorScope scope) {

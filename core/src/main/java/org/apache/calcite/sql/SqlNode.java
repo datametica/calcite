@@ -59,7 +59,7 @@ public abstract class SqlNode implements Cloneable {
 
   protected final SqlParserPos pos;
 
-  protected Set<Comment> commentList = new HashSet<>();
+  protected Set<Comment> commentList = new LinkedHashSet<>();
 
   //~ Constructors -----------------------------------------------------------
 
@@ -73,9 +73,7 @@ public abstract class SqlNode implements Cloneable {
   }
 
   public Set<Comment> getCommentList() {
-    return commentList.stream()
-        .sorted(Comparator.comparing(Comment::getComment))
-        .collect(Collectors.toCollection(LinkedHashSet::new));
+    return new LinkedHashSet<>(commentList);
   }
 
   public void updateCommentSet(Set<Comment> commentSet) {
