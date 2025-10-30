@@ -31,6 +31,7 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ControlFlowException;
 import org.apache.calcite.util.ImmutableNullableList;
 import org.apache.calcite.util.Litmus;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
@@ -193,6 +194,7 @@ public class SqlWindow extends SqlCall {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     if (null != declName) {
       declName.unparse(writer, 0, 0);
       writer.keyword("AS");
@@ -200,6 +202,7 @@ public class SqlWindow extends SqlCall {
 
     // Override, so we don't print extra parentheses.
     getOperator().unparse(writer, this, 0, 0);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   public @Nullable SqlIdentifier getDeclName() {

@@ -40,6 +40,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Litmus;
@@ -55,6 +56,7 @@ import java.util.AbstractList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * A relational expression representing a set of window aggregates.
@@ -432,6 +434,20 @@ public abstract class Window extends SingleRel implements Hintable {
       this.ignoreNulls = ignoreNulls;
     }
 
+    public RexWinAggCall(
+        SqlAggFunction aggFun,
+        RelDataType type,
+        List<RexNode> operands,
+        int ordinal,
+        boolean distinct,
+        boolean ignoreNulls,
+        Set<Comment> comments) {
+      super(type, aggFun, operands, comments);
+      this.ordinal = ordinal;
+      this.distinct = distinct;
+      this.ignoreNulls = ignoreNulls;
+    }
+
     @Override public boolean equals(@Nullable Object o) {
       if (this == o) {
         return true;
@@ -457,6 +473,10 @@ public abstract class Window extends SingleRel implements Hintable {
 
     @Override public RexCall clone(RelDataType type, List<RexNode> operands) {
       return super.clone(type, operands);
+    }
+
+    @Override public RexNode copy(Set<Comment> comments) {
+      return new RexWinAggCall((SqlAggFunction) op, type, operands, ordinal, distinct, ignoreNulls, comments);
     }
   }
 

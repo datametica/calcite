@@ -32,6 +32,7 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Bug;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.RangeSets;
@@ -3123,6 +3124,13 @@ public class RexSimplify {
       this.negate = negate;
     }
 
+    RexSargBuilder(RexNode ref, RexBuilder rexBuilder, boolean negate, Set<Comment> comments) {
+      super(comments);
+      this.ref = requireNonNull(ref, "ref");
+      this.rexBuilder = requireNonNull(rexBuilder, "rexBuilder");
+      this.negate = negate;
+    }
+
     @Override public String toString() {
       return "SEARCH(" + ref + ", " + (negate ? "NOT " : "") + rangeSet
           + "; NULL AS " + nullAs + ")";
@@ -3206,6 +3214,10 @@ public class RexSimplify {
         this.nullAs = this.nullAs.or(UNKNOWN);
         break;
       }
+    }
+
+    @Override public RexNode copy(Set<Comment> comments) {
+      return new RexSargBuilder(ref, rexBuilder, negate, comments);
     }
   }
 }

@@ -18,10 +18,12 @@ package org.apache.calcite.rex;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Dynamic parameter reference in a row-expression.
@@ -43,6 +45,14 @@ public class RexDynamicParam extends RexVariable {
       RelDataType type,
       int index) {
     super("?" + index, type);
+    this.index = index;
+  }
+
+  public RexDynamicParam(
+      RelDataType type,
+      int index,
+      Set<Comment> comments) {
+    super("?" + index, type, comments);
     this.index = index;
   }
 
@@ -73,5 +83,9 @@ public class RexDynamicParam extends RexVariable {
 
   @Override public int hashCode() {
     return Objects.hash(type, index);
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexDynamicParam(type, index, comments);
   }
 }

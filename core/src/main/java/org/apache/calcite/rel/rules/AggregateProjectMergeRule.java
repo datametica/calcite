@@ -32,6 +32,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mappings;
 
@@ -105,7 +106,9 @@ public class AggregateProjectMergeRule
       }
       map.put(source, ((RexInputRef) rex).getIndex());
     }
-
+    map.forEach((key, value) -> {
+      SqlCommentUtil.updateRexNodeInputRef(key, value, aggregate);
+    });
     final ImmutableBitSet newGroupSet = aggregate.getGroupSet().permute(map);
     ImmutableList<ImmutableBitSet> newGroupingSets = null;
     if (aggregate.getGroupType() != Group.SIMPLE) {

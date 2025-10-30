@@ -21,6 +21,7 @@ import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Litmus;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import com.google.common.collect.ImmutableList;
 
@@ -242,11 +243,13 @@ public class SqlNodeList extends SqlNode implements List<SqlNode>, RandomAccess 
       SqlWriter writer,
       int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     final SqlWriter.FrameTypeEnum frameType =
         (leftPrec > 0 || rightPrec > 0)
             ? SqlWriter.FrameTypeEnum.PARENTHESES
             : SqlWriter.FrameTypeEnum.SIMPLE;
     writer.list(frameType, SqlWriter.COMMA, this);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @Deprecated // to be removed before 2.0

@@ -27,6 +27,7 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.Symbolizable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import com.google.common.collect.ImmutableList;
 
@@ -66,8 +67,10 @@ public class SqlBegin extends SqlCall {
   }
 
   @Override public void unparse(final SqlWriter writer, final int leftPrec, final int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.keyword("BEGIN");
     transactionModeList.unparse(writer, -1, -1);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   /**
