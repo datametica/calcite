@@ -38,7 +38,11 @@ import java.util.Set;
  */
 public final class SqlCommentUtil {
 
-  /** Private constructor for utility class. */
+  public static final String SINGLE_LINE_COMMENT_START_TOKEN = "-- ";
+  public static final String MULTILINE_LINE_COMMENT_START_TOKEN = "/* ";
+  public static final String MULTILINE_LINE_COMMENT_END_TOKEN = " */";
+
+  // Private constructor for utility class.
   private SqlCommentUtil() {
     // Prevent instantiation
   }
@@ -154,11 +158,13 @@ public final class SqlCommentUtil {
           == (isUnparsingInBegin ? AnchorType.LEFT : AnchorType.RIGHT);
       if (match) {
         String prefix =
-            comment.getCommentType() == CommentType.SINGLE ? "-- " : "/* ";
+            comment.getCommentType() == CommentType.SINGLE
+                ? SINGLE_LINE_COMMENT_START_TOKEN
+                : MULTILINE_LINE_COMMENT_START_TOKEN;
         String suffix =
             comment.getCommentType() == CommentType.SINGLE
                 ? System.lineSeparator()
-                : " */";
+                : MULTILINE_LINE_COMMENT_END_TOKEN;
         writer.literal(prefix + comment.getComment() + suffix);
       }
     }
