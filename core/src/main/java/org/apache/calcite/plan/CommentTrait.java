@@ -21,7 +21,6 @@ import org.apache.calcite.util.Comment;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;

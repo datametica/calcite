@@ -83,11 +83,13 @@ public class Comment {
       return false;
     }
     Comment other = (Comment) o;
-    return Objects.equals(extractUuid(comment), extractUuid(other.comment));
+    return Objects.equals(
+        Objects.requireNonNull(extractUuid(comment)),
+        Objects.requireNonNull(extractUuid(other.comment)));
   }
 
   @Override public int hashCode() {
-    return Objects.hash(extractUuid(comment));
+    return Objects.hash(Objects.requireNonNull(extractUuid(comment)));
   }
 
   @Nullable
