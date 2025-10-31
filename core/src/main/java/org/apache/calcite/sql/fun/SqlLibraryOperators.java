@@ -2734,6 +2734,13 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING.or(OperandTypes.BINARY),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction MD5_NUMBER_LOWER64 =
+      SqlBasicFunction.create("MD5_NUMBER_LOWER64",
+          ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.STRING.or(OperandTypes.BINARY),
+          SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {BIG_QUERY, MYSQL, POSTGRESQL, SPARK})
   public static final SqlFunction SHA1 =
       SqlBasicFunction.create("SHA1",
@@ -4650,4 +4657,29 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.DATE_OR_TIMESTAMP,
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction CONDITIONAL_TRUE_EVENT =
+      SqlBasicAggFunction
+          .create("CONDITIONAL_TRUE_EVENT",
+              SqlKind.CONDITIONAL_TRUE_EVENT,
+              ReturnTypes.INTEGER_NULLABLE,
+              OperandTypes.BOOLEAN)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction BASE64_ENCODE =
+      new SqlFunction(
+          "BASE64_ENCODE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000,
+          null,
+          OperandTypes.or(
+              OperandTypes.family(
+                  ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
+                  n -> n >= 0 && n <= 2),
+              OperandTypes.family(
+                  ImmutableList.of(SqlTypeFamily.BINARY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
+                  n -> n >= 0 && n <= 2)),
+          SqlFunctionCategory.STRING);
 }

@@ -6048,7 +6048,7 @@ class RelToSqlConverterDMTest {
             + " PARSE_DATETIME('%Y%m%d', '20155308') AS date6,"
             + " PARSE_DATETIME('%F%I:%m:%S', '2009-03-2021:25:50') AS timestamp3,"
             + " PARSE_DATETIME('%F%I:%m:%S', '2009-03-2007:25:50') AS timestamp4, "
-            + "PARSE_DATETIME('%F%I:%m:%S %Z', '2009-03-20 12:25:50.222') AS timestamp5, "
+            + "PARSE_DATETIME('%F%I:%m:%S %z', '2009-03-20 12:25:50.222') AS timestamp5, "
             + "PARSE_DATETIME('%FT%I:%m:%S', '2012-05-09T04:12:12') AS timestamp6,"
             + " PARSE_DATETIME('%Y- %m-%d  %I: -%m:%S', '2015- 09-11  09: -07:23') AS timestamp7,"
             + " PARSE_DATETIME('%Y- %m-%d%I: -%m:%S', '2015- 09-1109: -07:23') AS timestamp8,"
@@ -11638,7 +11638,8 @@ class RelToSqlConverterDMTest {
   @Test public void testToHexFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode toHexFunction =
-        builder.call(SqlLibraryOperators.TO_HEX, builder.call(SqlLibraryOperators.MD5, builder.literal("snowflake")));
+        builder.call(SqlLibraryOperators.TO_HEX,
+            builder.call(SqlLibraryOperators.MD5, builder.literal("snowflake")));
 
     final RelNode root = builder
         .scan("EMP")
@@ -11650,6 +11651,21 @@ class RelToSqlConverterDMTest {
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testMd5NumberLower64Function() {
+    final RelBuilder builder = relBuilder();
+    final RexNode md5Function =
+            builder.call(SqlLibraryOperators.MD5_NUMBER_LOWER64, builder.literal("snowflake"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(md5Function, "md5_hashed"))
+        .build();
+    final String expectedSql = "SELECT MD5_NUMBER_LOWER64('snowflake') AS \"md5_hashed\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testJsonObjectFunction() {
@@ -14099,6 +14115,60 @@ class RelToSqlConverterDMTest {
         .project(builder.alias(dowIso, "dow_iso"))
         .build();
     final String expectedSql = "SELECT DAYOFWEEKISO(DATE '2025-10-06') AS \"dow_iso\"\nFROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSnowflakeConditionalTrueEvent() {
+    RelBuilder builder = relBuilder().scan("EMP");
+    RexNode eventOperand =
+        builder.call(SqlStdOperatorTable.GREATER_THAN, builder.field("SAL"), builder.literal(80000));
+    RexNode aggregateCall =
+        builder.aggregateCall(SqlLibraryOperators.CONDITIONAL_TRUE_EVENT, eventOperand
+        )
+        .over()
+        .orderBy(builder.field("DEPTNO"))
+        .rowsUnbounded()
+        .allowPartial(true)
+        .nullWhenCountZero(false)
+        .as("conditional_true_event");
+
+    RelNode root = builder
+        .project(aggregateCall)
+        .build();
+
+    final String expactedSnowflakeSql = "SELECT CONDITIONAL_TRUE_EVENT(\"SAL\" > 80000) "
+        + "OVER (ORDER BY \"DEPTNO\" RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS \"conditional_true_event\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expactedSnowflakeSql));
+  }
+
+  @Test public void testOrOperatorWithIsNullasOperand() {
+    final RelBuilder builder = relBuilder().scan("DEPT");
+    final RexNode isNullNode = builder.isNull(builder.field("DNAME"));
+    final RexNode equalNode = builder.equals(builder.field("DNAME"), builder.literal("tokyo"));
+    final RexNode conditionNode = builder.call(SqlStdOperatorTable.OR, isNullNode, equalNode);
+    RelNode filterNode = builder.filter(conditionNode).build();
+    final String expectedSql = "SELECT *\n"
+        + "FROM \"scott\".\"DEPT\"\n"
+        + "WHERE \"DNAME\" IS NULL OR \"DNAME\" = 'tokyo'";
+
+    assertThat(toSql(filterNode), isLinux(expectedSql));
+  }
+
+  @Test public void testBase64EncodeFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64Encode =
+        builder.call(SqlLibraryOperators.BASE64_ENCODE, builder.literal("HELLO"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64Encode, "encoded_value"))
+        .build();
+
+    final String expectedSql =
+        "SELECT BASE64_ENCODE('HELLO') AS \"encoded_value\"\nFROM \"scott\".\"EMP\"";
+
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 }
