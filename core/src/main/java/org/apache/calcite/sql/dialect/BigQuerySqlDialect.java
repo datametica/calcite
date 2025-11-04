@@ -921,29 +921,28 @@ public class BigQuerySqlDialect extends SqlDialect {
   private static void unparseOperandForMode(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
     SqlNode operand = call.operand(0);
-    if (isCastOfIf(operand)) {
-      SqlBasicCall castCall = (SqlBasicCall) operand;
-      SqlBasicCall ifCall = castCall.operand(0);
+    SqlBasicCall ifCall = getIfCallFromCast(operand);
+    if (ifCall != null) {
       ifCall.unparse(writer, leftPrec, rightPrec);
     } else {
       operand.unparse(writer, leftPrec, rightPrec);
     }
   }
 
-  private static boolean isCastOfIf(SqlNode node) {
+  private static @Nullable SqlBasicCall getIfCallFromCast(SqlNode node) {
     if (!(node instanceof SqlBasicCall)) {
-      return false;
+      return null;
     }
     SqlBasicCall castCall = (SqlBasicCall) node;
-    if (castCall.getOperator().kind != SqlKind.CAST) {
-      return false;
+    if (castCall.getOperator().getKind() != SqlKind.CAST) {
+      return null;
     }
     SqlNode innerOperand = castCall.operand(0);
     if (!(innerOperand instanceof SqlBasicCall)) {
-      return false;
+      return null;
     }
     SqlBasicCall innerCall = (SqlBasicCall) innerOperand;
-    return innerCall.getOperator() == SqlLibraryOperators.IF;
+    return innerCall.getOperator() == SqlLibraryOperators.IF ? innerCall : null;
   }
 
   private List<SqlNode> getModifiedModOperands(List<SqlNode> operandList) {
