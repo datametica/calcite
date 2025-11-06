@@ -2724,8 +2724,13 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private static String removeSingleQuotes(SqlNode sqlNode) {
-    return ((SqlCharStringLiteral) sqlNode).getValue().toString().replaceAll("'",
-        "");
+    if (sqlNode instanceof SqlCharStringLiteral) {
+      return ((SqlCharStringLiteral) sqlNode).getValue().toString().replace("'", "");
+    } else if (sqlNode instanceof SqlNumericLiteral) {
+      return ((SqlNumericLiteral) sqlNode).toValue().toString();
+    } else {
+      throw new IllegalArgumentException("Unsupported SqlNode type: " + sqlNode.getClass());
+    }
   }
 
   @Override public void quoteStringLiteral(StringBuilder buf, @Nullable String charsetName,
@@ -2772,7 +2777,9 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private SqlWriter.Frame getTruncFrame(SqlWriter writer, SqlCall call) {
     SqlWriter.Frame frame = null;
-    if (call.operandCount() == 1) {
+    if (call.operandCount() == 1 || (call.operandCount() == 2
+        && (call.operand(0) instanceof SqlNumericLiteral
+        || call.operand(1) instanceof SqlNumericLiteral))) {
       return writer.startFunCall("TRUNC");
     }
     String dateFormatOperand = call.operand(1).toString();

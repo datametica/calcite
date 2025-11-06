@@ -12175,15 +12175,21 @@ class RelToSqlConverterDMTest {
   @Test public void testSnowflakeTrunc() {
     final RelBuilder builder = relBuilder();
     final RexNode trunc =
-        builder.call(
-            SqlLibraryOperators.SNOWFLAKE_TRUNC, builder.cast(builder.literal("12323.3434"),
-                SqlTypeName.DECIMAL));
+        builder.call(SqlLibraryOperators.SNOWFLAKE_TRUNC,
+            builder.cast(builder.literal("12323.3434"), SqlTypeName.DECIMAL));
+    final RexNode truncWithLiteral =
+        builder.call(SqlLibraryOperators.SNOWFLAKE_TRUNC,
+            builder.literal(12323.3434), builder.literal(2));
+    final RexNode truncDatetime =
+        builder.call(SqlLibraryOperators.SNOWFLAKE_TRUNC,
+            builder.call(CURRENT_DATE), builder.literal("DAY"));
     final RelNode root = builder
         .scan("EMP")
-        .project(trunc)
+        .project(trunc, truncWithLiteral, truncDatetime)
         .build();
-    final String expectedSnowflakeSql = "SELECT TRUNC(12323.3434) AS \"$f0\"\nFROM \"scott\""
-        + ".\"EMP\"";
+    final String expectedSnowflakeSql = "SELECT TRUNC(12323.3434) AS \"$f0\", "
+        + "TRUNC(12323.3434, 2) AS \"$f1\", TRUNC(CURRENT_DATE, 'DAY') AS \"$f2\"\n"
+        + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
   }
 
