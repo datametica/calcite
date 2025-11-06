@@ -3546,6 +3546,16 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING)),
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction NUMERIC_TRUNC =
+      new SqlFunction(
+          "TRUNC",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE,
+          null,
+          OperandTypes.NUMERIC_OPTIONAL_INTEGER,
+          SqlFunctionCategory.NUMERIC);
+
   @LibraryOperator(libraries = {MSSQL})
   public static final SqlFunction DATETRUNC =
       new SqlFunction(

@@ -12178,7 +12178,7 @@ class RelToSqlConverterDMTest {
         builder.call(SqlLibraryOperators.SNOWFLAKE_TRUNC,
             builder.cast(builder.literal("12323.3434"), SqlTypeName.DECIMAL));
     final RexNode truncWithLiteral =
-        builder.call(SqlLibraryOperators.SNOWFLAKE_TRUNC,
+        builder.call(SqlLibraryOperators.NUMERIC_TRUNC,
             builder.literal(12323.3434), builder.literal(2));
     final RexNode truncDatetime =
         builder.call(SqlLibraryOperators.SNOWFLAKE_TRUNC,
