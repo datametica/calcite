@@ -2589,7 +2589,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         return createSqlDataTypeSpecByName("STRING", type);
       case BINARY:
       case VARBINARY:
-        return createSqlDataTypeSpecByName("BYTES", typeName);
+        return createSqlDataTypeSpecByName("BYTES", type);
       case DATE:
         return createSqlDataTypeSpecByName("DATE", typeName);
       case TIME:

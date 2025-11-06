@@ -2636,6 +2636,13 @@ public abstract class SqlLibraryOperators {
           OperandTypes.NUMERIC,
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TO_BYTES =
+      SqlBasicFunction.create("TO_BYTES",
+          ReturnTypes.VARBINARY_NULLABLE,
+          STRING_STRING,
+          SqlFunctionCategory.SYSTEM);
+
   /** The "COTH(value)" function; returns the hyperbolic cotangent
    * of {@code value}. */
   @LibraryOperator(libraries = {ALL})

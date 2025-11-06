@@ -12193,6 +12193,20 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
   }
 
+  @Test public void testToBytes() {
+    final RelBuilder builder = relBuilder();
+    final RexNode toBytesNode =
+        builder.call(SqlLibraryOperators.TO_BYTES,
+            builder.literal("5A"), builder.literal("BASE16"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(toBytesNode)
+        .build();
+    final String expectedSql = "SELECT TO_BYTES('5A', 'BASE16') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testTimestampAdd() {
     final RelBuilder builder = relBuilder();
     final RexNode timeDayPart = builder.literal(DAY);
