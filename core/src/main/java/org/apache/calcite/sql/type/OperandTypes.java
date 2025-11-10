@@ -465,6 +465,9 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker BINARY =
       family(SqlTypeFamily.BINARY);
 
+  public static final SqlSingleOperandTypeChecker CLOB =
+      new TypeNameChecker(SqlTypeName.CLOB);
+
   public static final SqlSingleOperandTypeChecker BINARY_BINARY =
       family(SqlTypeFamily.BINARY, SqlTypeFamily.BINARY);
 

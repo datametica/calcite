@@ -2724,6 +2724,9 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private static String removeSingleQuotes(SqlNode sqlNode) {
+    if (sqlNode instanceof SqlNumericLiteral) {
+      return ((SqlNumericLiteral) sqlNode).toValue();
+    }
     return ((SqlCharStringLiteral) sqlNode).getValue().toString()
         .replaceAll("'", "");
   }
@@ -2772,7 +2775,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private SqlWriter.Frame getTruncFrame(SqlWriter writer, SqlCall call) {
     SqlWriter.Frame frame = null;
-    if (call.operandCount() == 1) {
+    if (call.operandCount() == 1 || call.getOperator() == SqlLibraryOperators.NUMERIC_TRUNC) {
       return writer.startFunCall("TRUNC");
     }
     String dateFormatOperand = call.operand(1).toString();

@@ -14192,4 +14192,20 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testCreateXmlFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode createXmlCall =
+        builder.call(SqlLibraryOperators.CREATEXML, builder.literal("<txn id=\"1\">10.</txn>"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(createXmlCall, "XMLCol"))
+        .build();
+
+    final String expectedSql =
+        "SELECT CREATEXML('<txn id=\"1\">10.</txn>') AS \"XMLCol\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
+  }
 }

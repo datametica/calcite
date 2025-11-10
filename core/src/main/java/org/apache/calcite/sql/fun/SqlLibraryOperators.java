@@ -4702,4 +4702,12 @@ public abstract class SqlLibraryOperators {
                   ImmutableList.of(SqlTypeFamily.BINARY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
                   n -> n >= 0 && n <= 2)),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction CREATEXML =
+      new SqlFunction("CREATEXML",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_NULLABLE, null,
+          OperandTypes.or(OperandTypes.STRING, OperandTypes.CLOB, OperandTypes.BINARY),
+          SqlFunctionCategory.SYSTEM);
 }
