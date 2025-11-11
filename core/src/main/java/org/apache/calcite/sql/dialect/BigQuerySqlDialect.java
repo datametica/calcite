@@ -763,10 +763,10 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
     case STRING_AGG:
-      if (call.getFunctionQuantifier() != null &&
-          "DISTINCT".equals(requireNonNull(call.getFunctionQuantifier().getValue()).toString())
+      if (call.getFunctionQuantifier() != null
+          && "DISTINCT".equals(requireNonNull(call.getFunctionQuantifier().getValue()).toString())
           && call.getOperandList().stream().anyMatch(op -> op instanceof SqlNodeList)) {
-        SqlCall arrayToStringCall= createArrayToStringCall(call);
+        SqlCall arrayToStringCall = createArrayToStringCall(call);
         unparseCall(writer, arrayToStringCall, leftPrec, rightPrec);
       } else {
         super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -942,8 +942,9 @@ public class BigQuerySqlDialect extends SqlDialect {
   private static SqlCall createArrayToStringCall(SqlCall call) {
     List<SqlNode> operands = call.getOperandList();
     SqlNode separator = operands.size() == 3 ? operands.get(1) : null;
-    SqlNode arrayAgg = SqlLibraryOperators.ARRAY_AGG.createCall(call.getFunctionQuantifier(),
-        SqlParserPos.ZERO, operands.get(0), separator != null ? operands.get(2) : operands.get(1));
+    SqlNode arrayAgg =
+        SqlLibraryOperators.ARRAY_AGG.createCall(call.getFunctionQuantifier(), SqlParserPos.ZERO,
+            operands.get(0), separator != null ? operands.get(2) : operands.get(1));
     List<SqlNode> args = (separator != null)
         ? Arrays.asList(arrayAgg, separator)
         : Arrays.asList(arrayAgg, SqlCharStringLiteral.createCharString(",", SqlParserPos.ZERO));
