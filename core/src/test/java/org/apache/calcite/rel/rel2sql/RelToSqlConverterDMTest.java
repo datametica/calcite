@@ -6048,7 +6048,7 @@ class RelToSqlConverterDMTest {
             + " PARSE_DATETIME('%Y%m%d', '20155308') AS date6,"
             + " PARSE_DATETIME('%F%I:%m:%S', '2009-03-2021:25:50') AS timestamp3,"
             + " PARSE_DATETIME('%F%I:%m:%S', '2009-03-2007:25:50') AS timestamp4, "
-            + "PARSE_DATETIME('%F%I:%m:%S %z', '2009-03-20 12:25:50.222') AS timestamp5, "
+            + "PARSE_DATETIME('%F%I:%m:%S %Z', '2009-03-20 12:25:50.222') AS timestamp5, "
             + "PARSE_DATETIME('%FT%I:%m:%S', '2012-05-09T04:12:12') AS timestamp6,"
             + " PARSE_DATETIME('%Y- %m-%d  %I: -%m:%S', '2015- 09-11  09: -07:23') AS timestamp7,"
             + " PARSE_DATETIME('%Y- %m-%d%I: -%m:%S', '2015- 09-1109: -07:23') AS timestamp8,"
@@ -12175,16 +12175,36 @@ class RelToSqlConverterDMTest {
   @Test public void testSnowflakeTrunc() {
     final RelBuilder builder = relBuilder();
     final RexNode trunc =
-        builder.call(
-            SqlLibraryOperators.SNOWFLAKE_TRUNC, builder.cast(builder.literal("12323.3434"),
-                SqlTypeName.DECIMAL));
+        builder.call(SqlLibraryOperators.SNOWFLAKE_TRUNC,
+            builder.cast(builder.literal("12323.3434"), SqlTypeName.DECIMAL));
+    final RexNode truncWithLiteral =
+        builder.call(SqlLibraryOperators.NUMERIC_TRUNC,
+            builder.literal(12323.3434), builder.literal(2));
+    final RexNode truncDatetime =
+        builder.call(SqlLibraryOperators.SNOWFLAKE_TRUNC,
+            builder.call(CURRENT_DATE), builder.literal("DAY"));
     final RelNode root = builder
         .scan("EMP")
-        .project(trunc)
+        .project(trunc, truncWithLiteral, truncDatetime)
         .build();
-    final String expectedSnowflakeSql = "SELECT TRUNC(12323.3434) AS \"$f0\"\nFROM \"scott\""
-        + ".\"EMP\"";
+    final String expectedSnowflakeSql = "SELECT TRUNC(12323.3434) AS \"$f0\", "
+        + "TRUNC(12323.3434, 2) AS \"$f1\", TRUNC(CURRENT_DATE, 'DAY') AS \"$f2\"\n"
+        + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
+  }
+
+  @Test public void testToBytes() {
+    final RelBuilder builder = relBuilder();
+    final RexNode toBytesNode =
+        builder.call(SqlLibraryOperators.TO_BYTES,
+            builder.literal("5A"), builder.literal("BASE16"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(toBytesNode)
+        .build();
+    final String expectedSql = "SELECT TO_BYTES('5A', 'BASE16') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testTimestampAdd() {
@@ -14171,5 +14191,21 @@ class RelToSqlConverterDMTest {
         "SELECT BASE64_ENCODE('HELLO') AS \"encoded_value\"\nFROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testCreateXmlFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode createXmlCall =
+        builder.call(SqlLibraryOperators.CREATEXML, builder.literal("<txn id=\"1\">10.</txn>"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(createXmlCall, "XMLCol"))
+        .build();
+
+    final String expectedSql =
+        "SELECT CREATEXML('<txn id=\"1\">10.</txn>') AS \"XMLCol\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
   }
 }

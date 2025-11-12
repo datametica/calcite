@@ -2636,6 +2636,13 @@ public abstract class SqlLibraryOperators {
           OperandTypes.NUMERIC,
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TO_BYTES =
+      SqlBasicFunction.create("TO_BYTES",
+          ReturnTypes.VARBINARY_NULLABLE,
+          STRING_STRING,
+          SqlFunctionCategory.SYSTEM);
+
   /** The "COTH(value)" function; returns the hyperbolic cotangent
    * of {@code value}. */
   @LibraryOperator(libraries = {ALL})
@@ -3539,9 +3546,22 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "TRUNC",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.INTEGER,
+          ReturnTypes.ARG0_NULLABLE,
           null,
-          OperandTypes.family(SqlTypeFamily.INTEGER), SqlFunctionCategory.SYSTEM);
+          OperandTypes.or(
+              OperandTypes.NUMERIC_OPTIONAL_INTEGER,
+              OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING)),
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction NUMERIC_TRUNC =
+      new SqlFunction(
+          "TRUNC",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE,
+          null,
+          OperandTypes.NUMERIC_OPTIONAL_INTEGER,
+          SqlFunctionCategory.NUMERIC);
 
   @LibraryOperator(libraries = {MSSQL})
   public static final SqlFunction DATETRUNC =
@@ -4682,4 +4702,12 @@ public abstract class SqlLibraryOperators {
                   ImmutableList.of(SqlTypeFamily.BINARY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
                   n -> n >= 0 && n <= 2)),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction CREATEXML =
+      new SqlFunction("CREATEXML",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_NULLABLE, null,
+          OperandTypes.or(OperandTypes.STRING, OperandTypes.CLOB, OperandTypes.BINARY),
+          SqlFunctionCategory.SYSTEM);
 }

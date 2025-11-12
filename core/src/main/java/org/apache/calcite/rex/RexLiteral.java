@@ -776,7 +776,7 @@ public class RexLiteral extends RexNode {
   /** Converts a value to a temporary literal, for the purposes of generating a
    * digest. Literals of type ROW and MULTISET require that their components are
    * also literals. */
-  private static RexLiteral toLiteral(RelDataType type, Comparable<?> value) {
+  public static RexLiteral toLiteral(RelDataType type, Comparable<?> value) {
     final SqlTypeName typeName = strictTypeName(type);
     switch (typeName) {
     case ROW:

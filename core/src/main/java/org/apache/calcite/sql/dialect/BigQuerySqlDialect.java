@@ -302,7 +302,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(FRACTIONSIX, "6S");
         put(FRACTIONNINE, "9S");
         put(AMPM, "%p");
-        put(TIMEZONE, "%z");
+        put(TIMEZONE, "%Z");
         put(YYYYMM, "%Y%m");
         put(MMYY, "%m%y");
         put(MONTH_NAME, "%B");
@@ -2592,7 +2592,7 @@ public class BigQuerySqlDialect extends SqlDialect {
         return createSqlDataTypeSpecByName("STRING", type);
       case BINARY:
       case VARBINARY:
-        return createSqlDataTypeSpecByName("BYTES", typeName);
+        return createSqlDataTypeSpecByName("BYTES", type);
       case DATE:
         return createSqlDataTypeSpecByName("DATE", typeName);
       case TIME:
@@ -2727,8 +2727,11 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private static String removeSingleQuotes(SqlNode sqlNode) {
-    return ((SqlCharStringLiteral) sqlNode).getValue().toString().replaceAll("'",
-        "");
+    if (sqlNode instanceof SqlNumericLiteral) {
+      return ((SqlNumericLiteral) sqlNode).toValue();
+    }
+    return ((SqlCharStringLiteral) sqlNode).getValue().toString()
+        .replaceAll("'", "");
   }
 
   @Override public void quoteStringLiteral(StringBuilder buf, @Nullable String charsetName,
@@ -2775,7 +2778,7 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   private SqlWriter.Frame getTruncFrame(SqlWriter writer, SqlCall call) {
     SqlWriter.Frame frame = null;
-    if (call.operandCount() == 1) {
+    if (call.operandCount() == 1 || call.getOperator() == SqlLibraryOperators.NUMERIC_TRUNC) {
       return writer.startFunCall("TRUNC");
     }
     String dateFormatOperand = call.operand(1).toString();
