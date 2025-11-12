@@ -70,6 +70,7 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.Util;
@@ -1721,6 +1722,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private void unparseShiftLeftAndShiftRight(SqlWriter writer, SqlCall call, boolean isShiftLeft) {
+    SqlCommentUtil.unparseSqlComment(writer, call, true);
     writer.print("(");
     call.operand(0).unparse(writer, 0, 0);
     SqlNode secondOperand = call.operand(1);
@@ -1737,6 +1739,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       secondOperand.unparse(writer, 0, 0);
     }
     writer.print(")");
+    SqlCommentUtil.unparseSqlComment(writer, call, false);
   }
 
   private void unparseLastDay(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
