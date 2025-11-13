@@ -68,6 +68,7 @@ public final class LogicalTableScan extends TableScan {
   public LogicalTableScan(RelOptCluster cluster, RelTraitSet traitSet,
       List<RelHint> hints, RelOptTable table) {
     super(cluster, traitSet, hints, table);
+    this.rowType = table.getRowType();
   }
 
   @Deprecated // to be removed before 2.0
