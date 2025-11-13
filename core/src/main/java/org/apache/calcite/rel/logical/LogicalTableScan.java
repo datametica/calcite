@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.hint.RelHint;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.Table;
 
 import com.google.common.collect.ImmutableList;
@@ -68,7 +69,17 @@ public final class LogicalTableScan extends TableScan {
   public LogicalTableScan(RelOptCluster cluster, RelTraitSet traitSet,
       List<RelHint> hints, RelOptTable table) {
     super(cluster, traitSet, hints, table);
-    this.rowType = table.getRowType();
+  }
+
+  /**
+   * Creates a LogicalTableScan with modified rowType.
+   *
+   * <p>Use {@link #create} unless you know what you're doing.
+   */
+  public LogicalTableScan(RelOptCluster cluster, RelTraitSet traitSet,
+      List<RelHint> hints, RelOptTable table, RelDataType rowType) {
+    this(cluster, traitSet, hints, table);
+    this.rowType = rowType;
   }
 
   @Deprecated // to be removed before 2.0
