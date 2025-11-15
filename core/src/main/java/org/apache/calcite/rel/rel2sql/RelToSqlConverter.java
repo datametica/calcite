@@ -2072,6 +2072,8 @@ public class RelToSqlConverter extends SqlImplementor
           return tableFieldNames;
         }
       }
+    } else if (fromNode instanceof SqlIdentifier) {
+      isTable = true;
     }
     return (tableAlias != null && isTable)
         ? getTableFieldNames(relNode, tableAlias) : Collections.emptyList();
