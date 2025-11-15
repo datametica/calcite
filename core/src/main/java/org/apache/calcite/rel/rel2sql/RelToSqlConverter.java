@@ -2053,8 +2053,13 @@ public class RelToSqlConverter extends SqlImplementor
 
   private List<String> fetchFieldNames(RelNode relNode, SqlSelect sqlSelect, String tableAlias) {
     SqlNode fromNode = sqlSelect.getFrom();
+    boolean isTable = false;
     if (fromNode instanceof SqlBasicCall) {
       SqlBasicCall sqlBasicCall = (SqlBasicCall) fromNode;
+      if (sqlBasicCall.getOperator().kind == SqlKind.AS
+          && sqlBasicCall.operand(0) instanceof SqlIdentifier) {
+        isTable = true;
+      }
       if (sqlBasicCall.getOperator().kind == SqlKind.AS
           && sqlBasicCall.operand(0) instanceof SqlWithItem) {
         SqlWithItem sqlWithItem = sqlBasicCall.operand(0);
@@ -2068,7 +2073,8 @@ public class RelToSqlConverter extends SqlImplementor
         }
       }
     }
-    return tableAlias != null ? getTableFieldNames(relNode, tableAlias) : Collections.emptyList();
+    return (tableAlias != null && isTable)
+        ? getTableFieldNames(relNode, tableAlias) : Collections.emptyList();
   }
 
   private static boolean isFromAliased(SqlSelect sqlSelect) {
