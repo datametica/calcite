@@ -3962,7 +3962,13 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction TIME_SLICE =
       new SqlFunction("TIME_SLICE",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.TIMESTAMP,
+          opBinding -> {
+            RelDataType firstArgType = opBinding.getOperandType(0);
+            if (firstArgType.getSqlTypeName() == SqlTypeName.DATE) {
+              return opBinding.getTypeFactory().createSqlType(SqlTypeName.DATE);
+            }
+            return opBinding.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
+          },
           null,
           OperandTypes.DATETIME_INTEGER_STRING_OPTIONAL_STRING,
           SqlFunctionCategory.TIMEDATE);
