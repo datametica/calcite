@@ -4710,4 +4710,11 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_NULLABLE, null,
           OperandTypes.or(OperandTypes.STRING, OperandTypes.CLOB, OperandTypes.BINARY),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction FROM_BYTES =
+      SqlBasicFunction.create("FROM_BYTES",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.family(SqlTypeFamily.BINARY, SqlTypeFamily.STRING),
+          SqlFunctionCategory.STRING);
 }
