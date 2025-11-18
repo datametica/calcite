@@ -53,6 +53,7 @@ import org.apache.calcite.rel.logical.LogicalSnapshot;
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan;
 import org.apache.calcite.rel.metadata.RelMdUtil;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rel.rel2sql.CTERelToSqlUtil;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.FilterCorrelateRule;
 import org.apache.calcite.rel.rules.FilterFlattenCorrelatedConditionRule;
@@ -813,6 +814,9 @@ public class RelDecorrelator implements ReflectiveVisitor {
         .projectNamed(projects.leftList(), projects.rightList(), true)
         .build();
 
+    if (CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(rel.getTraitSet())) {
+      newProject = newProject.copy(rel.getTraitSet(), newProject.getInputs());
+    }
     return register(rel, newProject, mapOldToNewOutputs, corDefOutputs);
   }
 

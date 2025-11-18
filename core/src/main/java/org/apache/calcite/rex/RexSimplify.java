@@ -3081,7 +3081,7 @@ public class RexSimplify {
         return firstSqlTypeName == SqlTypeName.CHAR
                 && firstSqlTypeName == relDataTypes.get(1).getSqlTypeName();
       }
-      return firstSqlTypeName == SqlTypeName.CHAR;
+      return false;
     }
   }
 

@@ -1106,6 +1106,9 @@ public enum SqlKind {
   /** The {@code AVG} aggregate function. */
   AVG,
 
+  /** The {@code BOOLOR_AGG} aggregate function. */
+  BOOLOR_AGG,
+
   /** The {@code STDDEV_POP} aggregate function. */
   STDDEV_POP,
 
@@ -1201,6 +1204,9 @@ public enum SqlKind {
 
   /** The {@code ROW_NUMBER} window function. */
   CUME_DIST,
+
+  /** The {@code CONDITIONAL_TRUE_EVENT} window function. */
+  CONDITIONAL_TRUE_EVENT,
 
   /** The {@code DESCRIPTOR(column_name, ...)}. */
   DESCRIPTOR,

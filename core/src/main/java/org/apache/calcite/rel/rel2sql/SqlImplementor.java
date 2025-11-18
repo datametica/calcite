@@ -107,6 +107,7 @@ import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlTableRef;
+import org.apache.calcite.sql.SqlUnnestOperator;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
@@ -866,6 +867,9 @@ public abstract class SqlImplementor {
         } else {
           final RexCall call = (RexCall) rex;
           final List<SqlNode> cols = toSql(program, call.operands);
+          if (isInClauseWithUnnest(rex, cols)) {
+            return call.getOperator().createCall(POS, cols.get(0), cols.get(1));
+          }
           return call.getOperator().createCall(POS, cols.get(0),
                   new SqlNodeList(cols.subList(1, cols.size()), POS));
         }
@@ -1351,12 +1355,26 @@ public abstract class SqlImplementor {
       }
     }
 
-    /** Converts a call to an aggregate function to an expression. */
-    public SqlNode toSql(AggregateCall aggCall) {
+    /**
+     * Converts the given {@link AggregateCall} into its SQL representation.
+     *
+     * @param aggCall   The aggregate call containing aggregation function details.
+     * @param delimiter Optional delimiter string. If non-null, it replaces the
+     *                  second operand (when a {@link SqlIdentifier}) with this
+     *                  value. Useful for delimiter-based aggregates like
+     *                  {@code STRING_AGG} or {@code LISTAGG}.
+     * @return          A {@link SqlNode} representing the SQL form of the aggregate call.
+     */
+    public SqlNode toSql(AggregateCall aggCall, @Nullable String delimiter) {
+      List<SqlNode> operandList = Util.transform(aggCall.getArgList(), this::field);
+      List<SqlNode> updatedOperandList = new ArrayList<>(operandList);
+      if (delimiter != null && operandList.get(1) instanceof SqlIdentifier) {
+        updatedOperandList.set(
+            1, SqlLiteral.createCharString(delimiter, operandList.get(1).getParserPosition()));
+      }
       return toSql(aggCall.getAggregation(), aggCall.isDistinct(),
           Util.transform(aggCall.rexList, e -> toSql((RexProgram) null, e)),
-          Util.transform(aggCall.getArgList(), this::field),
-          aggCall.filterArg, aggCall.collation, aggCall.isApproximate());
+          updatedOperandList, aggCall.filterArg, aggCall.collation, aggCall.isApproximate());
     }
 
     /** Converts a call to an aggregate function, with a given list of operands,
@@ -1546,6 +1564,15 @@ public abstract class SqlImplementor {
             op(SqlStdOperatorTable.LESS_THAN, upper));
       }
     }
+  }
+
+  private static boolean isInClauseWithUnnest(RexNode rex, List<SqlNode> cols) {
+    return rex.getKind() == SqlKind.IN && isUnnestNode(cols.get(1));
+  }
+
+  private static boolean isUnnestNode(SqlNode sqlNode) {
+    return sqlNode instanceof SqlBasicCall
+        && ((SqlBasicCall) sqlNode).getOperator() instanceof SqlUnnestOperator;
   }
 
   private static boolean isNodeMatching(SqlNode node, RexFieldAccess lastAccess) {
@@ -2399,15 +2426,15 @@ public abstract class SqlImplementor {
             && !canMergeProjectAndAggregate(project.getProjects(), aggregate)) {
           return true;
         }
-        if (CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(rel.getTraitSet())
-            ||
-            CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(rel.getInput(0).getTraitSet())) {
-          return false;
-        }
         if (dialect.getConformance().isGroupByAlias()
             && hasAliasUsedInGroupByWhichIsNotPresentInFinalProjection((Project) rel)
             || !dialect.supportAggInGroupByClause() && hasAggFunctionUsedInGroupBy((Project) rel)) {
           return true;
+        }
+        if (CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(rel.getTraitSet())
+            ||
+            CTERelToSqlUtil.isCTEScopeOrDefinitionTrait(rel.getInput(0).getTraitSet())) {
+          return false;
         }
 
         //check for distinct
