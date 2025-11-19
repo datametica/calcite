@@ -2016,6 +2016,13 @@ public abstract class SqlImplementor {
       final Context newContext;
       Map<String, RelDataType> newAliases = null;
       final SqlNodeList selectList = select.getSelectList();
+
+      if (rel instanceof Filter && rel.getInput(0) instanceof Project
+          && clauses.contains(Clause.QUALIFY)
+          && (subQueryAliasTrait != null) && !dialect.supportNestedAnalyticalFunctions()
+          && isQualifyNodeContainsWindowFunction(((Filter) rel).getCondition(), selectList)) {
+        needNew = true;
+      }
       // Additional condition than apache calcite
       if (selectList != null && !selectList.equals(SqlNodeList.SINGLETON_STAR)) {
         // Additional condition than apache calcite
@@ -2126,6 +2133,24 @@ public abstract class SqlImplementor {
           && (rel.getInput(0) instanceof Aggregate || isQualifyFieldsContainsNestedAggregation()
           || isQualifyFilter(rel))) {
         return true;
+      }
+      return false;
+    }
+
+    private boolean isQualifyNodeContainsWindowFunction(
+        RexNode qualifyNode, @Nullable SqlNodeList selectList) {
+      if (selectList == null) {
+        return false;
+      }
+      RelOptUtil.InputReferencedVisitor visitor = new RelOptUtil.InputReferencedVisitor();
+      visitor.visitEach(Collections.singletonList(qualifyNode));
+      for (int index : visitor.inputPosReferenced) {
+        SqlNode node = selectList.get(index);
+        if (node instanceof SqlBasicCall) {
+          if (hasAnalyticalFunction((SqlBasicCall) node)) {
+            return true;
+          }
+        }
       }
       return false;
     }
