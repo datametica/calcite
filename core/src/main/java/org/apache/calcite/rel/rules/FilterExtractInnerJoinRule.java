@@ -234,7 +234,8 @@ public class FilterExtractInnerJoinRule
    * 4. In case of, =(lower(TRIM($7)), LOWER(TRIM($12))), it will return true.
    * 5. In case of AND(=($7, $9), =($14, $19), it will return false.*/
   private boolean isConditionComposedOfSingleCondition(RexCall conditions) {
-    return (conditions.getOperands().size() <= 2 || conditions.op.kind == SqlKind.BETWEEN)
+    return (conditions.getOperands().size() <= 2
+        || conditions.op.kind == SqlKind.BETWEEN || conditions.op.kind == SqlKind.IN)
         && conditions.getOperands().stream().allMatch(
             operand -> operand instanceof RexInputRef
                 || operand instanceof RexLiteral

@@ -3962,7 +3962,13 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction TIME_SLICE =
       new SqlFunction("TIME_SLICE",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.TIMESTAMP,
+          opBinding -> {
+            RelDataType firstArgType = opBinding.getOperandType(0);
+            if (firstArgType.getSqlTypeName() == SqlTypeName.DATE) {
+              return opBinding.getTypeFactory().createSqlType(SqlTypeName.DATE);
+            }
+            return opBinding.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
+          },
           null,
           OperandTypes.DATETIME_INTEGER_STRING_OPTIONAL_STRING,
           SqlFunctionCategory.TIMEDATE);
@@ -4710,4 +4716,11 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_NULLABLE, null,
           OperandTypes.or(OperandTypes.STRING, OperandTypes.CLOB, OperandTypes.BINARY),
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction FROM_BYTES =
+      SqlBasicFunction.create("FROM_BYTES",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.family(SqlTypeFamily.BINARY, SqlTypeFamily.STRING),
+          SqlFunctionCategory.STRING);
 }
