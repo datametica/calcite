@@ -2022,6 +2022,7 @@ public abstract class SqlImplementor {
           && (subQueryAliasTrait != null) && !dialect.supportNestedAnalyticalFunctions()
           && isQualifyNodeContainsWindowFunction(((Filter) rel).getCondition(), selectList)) {
         needNew = true;
+        select = subSelect();
       }
       // Additional condition than apache calcite
       if (selectList != null && !selectList.equals(SqlNodeList.SINGLETON_STAR)) {
