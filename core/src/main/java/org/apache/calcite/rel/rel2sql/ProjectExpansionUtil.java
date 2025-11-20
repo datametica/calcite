@@ -141,7 +141,7 @@ class ProjectExpansionUtil {
           }
         }
       }
-      if (result.node instanceof SqlSelect && ((SqlSelect) result.node).getSelectList() == null
+      if (result.node instanceof SqlSelect && ((SqlSelect) result.node).getSelectList().isEmpty()
           && !hasAliasEndingWithDigit(sqlIdentifierList)) {
         return;
       }
@@ -168,7 +168,7 @@ class ProjectExpansionUtil {
     String backTick = "`";
     return result.neededAlias != null
         && sqlCondition.toString().contains(backTick + result.neededAlias + backTick)
-        && result.asSelect().getSelectList() == null && !hasAmbiguousAlias(result);
+        && result.asSelect().getSelectList().isEmpty() && !hasAmbiguousAlias(result);
   }
 
   private boolean hasAmbiguousAlias(SqlImplementor.Result result) {
@@ -384,7 +384,7 @@ class ProjectExpansionUtil {
   private void updateSelectListInSelectNode(
       SqlSelect sqlSelect, List<SqlIdentifier> sqlIdentifiersNew) {
     SqlNodeList sqlNodeList = sqlSelect.getSelectList();
-    if (sqlNodeList != null) {
+    if (!sqlNodeList.isEmpty()) {
       List<String> columnNamesInSelect = getColumnNamesInSelect(sqlNodeList);
 
       if (sqlIdentifiersNew.size() > sqlNodeList.size()) {

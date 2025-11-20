@@ -27,6 +27,7 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -71,6 +72,7 @@ public class SqlCreateForeignSchema extends SqlCreate {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     if (getReplace()) {
       writer.keyword("CREATE OR REPLACE");
     } else {
@@ -102,6 +104,7 @@ public class SqlCreateForeignSchema extends SqlCreate {
       }
       writer.endList(frame);
     }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   /** Returns options as a list of (name, value) pairs. */

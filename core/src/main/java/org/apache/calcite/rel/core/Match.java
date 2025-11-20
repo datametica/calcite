@@ -33,6 +33,7 @@ import org.apache.calcite.sql.fun.SqlMinMaxAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlSumAggFunction;
 import org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ImmutableBitSet;
 
 import com.google.common.base.Preconditions;
@@ -105,7 +106,7 @@ public abstract class Match extends SingleRel {
     super(cluster, traitSet, input);
     this.rowType = Objects.requireNonNull(rowType, "rowType");
     this.pattern = Objects.requireNonNull(pattern, "pattern");
-    Preconditions.checkArgument(patternDefinitions.size() > 0);
+    Preconditions.checkArgument(!patternDefinitions.isEmpty());
     this.strictStart = strictStart;
     this.strictEnd = strictEnd;
     this.patternDefinitions = ImmutableMap.copyOf(patternDefinitions);
@@ -254,7 +255,7 @@ public abstract class Match extends SingleRel {
                 aggregateCalls.size());
         aggregateCalls.add(aggCall);
         Set<String> pv = new PatternVarFinder().go(call.getOperands());
-        if (pv.size() == 0) {
+        if (pv.isEmpty()) {
           pv.add(STAR);
         }
         for (String alpha : pv) {
@@ -333,6 +334,16 @@ public abstract class Match extends SingleRel {
       digest = toString(); // can compute here because class is final
     }
 
+    RexMRAggCall(SqlAggFunction aggFun,
+        RelDataType type,
+        List<RexNode> operands,
+        int ordinal,
+        Set<Comment> comments) {
+      super(type, aggFun, operands, comments);
+      this.ordinal = ordinal;
+      digest = toString(); // can compute here because class is final
+    }
+
     @Override public int compareTo(RexMRAggCall o) {
       return toString().compareTo(o.toString());
     }
@@ -345,6 +356,16 @@ public abstract class Match extends SingleRel {
 
     @Override public int hashCode() {
       return toString().hashCode();
+    }
+
+    @Override public RexNode copy(Set<Comment> comments) {
+      // Creates a new RexMRAggCall, preserving existing state + new comments
+      return new RexMRAggCall(
+          (SqlAggFunction) this.op,
+          this.type,
+          this.operands,
+          this.ordinal,
+          comments);
     }
   }
 }
