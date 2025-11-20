@@ -4723,4 +4723,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_NULLABLE,
           OperandTypes.family(SqlTypeFamily.BINARY, SqlTypeFamily.STRING),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction JSON =
+      new SqlFunction("JSON",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.JSON, null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
 }
