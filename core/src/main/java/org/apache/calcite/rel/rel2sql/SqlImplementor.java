@@ -2704,10 +2704,10 @@ public abstract class SqlImplementor {
     }
 
     boolean hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection(Project project) {
-      SqlSelect sqlSelect = (SqlSelect) node;
-      SqlNodeList selectList = sqlSelect.getSelectList();
-      List<SqlNode> qualifyColumnList = new ArrayList<>();
       try {
+        SqlSelect sqlSelect = (SqlSelect) node;
+        SqlNodeList selectList = sqlSelect.getSelectList();
+        List<SqlNode> qualifyColumnList = new ArrayList<>();
         sqlSelect.getQualify().accept(new SqlBasicVisitor<SqlNode>() {
           @Override public SqlNode visit(SqlIdentifier id) {
             qualifyColumnList.add(id);

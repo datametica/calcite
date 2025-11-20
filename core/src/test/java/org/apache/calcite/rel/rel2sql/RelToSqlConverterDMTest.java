@@ -14208,4 +14208,18 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testFromBytes() {
+    final RelBuilder builder = relBuilder();
+    final RexNode toBytesNode =
+        builder.call(SqlLibraryOperators.FROM_BYTES,
+            builder.literal("5A1B"), builder.literal("BASE16"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(toBytesNode)
+        .build();
+    final String expectedSql = "SELECT FROM_BYTES('5A1B', 'BASE16') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
+  }
 }
