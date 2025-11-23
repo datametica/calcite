@@ -2004,6 +2004,13 @@ public abstract class SqlImplementor {
       boolean isPivotPresent = pivotRelTrait.isPresent() && pivotRelTrait.get().isPivotRel();
       SubQueryAliasTrait subQueryAliasTrait =
           rel.getInput(0).getTraitSet().getTrait(SubQueryAliasTraitDef.instance);
+      SqlNodeList selectNodeList = node.getKind() == SqlKind.SELECT
+          ? ((SqlSelect) node).getSelectList() : null;
+      if (isQualifyFilter(rel) && clauses.contains(Clause.QUALIFY)
+          && !dialect.supportNestedAnalyticalFunctions()
+          && isQualifyNodeContainsWindowFunction(((Filter) rel).getCondition(), selectNodeList)) {
+        needNew = true;
+      }
       // Additional condition than apache calcite
       if ((!isPivotPresent && needNew) || (
           isCorrelated(rel) && ((subQueryAliasTrait != null) || !(rel instanceof Project)))) {
@@ -2016,14 +2023,6 @@ public abstract class SqlImplementor {
       final Context newContext;
       Map<String, RelDataType> newAliases = null;
       final SqlNodeList selectList = select.getSelectList();
-
-      if (rel instanceof Filter && rel.getInput(0) instanceof Project
-          && clauses.contains(Clause.QUALIFY)
-          && (subQueryAliasTrait != null) && !dialect.supportNestedAnalyticalFunctions()
-          && isQualifyNodeContainsWindowFunction(((Filter) rel).getCondition(), selectList)) {
-        needNew = true;
-        select = subSelect();
-      }
       // Additional condition than apache calcite
       if (selectList != null && !selectList.equals(SqlNodeList.SINGLETON_STAR)) {
         // Additional condition than apache calcite
