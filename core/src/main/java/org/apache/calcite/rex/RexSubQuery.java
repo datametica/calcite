@@ -27,6 +27,7 @@ import org.apache.calcite.sql.fun.SqlQuantifyOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.util.Comment;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -35,6 +36,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Scalar expression that represents an IN, EXISTS or scalar sub-query.
@@ -45,6 +47,12 @@ public class RexSubQuery extends RexCall {
   private RexSubQuery(RelDataType type, SqlOperator op,
       ImmutableList<RexNode> operands, RelNode rel) {
     super(type, op, operands);
+    this.rel = rel;
+  }
+
+  private RexSubQuery(RelDataType type, SqlOperator op,
+      ImmutableList<RexNode> operands, RelNode rel, Set<Comment> comments) {
+    super(type, op, operands, comments);
     this.rel = rel;
   }
 
@@ -205,5 +213,9 @@ public class RexSubQuery extends RexCall {
       hash = Objects.hash(op, operands, rel.deepHashCode());
     }
     return hash;
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexSubQuery(type, op, operands, rel, comments);
   }
 }

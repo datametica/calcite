@@ -22,6 +22,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.ddl.SqlCreateTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.util.SqlCommentUtil;
 
 /**
  * Parse tree for {@code CREATE TABLE} statement, with extensions for particular
@@ -44,6 +45,7 @@ public class SqlBabelCreateTable extends SqlCreateTable {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.keyword("CREATE");
     switch (tableCollectionType) {
     case SET:
@@ -76,5 +78,6 @@ public class SqlBabelCreateTable extends SqlCreateTable {
       writer.newlineAndIndent();
       query.unparse(writer, 0, 0);
     }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 }

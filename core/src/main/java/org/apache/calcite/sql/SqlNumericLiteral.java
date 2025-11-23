@@ -20,6 +20,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -84,7 +85,9 @@ public class SqlNumericLiteral extends SqlLiteral {
       SqlWriter writer,
       int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.literal(toValue());
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @Override public String toValue() {
