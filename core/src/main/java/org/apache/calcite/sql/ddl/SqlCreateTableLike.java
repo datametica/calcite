@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.Symbolizable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import com.google.common.base.Preconditions;
 
@@ -96,6 +97,7 @@ public class SqlCreateTableLike extends SqlCreate {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.keyword("CREATE");
     writer.keyword("TABLE");
     if (ifNotExists) {
@@ -117,5 +119,6 @@ public class SqlCreateTableLike extends SqlCreate {
       writer.keyword("EXCLUDING");
       writer.keyword(likeOption.name());
     }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 }

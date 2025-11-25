@@ -154,7 +154,7 @@ public class SqlSelectOperator extends SqlOperator {
       keyword.unparse(writer, 0, 0);
     }
     writer.topN(select.fetch, select.offset);
-    final SqlNodeList selectClause = select.selectList != null
+    final SqlNodeList selectClause = !select.selectList.isEmpty()
             ? select.selectList
             : SqlNodeList.of(SqlIdentifier.star(SqlParserPos.ZERO));
     writer.list(SqlWriter.FrameTypeEnum.SELECT_LIST, SqlWriter.COMMA,

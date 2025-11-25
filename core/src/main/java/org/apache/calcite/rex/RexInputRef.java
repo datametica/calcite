@@ -20,11 +20,13 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.PairList;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.Pair;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Variable which references a field of an input relational expression.
@@ -67,6 +69,10 @@ public class RexInputRef extends RexSlot {
    */
   public RexInputRef(int index, RelDataType type) {
     super(createName(index), index, type);
+  }
+
+  public RexInputRef(int index, RelDataType type, Set<Comment> comments) {
+    super(createName(index), index, type, comments);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -135,5 +141,9 @@ public class RexInputRef extends RexSlot {
    */
   public static String createName(int index) {
     return NAMES.get(index);
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexInputRef(this.index, this.type, comments);
   }
 }

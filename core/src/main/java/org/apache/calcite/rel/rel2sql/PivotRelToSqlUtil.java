@@ -32,6 +32,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 
@@ -108,7 +109,7 @@ public class PivotRelToSqlUtil {
               new SqlIdentifier(pivotTableAlias, pos));
     }
     SqlNode select =
-        new SqlSelect(SqlParserPos.ZERO, null, null, sqlTableAlias,
+        new SqlSelect(SqlParserPos.ZERO, null, SqlNodeList.EMPTY, sqlTableAlias,
             null, null, null, null, builder.select.getOrderList(),
             null, null, SqlNodeList.EMPTY);
     return select;
@@ -167,12 +168,19 @@ public class PivotRelToSqlUtil {
     Set<SqlNode> aggArgList = new HashSet<>();
     Set<String> columnName = new HashSet<>();
     for (int i = 0; i < e.getAggCallList().size(); i++) {
-      columnName.add(
-          e.getInput().getRowType().getFieldList().get(
-                  e.getAggCallList().get(i).getArgList().get(0))
-              .getKey());
+      if (e.getAggCallList().get(i).getAggregation() instanceof SqlCountAggFunction
+          && e.getAggCallList().get(i).getArgList().isEmpty()) {
+        // If there is no parameter in "count" function, add a star
+        // to it.
+        columnName.add("*");
+      } else {
+        columnName.add(e.getInput().getRowType().getFieldList()
+            .get(e.getAggCallList().get(i).getArgList().get(0)).getKey());
+      }
     }
-    SqlNode tempNode = new SqlIdentifier(new ArrayList<>(columnName).get(0), pos);
+    String column = new ArrayList<>(columnName).get(0);
+    SqlNode tempNode = column.equals("*") ? SqlIdentifier.STAR
+        : new SqlIdentifier(new ArrayList<>(columnName).get(0), pos);
     SqlNode aggFunctionNode =
         e.getAggCallList().get(0).getAggregation().createCall(pos, tempNode);
     aggArgList.add(aggFunctionNode);
