@@ -2164,7 +2164,7 @@ public abstract class SqlImplementor {
 
     private boolean isQualifyNodeContainsWindowFunction(
         RexNode qualifyNode, @Nullable SqlNodeList selectList) {
-      if (selectList == null) {
+      if (selectList == null || selectList.isEmpty()) {
         return false;
       }
       RelOptUtil.InputReferencedVisitor visitor = new RelOptUtil.InputReferencedVisitor();

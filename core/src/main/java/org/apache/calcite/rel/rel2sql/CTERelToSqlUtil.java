@@ -25,10 +25,12 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBinaryOperator;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSetOperator;
@@ -36,7 +38,10 @@ import org.apache.calcite.sql.SqlUnpivot;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.util.SqlShuttle;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -360,5 +365,57 @@ public class CTERelToSqlUtil {
       name = ((SqlWithItem) ((SqlBasicCall) sqlNode).operand(0)).name;
     }
     return name;
+  }
+
+  public static SqlWith modifyWithNode(SqlWith sqlWith) {
+    SqlNodeList withItemList = (SqlNodeList) sqlWith.getOperandList().get(0);
+    SqlNodeList modifiedList = modifyWithItemList(withItemList);
+    return new SqlWith(sqlWith.getParserPosition(), modifiedList, sqlWith.body);
+  }
+
+  private static SqlNodeList modifyWithItemList(SqlNodeList modeList) {
+    List<String> names = new ArrayList<>();
+    List<SqlNode> modifiedList = new ArrayList<>();
+
+    for (SqlNode node : modeList) {
+      SqlWithItem withItem = (SqlWithItem) node;
+      String name = withItem.name.names.get(0);
+      SqlNode query = withItem.query;
+      if (!names.isEmpty()) {
+        SqlNode modifiedQuery = query.accept(new SqlShuttle() {
+          @Override public SqlNode visit(SqlCall call) {
+            switch (call.getKind()) {
+            case WITH:
+              return removingRedundantWithItems(call, names);
+            default:
+              return super.visit(call);
+            }
+          }
+        });
+        SqlWithItem updatedItem =
+            new SqlWithItem(SqlParserPos.ZERO, withItem.name, withItem.columnList, modifiedQuery);
+        modifiedList.add(updatedItem);
+        names.add(name);
+      } else {
+        names.add(name);
+        modifiedList.add(withItem);
+      }
+    }
+    return new SqlNodeList(modifiedList, SqlParserPos.ZERO);
+  }
+
+  private static SqlNode removingRedundantWithItems(SqlNode sqlCall, List<String> existNames) {
+    SqlWith sqlWith = (SqlWith) sqlCall;
+    List<SqlNode> nodeList = new ArrayList<>();
+    for (SqlNode node : (SqlNodeList) sqlWith.getOperandList().get(0)) {
+      SqlWithItem item = (SqlWithItem) node;
+      String itemName = item.name.names.get(0);
+      boolean isExists = existNames.stream().anyMatch(n -> n.equals(itemName));
+      if (!isExists) {
+        nodeList.add(item);
+      }
+    }
+    return new SqlWith(SqlParserPos.ZERO, new SqlNodeList(nodeList, SqlParserPos.ZERO),
+        sqlWith.body);
   }
 }

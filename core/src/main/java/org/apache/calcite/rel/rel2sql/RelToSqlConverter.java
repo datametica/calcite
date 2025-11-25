@@ -1572,7 +1572,8 @@ public class RelToSqlConverter extends SqlImplementor
         SqlNodeList sqlNodeList = new SqlNodeList(sqlWithItemNodes, POS);
 
         SqlNode sqlWithNode = updateSqlWithNode(result);
-        final SqlWith sqlWith = new SqlWith(POS, sqlNodeList, sqlWithNode);
+        SqlWith sqlWith = new SqlWith(POS, sqlNodeList, sqlWithNode);
+        sqlWith = CTERelToSqlUtil.modifyWithNode(sqlWith);
         result = this.result(sqlWith, ImmutableList.of(), e, null);
       }
     }
