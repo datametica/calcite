@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelShuttle;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.hint.RelHint;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.util.ImmutableBitSet;
 
 import com.google.common.collect.ImmutableList;
@@ -70,6 +71,22 @@ public final class LogicalAggregate extends Aggregate {
       @Nullable List<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
     super(cluster, traitSet, hints, input, groupSet, groupSets, aggCalls);
+  }
+
+  /**
+   * Creates a LogicalAggregate with modified rowtype instead of self-derived rowtype.
+   */
+  public LogicalAggregate(
+      RelOptCluster cluster,
+      RelTraitSet traitSet,
+      List<RelHint> hints,
+      RelNode input,
+      ImmutableBitSet groupSet,
+      @Nullable List<ImmutableBitSet> groupSets,
+      List<AggregateCall> aggCalls,
+      RelDataType rowType) {
+    this(cluster, traitSet, hints, input, groupSet, groupSets, aggCalls);
+    this.rowType = rowType;
   }
 
   @Deprecated // to be removed before 2.0
