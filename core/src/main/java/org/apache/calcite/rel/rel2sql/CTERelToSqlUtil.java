@@ -415,6 +415,9 @@ public class CTERelToSqlUtil {
         nodeList.add(item);
       }
     }
+    if (nodeList.isEmpty()) {
+      return sqlWith.body;
+    }
     return new SqlWith(SqlParserPos.ZERO, new SqlNodeList(nodeList, SqlParserPos.ZERO),
         sqlWith.body);
   }
