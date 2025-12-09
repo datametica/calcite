@@ -807,8 +807,16 @@ public abstract class SqlImplementor {
           final RexFieldAccess lastAccess = accesses.pollLast();
           assert lastAccess != null;
           SqlNode node = correlAliasContext.field(lastAccess.getField().getIndex());
-          if (!isNodeMatching(node, lastAccess)) {
-            SqlNode newNode = getSqlNodeByName(correlAliasContext, lastAccess);
+          int positionOfCoRelationVariable = getPositionOfCoRelationVariable(variable.id);
+          AliasContext aliasContext = (AliasContext) correlAliasContext;
+          Integer firstFieldListSize =
+              aliasContext.aliases.values().iterator().next().getFieldList().size();
+
+          if (!isNodeMatching(node, lastAccess)
+              || (positionOfCoRelationVariable != 0 && aliasContext.aliases.size() > 1)) {
+            List<SqlNode> fieldList =
+                getSqlNodeList(aliasContext, positionOfCoRelationVariable, firstFieldListSize);
+            SqlNode newNode = getSqlNodeByName(fieldList, lastAccess);
             node = newNode != null ? newNode : node;
           }
           names.add(node);
@@ -972,13 +980,20 @@ public abstract class SqlImplementor {
       }
     }
 
-    private SqlNode getSqlNodeByName(Context correlAliasContext, RexFieldAccess lastAccess) {
-      for (SqlNode sqlNode : correlAliasContext.fieldList()) {
+    private SqlNode getSqlNodeByName(List<SqlNode> fieldList, RexFieldAccess lastAccess) {
+      for (SqlNode sqlNode : fieldList) {
         if (isMatching(lastAccess, sqlNode)) {
           return sqlNode;
         }
       }
       return null;
+    }
+
+    private List<SqlNode> getSqlNodeList(AliasContext aliasContext, Integer coRelPosition,
+        Integer firstFieldListSize) {
+      return coRelPosition != 0 && aliasContext.aliases.size() > 1
+          ? aliasContext.fieldList().subList(firstFieldListSize, aliasContext.fieldList().size())
+          : aliasContext.fieldList();
     }
 
     private static boolean isMatching(RexFieldAccess lastAccess, SqlNode sqlNode) {
@@ -1200,6 +1215,10 @@ public abstract class SqlImplementor {
     }
 
     protected Context getAliasContext(RexCorrelVariable variable) {
+      throw new UnsupportedOperationException();
+    }
+
+    protected int getPositionOfCoRelationVariable(CorrelationId correlationId) {
       throw new UnsupportedOperationException();
     }
 
@@ -1762,6 +1781,10 @@ public abstract class SqlImplementor {
           () -> "variable " + variable.id + " is not found");
     }
 
+    @Override protected int getPositionOfCoRelationVariable(CorrelationId correlationId) {
+      return new ArrayList<>(correlTableMap.keySet()).indexOf(correlationId);
+    }
+
     @Override public SqlImplementor implementor() {
       return SqlImplementor.this;
     }
@@ -2123,6 +2146,10 @@ public abstract class SqlImplementor {
             return requireNonNull(
                 correlTableMap.get(variable.id),
                 () -> "variable " + variable.id + " is not found");
+          }
+
+          @Override protected int getPositionOfCoRelationVariable(CorrelationId correlationId) {
+            return new ArrayList<>(correlTableMap.keySet()).indexOf(correlationId);
           }
         };
       } else {
