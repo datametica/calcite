@@ -14236,4 +14236,44 @@ class RelToSqlConverterDMTest {
         + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
   }
+
+  @Test
+  public void testTimestampMinusIntervalWithFormat() {
+    final RelBuilder builder = relBuilder();
+    RexBuilder rexBuilder = builder.getRexBuilder();
+
+    RexNode minuteInterval =
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(1),
+            new SqlIntervalQualifier(TimeUnit.MINUTE, null, SqlParserPos.ZERO));
+
+    RexNode secondInterval =
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(1),
+            new SqlIntervalQualifier(TimeUnit.SECOND, null, SqlParserPos.ZERO));
+
+    RexNode totalInterval =
+        builder.call(SqlStdOperatorTable.PLUS,
+            builder.call(SqlStdOperatorTable.MULTIPLY,
+                builder.literal(10),
+                minuteInterval),
+            builder.call(SqlStdOperatorTable.MULTIPLY,
+                builder.literal(54),
+                secondInterval));
+
+    RexNode timestampMinus =
+        builder.call(SqlStdOperatorTable.MINUS,
+            rexBuilder.makeTimestampLiteral(
+                new TimestampString("2025-11-18 08:17:34"), 6),
+            totalInterval);
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(timestampMinus, "RESULT"))
+        .build();
+
+    final String expectedSql =
+        "SELECT TIMESTAMP_SUB(CAST('2025-11-18 08:17:34' AS DATETIME), INTERVAL (10 * 60 + 54) SECOND) AS RESULT" +
+            "\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
 }
