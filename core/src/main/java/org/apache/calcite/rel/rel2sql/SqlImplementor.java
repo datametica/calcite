@@ -2029,6 +2029,13 @@ public abstract class SqlImplementor {
       boolean isPivotPresent = pivotRelTrait.isPresent() && pivotRelTrait.get().isPivotRel();
       SubQueryAliasTrait subQueryAliasTrait =
           rel.getInput(0).getTraitSet().getTrait(SubQueryAliasTraitDef.instance);
+      SqlNodeList selectNodeList = node.getKind() == SqlKind.SELECT
+          ? ((SqlSelect) node).getSelectList() : null;
+      if (isQualifyFilter(rel) && clauses.contains(Clause.QUALIFY)
+          && !dialect.supportNestedAnalyticalFunctions()
+          && isQualifyNodeContainsWindowFunction(((Filter) rel).getCondition(), selectNodeList)) {
+        needNew = true;
+      }
       // Additional condition than apache calcite
       if ((!isPivotPresent && needNew) || (
           isCorrelated(rel) && ((subQueryAliasTrait != null) || !(rel instanceof Project)))) {
@@ -2151,6 +2158,24 @@ public abstract class SqlImplementor {
           && (rel.getInput(0) instanceof Aggregate || isQualifyFieldsContainsNestedAggregation()
           || isQualifyFilter(rel))) {
         return true;
+      }
+      return false;
+    }
+
+    private boolean isQualifyNodeContainsWindowFunction(
+        RexNode qualifyNode, @Nullable SqlNodeList selectList) {
+      if (selectList == null || selectList.isEmpty()) {
+        return false;
+      }
+      RelOptUtil.InputReferencedVisitor visitor = new RelOptUtil.InputReferencedVisitor();
+      visitor.visitEach(Collections.singletonList(qualifyNode));
+      for (int index : visitor.inputPosReferenced) {
+        SqlNode node = selectList.get(index);
+        if (node instanceof SqlBasicCall) {
+          if (hasAnalyticalFunction((SqlBasicCall) node)) {
+            return true;
+          }
+        }
       }
       return false;
     }
