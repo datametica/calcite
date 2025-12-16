@@ -1193,8 +1193,7 @@ class RelToSqlConverterDMTest {
         .build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\n"
-        + "FROM (SELECT *\n"
-        + "FROM SALESSCHEMA.sales) UNPIVOT INCLUDE NULLS (monthly_sales FOR month IN (jansales "
+        + "FROM SALESSCHEMA.sales UNPIVOT INCLUDE NULLS (monthly_sales FOR month IN (jansales "
         + "AS 'jan', febsales AS 'feb', marsales AS 'march'))";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
@@ -1216,8 +1215,7 @@ class RelToSqlConverterDMTest {
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT id, year, janexpense, febexpense, marexpense, month, "
         + "CAST(monthly_sales AS INTEGER) AS monthly_sales\n"
-        + "FROM (SELECT *\n"
-        + "FROM SALESSCHEMA.sales) UNPIVOT EXCLUDE NULLS (monthly_sales FOR month IN "
+        + "FROM SALESSCHEMA.sales UNPIVOT EXCLUDE NULLS (monthly_sales FOR month IN "
         + "(jansales AS 'jan', febsales AS 'feb', marsales AS 'march'))";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
@@ -1242,8 +1240,7 @@ class RelToSqlConverterDMTest {
         .build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\n"
-        + "FROM (SELECT *\n"
-        + "FROM SALESSCHEMA.sales) UNPIVOT INCLUDE NULLS ((monthly_sales, monthly_expense) FOR "
+        + "FROM SALESSCHEMA.sales UNPIVOT INCLUDE NULLS ((monthly_sales, monthly_expense) FOR "
         + "month IN ((jansales, janexpense) AS 'jan', (febsales, febexpense) AS 'feb', "
         + "(marsales, marexpense) AS 'march'))";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
@@ -1269,8 +1266,7 @@ class RelToSqlConverterDMTest {
         .build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\n"
-        + "FROM (SELECT *\n"
-        + "FROM SALESSCHEMA.sales) UNPIVOT EXCLUDE NULLS ((monthly_sales, monthly_expense) FOR "
+        + "FROM SALESSCHEMA.sales UNPIVOT EXCLUDE NULLS ((monthly_sales, monthly_expense) FOR "
         + "month IN ((jansales, janexpense) AS 'jan', (febsales, febexpense) AS 'feb', "
         + "(marsales, marexpense) AS 'march'))";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
