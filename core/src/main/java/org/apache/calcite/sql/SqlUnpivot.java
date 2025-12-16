@@ -24,7 +24,7 @@ import org.apache.calcite.util.Util;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -127,8 +127,17 @@ public class SqlUnpivot extends SqlCall {
       case AS:
         final SqlCall call = (SqlCall) node;
         assert call.getOperandList().size() == 2;
-        final SqlNodeList nodeList = call.operand(0);
-        final SqlNodeList valueList = call.operand(1);
+        SqlNodeList nodeList = null;
+        SqlNodeList valueList = null;
+        if (call.operand(0) instanceof SqlIdentifier) {
+          nodeList = new SqlNodeList(ImmutableNullableList.of(call.operand(0)), SqlParserPos.ZERO);
+          valueList =
+              new SqlNodeList(ImmutableNullableList.of((SqlCharStringLiteral) call.operand(1)),
+                  SqlParserPos.ZERO);
+        } else {
+          nodeList = call.operand(0);
+          valueList = call.operand(1);
+        }
         consumer.accept(nodeList, valueList);
         break;
       default:
@@ -141,7 +150,7 @@ public class SqlUnpivot extends SqlCall {
   /** Returns the set of columns that are referenced in the {@code FOR}
    * clause. All columns that are not used will be part of the returned row. */
   public Set<String> usedColumnNames() {
-    final Set<String> columnNames = new HashSet<>();
+    final Set<String> columnNames = new LinkedHashSet<>();
     final SqlVisitor<Void> nameCollector = new SqlBasicVisitor<Void>() {
       @Override public Void visit(SqlIdentifier id) {
         columnNames.add(Util.last(id.names));
