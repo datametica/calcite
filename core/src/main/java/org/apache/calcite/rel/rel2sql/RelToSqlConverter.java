@@ -742,7 +742,6 @@ public class RelToSqlConverter extends SqlImplementor
   private SqlUnpivot createUnpivotSqlNodeWithIncludeNulls(Project projectRel,
       SqlImplementor.Builder builder, UnpivotRelToSqlUtil unpivotRelToSqlUtil) {
     RelNode leftRelOfJoin = ((LogicalJoin) projectRel.getInput(0)).getLeft();
-    SqlNode query = dispatch(leftRelOfJoin).node;
     LogicalValues valuesRel = unpivotRelToSqlUtil.getLogicalValuesRel(projectRel);
     SqlNodeList axisList = new SqlNodeList(ImmutableList.of
         (new SqlIdentifier(unpivotRelToSqlUtil.getLogicalValueAlias(valuesRel), POS)), POS);
@@ -759,7 +758,10 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNodeList aliasedInSqlNodeList = unpivotRelToSqlUtil.
         getInListForSqlUnpivot(measureList, aliasOfInList,
             inSqlNodeList);
-    SqlUnpivot sqlUnpivot = new SqlUnpivot(POS, query, true, measureList, axisList, aliasedInSqlNodeList);
+    SqlNode query = isInSqlNodeContainsCast(inSqlNodeList)
+        ? dispatch(leftRelOfJoin).asStatement() : dispatch(leftRelOfJoin).node;
+    SqlUnpivot sqlUnpivot =
+        new SqlUnpivot(POS, query, true, measureList, axisList, aliasedInSqlNodeList);
     if (!isInSqlNodeContainsCast(inSqlNodeList)) {
       return sqlUnpivot;
     }
