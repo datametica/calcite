@@ -167,6 +167,14 @@ public class RelOptTableImpl extends Prepare.AbstractPreparingTable {
         this.tableExpressionFactory, this.rowCount);
   }
 
+  /**
+   * Creates a copy of this RelOptTable. The new RelOptTable will have newRowType and modified entity name.
+   */
+  public RelOptTableImpl copy(RelDataType newRowType, List<String> qualifiedName) {
+    return new RelOptTableImpl(this.schema, newRowType, qualifiedName, this.table,
+        this.tableExpressionFactory, this.rowCount);
+  }
+
   @Override public String toString() {
     return "RelOptTableImpl{"
         + "schema=" + schema
