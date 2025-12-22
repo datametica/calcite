@@ -464,7 +464,7 @@ public class UnpivotRelToSqlUtil {
     for (int i = 0; i < aliasOfInSqlNodeList.size(); i++) {
       SqlNodeList identifierList = (SqlNodeList) inSqlNodeList.get(0);
       SqlNode identifier = identifierList.get(i);
-      String name = identifier instanceof SqlBasicCall
+      String name = identifier instanceof SqlBasicCall && identifier.getKind() == SqlKind.CAST
           ? ((SqlIdentifier) ((SqlBasicCall) identifier).operand(0)).names.get(1)
           : ((SqlIdentifier) identifier).names.get(1);
       SqlIdentifier columnName = new SqlIdentifier(name, POS);

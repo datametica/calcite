@@ -785,14 +785,15 @@ public class RelToSqlConverter extends SqlImplementor
     for (int i = 0; i < usedColumns.size(); i++) {
       aliasedInSqlNodeList.add(
           SqlStdOperatorTable.AS.createCall(POS, ((SqlNodeList) sqlNode).get(i),
-          new SqlIdentifier(usedColumns.stream().toList().get(i), POS)));
+          new SqlIdentifier(new ArrayList<>(usedColumns).get(i), POS)));
     }
     return aliasedInSqlNodeList;
   }
 
   private boolean isInSqlNodeContainsCast(SqlNodeList inSqlNodeList) {
     SqlNode sqlNodeList = inSqlNodeList.get(0);
-    return ((SqlNodeList) sqlNodeList).stream().anyMatch(it -> it instanceof SqlBasicCall);
+    return ((SqlNodeList) sqlNodeList).stream().anyMatch(it -> it instanceof SqlBasicCall
+        && it.getKind() == SqlKind.CAST);
   }
 
   /**
