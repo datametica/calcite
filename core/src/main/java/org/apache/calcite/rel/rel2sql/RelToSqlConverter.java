@@ -742,7 +742,6 @@ public class RelToSqlConverter extends SqlImplementor
   private SqlUnpivot createUnpivotSqlNodeWithIncludeNulls(Project projectRel,
       SqlImplementor.Builder builder, UnpivotRelToSqlUtil unpivotRelToSqlUtil) {
     RelNode leftRelOfJoin = ((LogicalJoin) projectRel.getInput(0)).getLeft();
-    SqlNode query = dispatch(leftRelOfJoin).asStatement();
     LogicalValues valuesRel = unpivotRelToSqlUtil.getLogicalValuesRel(projectRel);
     SqlNodeList axisList = new SqlNodeList(ImmutableList.of
         (new SqlIdentifier(unpivotRelToSqlUtil.getLogicalValueAlias(valuesRel), POS)), POS);
@@ -759,7 +758,43 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNodeList aliasedInSqlNodeList = unpivotRelToSqlUtil.
         getInListForSqlUnpivot(measureList, aliasOfInList,
             inSqlNodeList);
-    return new SqlUnpivot(POS, query, true, measureList, axisList, aliasedInSqlNodeList);
+    SqlNode query = isInSqlNodeContainsCast(inSqlNodeList)
+        && !dialect.hasImplicitTypeCoercionInUnpivot()
+        ? dispatch(leftRelOfJoin).asStatement() : dispatch(leftRelOfJoin).node;
+    SqlUnpivot sqlUnpivot =
+        new SqlUnpivot(POS, query, true, measureList, axisList, aliasedInSqlNodeList);
+    if (isInSqlNodeContainsCast(inSqlNodeList) && !dialect.hasImplicitTypeCoercionInUnpivot()) {
+      List<String> joinColumnList = leftRelOfJoin.getRowType().getFieldNames();
+      Set<String> usedColumns = sqlUnpivot.usedColumnNames();
+      List<String> unUsedColumns = joinColumnList.stream()
+          .filter(c -> !usedColumns.contains(c))
+          .collect(Collectors.toList());
+      List<SqlIdentifier> identifiers = unUsedColumns.stream()
+          .map(c -> new SqlIdentifier(c, POS))
+          .collect(Collectors.toList());
+      SqlNodeList sqlNodeList = createAliasNodes(inSqlNodeList.get(0), usedColumns);
+      List<SqlNode> mergedSelectNodes = new ArrayList<>(identifiers);
+      mergedSelectNodes.addAll(sqlNodeList.getList());
+      ((SqlSelect) query).setSelectList(new SqlNodeList(mergedSelectNodes, POS));
+      return sqlUnpivot;
+    }
+    return sqlUnpivot;
+  }
+
+  private SqlNodeList createAliasNodes(SqlNode sqlNode, Set<String> usedColumns) {
+    SqlNodeList aliasedInSqlNodeList = new SqlNodeList(POS);
+    for (int i = 0; i < usedColumns.size(); i++) {
+      aliasedInSqlNodeList.add(
+          SqlStdOperatorTable.AS.createCall(POS, ((SqlNodeList) sqlNode).get(i),
+          new SqlIdentifier(new ArrayList<>(usedColumns).get(i), POS)));
+    }
+    return aliasedInSqlNodeList;
+  }
+
+  private boolean isInSqlNodeContainsCast(SqlNodeList inSqlNodeList) {
+    SqlNode sqlNodeList = inSqlNodeList.get(0);
+    return ((SqlNodeList) sqlNodeList).stream().anyMatch(it -> it instanceof SqlBasicCall
+        && it.getKind() == SqlKind.CAST);
   }
 
   /**
