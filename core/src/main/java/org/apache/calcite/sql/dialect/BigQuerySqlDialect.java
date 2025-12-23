@@ -489,6 +489,10 @@ public class BigQuerySqlDialect extends SqlDialect {
     return true;
   }
 
+  public boolean hasImplicitTypeCoercionInUnpivot() {
+    return false;
+  }
+
   @Override public boolean castRequiredForStringOperand(RexCall node) {
     if (super.castRequiredForStringOperand(node)) {
       return true;
