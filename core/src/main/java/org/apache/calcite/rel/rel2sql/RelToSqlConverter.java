@@ -763,21 +763,21 @@ public class RelToSqlConverter extends SqlImplementor
         ? dispatch(leftRelOfJoin).asStatement() : dispatch(leftRelOfJoin).node;
     SqlUnpivot sqlUnpivot =
         new SqlUnpivot(POS, query, true, measureList, axisList, aliasedInSqlNodeList);
-    if (!isInSqlNodeContainsCast(inSqlNodeList) && dialect.hasImplicitTypeCoercionInUnpivot()) {
+    if (isInSqlNodeContainsCast(inSqlNodeList) && !dialect.hasImplicitTypeCoercionInUnpivot()) {
+      List<String> joinColumnList = leftRelOfJoin.getRowType().getFieldNames();
+      Set<String> usedColumns = sqlUnpivot.usedColumnNames();
+      List<String> unUsedColumns = joinColumnList.stream()
+          .filter(c -> !usedColumns.contains(c))
+          .collect(Collectors.toList());
+      List<SqlIdentifier> identifiers = unUsedColumns.stream()
+          .map(c -> new SqlIdentifier(c, POS))
+          .collect(Collectors.toList());
+      SqlNodeList sqlNodeList = createAliasNodes(inSqlNodeList.get(0), usedColumns);
+      List<SqlNode> mergedSelectNodes = new ArrayList<>(identifiers);
+      mergedSelectNodes.addAll(sqlNodeList.getList());
+      ((SqlSelect) query).setSelectList(new SqlNodeList(mergedSelectNodes, POS));
       return sqlUnpivot;
     }
-    List<String> joinColumnList = leftRelOfJoin.getRowType().getFieldNames();
-    Set<String> usedColumns = sqlUnpivot.usedColumnNames();
-    List<String> unUsedColumns = joinColumnList.stream()
-        .filter(c -> !usedColumns.contains(c))
-        .collect(Collectors.toList());
-    List<SqlIdentifier> identifiers = unUsedColumns.stream()
-        .map(c -> new SqlIdentifier(c, POS))
-        .collect(Collectors.toList());
-    SqlNodeList sqlNodeList = createAliasNodes(inSqlNodeList.get(0), usedColumns);
-    List<SqlNode> mergedSelectNodes = new ArrayList<>(identifiers);
-    mergedSelectNodes.addAll(sqlNodeList.getList());
-    ((SqlSelect) query).setSelectList(new SqlNodeList(mergedSelectNodes, POS));
     return sqlUnpivot;
   }
 
