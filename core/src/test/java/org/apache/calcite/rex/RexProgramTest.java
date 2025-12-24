@@ -1951,7 +1951,7 @@ class RexProgramTest extends RexProgramTestBase {
             isNotNull(bRef));
     // [CALCITE-4352] causes "and b is not null" to disappear from the expanded
     // form.
-    final String simplified = "AND(SEARCH($0, Sarg[(0..10)]), IS NOT NULL($1))";
+    final String simplified = "AND(IS NOT NULL($1), SEARCH($0, Sarg[(0..10)]))";
     final String expanded = "AND(>($0, 0), <($0, 10), IS NOT NULL($1))";
     checkSimplify(expr, simplified)
         .expandedSearch(expanded);
@@ -2948,7 +2948,7 @@ class RexProgramTest extends RexProgramTestBase {
   @Test void testSelfComparisons() {
     checkSimplify3(and(eq(vInt(), vInt()), eq(vInt(1), vInt(1))),
         "AND(OR(null, IS NOT NULL(?0.int0)), OR(null, IS NOT NULL(?0.int1)))",
-        "AND(IS NOT NULL(?0.int0), IS NOT NULL(?0.int1))",
+        "AND(IS NOT NULL(?0.int1), IS NOT NULL(?0.int0))",
         "true");
     checkSimplify3(and(ne(vInt(), vInt()), ne(vInt(1), vInt(1))),
         "AND(null, IS NULL(?0.int0), IS NULL(?0.int1))",
@@ -3737,13 +3737,13 @@ class RexProgramTest extends RexProgramTestBase {
 
     // COALESCE: not simplified because expression is not strong
     checkSimplifyFilter(and(isNotNull(vRef2), coalesce(vRef, vRef2)),
-        "AND(COALESCE($1, $3), IS NOT NULL($3))");
+        "AND(IS NOT NULL($3), COALESCE($1, $3))");
 
     // Not simplified because expression is not strong
     checkSimplifyFilter(
         and(isNotNull(vRef),
             or(like(vRef, literal("%hello%")), like(vRef2, literal("%bye%")))),
-        "AND(OR(LIKE($1, '%hello%'), LIKE($3, '%bye%')), IS NOT NULL($1))");
+        "AND(IS NOT NULL($1), OR(LIKE($1, '%hello%'), LIKE($3, '%bye%')))");
   }
 
   @Test void testSimplifyNonDeterministicFunction() {
