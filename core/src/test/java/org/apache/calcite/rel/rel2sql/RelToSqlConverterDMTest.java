@@ -11380,6 +11380,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
   }
 
+  @Test void testParseUrl() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode parseUrlNode =
+        builder.call(SqlLibraryOperators.PARSE_URL_SNOWFLAKE,
+            builder.literal("https://www.foodmart.com/products/dairy?item=milk&brand=store#details"),
+            builder.literal(0));
+    final RelNode root = builder
+        .project(parseUrlNode)
+        .build();
+    final String expectedSnowflakeSql = "SELECT PARSE_URL('https://www.foodmart.com/products/dai"
+        + "ry?item=milk&brand=store#details', 0) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
+  }
+
   @Test public void testForBlobFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode toClobRex = builder.call(SqlLibraryOperators.EMPTY_BLOB);

@@ -497,6 +497,14 @@ public abstract class SqlLibraryOperators {
               OperandTypes.STRING_STRING_OPTIONAL_STRING,
               SqlFunctionCategory.STRING);
 
+  /** The "PARSE_URL(urlString, partToExtract [, keyToExtract] )" function. */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction PARSE_URL_SNOWFLAKE =
+      SqlBasicFunction.create("PARSE_URL",
+          ReturnTypes.JSON,
+          OperandTypes.STRING_OPTIONAL_INTEGER,
+          SqlFunctionCategory.STRING);
+
   /** The "FIND_IN_SET(matchStr, textStr)" function. */
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction FIND_IN_SET =
