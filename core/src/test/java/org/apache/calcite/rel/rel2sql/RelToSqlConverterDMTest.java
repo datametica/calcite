@@ -13723,6 +13723,34 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testProjectWithCastAndLowerOperandUsedInGroupBy() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.scan("employee");
+    RexNode literalRex = builder.alias(builder.literal(10), "EXPR$123");
+    RexNode functionRex =
+        builder.alias(
+            builder.call(SqlStdOperatorTable.LOWER,
+            builder.call(SqlStdOperatorTable.CONCAT, builder.field("employee_id"),
+                builder.field("department_id"))), "A1");
+
+    RelNode relNode = builder
+        .project(literalRex, functionRex)
+        .aggregate(builder.groupKey(0, 1), builder.countStar("cnt"))
+        .project(
+            builder.alias(builder.field(0), "EXPR$123"),
+            builder.alias(
+                builder.call(SqlStdOperatorTable.SUBSTRING,
+                builder.cast(builder.field(1), SqlTypeName.VARCHAR),
+                builder.literal(3)), "A1"),
+            builder.field(2))
+        .build();
+    final String expectedBiqQuery = "SELECT 10, SUBSTR(CAST(LOWER(employee_id || department_id) "
+        + "AS STRING), 3) AS A1, COUNT(*) AS cnt\n"
+        + "FROM foodmart.employee\nGROUP BY 1, A1";
+
+    assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testErrorMessageFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode errorMessage =
