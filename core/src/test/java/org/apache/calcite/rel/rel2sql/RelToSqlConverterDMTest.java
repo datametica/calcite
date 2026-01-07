@@ -14318,7 +14318,8 @@ class RelToSqlConverterDMTest {
         builder.scan("EMP").project(builder.alias(stWithInCall, "is_within")).build();
 
     final String expectedSql = "SELECT ST_WITHIN(ST_GEOGFROMTEXT('POINT(-122.34900 47.65100)'),"
-        + "ST_GEOGFROMTEXT('POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))')) AS is_within \nFROM scott.EMP";
+        + "ST_GEOGFROMTEXT('POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))')) AS is_within \n"
+        + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
