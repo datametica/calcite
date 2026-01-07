@@ -14305,4 +14305,21 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testSTWithInFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT, builder.literal("POINT(-122.34900 47.65100)"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT, builder.literal("POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))"));
+    final RexNode stWithInCall =
+        builder.call(SqlLibraryOperators.ST_WITHIN, geoCall1, geoCall2);
+    final RelNode root =
+        builder.scan("EMP").project(builder.alias(stWithInCall, "is_within")).build();
+
+    final String expectedSql = "SELECT ST_WITHIN(ST_GEOGFROMTEXT('POINT(-122.34900 47.65100)'),"
+        + "ST_GEOGFROMTEXT('POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))')) AS is_within \nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
 }

@@ -4739,4 +4739,14 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.JSON, null,
           OperandTypes.STRING,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_WITHIN =
+      new SqlFunction(
+          "ST_WITHIN",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.GEOMETRY_GEOMETRY,
+          SqlFunctionCategory.SYSTEM);
 }
