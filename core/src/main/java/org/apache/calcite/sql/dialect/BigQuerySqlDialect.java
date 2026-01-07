@@ -1681,6 +1681,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "GENERATE_SQLERRM":
       writer.literal("@@error.message");
       break;
+    case "ST_DISTANCE__UDF":
     case "ST_DISTANCE":
       unparseStDistance(writer, call);
       break;

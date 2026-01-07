@@ -1082,6 +1082,10 @@ public abstract class OperandTypes {
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,
               SqlTypeFamily.INTEGER), i -> i == 2);
 
+  public static final SqlSingleOperandTypeChecker STRING_OPTIONAL_INTEGER =
+      family(
+          ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER), i -> i == 1);
+
   public static final SqlSingleOperandTypeChecker STRING_NUMERIC =
       family(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC);
 

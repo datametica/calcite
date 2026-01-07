@@ -2747,7 +2747,7 @@ public abstract class SqlImplementor {
 
     private boolean canMergeProjectAndAggregate(
         List<RexNode> nodes, Aggregate aggregate) {
-      List<Integer> complexGroupByItems = getComplexGroupByItems(aggregate);
+      List<Integer> complexGroupByItems = getComplexGroupByItems(aggregate, nodes);
       for (RexNode node : nodes) {
         if (RelToSqlUtils.findInputRef(node, complexGroupByItems)
             && !dialect.validOperationOnGroupByItem(node)) {
@@ -2757,8 +2757,10 @@ public abstract class SqlImplementor {
       return true;
     }
 
-    private List<Integer> getComplexGroupByItems(Aggregate aggregate) {
+    private List<Integer> getComplexGroupByItems(Aggregate aggregate, List<RexNode> nodes) {
       List<Integer> complexGroupItems = new ArrayList<>(aggregate.getGroupCount());
+      List<Integer> lowerOrUpperItems = new ArrayList<>();
+      boolean hasRexOver = nodes.stream().anyMatch(RexOver.class::isInstance);
       if (!(aggregate.getInput() instanceof Project)) {
         return Collections.emptyList();
       }
@@ -2766,9 +2768,20 @@ public abstract class SqlImplementor {
       for (int i = 0; i < aggregate.getGroupCount(); i++) {
         if (project.getChildExps().get(i) instanceof RexCall) {
           complexGroupItems.add(i);
+          if (hasLowerOrUpperFunction(project.getChildExps().get(i))) {
+            lowerOrUpperItems.add(i);
+          }
         }
       }
+      if (!hasRexOver && complexGroupItems.equals(lowerOrUpperItems)) {
+        return Collections.emptyList();
+      }
       return complexGroupItems;
+    }
+
+    private boolean hasLowerOrUpperFunction(RexNode rexNode) {
+      return ((RexCall) rexNode).op.getName().equals("LOWER")
+          || ((RexCall) rexNode).op.getName().equals("UPPER");
     }
 
     private boolean areAllNamedInputFieldsProjected(List<RexNode> projects,
