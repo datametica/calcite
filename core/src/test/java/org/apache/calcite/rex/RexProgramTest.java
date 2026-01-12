@@ -936,7 +936,7 @@ class RexProgramTest extends RexProgramTestBase {
     // case: trailing false and null, no simplification
     checkSimplify3(
         case_(aRef, trueLiteral, bRef, trueLiteral, cRef, falseLiteral, nullBool),
-        "OR(?0.a, ?0.b, AND(null, NOT(?0.a), NOT(?0.b), NOT(?0.c)))",
+        "CASE(OR(?0.a, ?0.b), true, ?0.c, false, null:BOOLEAN)",
         "OR(?0.a, ?0.b)",
         "OR(?0.a, ?0.b, NOT(?0.c))");
 

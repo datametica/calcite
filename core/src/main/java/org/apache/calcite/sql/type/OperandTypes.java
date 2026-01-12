@@ -1263,6 +1263,22 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker INTERVALINTERVAL_INTERVALDATETIME =
       INTERVAL_SAME_SAME.or(INTERVAL_DATETIME);
 
+  public static final FamilyOperandTypeChecker
+      GEOGRAPHY_NUMERIC_OPTIONAL_NUMERIC_OPTIONAL_STRING_OPTIONAL_STRING_OPTIONAL_BOOLEAN =
+      family(
+          ImmutableList.of(
+              SqlTypeFamily.GEOGRAPHY,
+              SqlTypeFamily.NUMERIC,
+              SqlTypeFamily.NUMERIC,
+              SqlTypeFamily.STRING,
+              SqlTypeFamily.STRING,
+              SqlTypeFamily.BOOLEAN),
+          number ->
+              number == 2
+                  || number == 3
+                  || number == 4
+                  || number == 5);
+
   // TODO: datetime+interval checking missing
   // TODO: interval+datetime checking missing
   public static final SqlSingleOperandTypeChecker PLUS_OPERATOR =
