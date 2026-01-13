@@ -11380,6 +11380,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
   }
 
+  @Test void testParseUrl() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode parseUrlNode =
+        builder.call(SqlLibraryOperators.PARSE_URL_SNOWFLAKE,
+            builder.literal("https://www.foodmart.com/products/dairy?item=milk&brand=store#details"),
+            builder.literal(0));
+    final RelNode root = builder
+        .project(parseUrlNode)
+        .build();
+    final String expectedSnowflakeSql = "SELECT PARSE_URL('https://www.foodmart.com/products/dai"
+        + "ry?item=milk&brand=store#details', 0) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
+  }
+
   @Test public void testForBlobFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode toClobRex = builder.call(SqlLibraryOperators.EMPTY_BLOB);
@@ -13708,6 +13723,34 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testProjectWithCastAndLowerOperandUsedInGroupBy() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.scan("employee");
+    RexNode literalRex = builder.alias(builder.literal(10), "EXPR$123");
+    RexNode functionRex =
+        builder.alias(
+            builder.call(SqlStdOperatorTable.LOWER,
+            builder.call(SqlStdOperatorTable.CONCAT, builder.field("employee_id"),
+                builder.field("department_id"))), "A1");
+
+    RelNode relNode = builder
+        .project(literalRex, functionRex)
+        .aggregate(builder.groupKey(0, 1), builder.countStar("cnt"))
+        .project(
+            builder.alias(builder.field(0), "EXPR$123"),
+            builder.alias(
+                builder.call(SqlStdOperatorTable.SUBSTRING,
+                builder.cast(builder.field(1), SqlTypeName.VARCHAR),
+                builder.literal(3)), "A1"),
+            builder.field(2))
+        .build();
+    final String expectedBiqQuery = "SELECT 10, SUBSTR(CAST(LOWER(employee_id || department_id) "
+        + "AS STRING), 3) AS A1, COUNT(*) AS cnt\n"
+        + "FROM foodmart.employee\nGROUP BY 1, A1";
+
+    assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testErrorMessageFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode errorMessage =
@@ -14259,6 +14302,26 @@ class RelToSqlConverterDMTest {
     final String expectedSql = "SELECT TIMESTAMP_SUB(CAST('2025-11-18 08:17:34' AS DATETIME), "
         + "INTERVAL (10 * 60 + 54) SECOND) AS RESULT\n"
             + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSTWithInFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-122.34900 47.65100)"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))"));
+    final RexNode stWithInCall =
+        builder.call(SqlLibraryOperators.ST_WITHIN, geoCall1, geoCall2);
+    final RelNode root = builder.scan("EMP")
+            .project(builder.alias(stWithInCall, "is_within")).build();
+
+    final String expectedSql = "SELECT ST_WITHIN(ST_GEOGFROMTEXT('POINT(-122.34900 47.65100)'),"
+        + " ST_GEOGFROMTEXT('POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))')) AS is_within\n"
+        + "FROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
