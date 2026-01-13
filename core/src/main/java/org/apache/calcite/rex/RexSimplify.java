@@ -1843,7 +1843,7 @@ public class RexSimplify {
     // Example. IS NOT NULL(x) AND x < 5  : x < 5
     for (RexNode operand : notNullOperands) {
       if (!strongOperands.contains(operand)) {
-        terms.add(
+        terms.add(0,
             rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, operand));
       }
     }
