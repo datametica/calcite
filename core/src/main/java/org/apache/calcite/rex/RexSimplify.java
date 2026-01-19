@@ -1452,7 +1452,9 @@ public class RexSimplify {
     // but not interfere with the normal simplification recursion
     List<CaseBranch> branches = new ArrayList<>();
     for (CaseBranch branch : inputBranches) {
-      if ((branches.size() > 0 && !isSafeExpression(branch.cond))
+      if ((
+          !branches.isEmpty() && (!isSafeExpression(branch.cond)
+          || hasValueIsNullAndCondIsBooleanValue(branch)))
           || !isSafeExpression(branch.value)) {
         return null;
       }
@@ -1468,6 +1470,11 @@ public class RexSimplify {
 
     result = simplifyBooleanCaseGeneric(rexBuilder, branches, branchType);
     return result;
+  }
+
+  private boolean hasValueIsNullAndCondIsBooleanValue(CaseBranch branch) {
+    return RexLiteral.isNullLiteral(branch.value) && branch.cond instanceof RexLiteral
+        && RexLiteral.booleanValue(branch.cond);
   }
 
   /**
