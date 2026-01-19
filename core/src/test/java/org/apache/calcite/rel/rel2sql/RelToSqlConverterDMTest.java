@@ -14325,4 +14325,64 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testSTMakeLineFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-122.34900 47.65100)"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-73.9847 40.7484)"));
+    final RexNode stMakeLineCall =
+        builder.call(SqlLibraryOperators.ST_MAKELINE, geoCall1, geoCall2);
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(stMakeLineCall, "is_makeline")).build();
+
+    final String expectedSql = "SELECT ST_MAKELINE(ST_GEOGFROMTEXT('POINT(-122.34900 47.65100)'),"
+        + " ST_GEOGFROMTEXT('POINT(-73.9847 40.7484)')) AS is_makeline\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSTBufferFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-122.34900 47.65100)"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-73.9847 40.7484)"));
+    final RexNode stMakeLineCall =
+        builder.call(SqlLibraryOperators.ST_MAKELINE, geoCall1, geoCall2);
+    final RexNode stBufferCall =
+        builder.call(SqlLibraryOperators.ST_BUFFER, stMakeLineCall, builder.literal(100));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(stBufferCall, "is_buffer")).build();
+
+    final String expectedSql = "SELECT ST_BUFFER(ST_MAKELINE(ST_GEOGFROMTEXT('POINT(-122.34900 47.65100)'), "
+        + "ST_GEOGFROMTEXT('POINT(-73.9847 40.7484)')), 100) AS is_buffer\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSTContainsFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POLYGON((1 1, 20 1, 10 20, 1 1))"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-73.9847 40.7484)"));
+    final RexNode stContainsCall =
+        builder.call(SqlLibraryOperators.ST_CONTAINS, geoCall1, geoCall2);
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(stContainsCall, "is_stContains")).build();
+
+    final String expectedSql = "SELECT ST_CONTAINS(ST_GEOGFROMTEXT('POLYGON((1 1, 20 1, 10 20, 1 1))'),"
+        + " ST_GEOGFROMTEXT('POINT(-73.9847 40.7484)')) AS is_stContains\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
 }
