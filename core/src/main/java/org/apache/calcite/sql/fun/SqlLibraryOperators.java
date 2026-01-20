@@ -4749,4 +4749,44 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.GEOMETRY_GEOMETRY,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_MAKELINE =
+      new SqlFunction(
+          "ST_MAKELINE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.ARRAY), OperandTypes.GEOMETRY_GEOMETRY),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_BUFFER =
+      new SqlFunction(
+          "ST_BUFFER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.GEOGRAPHY_NUMERIC_OPTIONAL_NUMERIC_OPTIONAL_STRING_OPTIONAL_STRING_OPTIONAL_BOOLEAN,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_CONTAINS =
+      new SqlFunction(
+          "ST_CONTAINS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.GEOMETRY_GEOMETRY,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_GEOGPOINT =
+      new SqlFunction(
+          "ST_GEOGPOINT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.SYSTEM);
 }
