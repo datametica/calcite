@@ -1452,8 +1452,7 @@ public class RexSimplify {
     // but not interfere with the normal simplification recursion
     List<CaseBranch> branches = new ArrayList<>();
     for (CaseBranch branch : inputBranches) {
-      if ((
-          !branches.isEmpty() && (!isSafeExpression(branch.cond)
+      if ((!branches.isEmpty() && (!isSafeExpression(branch.cond)
           || hasValueIsNullAndCondIsBooleanValue(branch)))
           || !isSafeExpression(branch.value)) {
         return null;
