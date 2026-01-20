@@ -4779,4 +4779,14 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.GEOMETRY_GEOMETRY,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_GEOGPOINT =
+      new SqlFunction(
+          "ST_GEOGPOINT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.SYSTEM);
 }
