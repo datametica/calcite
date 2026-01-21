@@ -29,6 +29,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * SqlSetOperator represents a relational set theory operator (UNION, INTERSECT,
  * MINUS). These are binary operators, but with an extra boolean attribute
@@ -97,56 +100,31 @@ public class SqlSetOperator extends SqlBinaryOperator {
 
   @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
     assert call.operandCount() == 2;
-    List<SetOpItem> items = new ArrayList<>();
-    ArrayDeque<SqlCall> stack = new ArrayDeque<>();
-    stack.push(call);
-    while (!stack.isEmpty()) {
-      SqlCall c = stack.pop();
-      SqlOperator operator = c.getOperator();
-      if (operator instanceof SqlSetOperator) {
-        SqlSetOperator setOp = (SqlSetOperator) operator;
-        SqlNode right = c.operand(1);
-        SqlNode left = c.operand(0);
-        if (right instanceof SqlCall
-            && ((SqlCall) right).getOperator() instanceof SqlSetOperator
-            && sameSetOp(setOp, (SqlSetOperator) ((SqlCall) right).getOperator())) {
-          stack.push((SqlCall) right);
-        } else {
-          items.add(new SetOpItem(right, setOp));
-        }
-        if (left instanceof SqlCall
-            && ((SqlCall) left).getOperator() instanceof SqlSetOperator
-            && sameSetOp(setOp, (SqlSetOperator) ((SqlCall) left).getOperator())) {
-          stack.push((SqlCall) left);
-        } else {
-          items.add(new SetOpItem(left, null));
-        }
+    SqlSetOperator rootOp = (SqlSetOperator) call.getOperator();
+    List<SqlNode> operands = new ArrayList<>();
+    flatten(call, rootOp, operands);
+    final SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.SETOP);
+    for (int i = 0; i < operands.size(); i++) {
+      if (i > 0) {
+        writer.sep(getSetOperatorSql(rootOp));
       }
-    }
-    Collections.reverse(items);
-    SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.SETOP);
-    boolean first = true;
-    for (SetOpItem item : items) {
-      if (!first) {
-        writer.sep(getSetOperatorSql(item.operator));
-      }
-      int prec = call.getOperator().getLeftPrec();
-      item.node.unparse(writer, prec, prec);
-      first = false;
+      int prec = rootOp.getLeftPrec();
+      operands.get(i).unparse(writer, prec, prec);
     }
     writer.endList(frame);
   }
 
-  /**
-   * Holds a SQL node and the set operator.
-   */
-  static class SetOpItem {
-    final SqlNode node;
-    final SqlSetOperator operator;
-    SetOpItem(SqlNode node, SqlSetOperator operator) {
-      this.node = node;
-      this.operator = operator;
+  private void flatten(SqlNode node, SqlSetOperator rootOp, List<SqlNode> operands) {
+    if (node instanceof SqlCall) {
+      SqlCall call = (SqlCall) node;
+      SqlOperator op = call.getOperator();
+      if (op instanceof SqlSetOperator && sameSetOp(rootOp, (SqlSetOperator) op)) {
+        flatten(call.operand(0), rootOp, operands);
+        flatten(call.operand(1), rootOp, operands);
+        return;
+      }
     }
+    operands.add(node);
   }
 
   private boolean sameSetOp(SqlSetOperator a, SqlSetOperator b) {
