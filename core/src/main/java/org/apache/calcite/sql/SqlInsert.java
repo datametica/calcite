@@ -157,7 +157,7 @@ public class SqlInsert extends SqlCall {
     final int opLeft = getOperator().getLeftPrec();
     final int opRight = getOperator().getRightPrec();
     targetTable.unparse(writer, opLeft, opRight);
-    if (columnList != null) {
+    if (columnList != null && columnList.size() != 0) {
       columnList.unparse(writer, opLeft, opRight);
     }
     writer.newlineAndIndent();
