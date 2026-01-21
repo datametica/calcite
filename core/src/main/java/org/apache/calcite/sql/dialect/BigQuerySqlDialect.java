@@ -18,6 +18,7 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.Lex;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.linq4j.Nullness;
@@ -2361,7 +2362,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     if (interval.getSign() == -1) {
       writer.print("-");
     }
-    if (interval.getIntervalQualifier().timeUnitRange.endUnit != null) {
+    if (interval.getIntervalQualifier().timeUnitRange.endUnit != null
+        || (interval.getIntervalQualifier().timeUnitRange == TimeUnitRange.SECOND
+        && interval.getIntervalLiteral().contains("."))) {
       writer.literal("'" + interval.getIntervalLiteral() + "'");
     } else {
       writer.literal(interval.getIntervalLiteral());
