@@ -14326,6 +14326,19 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testSTGeogpointFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode literalPoint = builder.literal(10);
+    final RexNode geogPointCall =
+        builder.call(SqlLibraryOperators.ST_GEOGPOINT, literalPoint);
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(geogPointCall, "is_geogpoint")).build();
+
+    final String expectedSql = "SELECT ST_GEOGPOINT(10) AS is_geogpoint\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testSTMakeLineFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode geoCall1 =
