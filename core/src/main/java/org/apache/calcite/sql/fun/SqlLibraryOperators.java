@@ -2289,6 +2289,15 @@ public abstract class SqlLibraryOperators {
               OperandTypes.STRING_STRING, OperandTypes.STRING_STRING_BOOLEAN),
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction STR =
+      new SqlFunction("STR",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.or(OperandTypes.NUMERIC, OperandTypes.NUMERIC_INTEGER,
+              OperandTypes.NUMERIC_INTEGER_INTEGER), SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction ORACLE_TO_TIMESTAMP =
       new SqlFunction("TO_TIMESTAMP",
