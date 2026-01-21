@@ -2186,6 +2186,40 @@ public abstract class SqlImplementor {
       return false;
     }
 
+    private boolean isQualifyNodeContainsWindowFunction(
+        RexNode qualifyNode, @Nullable SqlNodeList selectList) {
+      if (selectList == null || selectList.isEmpty()) {
+        return false;
+      }
+      RelOptUtil.InputReferencedVisitor visitor = new RelOptUtil.InputReferencedVisitor();
+      visitor.visitEach(Collections.singletonList(qualifyNode));
+      for (int index : visitor.inputPosReferenced) {
+        SqlNode node = selectList.get(index);
+        if (node instanceof SqlBasicCall) {
+          if (hasAnalyticalFunction((SqlBasicCall) node)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    public boolean isQualifyFilter(RelNode relNode) {
+      if (!(relNode instanceof LogicalFilter)) {
+        return false;
+      }
+      LogicalFilter filter = (LogicalFilter) relNode;
+      RexNode condition = filter.getCondition();
+      if (condition instanceof RexCall) {
+        for (RexNode operand : ((RexCall) condition).getOperands()) {
+          if (operand instanceof RexOver) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
     private boolean hasAnalyticalFunctionInAggregate(Aggregate rel) {
       boolean present = false;
       if (node instanceof SqlSelect) {
