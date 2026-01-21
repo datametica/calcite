@@ -7892,6 +7892,31 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
   }
 
+  @Test public void testPlusAndMinusForTimestamp() {
+    final RelBuilder builder = relBuilder();
+
+    final RexNode plusNode = builder.call(SqlStdOperatorTable.PLUS,
+        builder.cast(builder.literal("1999-07-01 12:00:00"), SqlTypeName.TIMESTAMP),
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(86400000),
+            new SqlIntervalQualifier(DAY, 6, DAY,
+                -1, SqlParserPos.ZERO)));
+    final RexNode minusNode = builder.call(SqlStdOperatorTable.MINUS,
+        builder.cast(builder.literal("1999-07-01 12:00:00"), SqlTypeName.TIMESTAMP),
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(86400000),
+            new SqlIntervalQualifier(DAY, 6, DAY,
+                -1, SqlParserPos.ZERO)));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(plusNode, minusNode)
+        .build();
+
+    final String expectedSparkQuery = "SELECT TIMESTAMP '1999-07-01 12:00:00' + INTERVAL '1' DAY "
+        + "$f0, TIMESTAMP '1999-07-01 12:00:00' - INTERVAL '1' DAY $f1\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkQuery));
+  }
+
   @Test public void testPlusForDateAddForWeek() {
     final RelBuilder builder = relBuilder();
 
