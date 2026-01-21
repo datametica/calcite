@@ -1192,8 +1192,7 @@ class RelToSqlConverterDMTest {
         .build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\n"
-        + "FROM (SELECT *\n"
-        + "FROM SALESSCHEMA.sales) UNPIVOT INCLUDE NULLS (monthly_sales FOR month IN (jansales "
+        + "FROM SALESSCHEMA.sales UNPIVOT INCLUDE NULLS (monthly_sales FOR month IN (jansales "
         + "AS 'jan', febsales AS 'feb', marsales AS 'march'))";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
@@ -1215,8 +1214,7 @@ class RelToSqlConverterDMTest {
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT id, year, janexpense, febexpense, marexpense, month, "
         + "CAST(monthly_sales AS INTEGER) AS monthly_sales\n"
-        + "FROM (SELECT *\n"
-        + "FROM SALESSCHEMA.sales) UNPIVOT EXCLUDE NULLS (monthly_sales FOR month IN "
+        + "FROM SALESSCHEMA.sales UNPIVOT EXCLUDE NULLS (monthly_sales FOR month IN "
         + "(jansales AS 'jan', febsales AS 'feb', marsales AS 'march'))";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
@@ -1241,8 +1239,7 @@ class RelToSqlConverterDMTest {
         .build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\n"
-        + "FROM (SELECT *\n"
-        + "FROM SALESSCHEMA.sales) UNPIVOT INCLUDE NULLS ((monthly_sales, monthly_expense) FOR "
+        + "FROM SALESSCHEMA.sales UNPIVOT INCLUDE NULLS ((monthly_sales, monthly_expense) FOR "
         + "month IN ((jansales, janexpense) AS 'jan', (febsales, febexpense) AS 'feb', "
         + "(marsales, marexpense) AS 'march'))";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
@@ -1268,8 +1265,7 @@ class RelToSqlConverterDMTest {
         .build();
     final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
     final String expectedSql = "SELECT *\n"
-        + "FROM (SELECT *\n"
-        + "FROM SALESSCHEMA.sales) UNPIVOT EXCLUDE NULLS ((monthly_sales, monthly_expense) FOR "
+        + "FROM SALESSCHEMA.sales UNPIVOT EXCLUDE NULLS ((monthly_sales, monthly_expense) FOR "
         + "month IN ((jansales, janexpense) AS 'jan', (febsales, febexpense) AS 'feb', "
         + "(marsales, marexpense) AS 'march'))";
     assertThat(toSql(root, dialect), isLinux(expectedSql));
@@ -11383,6 +11379,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
   }
 
+  @Test void testParseUrl() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode parseUrlNode =
+        builder.call(SqlLibraryOperators.PARSE_URL_SNOWFLAKE,
+            builder.literal("https://www.foodmart.com/products/dairy?item=milk&brand=store#details"),
+            builder.literal(0));
+    final RelNode root = builder
+        .project(parseUrlNode)
+        .build();
+    final String expectedSnowflakeSql = "SELECT PARSE_URL('https://www.foodmart.com/products/dai"
+        + "ry?item=milk&brand=store#details', 0) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
+  }
+
   @Test public void testForBlobFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode toClobRex = builder.call(SqlLibraryOperators.EMPTY_BLOB);
@@ -13712,6 +13723,34 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
+  @Test public void testProjectWithCastAndLowerOperandUsedInGroupBy() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.scan("employee");
+    RexNode literalRex = builder.alias(builder.literal(10), "EXPR$123");
+    RexNode functionRex =
+        builder.alias(
+            builder.call(SqlStdOperatorTable.LOWER,
+            builder.call(SqlStdOperatorTable.CONCAT, builder.field("employee_id"),
+                builder.field("department_id"))), "A1");
+
+    RelNode relNode = builder
+        .project(literalRex, functionRex)
+        .aggregate(builder.groupKey(0, 1), builder.countStar("cnt"))
+        .project(
+            builder.alias(builder.field(0), "EXPR$123"),
+            builder.alias(
+                builder.call(SqlStdOperatorTable.SUBSTRING,
+                builder.cast(builder.field(1), SqlTypeName.VARCHAR),
+                builder.literal(3)), "A1"),
+            builder.field(2))
+        .build();
+    final String expectedBiqQuery = "SELECT 10, SUBSTR(CAST(LOWER(employee_id || department_id) "
+        + "AS STRING), 3) AS A1, COUNT(*) AS cnt\n"
+        + "FROM foodmart.employee\nGROUP BY 1, A1";
+
+    assertThat(toSql(relNode, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testErrorMessageFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode errorMessage =
@@ -14209,6 +14248,20 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testJsonFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jsonNode =
+        builder.call(SqlLibraryOperators.JSON, builder.literal("{\"name\":\"Alice\",\"age\":25}"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(jsonNode, "inventory_state"))
+        .build();
+    final String expectedTDSql = "SELECT JSON('{\"name\":\"Alice\",\"age\":25}') AS \"inventory_state\""
+        + "\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTDSql));
+  }
+
   @Test public void testFromBytes() {
     final RelBuilder builder = relBuilder();
     final RexNode toBytesNode =
@@ -14221,5 +14274,128 @@ class RelToSqlConverterDMTest {
     final String expectedSql = "SELECT FROM_BYTES('5A1B', 'BASE16') AS \"$f0\"\n"
         + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testTimestampMinusIntervalWithFormat() {
+    final RelBuilder builder = relBuilder();
+    RexBuilder rexBuilder = builder.getRexBuilder();
+    RexNode minuteInterval =
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(1),
+            new SqlIntervalQualifier(TimeUnit.MINUTE, null, SqlParserPos.ZERO));
+    RexNode secondInterval =
+        builder.getRexBuilder().makeIntervalLiteral(new BigDecimal(1),
+            new SqlIntervalQualifier(TimeUnit.SECOND, null, SqlParserPos.ZERO));
+    RexNode totalInterval =
+        builder.call(SqlStdOperatorTable.PLUS,
+            builder.call(SqlStdOperatorTable.MULTIPLY, builder.literal(10), minuteInterval),
+            builder.call(SqlStdOperatorTable.MULTIPLY, builder.literal(54), secondInterval));
+    RexNode timestampMinus =
+        builder.call(SqlStdOperatorTable.MINUS,
+            rexBuilder.makeTimestampLiteral(
+                new TimestampString("2025-11-18 08:17:34"), 6), totalInterval);
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(timestampMinus, "RESULT"))
+        .build();
+
+    final String expectedSql = "SELECT TIMESTAMP_SUB(CAST('2025-11-18 08:17:34' AS DATETIME), "
+        + "INTERVAL (10 * 60 + 54) SECOND) AS RESULT\n"
+            + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSTWithInFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-122.34900 47.65100)"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))"));
+    final RexNode stWithInCall =
+        builder.call(SqlLibraryOperators.ST_WITHIN, geoCall1, geoCall2);
+    final RelNode root = builder.scan("EMP")
+            .project(builder.alias(stWithInCall, "is_within")).build();
+
+    final String expectedSql = "SELECT ST_WITHIN(ST_GEOGFROMTEXT('POINT(-122.34900 47.65100)'),"
+        + " ST_GEOGFROMTEXT('POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))')) AS is_within\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSTGeogpointFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode literalPoint = builder.literal(10);
+    final RexNode geogPointCall =
+        builder.call(SqlLibraryOperators.ST_GEOGPOINT, literalPoint);
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(geogPointCall, "is_geogpoint")).build();
+
+    final String expectedSql = "SELECT ST_GEOGPOINT(10) AS is_geogpoint\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSTMakeLineFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-122.34900 47.65100)"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-73.9847 40.7484)"));
+    final RexNode stMakeLineCall =
+        builder.call(SqlLibraryOperators.ST_MAKELINE, geoCall1, geoCall2);
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(stMakeLineCall, "is_makeline")).build();
+
+    final String expectedSql = "SELECT ST_MAKELINE(ST_GEOGFROMTEXT('POINT(-122.34900 47.65100)'),"
+        + " ST_GEOGFROMTEXT('POINT(-73.9847 40.7484)')) AS is_makeline\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSTBufferFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-122.34900 47.65100)"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-73.9847 40.7484)"));
+    final RexNode stMakeLineCall =
+        builder.call(SqlLibraryOperators.ST_MAKELINE, geoCall1, geoCall2);
+    final RexNode stBufferCall =
+        builder.call(SqlLibraryOperators.ST_BUFFER, stMakeLineCall, builder.literal(100));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(stBufferCall, "is_buffer")).build();
+
+    final String expectedSql = "SELECT ST_BUFFER(ST_MAKELINE(ST_GEOGFROMTEXT('POINT(-122.34900 47.65100)'), "
+        + "ST_GEOGFROMTEXT('POINT(-73.9847 40.7484)')), 100) AS is_buffer\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSTContainsFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode geoCall1 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POLYGON((1 1, 20 1, 10 20, 1 1))"));
+    final RexNode geoCall2 =
+        builder.call(SqlLibraryOperators.ST_GEOGFROMTEXT,
+            builder.literal("POINT(-73.9847 40.7484)"));
+    final RexNode stContainsCall =
+        builder.call(SqlLibraryOperators.ST_CONTAINS, geoCall1, geoCall2);
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(stContainsCall, "is_stContains")).build();
+
+    final String expectedSql = "SELECT ST_CONTAINS(ST_GEOGFROMTEXT('POLYGON((1 1, 20 1, 10 20, 1 1))'),"
+        + " ST_GEOGFROMTEXT('POINT(-73.9847 40.7484)')) AS is_stContains\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 }

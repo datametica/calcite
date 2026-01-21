@@ -19,11 +19,13 @@ package org.apache.calcite.rex;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Variable which references a column of a table occurrence in a relational plan.
@@ -48,6 +50,12 @@ public class RexTableInputRef extends RexInputRef {
 
   private RexTableInputRef(RelTableRef tableRef, int index, RelDataType type) {
     super(index, type);
+    this.tableRef = tableRef;
+    this.digest = tableRef.toString() + ".$" + index;
+  }
+
+  private RexTableInputRef(RelTableRef tableRef, int index, RelDataType type, Set<Comment> comments) {
+    super(index, type, comments);
     this.tableRef = tableRef;
     this.digest = tableRef.toString() + ".$" + index;
   }
@@ -95,6 +103,10 @@ public class RexTableInputRef extends RexInputRef {
 
   @Override public SqlKind getKind() {
     return SqlKind.TABLE_INPUT_REF;
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexTableInputRef(tableRef, index, type, comments);
   }
 
   /** Identifies uniquely a table by its qualified name and its entity number

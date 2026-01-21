@@ -1082,6 +1082,10 @@ public abstract class OperandTypes {
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,
               SqlTypeFamily.INTEGER), i -> i == 2);
 
+  public static final SqlSingleOperandTypeChecker STRING_OPTIONAL_INTEGER =
+      family(
+          ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER), i -> i == 1);
+
   public static final SqlSingleOperandTypeChecker STRING_NUMERIC =
       family(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC);
 
@@ -1258,6 +1262,22 @@ public abstract class OperandTypes {
 
   public static final SqlSingleOperandTypeChecker INTERVALINTERVAL_INTERVALDATETIME =
       INTERVAL_SAME_SAME.or(INTERVAL_DATETIME);
+
+  public static final FamilyOperandTypeChecker
+      GEOGRAPHY_NUMERIC_OPTIONAL_NUMERIC_OPTIONAL_STRING_OPTIONAL_STRING_OPTIONAL_BOOLEAN =
+      family(
+          ImmutableList.of(
+              SqlTypeFamily.GEOGRAPHY,
+              SqlTypeFamily.NUMERIC,
+              SqlTypeFamily.NUMERIC,
+              SqlTypeFamily.STRING,
+              SqlTypeFamily.STRING,
+              SqlTypeFamily.BOOLEAN),
+          number ->
+              number == 2
+                  || number == 3
+                  || number == 4
+                  || number == 5);
 
   // TODO: datetime+interval checking missing
   // TODO: interval+datetime checking missing

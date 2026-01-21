@@ -19,6 +19,7 @@ package org.apache.calcite.rex;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 
 import com.google.common.collect.ImmutableList;
 
@@ -26,6 +27,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Represents a lambda expression.
@@ -39,6 +41,12 @@ public class RexLambda extends RexNode {
   //~ Constructors -----------------------------------------------------------
 
   RexLambda(List<RexLambdaRef> parameters, RexNode expression) {
+    this.parameters = ImmutableList.copyOf(parameters);
+    this.expression = Objects.requireNonNull(expression, "expression");
+  }
+
+  RexLambda(List<RexLambdaRef> parameters, RexNode expression, Set<Comment> comments) {
+    super(comments);
     this.parameters = ImmutableList.copyOf(parameters);
     this.expression = Objects.requireNonNull(expression, "expression");
   }
@@ -96,5 +104,9 @@ public class RexLambda extends RexNode {
       digest = sb.toString();
     }
     return digest;
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexLambda(parameters, expression, comments);
   }
 }

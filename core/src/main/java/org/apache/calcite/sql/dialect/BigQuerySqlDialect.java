@@ -70,6 +70,7 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.ToNumberUtils;
 import org.apache.calcite.util.Util;
@@ -486,6 +487,10 @@ public class BigQuerySqlDialect extends SqlDialect {
 
   @Override public boolean supportsUnpivot() {
     return true;
+  }
+
+  public boolean hasImplicitTypeCoercionInUnpivot() {
+    return false;
   }
 
   @Override public boolean castRequiredForStringOperand(RexCall node) {
@@ -1236,6 +1241,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     case MINUS:
       unparseMinusIntervalCall(writer, call, leftPrec, rightPrec);
       break;
+    case PLUS:
+      unparsePlusIntervalCall(writer, call.operand(1), leftPrec, rightPrec);
+      break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
@@ -1266,6 +1274,35 @@ public class BigQuerySqlDialect extends SqlDialect {
     intervalOperand.unparse(writer, leftPrec, rightPrec);
     writer.print(")");
     writer.keyword("DAY");
+  }
+
+  private void unparsePlusIntervalCall(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    writer.keyword("INTERVAL");
+    writer.print("(");
+    for (SqlNode node : call.getOperandList()) {
+      SqlBasicCall basicCall = (SqlBasicCall) node;
+      SqlNode intervalLiteral = null;
+      SqlNode numericLiteral = null;
+      if (basicCall.operand(0) instanceof SqlIntervalLiteral) {
+        intervalLiteral = basicCall.operand(0);
+        numericLiteral = basicCall.operand(1);
+      } else {
+        intervalLiteral = basicCall.operand(1);
+        numericLiteral = basicCall.operand(0);
+      }
+      numericLiteral.unparse(writer, leftPrec, rightPrec);
+      boolean isMinuteInterval =
+          (intervalLiteral instanceof SqlIntervalLiteral)
+              && ((SqlIntervalLiteral) intervalLiteral).getTypeName() == SqlTypeName.INTERVAL_MINUTE;
+      if (isMinuteInterval) {
+        writer.sep("*");
+        writer.sep("60");
+        writer.sep(PLUS.getName());
+      }
+    }
+    writer.print(")");
+    writer.keyword("SECOND");
   }
 
   private void unparseExpressionIntervalCall(
@@ -1644,6 +1681,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     case "GENERATE_SQLERRM":
       writer.literal("@@error.message");
       break;
+    case "ST_DISTANCE__UDF":
     case "ST_DISTANCE":
       unparseStDistance(writer, call);
       break;
@@ -1721,6 +1759,7 @@ public class BigQuerySqlDialect extends SqlDialect {
   }
 
   private void unparseShiftLeftAndShiftRight(SqlWriter writer, SqlCall call, boolean isShiftLeft) {
+    SqlCommentUtil.unparseSqlComment(writer, call, true);
     writer.print("(");
     call.operand(0).unparse(writer, 0, 0);
     SqlNode secondOperand = call.operand(1);
@@ -1737,6 +1776,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       secondOperand.unparse(writer, 0, 0);
     }
     writer.print(")");
+    SqlCommentUtil.unparseSqlComment(writer, call, false);
   }
 
   private void unparseLastDay(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {

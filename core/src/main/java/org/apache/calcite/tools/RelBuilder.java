@@ -110,6 +110,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.TableFunctionReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -2396,8 +2397,13 @@ public class RelBuilder {
       return inferAlias(exprList, ((RexCall) expr).getOperands().get(0), -1);
     case AS:
       final RexCall call = (RexCall) expr;
+      Set<Comment> comments = new HashSet<>();
+      call.getOperands().forEach(operand -> {
+        comments.addAll(operand.getComment());
+      });
+      comments.addAll(call.getComment());
       if (i >= 0) {
-        exprList.set(i, call.getOperands().get(0));
+        exprList.set(i, call.getOperands().get(0).copy(comments));
       }
       NlsString value = (NlsString) ((RexLiteral) call.getOperands().get(1)).getValue();
       return castNonNull(value)

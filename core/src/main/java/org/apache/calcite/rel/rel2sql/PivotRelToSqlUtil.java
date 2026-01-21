@@ -109,7 +109,7 @@ public class PivotRelToSqlUtil {
               new SqlIdentifier(pivotTableAlias, pos));
     }
     SqlNode select =
-        new SqlSelect(SqlParserPos.ZERO, null, null, sqlTableAlias,
+        new SqlSelect(SqlParserPos.ZERO, null, SqlNodeList.EMPTY, sqlTableAlias,
             null, null, null, null, builder.select.getOrderList(),
             null, null, SqlNodeList.EMPTY);
     return select;

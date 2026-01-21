@@ -497,6 +497,14 @@ public abstract class SqlLibraryOperators {
               OperandTypes.STRING_STRING_OPTIONAL_STRING,
               SqlFunctionCategory.STRING);
 
+  /** The "PARSE_URL(urlString, partToExtract [, keyToExtract] )" function. */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction PARSE_URL_SNOWFLAKE =
+      SqlBasicFunction.create("PARSE_URL",
+          ReturnTypes.JSON,
+          OperandTypes.STRING_OPTIONAL_INTEGER,
+          SqlFunctionCategory.STRING);
+
   /** The "FIND_IN_SET(matchStr, textStr)" function. */
   @LibraryOperator(libraries = {HIVE, SPARK})
   public static final SqlFunction FIND_IN_SET =
@@ -4723,4 +4731,62 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR_NULLABLE,
           OperandTypes.family(SqlTypeFamily.BINARY, SqlTypeFamily.STRING),
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction JSON =
+      new SqlFunction("JSON",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.JSON, null,
+          OperandTypes.STRING,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_WITHIN =
+      new SqlFunction(
+          "ST_WITHIN",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.GEOMETRY_GEOMETRY,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_MAKELINE =
+      new SqlFunction(
+          "ST_MAKELINE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.or(OperandTypes.family(SqlTypeFamily.ARRAY), OperandTypes.GEOMETRY_GEOMETRY),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_BUFFER =
+      new SqlFunction(
+          "ST_BUFFER",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.GEOGRAPHY_NUMERIC_OPTIONAL_NUMERIC_OPTIONAL_STRING_OPTIONAL_STRING_OPTIONAL_BOOLEAN,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_CONTAINS =
+      new SqlFunction(
+          "ST_CONTAINS",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BOOLEAN,
+          null,
+          OperandTypes.GEOMETRY_GEOMETRY,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ST_GEOGPOINT =
+      new SqlFunction(
+          "ST_GEOGPOINT",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.GEOGRAPHY,
+          null,
+          OperandTypes.NUMERIC_NUMERIC,
+          SqlFunctionCategory.SYSTEM);
 }
