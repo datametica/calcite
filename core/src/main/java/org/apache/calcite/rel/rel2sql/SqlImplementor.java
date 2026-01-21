@@ -1337,9 +1337,26 @@ public abstract class SqlImplementor {
     private List<SqlNode> toSql(@Nullable RexProgram program, List<RexNode> operandList) {
       final List<SqlNode> list = new ArrayList<>();
       for (RexNode rex : operandList) {
-        list.add(toSql(program, rex));
+        SqlNode node = toSql(program, rex);
+        boolean flag = (rex.getType().getSqlTypeName() == SqlTypeName.BOOLEAN
+            || rex.getType().getSqlTypeName() == SqlTypeName.TINYINT)
+            && rex.getClass().toString().equals(RexLiteral.class.toString())
+            && (((RexLiteral) rex).getTypeName() == SqlTypeName.NULL
+            || ((RexLiteral) rex).getTypeName() == SqlTypeName.DECIMAL);
+        if (flag) {
+          node = castNullType(node, rex.getType());
+        }
+        list.add(node);
       }
       return list;
+    }
+
+    private SqlNode castNullType(SqlNode nullLiteral, RelDataType type) {
+      final SqlNode typeNode = dialect.getCastSpec(type);
+      if (typeNode == null) {
+        return nullLiteral;
+      }
+      return SqlStdOperatorTable.CAST.createCall(POS, nullLiteral, typeNode);
     }
 
     public List<SqlNode> fieldList() {
