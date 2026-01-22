@@ -2382,6 +2382,14 @@ public class BigQuerySqlDialect extends SqlDialect {
           RelDataType.PRECISION_NOT_SPECIFIED, SqlParserPos.ZERO);
       return SqlLiteral.createInterval(interval.getSign(), Long.toString(equivalentSecondValue),
           qualifier, literal.getParserPosition());
+    case INTERVAL_YEAR_MONTH:
+      long equivalentMonthValue =
+          SqlParserUtil.intervalToMonths(interval.getIntervalLiteral(), interval.getIntervalQualifier());
+      SqlIntervalQualifier monthQualifier =
+          new SqlIntervalQualifier(TimeUnit.MONTH, -1,
+              TimeUnit.MONTH, -1, SqlParserPos.ZERO);
+      return SqlLiteral.createInterval(interval.getSign(), Long.toString(equivalentMonthValue),
+          monthQualifier, literal.getParserPosition());
     default:
       return literal;
     }
