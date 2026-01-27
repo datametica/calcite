@@ -2076,7 +2076,11 @@ public class RelToSqlConverter extends SqlImplementor
       for (SqlNode node : sqlSelect.getSelectList()) {
         if (node.getKind() == SqlKind.AS) {
           SqlCall call = (SqlCall) node;
+          SqlNode firstOperand = call.operand(0);
           SqlIdentifier alias = call.operand(1);
+          if (isAliasMatchingColumn(firstOperand, alias.names.get(0), tableFieldNames)) {
+            continue;
+          }
           selectListAliases.add(alias.names.get(0));
         }
       }
@@ -2090,6 +2094,16 @@ public class RelToSqlConverter extends SqlImplementor
       return result(node, result.clauses, result.neededAlias, result.neededType, result.aliases);
     }
     return result;
+  }
+
+  private boolean isAliasMatchingColumn(SqlNode node,
+      String alias, List<String> tableFieldNames) {
+    if (node instanceof SqlIdentifier
+        && tableFieldNames.stream().anyMatch(alias::equals)) {
+      String columnName = ((SqlIdentifier) node).names.get(0);
+      return tableFieldNames.stream().anyMatch(columnName::equals);
+    }
+    return false;
   }
 
   private List<String> fetchFieldNames(RelNode relNode, SqlSelect sqlSelect, String tableAlias) {
