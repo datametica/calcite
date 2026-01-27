@@ -18,11 +18,11 @@ package org.apache.calcite.rel.rules.dm;
 
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelRule;
-import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.rules.TransformationRule;
+import org.apache.calcite.sql.SqlKind;
 
 import org.immutables.value.Value;
 
@@ -55,10 +55,10 @@ public class DatabricksSortAggregateTransformationRule
     extension.execute(call);
   }
 
-  private static boolean callHasCollation(Aggregate aggregate) {
+  private static boolean callHasListAggFun(Aggregate aggregate) {
     List<AggregateCall> aggregateCallList = aggregate.getAggCallList();
     return aggregateCallList.stream().anyMatch(aggregateCall ->
-        aggregateCall.collation != RelCollations.EMPTY);
+        aggregateCall.getAggregation().kind.equals(SqlKind.LISTAGG));
   }
 
   /**
@@ -71,7 +71,7 @@ public class DatabricksSortAggregateTransformationRule
         ImmutableDatabricksSortAggregateTransformationRule.Config.of()
             .withOperandSupplier(b0 ->
                 b0.operand(Aggregate.class)
-                    .predicate(DatabricksSortAggregateTransformationRule::callHasCollation)
+                    .predicate(DatabricksSortAggregateTransformationRule::callHasListAggFun)
                     .oneInput(b1 ->
                         b1.operand(Project.class).anyInputs()))
             .as(DatabricksSortAggregateTransformationRule.Config.class);
