@@ -211,6 +211,8 @@ public class SqlUpdate extends SqlCall {
   private boolean isTargetTable(SqlNode node) {
     if (node.equalsDeep(targetTable, Litmus.IGNORE)) {
       return true;
+    } else if (isSameTableJoin()) {
+      return ((SqlBasicCall) node).getOperandList().get(1).equalsDeep(this.alias, Litmus.IGNORE);
     } else if (node.getKind() == SqlKind.AS) {
       return ((SqlBasicCall) node).getOperandList().get(0).equalsDeep(targetTable, Litmus.IGNORE);
     }
@@ -371,5 +373,17 @@ public class SqlUpdate extends SqlCall {
 
   @Override public void validate(SqlValidator validator, SqlValidatorScope scope) {
     validator.validateUpdate(this);
+  }
+
+  private boolean isSameTableJoin() {
+    if (sourceSelect == null || sourceSelect.from == null || alias == null) {
+      return false;
+    }
+    SqlJoin join = (SqlJoin) sourceSelect.from;
+    if (join.getJoinType() == JoinType.INNER && join.left instanceof SqlCall && join.right instanceof SqlCall) {
+      return ((SqlCall) join.left).operand(0)
+          .equalsDeep(((SqlCall) join.right).operand(0), Litmus.IGNORE);
+    }
+    return false;
   }
 }
