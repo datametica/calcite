@@ -85,6 +85,7 @@ import org.apache.calcite.sql.dialect.MssqlSqlDialect;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.fun.BQRangeSessionizeTableFunction;
 import org.apache.calcite.sql.fun.GeneratorTableFunction;
+import org.apache.calcite.sql.fun.HiveLateralViewExplodeFunction;
 import org.apache.calcite.sql.fun.SqlAddMonths;
 import org.apache.calcite.sql.fun.SqlLibrary;
 import org.apache.calcite.sql.fun.SqlLibraryOperatorTableFactory;
@@ -95,6 +96,7 @@ import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.BasicSqlTypeWithFormat;
+import org.apache.calcite.sql.type.MapSqlType;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
@@ -10977,6 +10979,24 @@ class RelToSqlConverterDMTest {
         + "FROM TABLE(MSSQL_STRING_SPLIT('a-b-c', '-'))";
 
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testLateralViewExplodeFunction() {
+    final RelBuilder builder = foodmartRelBuilder();
+    RexNode operand =
+        builder.call(SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, builder.literal("key_name"),
+            builder.literal("value_name"));
+    Map<String, RelDataType> tableFunRowType = new HashMap<>();
+    tableFunRowType.put("key", ((MapSqlType) operand.getType()).getKeyType());
+    tableFunRowType.put("value", ((MapSqlType) operand.getType()).getValueType());
+    List<RexNode> operands = new ArrayList<>();
+    operands.add(operand);
+    RelNode root =
+        builder.functionScan(new HiveLateralViewExplodeFunction(tableFunRowType), 0, operands).build();
+    final String expectedQuery = "SELECT *\n"
+        + "FROM TABLE(LATERAL VIEW EXPLODE(MAP['key_name', 'value_name']))";
+
+    assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedQuery));
   }
 
   @Test public void testStrtokSplitToTable() {
