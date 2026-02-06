@@ -14421,9 +14421,17 @@ class RelToSqlConverterDMTest {
 
   @Test public void testIntervalSecondDecimalValue() {
     final String query = "SELECT INTERVAL '25.500' SECOND interval_sec";
-    final String expectedBiqquery = "SELECT INTERVAL '25.5' SECOND AS INTERVAL_SEC";
+    final String expectedSql = "SELECT INTERVAL '25.5' SECOND AS INTERVAL_SEC";
     sql(query)
         .withBigQuery()
-        .ok(expectedBiqquery);
+        .ok(expectedSql);
+  }
+
+  @Test public void testCastBooleanWithInteger() {
+    final String query = "SELECT CAST(1 AS BOOLEAN) boolean_value";
+    final String expectedSql = "SELECT CAST(1 AS BOOL) AS BOOLEAN_VALUE";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedSql);
   }
 }

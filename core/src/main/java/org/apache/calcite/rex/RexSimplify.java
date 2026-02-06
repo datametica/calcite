@@ -2279,6 +2279,11 @@ public class RexSimplify {
         return rexBuilder.makeCast(e.getType(), operand);
       }
 
+      if (e.getType().getSqlTypeName() == SqlTypeName.BOOLEAN
+          && operand.getType().getSqlTypeName() == SqlTypeName.INTEGER) {
+        return e;
+      }
+
       // Next, try to convert the value to a different type,
       // e.g. CAST('123' as integer)
       switch (literal.getTypeName()) {
