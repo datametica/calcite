@@ -334,11 +334,16 @@ allprojects {
         // RAT and Autostyle dependencies
         mavenCentral()
         maven {
-            url = uri("http://nexus2.datametica.com:8081/nexus/content/repositories/thirdparty/")
-            setAllowInsecureProtocol(true)
+            name = "secretNexus"
+            val baseUrl = "http://nexus.datametica.com:8081/repository"
+            val releasesUrl = "$baseUrl/3rd-party-n2"
+            val snapshotsUrl = "$baseUrl/3rd-party-n2"
+            val release = !project.version.toString().endsWith("-1")
+            url = uri(if (release) releasesUrl else snapshotsUrl)
+            isAllowInsecureProtocol = true
             credentials {
-                username = "abbas.gadhia"
-                password = "abbas.gadhia"
+                username = "admin"
+                password = "DMNexus@321!"
             }
         }
     }

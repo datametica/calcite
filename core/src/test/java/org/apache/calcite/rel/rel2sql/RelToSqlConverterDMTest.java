@@ -14421,9 +14421,31 @@ class RelToSqlConverterDMTest {
 
   @Test public void testIntervalSecondDecimalValue() {
     final String query = "SELECT INTERVAL '25.500' SECOND interval_sec";
-    final String expectedBiqquery = "SELECT INTERVAL '25.5' SECOND AS INTERVAL_SEC";
+    final String expectedSql = "SELECT INTERVAL '25.5' SECOND AS INTERVAL_SEC";
     sql(query)
         .withBigQuery()
-        .ok(expectedBiqquery);
+        .ok(expectedSql);
+  }
+
+  @Test public void testCastBooleanWithInteger() {
+    final String query = "SELECT CAST(1 AS BOOLEAN) boolean_value";
+    final String expectedSql = "SELECT CAST(1 AS BOOL) AS BOOLEAN_VALUE";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedSql);
+  }
+
+  @Test public void testTimeFromPartsFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode timeFromParts =
+        builder.call(SqlLibraryOperators.TIME_FROM_PARTS, builder.literal(3),
+            builder.literal(15), builder.literal(30), builder.literal(854796));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(timeFromParts, "time_diff")).build();
+
+    final String expectedSql = "SELECT TIME_FROM_PARTS(3, 15, 30, 854796) AS \"time_diff\"\nFROM "
+        + "\"scott\".\"EMP\"";
+
+    assertThat(toSql(root), isLinux(expectedSql));
   }
 }

@@ -1683,7 +1683,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("TIME_FROM_PARTS",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIME, null,
-          OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+          OperandTypes.INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER,
           SqlFunctionCategory.NUMERIC);
 
   @LibraryOperator(libraries = {TERADATA})
