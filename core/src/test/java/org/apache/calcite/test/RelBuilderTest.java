@@ -566,7 +566,7 @@ public class RelBuilderTest {
                 builder.isNotNull(builder.field(3)))
             .build();
     final String expected = ""
-        + "LogicalFilter(condition=[AND(OR(=($7, 20), IS NULL($6)), IS NOT NULL($3))])\n"
+        + "LogicalFilter(condition=[AND(IS NOT NULL($3), OR(=($7, 20), IS NULL($6)))])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
     assertThat(root, hasTree(expected));
   }
