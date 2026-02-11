@@ -1913,13 +1913,17 @@ public class RelToSqlConverter extends SqlImplementor
     } else {
       unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, operand);
     }
-    final List<SqlNode> operands =
-        createAsFullOperands(e.getRowType(), unnestNode,
-            requireNonNull(x.neededAlias, () -> "x.neededAlias is null, node is " + x.node));
+    String alias = null;
     TableAliasTrait tableAliasTrait = e.getTraitSet().getTrait(TableAliasTraitDef.instance);
     if (tableAliasTrait != null) {
-      operands.add(new SqlIdentifier(tableAliasTrait.getTableAlias(), POS));
+      alias = tableAliasTrait.getTableAlias();
     }
+    if (alias == null) {
+      alias = requireNonNull(x.neededAlias, () -> "x.neededAlias is null, node is " + x.node);
+    }
+    final List<SqlNode> operands =
+        createAsFullOperands(e.getRowType(), unnestNode, alias);
+
     final SqlNode asNode = SqlStdOperatorTable.AS.createCall(POS, operands);
     return result(asNode, ImmutableList.of(Clause.FROM), e, null);
   }
