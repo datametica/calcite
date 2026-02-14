@@ -1057,16 +1057,15 @@ class RelToSqlConverterDMTest {
         + "  from \"foodmart\".\"employee\" \"a\"\n"
         + "    group by \"a\".\"full_name\", \"a\".\"position_title\""
         + "    qualify item <= 3) \"b\"";
-    final String expectedBigQuery = "SELECT "
-        + "CASE WHEN MAX(`$f0`) IS NOT NULL THEN CAST(MAX(`$f0`) AS STRING) ELSE 'N/A' END AS pos\n"
-        + "FROM (SELECT CASE WHEN full_name = 'John Smith' AND "
-        + "(ROW_NUMBER() OVER (PARTITION BY full_name ORDER BY full_name IS NULL, full_name)) = 1 "
-        + "THEN position_title ELSE NULL END AS `$f0`\n"
+    final String expectedBigQuery = "SELECT CASE WHEN MAX(CASE WHEN full_name = 'John Smith' AND ITEM = 1 "
+        + "THEN position_title ELSE NULL END) IS NOT NULL THEN CAST(MAX(CASE WHEN "
+        + "full_name = 'John Smith' AND ITEM = 1 THEN position_title ELSE NULL END) AS STRING) ELSE 'N/A' END AS pos\n"
+        + "FROM (SELECT full_name, position_title, "
+        + "ROW_NUMBER() OVER (PARTITION BY full_name ORDER BY full_name IS NULL, full_name) AS ITEM, "
+        + "(ROW_NUMBER() OVER (PARTITION BY position_title ORDER BY position_title IS NULL, position_title)) <= 3 AS QualifyExpression\n"
         + "FROM foodmart.employee\n"
         + "GROUP BY full_name, position_title\n"
-        + "QUALIFY "
-        + "(ROW_NUMBER() OVER "
-        + "(PARTITION BY position_title ORDER BY position_title IS NULL, position_title)) <= 3) AS t3";
+        + "QUALIFY QualifyExpression) AS t2";
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery);
@@ -8877,7 +8876,7 @@ class RelToSqlConverterDMTest {
         .build();
     final String expectedBQSql = "SELECT COUNT(*) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS CNT\n"
         + "FROM scott.EMP\n"
-        + "QUALIFY (COUNT(*) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)) = 1";
+        + "QUALIFY CNT = 1";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
   }
 
@@ -11832,10 +11831,11 @@ class RelToSqlConverterDMTest {
         .build();
 
     final String expectedBiqQuery = "SELECT DEPTNO\n"
+        + "FROM (SELECT DEPTNO, CAST(FLOOR(((RANK() OVER (ORDER BY 23)) - 1) * 5 / "
+        + "(COUNT(*) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING))) AS INT64) AS quantile\n"
         + "FROM scott.EMP\n"
         + "WHERE EMPNO NOT BETWEEN 1 AND 3\n"
-        + "QUALIFY CAST(FLOOR(((RANK() OVER (ORDER BY 23)) - 1) * 5 / (COUNT(*) OVER (RANGE BETWEEN "
-        + "UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING))) AS INT64) = 1";
+        + "QUALIFY quantile = 1) AS t1";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
