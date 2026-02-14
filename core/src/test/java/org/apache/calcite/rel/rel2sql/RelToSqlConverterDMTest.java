@@ -857,6 +857,22 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
 
+  @Test void testChainComparison() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode comparisonNode =
+        builder.equals(builder.call(CURRENT_DATE), builder.call(CURRENT_TIMESTAMP));
+    final RexNode nestedComparisonNode =
+        builder.equals(comparisonNode, builder.field(0));
+    final RelNode root =
+        builder.scan("EMP").project(nestedComparisonNode).build();
+    final String expectedSql = "SELECT CURRENT_DATE = CURRENT_TIMESTAMP = \"EMPNO\" AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBigQuery = "SELECT (CURRENT_DATE = CURRENT_DATETIME()) = EMPNO AS `$f0`\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
   /*@Test public void testGroupByAliasReplacementWithGroupByExpression() {
     String query = "select \"product_class_id\" + \"product_id\" as product_id, "
         + "\"product_id\" + 2 as prod_id, count(1) as num_records"
