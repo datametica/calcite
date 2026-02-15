@@ -925,6 +925,9 @@ public enum SqlKind {
   /** {@code SUBSTR} function (PostgreSQL semantics). */
   SUBSTR_POSTGRESQL,
 
+  /** {@code SUBSTR} function (Teradata semantics). */
+  SUBSTR_TERADATA,
+
   /** {@code ENDS_WITH} function. */
   ENDS_WITH,
 
