@@ -11633,6 +11633,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSFQuery));
   }
 
+  @Test public void testRegexpCountWithFourArgs() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpCountRexNodeWithThreeArgs =
+        builder.call(SqlLibraryOperators.REGEXP_COUNT, builder.literal("foo1 foo foo40 foo"),
+            builder.literal("foo"), builder.literal(2), builder.literal("c"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpCountRexNodeWithThreeArgs, "value"))
+        .build();
+    final String expectedSFQuery = "SELECT REGEXP_COUNT('foo1 foo foo40 foo', 'foo', 2, 'c') AS "
+        + "\"value\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSFQuery));
+  }
+
   @Test public void testRegexpSplitToArray() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpCountRexNode =
