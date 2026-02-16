@@ -3705,11 +3705,11 @@ class RelToSqlConverterDMTest {
         + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1) AS \"position3\", "
         + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1, 1) AS \"position4\"\n"
         + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT REGEXP_INSTR('Hello, Hello, World!', 'Hello') "
+    final String expectedBiqQuery = "SELECT REGEXP_INSTR('Hello, Hello, World!', r'Hello') "
         + "AS position1, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2) AS position2, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1) AS position3, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1, 1) AS position4\n"
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2) AS position2, "
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2, 1) AS position3, "
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2, 1, 1) AS position4\n"
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -14447,5 +14447,31 @@ class RelToSqlConverterDMTest {
         + "\"scott\".\"EMP\"";
 
     assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testRegexpInstrInBQ() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpInstrWithTwoArgs =
+        builder.call(SqlLibraryOperators.REGEXP_INSTR, builder.literal("EMP-A02"),
+            builder.literal("(?i)[0-9]"));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(regexpInstrWithTwoArgs, "position1")).build();
+
+    final String expectedBiqQuery = "SELECT REGEXP_INSTR('EMP-A02', r'(?i)[0-9]') AS position1\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testChecksumFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode checkSumNode =
+        builder.call(SqlLibraryOperators.CHECKSUM, builder.field(0),
+            builder.field(1));
+    final RelNode root = builder
+        .project(checkSumNode).build();
+
+    final String expectedBiqQuery = "SELECT CHECKSUM([EMPNO], [ENAME]) AS [$f0]\n"
+        + "FROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedBiqQuery));
   }
 }
