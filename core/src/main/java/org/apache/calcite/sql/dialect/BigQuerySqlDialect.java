@@ -2350,7 +2350,8 @@ public class BigQuerySqlDialect extends SqlDialect {
         .replace("%Y-%m-%d", "%F")
         .replace("'", "")
         .replace("%S.", "%E")
-        .replace("%E.*S", "%E*S");
+        .replace("%E.*S", "%E*S")
+        .replace("%Y*%m_%d-%I*%m", "%Y*%m_%d-%H*%m");
   }
 
   @Override public void unparseSqlIntervalLiteral(
