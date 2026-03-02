@@ -86,6 +86,7 @@ import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.fun.BQRangeSessionizeTableFunction;
 import org.apache.calcite.sql.fun.GeneratorTableFunction;
 import org.apache.calcite.sql.fun.HiveLateralViewExplodeFunction;
+import org.apache.calcite.sql.fun.HiveTableValueFunction;
 import org.apache.calcite.sql.fun.SqlAddMonths;
 import org.apache.calcite.sql.fun.SqlLibrary;
 import org.apache.calcite.sql.fun.SqlLibraryOperatorTableFactory;
@@ -3705,11 +3706,11 @@ class RelToSqlConverterDMTest {
         + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1) AS \"position3\", "
         + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1, 1) AS \"position4\"\n"
         + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT REGEXP_INSTR('Hello, Hello, World!', 'Hello') "
+    final String expectedBiqQuery = "SELECT REGEXP_INSTR('Hello, Hello, World!', r'Hello') "
         + "AS position1, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2) AS position2, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1) AS position3, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1, 1) AS position4\n"
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2) AS position2, "
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2, 1) AS position3, "
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2, 1, 1) AS position4\n"
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
@@ -10999,6 +11000,25 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedQuery));
   }
 
+  @Test public void testLateralViewInlineFunction() {
+    final RelBuilder builder = foodmartRelBuilder();
+    RexNode operand =
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal(0), builder.literal(1), builder.literal(2));
+    Map<String, RelDataType> tableFunRowType = new HashMap<>();
+    tableFunRowType.put("col1", operand.getType());
+    tableFunRowType.put("col2", operand.getType());
+    List<RexNode> operands = new ArrayList<>();
+    operands.add(operand);
+    RelNode root =
+        builder.functionScan(HiveTableValueFunction.of("INLINE", tableFunRowType), 0, operands).build();
+    final String expectedQuery = "SELECT *\n"
+        + "FROM TABLE(INLINE(ARRAY (0, 1, 2)))";
+
+    assertThat(toSql(root, DatabaseProduct.HIVE.getDialect()), isLinux(expectedQuery));
+  }
+
+
   @Test public void testStrtokSplitToTable() {
     final RelBuilder builder = relBuilder();
     final Map<String, RelDataType> columnDefinition = new HashMap<>();
@@ -14447,5 +14467,31 @@ class RelToSqlConverterDMTest {
         + "\"scott\".\"EMP\"";
 
     assertThat(toSql(root), isLinux(expectedSql));
+  }
+
+  @Test public void testRegexpInstrInBQ() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpInstrWithTwoArgs =
+        builder.call(SqlLibraryOperators.REGEXP_INSTR, builder.literal("EMP-A02"),
+            builder.literal("(?i)[0-9]"));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(regexpInstrWithTwoArgs, "position1")).build();
+
+    final String expectedBiqQuery = "SELECT REGEXP_INSTR('EMP-A02', r'(?i)[0-9]') AS position1\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testChecksumFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode checkSumNode =
+        builder.call(SqlLibraryOperators.CHECKSUM, builder.field(0),
+            builder.field(1));
+    final RelNode root = builder
+        .project(checkSumNode).build();
+
+    final String expectedBiqQuery = "SELECT CHECKSUM([EMPNO], [ENAME]) AS [$f0]\n"
+        + "FROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedBiqQuery));
   }
 }
