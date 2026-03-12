@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlDelete;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlKind;
@@ -93,6 +94,9 @@ public class CTERelToSqlUtil {
     }
     if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlSelect).getWhere() != null) {
       fetchSqlWithSelectList(Arrays.asList(((SqlSelect) sqlSelect).getWhere()), sqlNodes);
+    }
+    if (sqlSelect instanceof SqlDelete && ((SqlDelete) sqlSelect).getSourceSelect() != null) {
+      fetchSqlWithItems(((SqlDelete) sqlSelect).getSourceSelect(), sqlNodes);
     }
     return sqlNodes;
   }
@@ -238,6 +242,14 @@ public class CTERelToSqlUtil {
         for (SqlNode operand : setOpCall.getOperandList()) {
           updateSqlNode(operand);
         }
+      } else if (sqlNode instanceof SqlDelete) {
+        SqlDelete sqlDelete = (SqlDelete) sqlNode;
+        // Handle targetTable
+        SqlNode targetTable = sqlDelete.getTargetTable();
+        processFromNode(sqlDelete, targetTable);
+        if (sqlDelete.getCondition() != null) {
+          updateNode(sqlDelete.getCondition());
+        }
       }
     }
   }
@@ -253,7 +265,11 @@ public class CTERelToSqlUtil {
       if (isNestedCte(query)) {
         processWithItem((SqlWithItem) fromNode);
       } else {
-        ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
+        if (sqlNode instanceof SqlDelete) {
+          ((SqlDelete) sqlNode).setOperand(0, ((SqlWithItem) fromNode).name);
+        } else {
+          ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
+        }
       }
     } else if (fromNode instanceof SqlUnpivot
         && ((SqlUnpivot) fromNode).query instanceof SqlWithItem) {
