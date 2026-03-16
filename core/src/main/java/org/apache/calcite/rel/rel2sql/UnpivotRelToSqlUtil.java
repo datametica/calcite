@@ -396,6 +396,9 @@ public class UnpivotRelToSqlUtil {
         for (RexNode rex : projectionExpressions) {
           if (rex instanceof RexCall && ((RexCall) rex).op.kind == SqlKind.CAST) {
             castColumns.add(getColumnNameFromCast(rex, inputRowType));
+          } else if ((rex instanceof RexCall && ((RexCall) rex).op.kind != SqlKind.CAST)
+              || rex instanceof RexLiteral) {
+            return false;
           }
         }
         isStar = castColumns.containsAll(measureColumnNames);
