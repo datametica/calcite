@@ -247,6 +247,11 @@ public class CTERelToSqlUtil {
         // Handle targetTable
         SqlNode targetTable = sqlDelete.getTargetTable();
         processFromNode(sqlDelete, targetTable);
+        if (isNestedCte(targetTable)
+            && targetTable instanceof SqlBasicCall
+            && ((SqlBasicCall) targetTable).getOperator() instanceof SqlAsOperator) {
+          updateNode(targetTable);
+        }
         if (sqlDelete.getCondition() != null) {
           updateNode(sqlDelete.getCondition());
         }
