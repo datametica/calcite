@@ -2271,8 +2271,13 @@ public class RelToSqlConverter extends SqlImplementor
    */
   private SqlWithItem createSqlWithItem(CTEDefinationTrait cteDefinationTrait, Result result, RelNode e) {
     SqlIdentifier withName = new SqlIdentifier(cteDefinationTrait.getCteName(), POS);
-    List<String> fieldNames = e.getRowType().getFieldNames();
-    SqlNodeList columnList = identifierList(fieldNames);
+    SqlNodeList columnList;
+    if (cteDefinationTrait.hasExplicitColumns()) {
+      List<String> fieldNames = e.getRowType().getFieldNames();
+      columnList = identifierList(fieldNames);
+    } else {
+      columnList = identifierList(new ArrayList<>());
+    }
     return new SqlWithItem(POS, withName, columnList, result.node);
   }
 }

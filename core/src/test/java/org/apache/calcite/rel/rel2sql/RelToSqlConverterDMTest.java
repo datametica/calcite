@@ -12192,7 +12192,7 @@ class RelToSqlConverterDMTest {
         .build();
 
     // add CTE definition trait
-    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE");
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
     final RelTraitSet cteRelTraitSet = rundate.getTraitSet().plus(cteTrait);
     final RelNode cteRelNodeWithRelTrait = rundate.copy(cteRelTraitSet, rundate.getInputs());
 
