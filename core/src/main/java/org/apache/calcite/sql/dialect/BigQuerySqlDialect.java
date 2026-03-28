@@ -1080,10 +1080,10 @@ public class BigQuerySqlDialect extends SqlDialect {
     //    In that case the first field alias is used as a table alias and the rest of the aliases
     //    are used as field aliases.
     List<SqlNode> fieldAliases = call.getOperandList().subList(1, ordinalIndex);
-    if (fieldAliases.size() > 2) { // array<struct> case with table alias and multiple field aliases
-      call.operand(1).unparse(writer, leftPrec, rightPrec); // table alias
+    if (fieldAliases.get(0).toString().startsWith("unnest$")) {
+      call.operand(2).unparse(writer, leftPrec, rightPrec);
     } else {
-      call.operand(ordinalIndex - 1).unparse(writer, leftPrec, rightPrec);
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
     }
     if (unnestOperator.withOrdinality) {
       writer.literal("WITH OFFSET");
