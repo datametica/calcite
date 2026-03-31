@@ -29,6 +29,7 @@ import org.apache.calcite.rel.type.RelDataTypePrecedenceList;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlInOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -68,6 +69,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -89,6 +91,7 @@ public abstract class SqlUtil {
   /** Prefix for generated column aliases. Ends with '$' so that human-written
    * queries are unlikely to accidentally reference the generated name. */
   public static final String GENERATED_EXPR_ALIAS_PREFIX = "EXPR$";
+  public static final List<String> COMPARISON_OPERATORS = Arrays.asList("=", "<", ">", "<=", ">=", "!=");
 
   //~ Methods ----------------------------------------------------------------
 
@@ -463,13 +466,26 @@ public abstract class SqlUtil {
             (operator instanceof SqlSetOperator)
                 ? SqlWriter.FrameTypeEnum.SETOP
                 : SqlWriter.FrameTypeEnum.SIMPLE);
-    call.operand(0).unparse(writer, leftPrec, operator.getLeftPrec());
+    boolean brackets = needBrackets(call, writer);
+    if (brackets) {
+      writer.print("(");
+      call.operand(0).unparse(writer, leftPrec, operator.getLeftPrec());
+      writer.print(")");
+    } else {
+      call.operand(0).unparse(writer, leftPrec, operator.getLeftPrec());
+    }
     final boolean needsSpace = operator.needsSpace();
     writer.setNeedWhitespace(needsSpace);
     writer.sep(operator.getName());
     writer.setNeedWhitespace(needsSpace);
     call.operand(1).unparse(writer, operator.getRightPrec(), rightPrec);
     writer.endList(frame);
+  }
+
+  private static boolean needBrackets(SqlCall call, SqlWriter writer) {
+    return writer.getDialect() instanceof BigQuerySqlDialect && call.operand(0) instanceof SqlBasicCall
+        && COMPARISON_OPERATORS.contains(call.getOperator().getName())
+        && COMPARISON_OPERATORS.contains(((SqlBasicCall) call.operand(0)).getOperator().getName());
   }
 
   /**
