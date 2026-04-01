@@ -2072,9 +2072,9 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   private SqlNode updateSqlWithNode(SqlImplementor.Result result) {
-    SqlSelect sqlSelect = null;
-    if (result.node instanceof SqlSelect) {
-      sqlSelect = (SqlSelect) result.node;
+    SqlNode sqlSelect = null;
+    if (result.node instanceof SqlSelect || result.node instanceof SqlDelete) {
+      sqlSelect = result.node;
     } else {
       sqlSelect = wrapSelect(result.node);
     }
