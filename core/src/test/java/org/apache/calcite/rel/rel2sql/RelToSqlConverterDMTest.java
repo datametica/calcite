@@ -13912,6 +13912,48 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testObjectName() {
+    final RelBuilder builder = relBuilder();
+    final RexNode objectName =
+        builder.call(SqlLibraryOperators.OBJECT_NAME);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(objectName, "objectName"))
+        .build();
+    final String expectedSql = "SELECT OBJECT_NAME() AS [objectName]"
+        + "\nFROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testErrorLine() {
+    final RelBuilder builder = relBuilder();
+    final RexNode errorLine =
+        builder.call(SqlLibraryOperators.ERROR_LINE);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(errorLine, "errorLine"))
+        .build();
+    final String expectedSql = "SELECT ERROR_LINE() AS [errorLine]"
+        + "\nFROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testGenerateErrorLine() {
+    final RelBuilder builder = relBuilder();
+    final RexNode generateErrorLine =
+        builder.call(SqlLibraryOperators.GENERATE_ERROR_LINE);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(generateErrorLine, "generateErrorLine"))
+        .build();
+    final String expectedSql = "SELECT @@ERROR.STACK_TRACE[OFFSET(0)].LINE AS generateErrorLine"
+        + "\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testObjectIdFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode objectId =
@@ -14586,5 +14628,20 @@ class RelToSqlConverterDMTest {
     final String expectedBiqQuery = "SELECT CHECKSUM([EMPNO], [ENAME]) AS [$f0]\n"
         + "FROM [scott].[EMP]";
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testSnowflakeMonthsBetween() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode monthsBetweenNode =
+        builder.call(SqlLibraryOperators.SNOWFLAKE_MONTHS_BETWEEN,
+            builder.call(CURRENT_TIMESTAMP),
+            builder.call(CURRENT_TIMESTAMP));
+    RelNode root = builder
+        .project(monthsBetweenNode)
+        .build();
+    final String expectedBigQuery =
+        "SELECT MONTHS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) AS \"$f0\"\n"
+            + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedBigQuery));
   }
 }

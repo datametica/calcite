@@ -4219,6 +4219,28 @@ public abstract class SqlLibraryOperators {
           .withFunctionType(SqlFunctionCategory.SYSTEM).withSyntax(SqlSyntax.FUNCTION_ID);
 
   @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction OBJECT_NAME =
+       new SqlFunction("OBJECT_NAME", SqlKind.OTHER_FUNCTION,
+           ReturnTypes.VARCHAR, null,
+           OperandTypes.STRING, SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction ERROR_LINE =
+       new SqlFunction("ERROR_LINE", SqlKind.OTHER_FUNCTION,
+           ReturnTypes.INTEGER, null,
+           OperandTypes.NILADIC, SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction GENERATE_ERROR_LINE =
+      SqlBasicFunction
+          .create(
+              "@@error.stack_trace[OFFSET(0)].line",
+              ReturnTypes.INTEGER,
+              OperandTypes.NILADIC,
+              SqlFunctionCategory.SYSTEM)
+          .withFunctionType(SqlFunctionCategory.SYSTEM).withSyntax(SqlSyntax.FUNCTION_ID);
+
+  @LibraryOperator(libraries = {MSSQL})
   public static final SqlFunction OBJECT_ID =
       new SqlFunction(
           "OBJECT_ID",
@@ -4868,4 +4890,13 @@ public abstract class SqlLibraryOperators {
           .withOperandTypeInference(InferTypes.FIRST_KNOWN)
           .withOperandHandler(
               OperandHandlers.of(SqlLibraryOperators::transformConvert));
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_MONTHS_BETWEEN =
+      new SqlFunction("MONTHS_BETWEEN",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DOUBLE_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME),
+          SqlFunctionCategory.TIMEDATE);
 }
