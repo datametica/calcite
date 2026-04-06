@@ -261,6 +261,19 @@ public abstract class SqlLibraryOperators {
 //        }
       };
 
+  /** The "IF_FOR_SAFE_CAST(condition, thenValue, elseValue)" function. */
+  @LibraryOperator(libraries = {HIVE, MSSQL})
+  public static final SqlFunction IF_FOR_SAFE_CAST =
+      new SqlFunction("IF", SqlKind.IF_FOR_SAFE_CAST, SqlLibraryOperators::inferIfReturnType,
+          null,
+          OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY,
+              SqlTypeFamily.ANY)
+              .and(
+                  // Arguments 1 and 2 must have same type
+                  OperandTypes.same(3, 1, 2)),
+          SqlFunctionCategory.SYSTEM) {
+      };
+
   /** Infers the return type of {@code IF(b, x, y)},
    * namely the least restrictive of the types of x and y.
    * Similar to {@link ReturnTypes#LEAST_RESTRICTIVE}. */
@@ -336,6 +349,33 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {SNOWFLAKE, SPARK})
   public static final SqlFunction LEN =
       SqlStdOperatorTable.CHAR_LENGTH.withName("LEN");
+
+  /**
+   * The "BYTE_LENGTH(string)" function.
+   */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction BYTE_LENGTH =
+      SqlBasicFunction.create("BYTE_LENGTH",
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.or(OperandTypes.CHARACTER, OperandTypes.BINARY),
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction DATALENGTH =
+      SqlBasicFunction.create("DATALENGTH",
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.or(OperandTypes.CHARACTER, OperandTypes.INTEGER, OperandTypes.NUMERIC,
+              OperandTypes.BINARY, OperandTypes.DATE, OperandTypes.TIMESTAMP, OperandTypes.TIME),
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction FOR_XML =
+      new SqlFunction("FOR_XML",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_NULLABLE,
+          null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.STRING);
 
   /** The "LENGTH(string)" function. */
   @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE, SPARK})
@@ -4815,4 +4855,17 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.NUMERIC_NUMERIC,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction PARSE =
+      SqlBasicFunction.create(SqlKind.OTHER_FUNCTION,
+              ReturnTypes.andThen(SqlLibraryOperators::transformConvert,
+                  SqlCastFunction.returnTypeInference(false)),
+              OperandTypes.repeat(SqlOperandCountRanges.between(1, 2),
+                  OperandTypes.ANY))
+          .withName("PARSE")
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withOperandTypeInference(InferTypes.FIRST_KNOWN)
+          .withOperandHandler(
+              OperandHandlers.of(SqlLibraryOperators::transformConvert));
 }
