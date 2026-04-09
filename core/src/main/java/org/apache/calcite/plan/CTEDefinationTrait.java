@@ -23,6 +23,7 @@ public class CTEDefinationTrait implements RelTrait {
 
   private final boolean isCTEDefination;
   private final String cteName;
+  /** Whether the CTE was declared with an explicit column list (e.g., {@code WITH cte(col1, col2) AS (...)}). */
   private final boolean hasExplicitColumns;
 
   public CTEDefinationTrait(boolean isCTEDefination, String cteName, boolean hasExplicitColumns) {

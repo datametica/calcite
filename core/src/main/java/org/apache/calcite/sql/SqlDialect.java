@@ -767,13 +767,17 @@ public class SqlDialect {
 
   // -- behaviors --
 
-  /** Whether a sub-query in the FROM clause must have an alias.
+  /** Whether SQL generation should always emit aliases for FROM items.
+   *
+   * <p>If this returns {@code true}, generated SQL always provides an alias
+   * (for example for sub-queries in the FROM clause). If this returns
+   * {@code false}, aliases are optional and may be omitted.
    *
    * <p>For example, in PostgreSQL, this query is legal:
    *
-   * <blockquote>{@code SELECT * FROM (SELECT * FROM Emp) As e}</blockquote>
+   * <blockquote>{@code SELECT * FROM (SELECT * FROM Emp) AS e}</blockquote>
    *
-   * <p>but remove the alias {@code e} and it is not:
+   * <p>but omitting the alias is:
    *
    * <blockquote>{@code SELECT * FROM (SELECT * FROM Emp)}</blockquote>
    *
