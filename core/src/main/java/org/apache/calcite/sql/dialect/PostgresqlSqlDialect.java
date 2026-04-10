@@ -240,6 +240,13 @@ public class PostgresqlSqlDialect extends SqlDialect {
     return false;
   }
 
+  /**
+   * The comment regarding postgres in parent class is outdated. PostgreSQL 16 added the ability
+   * for subqueries in the FROM clause to omit aliases. See
+   * <a href="https://www.postgresql.org/docs/16/release-16.html">PostgreSQL</a>.
+   * So SELECT * FROM (SELECT * FROM Emp) is now legal in PostgreSQL 16 and later.
+   * So, keeping false here also.
+   */
   @Override public boolean requiresAliasForFromItems() {
     return false;
   }

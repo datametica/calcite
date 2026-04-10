@@ -767,12 +767,17 @@ public class SqlDialect {
 
   // -- behaviors --
 
-  /**
-   * The comment regarding postgres in parent class is outdated. PostgreSQL 16 added the ability
-   * for subqueries in the FROM clause to omit aliases. See
-   * <a href="https://www.postgresql.org/docs/16/release-16.html">PostgreSQL</a>.
-   * So SELECT * FROM (SELECT * FROM Emp) is now legal in PostgreSQL 16 and later.
-   * So, keeping false here also.
+  /** Whether a sub-query in the FROM clause must have an alias.
+   *
+   * <p>For example, in PostgreSQL, this query is legal:
+   *
+   * <blockquote>{@code SELECT * FROM (SELECT * FROM Emp) As e}</blockquote>
+   *
+   * <p>but remove the alias {@code e} and it is not:
+   *
+   * <blockquote>{@code SELECT * FROM (SELECT * FROM Emp)}</blockquote>
+   *
+   * <p>In Oracle, both queries are legal.
    */
   public boolean requiresAliasForFromItems() {
     return false;
