@@ -767,21 +767,12 @@ public class SqlDialect {
 
   // -- behaviors --
 
-  /** Whether SQL generation should always emit aliases for FROM items.
-   *
-   * <p>If this returns {@code true}, generated SQL always provides an alias
-   * (for example for sub-queries in the FROM clause). If this returns
-   * {@code false}, aliases are optional and may be omitted.
-   *
-   * <p>For example, in PostgreSQL, this query is legal:
-   *
-   * <blockquote>{@code SELECT * FROM (SELECT * FROM Emp) AS e}</blockquote>
-   *
-   * <p>but omitting the alias is:
-   *
-   * <blockquote>{@code SELECT * FROM (SELECT * FROM Emp)}</blockquote>
-   *
-   * <p>In Oracle, both queries are legal.
+  /**
+   * The comment regarding postgres in parent class is outdated. PostgreSQL 16 added the ability
+   * for subqueries in the FROM clause to omit aliases. See
+   * <a href="https://www.postgresql.org/docs/16/release-16.html">PostgreSQL</a>.
+   * So SELECT * FROM (SELECT * FROM Emp) is now legal in PostgreSQL 16 and later.
+   * So, keeping false here also.
    */
   public boolean requiresAliasForFromItems() {
     return false;
