@@ -1474,13 +1474,16 @@ class RelToSqlConverterDMTest {
         + "FROM foodmart.reserve_employee";
     final String expectedSpark = "SELECT TRIM(' ' FROM ' str ')\nFROM foodmart"
         + ".reserve_employee";
+    final String expectedPostgres = "SELECT TRIM(' str ')\nFROM \"foodmart\".\"reserve_employee\"";
     sql(query)
         .withHive()
         .ok(expected)
         .withSpark()
       .ok(expectedSpark)
       .withBigQuery()
-        .ok(expected);
+        .ok(expected)
+        .withPostgresql()
+        .ok(expectedPostgres);
   }
 
   @Test void testHiveSparkAndBqTrimWithBoth() {
