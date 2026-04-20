@@ -264,6 +264,9 @@ public class CTERelToSqlUtil {
         // Handle targetTable
         SqlNode targetTable = sqlUpdate.getTargetTable();
         processFromNode(sqlUpdate, targetTable);
+        if (sqlUpdate.getSourceSelect() != null) {
+          updateSqlNode(sqlUpdate.getSourceSelect());
+        }
         if (isNestedCte(targetTable)
             && targetTable instanceof SqlBasicCall
             && ((SqlBasicCall) targetTable).getOperator() instanceof SqlAsOperator) {
