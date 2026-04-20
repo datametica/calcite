@@ -1634,7 +1634,7 @@ public class RelToSqlConverter extends SqlImplementor
       CTEDefinationTrait cteDefinationTrait = e.getTraitSet().getTrait(CTEDefinationTraitDef.instance);
       TableAliasTrait tableAliasTrait = e.getTraitSet().getTrait(TableAliasTraitDef.instance);
 
-      SqlWithItem sqlWithItem = createSqlWithItem(cteDefinationTrait, result);
+      SqlWithItem sqlWithItem = createSqlWithItem(cteDefinationTrait, result, e);
 
       if (tableAliasTrait != null) {
         result = applyTableAlias(sqlWithItem, tableAliasTrait, e, result);
@@ -2273,9 +2273,15 @@ public class RelToSqlConverter extends SqlImplementor
    * @param result - The relational algebra result node
    * @return SqlWithItem - The constructed SqlWithItem for the CTE
    */
-  private SqlWithItem createSqlWithItem(CTEDefinationTrait cteDefinationTrait, Result result) {
+  private SqlWithItem createSqlWithItem(CTEDefinationTrait cteDefinationTrait, Result result, RelNode e) {
     SqlIdentifier withName = new SqlIdentifier(cteDefinationTrait.getCteName(), POS);
-    SqlNodeList columnList = identifierList(new ArrayList<>());
+    SqlNodeList columnList;
+    if (cteDefinationTrait.hasExplicitColumns()) {
+      List<String> fieldNames = e.getRowType().getFieldNames();
+      columnList = identifierList(fieldNames);
+    } else {
+      columnList = identifierList(new ArrayList<>());
+    }
     return new SqlWithItem(POS, withName, columnList, result.node);
   }
 }

@@ -3230,7 +3230,7 @@ class RelToSqlConverterDMTest {
     final String expectedPostgresql = "SELECT \"a\"\n"
         + "FROM (SELECT 1 AS \"a\", 'x ' AS \"b\"\n"
         + "UNION ALL\n"
-        + "SELECT 2 AS \"a\", 'yy' AS \"b\") AS \"t\"";
+        + "SELECT 2 AS \"a\", 'yy' AS \"b\")";
     final String expectedOracle = "SELECT \"a\"\n"
         + "FROM (SELECT 1 \"a\", 'x ' \"b\"\n"
         + "FROM \"DUAL\"\n"
@@ -12225,7 +12225,7 @@ class RelToSqlConverterDMTest {
         .build();
 
     // add CTE definition trait
-    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE");
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
     final RelTraitSet cteRelTraitSet = rundate.getTraitSet().plus(cteTrait);
     final RelNode cteRelNodeWithRelTrait = rundate.copy(cteRelTraitSet, rundate.getInputs());
 
@@ -13916,6 +13916,48 @@ class RelToSqlConverterDMTest {
         .project(builder.alias(errorMessageId, "errorMessageId"))
         .build();
     final String expectedSql = "SELECT @@ERROR.MESSAGE AS errorMessageId"
+        + "\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testObjectName() {
+    final RelBuilder builder = relBuilder();
+    final RexNode objectName =
+        builder.call(SqlLibraryOperators.OBJECT_NAME);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(objectName, "objectName"))
+        .build();
+    final String expectedSql = "SELECT OBJECT_NAME() AS [objectName]"
+        + "\nFROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testErrorLine() {
+    final RelBuilder builder = relBuilder();
+    final RexNode errorLine =
+        builder.call(SqlLibraryOperators.ERROR_LINE);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(errorLine, "errorLine"))
+        .build();
+    final String expectedSql = "SELECT ERROR_LINE() AS [errorLine]"
+        + "\nFROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testGenerateErrorLine() {
+    final RelBuilder builder = relBuilder();
+    final RexNode generateErrorLine =
+        builder.call(SqlLibraryOperators.GENERATE_ERROR_LINE);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(generateErrorLine, "generateErrorLine"))
+        .build();
+    final String expectedSql = "SELECT @@ERROR.STACK_TRACE[OFFSET(0)].LINE AS generateErrorLine"
         + "\nFROM scott.EMP";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
