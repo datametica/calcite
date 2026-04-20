@@ -36,6 +36,7 @@ import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlUnpivot;
+import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.fun.SqlCase;
@@ -97,6 +98,9 @@ public class CTERelToSqlUtil {
     }
     if (sqlSelect instanceof SqlDelete && ((SqlDelete) sqlSelect).getSourceSelect() != null) {
       fetchSqlWithItems(((SqlDelete) sqlSelect).getSourceSelect(), sqlNodes);
+    }
+    if (sqlSelect instanceof SqlUpdate && ((SqlUpdate) sqlSelect).getSourceSelect() != null) {
+      fetchSqlWithItems(((SqlUpdate) sqlSelect).getSourceSelect(), sqlNodes);
     }
     return sqlNodes;
   }
@@ -255,6 +259,19 @@ public class CTERelToSqlUtil {
         if (sqlDelete.getCondition() != null) {
           updateNode(sqlDelete.getCondition());
         }
+      } else if (sqlNode instanceof SqlUpdate) {
+        SqlUpdate sqlUpdate = (SqlUpdate) sqlNode;
+        // Handle targetTable
+        SqlNode targetTable = sqlUpdate.getTargetTable();
+        processFromNode(sqlUpdate, targetTable);
+        if (isNestedCte(targetTable)
+            && targetTable instanceof SqlBasicCall
+            && ((SqlBasicCall) targetTable).getOperator() instanceof SqlAsOperator) {
+          updateNode(targetTable);
+        }
+        if (sqlUpdate.getCondition() != null) {
+          updateNode(sqlUpdate.getCondition());
+        }
       }
     }
   }
@@ -270,11 +287,7 @@ public class CTERelToSqlUtil {
       if (isNestedCte(query)) {
         processWithItem((SqlWithItem) fromNode);
       } else {
-        if (sqlNode instanceof SqlDelete) {
-          ((SqlDelete) sqlNode).setOperand(0, ((SqlWithItem) fromNode).name);
-        } else {
-          ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
-        }
+        ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
       }
     } else if (fromNode instanceof SqlUnpivot
         && ((SqlUnpivot) fromNode).query instanceof SqlWithItem) {
