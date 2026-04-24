@@ -378,6 +378,16 @@ public abstract class SqlLibraryOperators {
           OperandTypes.VARIADIC,
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction MSSQL_VALUE =
+      new SqlFunction("MSSQL_VALUE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_NULLABLE,
+          null,
+          STRING_STRING,
+          SqlFunctionCategory.STRING);
+
+
   /** The "LENGTH(string)" function. */
   @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE, SPARK})
   public static final SqlFunction LENGTH =
