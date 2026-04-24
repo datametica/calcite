@@ -2718,9 +2718,13 @@ public abstract class SqlImplementor {
 
       if (rel instanceof LogicalProject
           && relInput instanceof LogicalFilter
-          && clauses.contains(Clause.QUALIFY)
-          && hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection((Project) rel)) {
-        return true;
+          && clauses.contains(Clause.QUALIFY)) {
+        if (hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection((Project) rel)) {
+          return true;
+        } else if ((((LogicalFilter) relInput).getInput() instanceof LogicalFilter)
+            && ((LogicalFilter) ((LogicalFilter) relInput).getInput()).getInput() instanceof LogicalProject) {
+          return true;
+        }
       }
 
       if (rel instanceof Project
