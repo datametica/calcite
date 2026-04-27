@@ -14456,6 +14456,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testHaversineFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode haversineNode =
+        builder.call(SqlLibraryOperators.HAVERSINE,
+            builder.literal(40.7127),
+            builder.literal(-74.0059),
+            builder.literal(34.05),
+            builder.literal(-118.25));
+    final RelNode root = builder.project(haversineNode).build();
+
+    final String expectedQuery = "SELECT HAVERSINE(40.7127, -74.0059, 34.05, -118.25) AS [$f0]\n"
+        + "FROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedQuery));
+  }
+
   @Test public void testTimestampMinusIntervalWithFormat() {
     final RelBuilder builder = relBuilder();
     RexBuilder rexBuilder = builder.getRexBuilder();
