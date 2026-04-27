@@ -2719,10 +2719,8 @@ public abstract class SqlImplementor {
       if (rel instanceof LogicalProject
           && relInput instanceof LogicalFilter
           && clauses.contains(Clause.QUALIFY)) {
-        if (hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection((Project) rel)) {
-          return true;
-        } else if ((((LogicalFilter) relInput).getInput() instanceof LogicalFilter)
-            && ((LogicalFilter) ((LogicalFilter) relInput).getInput()).getInput() instanceof LogicalProject) {
+        if (hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection((Project) rel)
+            || hasFilterInputConsumeProject((LogicalFilter) relInput)) {
           return true;
         }
       }
@@ -2914,6 +2912,11 @@ public abstract class SqlImplementor {
       } catch (Exception e) {
         return false;
       }
+    }
+
+    boolean hasFilterInputConsumeProject(Filter filter) {
+      return filter.getInput() instanceof LogicalFilter
+          && ((LogicalFilter) filter.getInput()).getInput() instanceof LogicalProject;
     }
 
     boolean grpCallIsAlias(String grpCall, SqlBasicCall selectCall) {
