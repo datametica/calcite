@@ -2287,7 +2287,11 @@ public abstract class SqlImplementor {
         return false;
       }
       List<String> aliases = getAliases(sqlNode.getSelectList());
-      return ifAliasUsedInHavingClause(aliases, (SqlBasicCall) sqlNode.getHaving());
+      SqlNode having = sqlNode.getHaving();
+      if (having instanceof SqlCall) {
+        return ifAliasUsedInHavingClause(aliases, (SqlCall) having);
+      }
+      return false;
     }
 
     private boolean ifSqlBasicCallAliased(SqlSelect sqlSelectNode) {
@@ -2304,19 +2308,13 @@ public abstract class SqlImplementor {
     }
 
 
-    private boolean ifAliasUsedInHavingClause(List<String> aliases, SqlBasicCall havingClauseCall) {
-      if (havingClauseCall == null) {
-        return false;
-      }
+    private boolean ifAliasUsedInHavingClause(List<String> aliases, SqlCall havingClauseCall) {
       List<SqlNode> sqlNodes = havingClauseCall.getOperandList();
       for (SqlNode node : sqlNodes) {
-        if (node instanceof SqlBasicCall) {
-          return ifAliasUsedInHavingClause(aliases, (SqlBasicCall) node);
+        if (node instanceof SqlCall && ifAliasUsedInHavingClause(aliases, (SqlCall) node)) {
+          return true;
         } else if (node instanceof SqlIdentifier) {
-          boolean aliasUsed = aliases.contains(node.toString());
-          if (aliasUsed) {
-            return true;
-          }
+          return aliases.contains(node.toString());
         }
       }
       return false;
@@ -2718,11 +2716,10 @@ public abstract class SqlImplementor {
 
       if (rel instanceof LogicalProject
           && relInput instanceof LogicalFilter
-          && clauses.contains(Clause.QUALIFY)) {
-        if (hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection((Project) rel)
-            || hasFilterInputConsumeProject((LogicalFilter) relInput)) {
-          return true;
-        }
+          && clauses.contains(Clause.QUALIFY)
+          && (hasFieldsUsedInFilterWhichIsNotUsedInFinalProjection((Project) rel)
+          || hasFilterInputConsumeProject((LogicalFilter) relInput))) {
+        return true;
       }
 
       if (rel instanceof Project
