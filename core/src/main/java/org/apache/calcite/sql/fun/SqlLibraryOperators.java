@@ -331,6 +331,17 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING,
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction HAVERSINE =
+      new SqlFunction(
+          "HAVERSINE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DOUBLE_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC,
+              SqlTypeFamily.NUMERIC),
+          SqlFunctionCategory.SYSTEM);
+
   /** The "NVL2(value, value, value)" function. */
   @LibraryOperator(libraries = {ORACLE, SPARK})
   public static final SqlBasicFunction NVL2 =
@@ -377,6 +388,16 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.VARIADIC,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction MSSQL_VALUE =
+      new SqlFunction("MSSQL_VALUE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_NULLABLE,
+          null,
+          STRING_STRING,
+          SqlFunctionCategory.STRING);
+
 
   /** The "LENGTH(string)" function. */
   @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE, SPARK})
