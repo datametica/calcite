@@ -31,6 +31,9 @@ import org.apache.calcite.plan.ViewChildProjectRelTrait;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -39,6 +42,7 @@ import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.logical.ToLogicalConverter;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
@@ -76,7 +80,6 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriterConfig;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
@@ -84,8 +87,6 @@ import org.apache.calcite.sql.dialect.HiveSqlDialect;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
 import org.apache.calcite.sql.dialect.MssqlSqlDialect;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
-import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
-import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 import org.apache.calcite.sql.fun.BQRangeSessionizeTableFunction;
 import org.apache.calcite.sql.fun.GeneratorTableFunction;
 import org.apache.calcite.sql.fun.HiveLateralViewExplodeFunction;
@@ -14668,79 +14669,34 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedBigQuery));
   }
 
-  @Test public void testUnparseOffsetFetchWithTiesNoOffset() {
-    final SqlNode fetchNode =
-        SqlLibraryOperators.WITH_TIES.createCall(SqlParserPos.ZERO,
-            SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO));
-
-    final StringBuilder buf = new StringBuilder();
-    final SqlWriterConfig config =
-        SqlPrettyWriter.config()
-            .withAlwaysUseParentheses(false)
-            .withSelectListItemsOnSeparateLines(false)
-            .withIndentation(0);
-    final SqlPrettyWriter writer = new SqlPrettyWriter(config, buf);
-
-    PostgresqlSqlDialect.DEFAULT.unparseOffsetFetch(writer, null, fetchNode);
-
-    assertThat(buf.toString(), isLinux("\nFETCH FIRST 5 ROWS WITH TIES"));
+  @Test public void testFetchFirstRowsWithTies() {
+    final RelBuilder builder = relBuilder();
+    final RexNode fetchWithTies =
+        builder.call(SqlLibraryOperators.WITH_TIES, builder.literal(5));
+    final RelNode scan = builder.scan("EMP").build();
+    final RelCollation collation = RelCollations.of(new RelFieldCollation(1));
+    final RelNode root = LogicalSort.create(scan, collation, null, fetchWithTies);
+    final String expectedSql = "SELECT *\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "ORDER BY \"ENAME\"\n"
+        + "FETCH FIRST 5 ROWS WITH TIES";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedSql));
   }
 
-  @Test public void testUnparseOffsetFetchWithTiesAndOffset() {
-    final SqlNode fetchNode =
-        SqlLibraryOperators.WITH_TIES.createCall(SqlParserPos.ZERO,
-            SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO));
-    final SqlNode offsetNode =
-        SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO);
-
-    final StringBuilder buf = new StringBuilder();
-    final SqlWriterConfig config =
-        SqlPrettyWriter.config()
-            .withAlwaysUseParentheses(false)
-            .withSelectListItemsOnSeparateLines(false)
-            .withIndentation(0);
-    final SqlPrettyWriter writer = new SqlPrettyWriter(config, buf);
-
-    PostgresqlSqlDialect.DEFAULT.unparseOffsetFetch(writer, offsetNode, fetchNode);
-
-    assertThat(buf.toString(), isLinux("\nOFFSET 3 ROWS\nFETCH FIRST 5 ROWS WITH TIES"));
-  }
-
-  @Test public void testUnparseOffsetFetchWithoutTies() {
-    final SqlNode fetchNode =
-        SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO);
-
-    final StringBuilder buf = new StringBuilder();
-    final SqlWriterConfig config =
-        SqlPrettyWriter.config()
-            .withAlwaysUseParentheses(false)
-            .withSelectListItemsOnSeparateLines(false)
-            .withIndentation(0);
-    final SqlPrettyWriter writer = new SqlPrettyWriter(config, buf);
-
-    PostgresqlSqlDialect.DEFAULT.unparseOffsetFetch(writer, null, fetchNode);
-
-    assertThat(buf.toString(), isLinux("\nFETCH NEXT 5 ROWS ONLY"));
-  }
-
-  @Test public void testUnparseOffsetFetchWithoutTiesAndOffset() {
-    // Build: fetch = literal 5, offset = 3
-    final SqlNode fetchNode =
-        SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO);
-    final SqlNode offsetNode =
-        SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO);
-
-    final StringBuilder buf = new StringBuilder();
-    final SqlWriterConfig config =
-        SqlPrettyWriter.config()
-            .withAlwaysUseParentheses(false)
-            .withSelectListItemsOnSeparateLines(false)
-            .withIndentation(0);
-    final SqlPrettyWriter writer = new SqlPrettyWriter(config, buf);
-
-    PostgresqlSqlDialect.DEFAULT.unparseOffsetFetch(writer, offsetNode, fetchNode);
-
-    assertThat(buf.toString(), isLinux("\nOFFSET 3 ROWS\nFETCH NEXT 5 ROWS ONLY"));
+  @Test public void testFetchFirstRowsWithTiesAndOffset() {
+    final RelBuilder builder = relBuilder();
+    final RexNode fetchWithTies =
+        builder.call(SqlLibraryOperators.WITH_TIES, builder.literal(5));
+    final RelNode scan = builder.scan("EMP").build();
+    final RelCollation collation = RelCollations.of(new RelFieldCollation(1));
+    final RexNode offset = builder.literal(3);
+    final RelNode root = LogicalSort.create(scan, collation, offset, fetchWithTies);
+    final String expectedSql = "SELECT *\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "ORDER BY \"ENAME\"\n"
+        + "OFFSET 3 ROWS\n"
+        + "FETCH FIRST 5 ROWS WITH TIES";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testSkipSimplify() {
