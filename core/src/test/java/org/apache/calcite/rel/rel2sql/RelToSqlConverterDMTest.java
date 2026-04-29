@@ -76,6 +76,7 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriterConfig;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
@@ -83,6 +84,8 @@ import org.apache.calcite.sql.dialect.HiveSqlDialect;
 import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
 import org.apache.calcite.sql.dialect.MssqlSqlDialect;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
+import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
+import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 import org.apache.calcite.sql.fun.BQRangeSessionizeTableFunction;
 import org.apache.calcite.sql.fun.GeneratorTableFunction;
 import org.apache.calcite.sql.fun.HiveLateralViewExplodeFunction;
@@ -14665,6 +14668,80 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedBigQuery));
   }
 
+  @Test public void testUnparseOffsetFetchWithTiesNoOffset() {
+    final SqlNode fetchNode =
+        SqlLibraryOperators.WITH_TIES.createCall(SqlParserPos.ZERO,
+            SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO));
+
+    final StringBuilder buf = new StringBuilder();
+    final SqlWriterConfig config =
+        SqlPrettyWriter.config()
+            .withAlwaysUseParentheses(false)
+            .withSelectListItemsOnSeparateLines(false)
+            .withIndentation(0);
+    final SqlPrettyWriter writer = new SqlPrettyWriter(config, buf);
+
+    PostgresqlSqlDialect.DEFAULT.unparseOffsetFetch(writer, null, fetchNode);
+
+    assertThat(buf.toString(), isLinux("\nFETCH FIRST 5 ROWS WITH TIES"));
+  }
+
+  @Test public void testUnparseOffsetFetchWithTiesAndOffset() {
+    final SqlNode fetchNode =
+        SqlLibraryOperators.WITH_TIES.createCall(SqlParserPos.ZERO,
+            SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO));
+    final SqlNode offsetNode =
+        SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO);
+
+    final StringBuilder buf = new StringBuilder();
+    final SqlWriterConfig config =
+        SqlPrettyWriter.config()
+            .withAlwaysUseParentheses(false)
+            .withSelectListItemsOnSeparateLines(false)
+            .withIndentation(0);
+    final SqlPrettyWriter writer = new SqlPrettyWriter(config, buf);
+
+    PostgresqlSqlDialect.DEFAULT.unparseOffsetFetch(writer, offsetNode, fetchNode);
+
+    assertThat(buf.toString(), isLinux("\nOFFSET 3 ROWS\nFETCH FIRST 5 ROWS WITH TIES"));
+  }
+
+  @Test public void testUnparseOffsetFetchWithoutTies() {
+    final SqlNode fetchNode =
+        SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO);
+
+    final StringBuilder buf = new StringBuilder();
+    final SqlWriterConfig config =
+        SqlPrettyWriter.config()
+            .withAlwaysUseParentheses(false)
+            .withSelectListItemsOnSeparateLines(false)
+            .withIndentation(0);
+    final SqlPrettyWriter writer = new SqlPrettyWriter(config, buf);
+
+    PostgresqlSqlDialect.DEFAULT.unparseOffsetFetch(writer, null, fetchNode);
+
+    assertThat(buf.toString(), isLinux("\nFETCH NEXT 5 ROWS ONLY"));
+  }
+
+  @Test public void testUnparseOffsetFetchWithoutTiesAndOffset() {
+    // Build: fetch = literal 5, offset = 3
+    final SqlNode fetchNode =
+        SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO);
+    final SqlNode offsetNode =
+        SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO);
+
+    final StringBuilder buf = new StringBuilder();
+    final SqlWriterConfig config =
+        SqlPrettyWriter.config()
+            .withAlwaysUseParentheses(false)
+            .withSelectListItemsOnSeparateLines(false)
+            .withIndentation(0);
+    final SqlPrettyWriter writer = new SqlPrettyWriter(config, buf);
+
+    PostgresqlSqlDialect.DEFAULT.unparseOffsetFetch(writer, offsetNode, fetchNode);
+
+    assertThat(buf.toString(), isLinux("\nOFFSET 3 ROWS\nFETCH NEXT 5 ROWS ONLY"));
+  }
 
   @Test public void testSkipSimplify() {
     final RelBuilder builder = foodmartRelBuilder();
