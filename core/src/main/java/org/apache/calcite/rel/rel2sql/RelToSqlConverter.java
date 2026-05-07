@@ -556,6 +556,14 @@ public class RelToSqlConverter extends SqlImplementor
     if (rightNode.getKind() == SqlKind.AS) {
       rightNode = ((SqlBasicCall) rightNode).getOperandList().get(0);
     }
+    if (rightNode.getKind() == SqlKind.JOIN
+        && ((SqlJoin) rightNode).getJoinType() == JoinType.COMMA) {
+      SqlNode leftUpdatedNode =
+          getJoinNode(leftResult.asFrom(), ((SqlJoin) rightLateralAs).getLeft());
+      SqlNode rightUpdatedNode =
+          getJoinNode(leftUpdatedNode, ((SqlJoin) rightLateralAs).getRight());
+      return result(rightUpdatedNode, leftResult, rightResult);
+    }
 
     //Following validation checks if the right evaluated node is UNNEST or not, because
     //as per ANSI standard, we either can use LATERAL with subquery or UNNEST with array/multiset
@@ -734,6 +742,16 @@ public class RelToSqlConverter extends SqlImplementor
       }
     }
     return aliases;
+  }
+
+  private SqlNode getJoinNode(SqlNode leftNode, SqlNode rightNode) {
+    return new SqlJoin(POS,
+        leftNode,
+        SqlLiteral.createBoolean(false, POS),
+        JoinType.COMMA.symbol(POS),
+        rightNode,
+        JoinConditionType.NONE.symbol(POS),
+        null);
   }
 
   /**
@@ -1616,7 +1634,7 @@ public class RelToSqlConverter extends SqlImplementor
       CTEDefinationTrait cteDefinationTrait = e.getTraitSet().getTrait(CTEDefinationTraitDef.instance);
       TableAliasTrait tableAliasTrait = e.getTraitSet().getTrait(TableAliasTraitDef.instance);
 
-      SqlWithItem sqlWithItem = createSqlWithItem(cteDefinationTrait, result);
+      SqlWithItem sqlWithItem = createSqlWithItem(cteDefinationTrait, result, e);
 
       if (tableAliasTrait != null) {
         result = applyTableAlias(sqlWithItem, tableAliasTrait, e, result);
@@ -1913,9 +1931,22 @@ public class RelToSqlConverter extends SqlImplementor
     } else {
       unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, operand);
     }
+    String alias = null;
+    TableAliasTrait tableAliasTrait = e.getTraitSet().getTrait(TableAliasTraitDef.instance);
+    if (tableAliasTrait != null) {
+      alias = tableAliasTrait.getTableAlias();
+    }
+    SubQueryAliasTrait subQueryAliasTrait =
+        e.getTraitSet().getTrait(SubQueryAliasTraitDef.instance);
+    if (subQueryAliasTrait != null) {
+      alias = subQueryAliasTrait.getSubQueryAlias();
+    }
+    if (alias == null) {
+      alias = requireNonNull(x.neededAlias, () -> "x.neededAlias is null, node is " + x.node);
+    }
     final List<SqlNode> operands =
-        createAsFullOperands(e.getRowType(), unnestNode,
-            requireNonNull(x.neededAlias, () -> "x.neededAlias is null, node is " + x.node));
+        createAsFullOperands(e.getRowType(), unnestNode, alias);
+
     final SqlNode asNode = SqlStdOperatorTable.AS.createCall(POS, operands);
     return result(asNode, ImmutableList.of(Clause.FROM), e, null);
   }
@@ -2045,9 +2076,10 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   private SqlNode updateSqlWithNode(SqlImplementor.Result result) {
-    SqlSelect sqlSelect = null;
-    if (result.node instanceof SqlSelect) {
-      sqlSelect = (SqlSelect) result.node;
+    SqlNode sqlSelect = null;
+    if (result.node instanceof SqlSelect
+        || result.node instanceof SqlDelete || result.node instanceof SqlUpdate) {
+      sqlSelect = result.node;
     } else {
       sqlSelect = wrapSelect(result.node);
     }
@@ -2076,7 +2108,11 @@ public class RelToSqlConverter extends SqlImplementor
       for (SqlNode node : sqlSelect.getSelectList()) {
         if (node.getKind() == SqlKind.AS) {
           SqlCall call = (SqlCall) node;
+          SqlNode firstOperand = call.operand(0);
           SqlIdentifier alias = call.operand(1);
+          if (isAliasMatchingColumn(firstOperand, alias.names.get(0), tableFieldNames)) {
+            continue;
+          }
           selectListAliases.add(alias.names.get(0));
         }
       }
@@ -2090,6 +2126,16 @@ public class RelToSqlConverter extends SqlImplementor
       return result(node, result.clauses, result.neededAlias, result.neededType, result.aliases);
     }
     return result;
+  }
+
+  private boolean isAliasMatchingColumn(SqlNode node,
+      String alias, List<String> tableFieldNames) {
+    if (node instanceof SqlIdentifier
+        && tableFieldNames.stream().anyMatch(alias::equals)) {
+      String columnName = ((SqlIdentifier) node).names.get(0);
+      return tableFieldNames.stream().anyMatch(columnName::equals);
+    }
+    return false;
   }
 
   private List<String> fetchFieldNames(RelNode relNode, SqlSelect sqlSelect, String tableAlias) {
@@ -2228,9 +2274,15 @@ public class RelToSqlConverter extends SqlImplementor
    * @param result - The relational algebra result node
    * @return SqlWithItem - The constructed SqlWithItem for the CTE
    */
-  private SqlWithItem createSqlWithItem(CTEDefinationTrait cteDefinationTrait, Result result) {
+  private SqlWithItem createSqlWithItem(CTEDefinationTrait cteDefinationTrait, Result result, RelNode e) {
     SqlIdentifier withName = new SqlIdentifier(cteDefinationTrait.getCteName(), POS);
-    SqlNodeList columnList = identifierList(new ArrayList<>());
+    SqlNodeList columnList;
+    if (cteDefinationTrait.hasExplicitColumns()) {
+      List<String> fieldNames = e.getRowType().getFieldNames();
+      columnList = identifierList(fieldNames);
+    } else {
+      columnList = identifierList(new ArrayList<>());
+    }
     return new SqlWithItem(POS, withName, columnList, result.node);
   }
 }

@@ -510,6 +510,12 @@ public abstract class OperandTypes {
           // Third operand optional (operand index 0, 1, 2)
           number -> number == 2);
 
+  public static final FamilyOperandTypeChecker INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER =
+      family(
+          ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+          number -> number == 3);
+
   public static final FamilyOperandTypeChecker STRING_OPTIONAL_STRING_OPTIONAL_STRING =
       family(
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,

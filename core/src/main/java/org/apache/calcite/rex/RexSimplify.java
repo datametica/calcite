@@ -263,6 +263,11 @@ public class RexSimplify {
    * Verify adds an overhead that is only acceptable for a top-level call.
    */
   RexNode simplify(RexNode e, RexUnknownAs unknownAs) {
+    boolean skipSimplify = !e.getComment().isEmpty()
+        && "skip_simplify".equals(((Comment) e.getComment().iterator().next()).getComment());
+    if (skipSimplify) {
+      return e;
+    }
     if (STRONG.isNull(e)) {
       // Only boolean NULL (aka UNKNOWN) can be converted to FALSE. Even in
       // unknownAs=FALSE mode, we must not convert a NULL integer (say) to FALSE
@@ -323,6 +328,7 @@ public class RexSimplify {
     case DIVIDE:
       return simplifyArithmetic((RexCall) e);
     case IF:
+    case IF_FOR_SAFE_CAST:
       return simplifyIf((RexCall) e, unknownAs);
     case NVL:
       // We currently do not optimize the IFNULL function at the MIG end,
@@ -2277,6 +2283,11 @@ public class RexSimplify {
       // sure to be able to remove the cast.
       if (rexBuilder.canRemoveCastFromLiteral(e.getType(), value, typeName)) {
         return rexBuilder.makeCast(e.getType(), operand);
+      }
+
+      if (e.getType().getSqlTypeName() == SqlTypeName.BOOLEAN
+          && operand.getType().getSqlTypeName() == SqlTypeName.INTEGER) {
+        return e;
       }
 
       // Next, try to convert the value to a different type,

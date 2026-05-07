@@ -19,6 +19,7 @@ package org.apache.calcite.sql.fun;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlBasicFunction;
 import org.apache.calcite.sql.SqlBinaryOperator;
@@ -261,6 +262,19 @@ public abstract class SqlLibraryOperators {
 //        }
       };
 
+  /** The "IF_FOR_SAFE_CAST(condition, thenValue, elseValue)" function. */
+  @LibraryOperator(libraries = {HIVE, MSSQL})
+  public static final SqlFunction IF_FOR_SAFE_CAST =
+      new SqlFunction("IF", SqlKind.IF_FOR_SAFE_CAST, SqlLibraryOperators::inferIfReturnType,
+          null,
+          OperandTypes.family(SqlTypeFamily.BOOLEAN, SqlTypeFamily.ANY,
+              SqlTypeFamily.ANY)
+              .and(
+                  // Arguments 1 and 2 must have same type
+                  OperandTypes.same(3, 1, 2)),
+          SqlFunctionCategory.SYSTEM) {
+      };
+
   /** Infers the return type of {@code IF(b, x, y)},
    * namely the least restrictive of the types of x and y.
    * Similar to {@link ReturnTypes#LEAST_RESTRICTIVE}. */
@@ -317,6 +331,17 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING,
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction HAVERSINE =
+      new SqlFunction(
+          "HAVERSINE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DOUBLE_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC,
+              SqlTypeFamily.NUMERIC),
+          SqlFunctionCategory.SYSTEM);
+
   /** The "NVL2(value, value, value)" function. */
   @LibraryOperator(libraries = {ORACLE, SPARK})
   public static final SqlBasicFunction NVL2 =
@@ -336,6 +361,43 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {SNOWFLAKE, SPARK})
   public static final SqlFunction LEN =
       SqlStdOperatorTable.CHAR_LENGTH.withName("LEN");
+
+  /**
+   * The "BYTE_LENGTH(string)" function.
+   */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction BYTE_LENGTH =
+      SqlBasicFunction.create("BYTE_LENGTH",
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.or(OperandTypes.CHARACTER, OperandTypes.BINARY),
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction DATALENGTH =
+      SqlBasicFunction.create("DATALENGTH",
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.or(OperandTypes.CHARACTER, OperandTypes.INTEGER, OperandTypes.NUMERIC,
+              OperandTypes.BINARY, OperandTypes.DATE, OperandTypes.TIMESTAMP, OperandTypes.TIME),
+          SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction FOR_XML =
+      new SqlFunction("FOR_XML",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_NULLABLE,
+          null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction MSSQL_VALUE =
+      new SqlFunction("MSSQL_VALUE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_NULLABLE,
+          null,
+          STRING_STRING,
+          SqlFunctionCategory.STRING);
+
 
   /** The "LENGTH(string)" function. */
   @LibraryOperator(libraries = {BIG_QUERY, SNOWFLAKE, SPARK})
@@ -957,6 +1019,14 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.DATE_NULLABLE, null,
           OperandTypes.INTEGER_INTEGER_INTEGER,
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction CHECKSUM =
+      new SqlFunction("CHECKSUM",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.SYSTEM);
 
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction MAKE_DATE =
@@ -1683,7 +1753,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("TIME_FROM_PARTS",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.TIME, null,
-          OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+          OperandTypes.INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER,
           SqlFunctionCategory.NUMERIC);
 
   @LibraryOperator(libraries = {TERADATA})
@@ -2283,6 +2353,17 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("TRY_TO_DATE",
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.DATE_NULLABLE,
+          null,
+          OperandTypes.or(
+              OperandTypes.STRING,
+              OperandTypes.STRING_STRING, OperandTypes.STRING_STRING_BOOLEAN),
+          SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction TRY_TO_DATE_SF =
+      new SqlFunction("TRY_TO_DATE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.explicit(RelDataTypeImpl.proto(SqlTypeName.DATE, true)),
           null,
           OperandTypes.or(
               OperandTypes.STRING,
@@ -4005,6 +4086,24 @@ public abstract class SqlLibraryOperators {
           OperandTypes.NILADIC,
           SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {SQL_SERVER})
+  public static final SqlFunction NEWID =
+      new SqlFunction("NEWID",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.UUID,
+          null,
+          OperandTypes.NILADIC,
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {SQL_SERVER})
+  public static final SqlFunction NEWSEQUENTIALID =
+      new SqlFunction("NEWSEQUENTIALID",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.UUID,
+          null,
+          OperandTypes.NILADIC,
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction UID =
       new SqlFunction("UID",
@@ -4150,6 +4249,28 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARCHAR,
           OperandTypes.NILADIC,
           SqlFunctionCategory.SYSTEM)
+          .withFunctionType(SqlFunctionCategory.SYSTEM).withSyntax(SqlSyntax.FUNCTION_ID);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction OBJECT_NAME =
+       new SqlFunction("OBJECT_NAME", SqlKind.OTHER_FUNCTION,
+           ReturnTypes.VARCHAR, null,
+           OperandTypes.STRING, SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction ERROR_LINE =
+       new SqlFunction("ERROR_LINE", SqlKind.OTHER_FUNCTION,
+           ReturnTypes.INTEGER, null,
+           OperandTypes.NILADIC, SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction GENERATE_ERROR_LINE =
+      SqlBasicFunction
+          .create(
+              "@@error.stack_trace[OFFSET(0)].line",
+              ReturnTypes.INTEGER,
+              OperandTypes.NILADIC,
+              SqlFunctionCategory.SYSTEM)
           .withFunctionType(SqlFunctionCategory.SYSTEM).withSyntax(SqlSyntax.FUNCTION_ID);
 
   @LibraryOperator(libraries = {MSSQL})
@@ -4789,4 +4910,48 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.NUMERIC_NUMERIC,
           SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction PARSE =
+      SqlBasicFunction.create(SqlKind.OTHER_FUNCTION,
+              ReturnTypes.andThen(SqlLibraryOperators::transformConvert,
+                  SqlCastFunction.returnTypeInference(false)),
+              OperandTypes.repeat(SqlOperandCountRanges.between(1, 2),
+                  OperandTypes.ANY))
+          .withName("PARSE")
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withOperandTypeInference(InferTypes.FIRST_KNOWN)
+          .withOperandHandler(
+              OperandHandlers.of(SqlLibraryOperators::transformConvert));
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_MONTHS_BETWEEN =
+      new SqlFunction("MONTHS_BETWEEN",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DOUBLE_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME),
+          SqlFunctionCategory.TIMEDATE);
+
+  /** The "TOP_PERCENT(n)" function represents SQL Server's
+   * {@code SELECT TOP (n) PERCENT} clause. The operand is the percent value.
+   * During rel-to-sql conversion, this is transformed into
+   * {@code FETCH NEXT (SELECT CAST(CEIL(COUNT(*) * n / 100.0) AS BIGINT) FROM table) ROWS ONLY}. */
+  @LibraryOperator(libraries = {MSSQL, POSTGRESQL})
+  public static final SqlFunction PERCENT =
+      SqlBasicFunction.create("PERCENT",
+          ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.NUMERIC,
+          SqlFunctionCategory.NUMERIC);
+
+  /** The "TOP_WITH_TIES(n)" function represents SQL Server's
+   * {@code SELECT TOP (n) WITH TIES} clause. The operand is the fetch count.
+   * During rel-to-sql conversion, this is unparsed as
+   * {@code FETCH FIRST n ROWS WITH TIES}. */
+  @LibraryOperator(libraries = {MSSQL, POSTGRESQL})
+  public static final SqlFunction WITH_TIES =
+      SqlBasicFunction.create("WITH_TIES",
+          ReturnTypes.BIGINT_NULLABLE,
+          OperandTypes.NUMERIC,
+          SqlFunctionCategory.NUMERIC);
 }

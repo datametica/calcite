@@ -575,7 +575,7 @@ class RelToSqlConverterTest {
         BigQuerySqlDialect.DEFAULT.configureParser(SqlParser.config());
     final Sql sql = fixture()
         .withBigQuery().withLibrary(SqlLibrary.BIG_QUERY).parserConfig(parserConfig);
-    sql.withSql(query).ok("SELECT CAST(TIMESTAMP_SECONDS(CAST(CEIL(3) AS INT64)) AS DATETIME) AS "
+    sql.withSql(query).ok("SELECT TIMESTAMP_SECONDS(CAST(CEIL(3) AS INT64)) AS "
         + "created_thing\nFROM foodmart.product");
   }
 
@@ -586,7 +586,7 @@ class RelToSqlConverterTest {
         BigQuerySqlDialect.DEFAULT.configureParser(SqlParser.config());
     final Sql sql = fixture()
         .withBigQuery().withLibrary(SqlLibrary.BIG_QUERY).parserConfig(parserConfig);
-    sql.withSql(query).ok("SELECT CAST(TIMESTAMP_SECONDS(CAST(FLOOR(3) AS INT64)) AS DATETIME) AS "
+    sql.withSql(query).ok("SELECT TIMESTAMP_SECONDS(CAST(FLOOR(3) AS INT64)) AS "
         + "created_thing\nFROM foodmart.product");
   }
 
@@ -6099,7 +6099,7 @@ class RelToSqlConverterTest {
     final String expectedPostgresql = "SELECT \"a\"\n"
         + "FROM (SELECT 1 AS \"a\", 'x ' AS \"b\"\n"
         + "UNION ALL\n"
-        + "SELECT 2 AS \"a\", 'yy' AS \"b\") AS \"t\"";
+        + "SELECT 2 AS \"a\", 'yy' AS \"b\")";
     final String expectedOracle = "SELECT \"a\"\n"
         + "FROM (SELECT 1 \"a\", 'x ' \"b\"\n"
         + "FROM \"DUAL\"\n"

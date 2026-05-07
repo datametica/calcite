@@ -556,6 +556,9 @@ public abstract class ReturnTypes {
   public static final SqlReturnTypeInference VARCHAR_2000 =
       explicit(SqlTypeName.VARCHAR, 2000);
 
+  public static final SqlReturnTypeInference UUID =
+      explicit(SqlTypeName.UUID);
+
   public static final SqlReturnTypeInference JSON =
       explicit(SqlTypeName.JSON);
 
@@ -564,6 +567,9 @@ public abstract class ReturnTypes {
    */
   public static final SqlReturnTypeInference VARIANT =
       ReturnTypes.explicit(SqlTypeName.VARIANT);
+
+  public static final SqlReturnTypeInference XML =
+      ReturnTypes.explicit(SqlTypeName.XML);
 
   /**
    * Type-inference strategy that always returns "VARCHAR(2000)" with nulls
