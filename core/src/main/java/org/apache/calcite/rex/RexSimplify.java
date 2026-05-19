@@ -188,7 +188,7 @@ public class RexSimplify {
   public RexNode simplifyPreservingType(RexNode e, RexUnknownAs unknownAs,
       boolean matchNullability) {
     final RexNode e2 = simplifyUnknownAs(e, unknownAs);
-    if (e2.getType() == e.getType()) {
+    if (e2.getType().equals(e.getType())) {
       return e2;
     }
     if (!matchNullability
