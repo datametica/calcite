@@ -24,6 +24,6 @@ import org.apache.calcite.rel.logical.LogicalJoin;
 public enum SourceJoinKind {
   /** Explicit CROSS JOIN, comma join, or implicit cartesian product (ON TRUE). */
   CROSS_OR_COMMA,
-  /** Explicit join with an ON / USING clause */
+  /** Explicit join with an ON / USING clause. */
   NON_CROSS_OR_COMMA
 }
