@@ -28,6 +28,8 @@ import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelOptSamplingParameters;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.plan.SourceJoinFormTrait;
+import org.apache.calcite.plan.SourceJoinFormTraitDef;
 import org.apache.calcite.plan.SubQueryAliasTrait;
 import org.apache.calcite.plan.SubQueryAliasTraitDef;
 import org.apache.calcite.plan.TableAliasTrait;
@@ -528,11 +530,10 @@ public class RelToSqlConverter extends SqlImplementor
       }
     }
 
-    // If all joins are cross-joins (INNER JOIN ON TRUE), we can use
+    // If all joins are cross-joins (INNER JOIN ON TRUE with CROSS_OR_COMMA source form),
     // we can use comma syntax "FROM a, b, c, d, e".
     for (Join j2 : flatJoins) {
-      if (j2.getJoinType() != JoinRelType.INNER
-          || !j2.getCondition().isAlwaysTrue()) {
+      if (!isCrossJoin(j2)) {
         return false;
       }
     }
@@ -541,7 +542,14 @@ public class RelToSqlConverter extends SqlImplementor
 
 
   private static boolean isCrossJoin(final Join e) {
-    return e.getJoinType() == JoinRelType.INNER && e.getCondition().isAlwaysTrue();
+    SourceJoinFormTrait joinForm =
+        e.getTraitSet().getTrait(SourceJoinFormTraitDef.instance);
+    // keeping the default as true to retain calcite default behavior whenever the trait is absent
+    boolean crossOrCommaForm = true;
+    if (joinForm != null) {
+      crossOrCommaForm = joinForm.isCrossOrComma();
+    }
+    return e.getJoinType() == JoinRelType.INNER && e.getCondition().isAlwaysTrue() && crossOrCommaForm;
   }
 
   /**
