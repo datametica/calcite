@@ -1359,13 +1359,8 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
     // Right input positions are shifted by newLeftFieldCount.
     for (int i = 0; i < oldRightFieldCount; i++) {
-      if (oldRight instanceof LogicalAggregate
-          && rightFrame.oldToNewOutputs.get(i) == null) {
-        mapOldToNewOutputs.put(i + oldLeftFieldCount, newLeftFieldCount);
-      } else {
-        mapOldToNewOutputs.put(i + oldLeftFieldCount,
-            requireNonNull(rightFrame.oldToNewOutputs.get(i)) + newLeftFieldCount);
-      }
+      mapOldToNewOutputs.put(i + oldLeftFieldCount,
+          requireNonNull(rightFrame.oldToNewOutputs.get(i)) + newLeftFieldCount);
     }
 
     final NavigableMap<CorDef, Integer> corDefOutputs =
@@ -1416,9 +1411,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // figure out the newLocalOrdinal, relative to the newInput.
     int newLocalOrdinal = oldLocalOrdinal;
 
-    if (!frame.oldToNewOutputs.isEmpty()
-        && !((oldInput instanceof LogicalAggregate)
-        && frame.oldToNewOutputs.get(oldLocalOrdinal) == null)) {
+    if (!frame.oldToNewOutputs.isEmpty()) {
       newLocalOrdinal = requireNonNull(frame.oldToNewOutputs.get(oldLocalOrdinal));
     }
 
