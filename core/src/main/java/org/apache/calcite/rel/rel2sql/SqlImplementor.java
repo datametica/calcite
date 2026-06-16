@@ -1509,7 +1509,7 @@ public abstract class SqlImplementor {
       }
       final List<SqlNode> orderByList = new ArrayList<>();
       for (RelFieldCollation field : collation.getFieldCollations()) {
-        addOrderItem(orderByList, field, false);
+        addOrderItem(orderByList, field, false, sqlOperator);
       }
       SqlNodeList orderNodeList = new SqlNodeList(orderByList, POS);
       List<SqlNode> operandList = new ArrayList<>();
