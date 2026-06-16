@@ -80,8 +80,8 @@ import org.apache.calcite.sql.SqlDialect.Context;
 import org.apache.calcite.sql.SqlDialect.DatabaseProduct;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -12412,17 +12412,17 @@ class RelToSqlConverterDMTest {
     final SqlNodeList selectList =
         new SqlNodeList(Collections.singletonList(new SqlIdentifier("c", SqlParserPos.ZERO)),
             SqlParserPos.ZERO);
-    final SqlSelect query1 = new SqlSelect(SqlParserPos.ZERO, null, selectList,
-        null, null, null, null, null, null, null, null, null, null);
-    final SqlSelect query2 = new SqlSelect(SqlParserPos.ZERO, null, selectList,
-        null, null, null, null, null, null, null, null, null, null);
-    final SqlSelect body = new SqlSelect(SqlParserPos.ZERO, null, selectList,
-        null, null, null, null, null, null, null, null, null, null);
+    final SqlSelect query1 =
+        new SqlSelect(SqlParserPos.ZERO, null, selectList, null, null, null, null, null, null, null, null, null, null);
+    final SqlSelect query2 =
+        new SqlSelect(SqlParserPos.ZERO, null, selectList, null, null, null, null, null, null, null, null, null, null);
+    final SqlSelect body =
+        new SqlSelect(SqlParserPos.ZERO, null, selectList, null, null, null, null, null, null, null, null, null, null);
 
-    final SqlWithItem item1 = new SqlWithItem(SqlParserPos.ZERO,
-        new SqlIdentifier("A", SqlParserPos.ZERO), null, query1);
-    final SqlWithItem item2 = new SqlWithItem(SqlParserPos.ZERO,
-        new SqlIdentifier("B", SqlParserPos.ZERO), null, query2);
+    final SqlWithItem item1 =
+        new SqlWithItem(SqlParserPos.ZERO, new SqlIdentifier("A", SqlParserPos.ZERO), null, query1);
+    final SqlWithItem item2 =
+        new SqlWithItem(SqlParserPos.ZERO, new SqlIdentifier("B", SqlParserPos.ZERO), null, query2);
     // Comment captured around the 2nd CTE name. modifyWithItemList rebuilds every non-first
     // CTE item, so without the explicit comment copy this comment would be dropped.
     final Comment comment = new Comment("second cte", AnchorType.LEFT, CommentType.MULTIPLE);
