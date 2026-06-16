@@ -114,6 +114,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Permutation;
@@ -662,6 +663,29 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   /**
+   * Re-hydrates comments that were captured on nested expression RexNodes during
+   * canonical building and routed into the {@link org.apache.calcite.plan.CommentTrait}
+   * map (the durable carrier) because the inline comment on a nested {@code RexCall}
+   * does not survive projection/simplification rebuilds. For each RexNode in the
+   * projection expression, comments mapped to exactly that node are copied back onto
+   * its live comment set so {@code toSql} places them on the corresponding nested
+   * SqlNode and the unparser renders them in place (e.g. a comment before a CASE
+   * THEN branch). A direct (non-fallback) map lookup is used so a comment is restored
+   * only onto the node it annotates, never smeared onto that node's operands.
+   */
+  private static void rehydrateNestedComments(RelNode rel, RexNode rex) {
+    Set<Comment> mapped = SqlCommentUtil.getDirectCommentsInMap(rel, rex);
+    if (!mapped.isEmpty()) {
+      rex.getComment().addAll(mapped);
+    }
+    if (rex instanceof RexCall) {
+      for (RexNode operand : ((RexCall) rex).operands) {
+        rehydrateNestedComments(rel, operand);
+      }
+    }
+  }
+
+  /**
    * Visits a Project; called by {@link #dispatch} via reflection.
    */
   public Result visit(Project e) {
@@ -683,6 +707,7 @@ public class RelToSqlConverter extends SqlImplementor
         final List<SqlNode> selectList = new ArrayList<>();
         List<String> pivotColumnAliases = extractAliasesFromPivot(x);
         for (RexNode ref : e.getProjects()) {
+          rehydrateNestedComments(e, ref);
           SqlNode sqlExpr = builder.context.toSql(null, ref);
           sqlExpr.updateCommentSet(SqlCommentUtil.getCommentsInMap(e, ref));
           RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
@@ -1131,9 +1156,19 @@ public class RelToSqlConverter extends SqlImplementor
 
     final List<SqlNode> groupKeys = new ArrayList<>();
     for (int key : groupList) {
-      groupKeys.add(getGroupBySqlNode(builder, key));
-      groupKeys.get(groupKeys.size() - 1)
-          .updateCommentSet(SqlCommentUtil.getCommentsInMap(aggregate, key));
+      SqlNode groupByNode = getGroupBySqlNode(builder, key);
+      Set<Comment> groupByComments = SqlCommentUtil.getCommentsInMap(aggregate, key);
+      if (!groupByComments.isEmpty()) {
+        // getGroupBySqlNode may return the very SqlNode instance that the SELECT
+        // list reuses (e.g. when the aggregate's input is a Project that inlines the
+        // grouping expression, so field(key) yields a shared node). Attaching the
+        // comment to that shared node would render it in both the SELECT list and the
+        // GROUP BY clause. Clone first so the comment is anchored to a node that is
+        // exclusive to the GROUP BY clause.
+        groupByNode = groupByNode.clone(groupByNode.getParserPosition());
+        groupByNode.updateCommentSet(groupByComments);
+      }
+      groupKeys.add(groupByNode);
     }
 
     for (int key : sortedGroupList) {
@@ -2283,6 +2318,14 @@ public class RelToSqlConverter extends SqlImplementor
     } else {
       columnList = identifierList(new ArrayList<>());
     }
-    return new SqlWithItem(POS, withName, columnList, result.node);
+    SqlWithItem withItem = new SqlWithItem(POS, withName, columnList, result.node);
+    // Re-anchor the comments captured around the CTE name onto the SqlWithItem rather than
+    // the name identifier: the name node is reused as the body's CTE reference, so a comment
+    // there would render twice and be stripped by comment deduplication. The SqlWithItem
+    // occurs once (the WITH-clause definition) and its operator emits these around the name.
+    if (cteDefinationTrait.getComments() != null && !cteDefinationTrait.getComments().isEmpty()) {
+      withItem.setCommentList(cteDefinationTrait.getComments());
+    }
+    return withItem;
   }
 }

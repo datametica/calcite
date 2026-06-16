@@ -431,6 +431,9 @@ public class CTERelToSqlUtil {
         });
         SqlWithItem updatedItem =
             new SqlWithItem(SqlParserPos.ZERO, withItem.name, withItem.columnList, modifiedQuery);
+        // Preserve comments captured around the CTE name (e.g. a comment before the 2nd+ CTE);
+        // this rebuild only runs for non-first CTEs, otherwise their name comments are dropped.
+        updatedItem.setCommentList(withItem.getCommentList());
         modifiedList.add(updatedItem);
         names.add(name);
       } else {

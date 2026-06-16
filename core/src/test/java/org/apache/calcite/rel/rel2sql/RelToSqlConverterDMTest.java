@@ -123,6 +123,9 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
+import org.apache.calcite.util.AnchorType;
+import org.apache.calcite.util.Comment;
+import org.apache.calcite.util.CommentType;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -12269,6 +12272,46 @@ class RelToSqlConverterDMTest {
     final String expectedSql = "WITH RUNDATE AS (SELECT first_name, last_name, birth_date\nFROM "
                                 + "foodmart.employee\nGROUP BY first_name, last_name, birth_date)"
                                 + " (SELECT first_name AS FNAME\nFROM RUNDATE)";
+    assertThat(actualSql, isLinux(expectedSql));
+  }
+
+  @Test public void testCTEWithTraitsRetainsNameComment() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode rundate = builder.scan("employee")
+        .project(builder.field("first_name"), builder.field("last_name"),
+            builder.field("birth_date"))
+        .aggregate(builder.groupKey(0, 1, 2))
+        .build();
+
+    // CTE definition trait carrying a comment captured around the CTE name.
+    final Comment nameComment = new Comment("my cte", AnchorType.LEFT, CommentType.MULTIPLE);
+    final CTEDefinationTrait cteTrait =
+        new CTEDefinationTrait(true, "RUNDATE", false,
+            new java.util.LinkedHashSet<>(Collections.singletonList(nameComment)));
+    final RelTraitSet cteRelTraitSet = rundate.getTraitSet().plus(cteTrait);
+    final RelNode cteRelNodeWithRelTrait = rundate.copy(cteRelTraitSet, rundate.getInputs());
+
+    final RelNode innerSelect = builder
+        .push(cteRelNodeWithRelTrait)
+        .project(
+            builder.alias(
+                builder.field("first_name"),
+                "FNAME")).build();
+
+    final CTEScopeTrait cteScopeTrait = new CTEScopeTrait(true);
+    final RelTraitSet cteScopeRelTraitSet = innerSelect.getTraitSet().plus(cteScopeTrait);
+    final RelNode cteScopeRelNodeWithRelTrait =
+        innerSelect.copy(cteScopeRelTraitSet, innerSelect.getInputs());
+
+    final String actualSql =
+        toSql(cteScopeRelNodeWithRelTrait, DatabaseProduct.BIG_QUERY.getDialect());
+
+    // The comment captured around the CTE name renders before the name at the WITH-clause
+    // definition only; the body reference (which reuses the name node) is left untouched.
+    final String expectedSql = "WITH /* my cte */ RUNDATE AS (SELECT first_name, last_name, birth_date"
+        + "\nFROM foodmart.employee\nGROUP BY first_name, last_name, birth_date)"
+        + " (SELECT first_name AS FNAME\nFROM RUNDATE)";
     assertThat(actualSql, isLinux(expectedSql));
   }
 
