@@ -2323,7 +2323,7 @@ public class RelToSqlConverter extends SqlImplementor
     // the name identifier: the name node is reused as the body's CTE reference, so a comment
     // there would render twice and be stripped by comment deduplication. The SqlWithItem
     // occurs once (the WITH-clause definition) and its operator emits these around the name.
-    if (cteDefinationTrait.getComments() != null && !cteDefinationTrait.getComments().isEmpty()) {
+    if (!cteDefinationTrait.getComments().isEmpty()) {
       withItem.setCommentList(cteDefinationTrait.getComments());
     }
     return withItem;
