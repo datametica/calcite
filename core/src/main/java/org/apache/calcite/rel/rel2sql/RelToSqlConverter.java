@@ -114,6 +114,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
+import org.apache.calcite.util.AnchorType;
 import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
@@ -139,6 +140,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -741,6 +743,25 @@ public class RelToSqlConverter extends SqlImplementor
             sqlExpr = new SqlIdentifier(pivotColumnAliases.get(index), SqlParserPos.ZERO);
           }
           addSelect(selectList, sqlExpr, e.getRowType());
+
+          // SqlAsOperator (the select-item wrapper) is what emits a node's comments. When addSelect
+          // wraps sqlExpr in a fresh AS, a LEADING (LEFT) comment on a bare inner call (e.g. a
+          // window-function OVER call, whose own unparse emits nothing) would be orphaned. Lift only
+          // the LEFT comments onto the AS select item so they render before the column; RIGHT
+          // (trailing) comments stay on the inner node to keep their in-place position.
+          SqlNode selectItem = selectList.get(selectList.size() - 1);
+          if (selectItem != sqlExpr) {
+            Set<Comment> onExpr = sqlExpr.getCommentList();
+            Set<Comment> leftComments = new LinkedHashSet<>();
+            Set<Comment> remaining = new LinkedHashSet<>();
+            for (Comment comment : onExpr) {
+              (comment.getAnchorType() == AnchorType.LEFT ? leftComments : remaining).add(comment);
+            }
+            if (!leftComments.isEmpty()) {
+              sqlExpr.setCommentList(remaining);
+              selectItem.updateCommentSet(leftComments);
+            }
+          }
         }
 
         builder.setSelect(new SqlNodeList(selectList, POS));
