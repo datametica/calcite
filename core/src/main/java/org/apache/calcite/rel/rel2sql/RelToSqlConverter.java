@@ -674,11 +674,16 @@ public class RelToSqlConverter extends SqlImplementor
    * only onto the node it annotates, never smeared onto that node's operands.
    */
   private static void rehydrateNestedComments(RelNode rel, RexNode rex) {
-    Set<Comment> mapped = SqlCommentUtil.getDirectCommentsInMap(rel, rex);
-    if (!mapped.isEmpty()) {
-      rex.getComment().addAll(mapped);
-    }
+    // Only re-hydrate comments onto nested expression (RexCall) nodes. A comment keyed by a bare
+    // RexInputRef is a column-level comment owned by its top-level projection (applied via
+    // getCommentsInMap at the projection site); applying it to a nested RexInputRef occurrence would
+    // smear the same comment onto every re-use of that aggregate/column output (e.g. a GROUP BY
+    // aggregate referenced again inside a later projection's expression).
     if (rex instanceof RexCall) {
+      Set<Comment> mapped = SqlCommentUtil.getDirectCommentsInMap(rel, rex);
+      if (!mapped.isEmpty()) {
+        rex.getComment().addAll(mapped);
+      }
       for (RexNode operand : ((RexCall) rex).operands) {
         rehydrateNestedComments(rel, operand);
       }
@@ -709,7 +714,18 @@ public class RelToSqlConverter extends SqlImplementor
         for (RexNode ref : e.getProjects()) {
           rehydrateNestedComments(e, ref);
           SqlNode sqlExpr = builder.context.toSql(null, ref);
-          sqlExpr.updateCommentSet(SqlCommentUtil.getCommentsInMap(e, ref));
+          Set<Comment> projectionComments = SqlCommentUtil.getCommentsInMap(e, ref);
+          if (!projectionComments.isEmpty()) {
+            // AliasContext.field(ordinal) returns a SqlNode shared via ordinalMap, so a bare
+            // INPUT_REF projection's SqlNode may also be embedded inside another projection (e.g. a
+            // reused aggregate output inside a COALESCE/NULLIF). Mutating that shared node with this
+            // select item's comment would smear the comment onto every reuse. Attach to a private
+            // clone so the comment renders only on this column.
+            if (ref instanceof RexInputRef) {
+              sqlExpr = sqlExpr.clone(sqlExpr.getParserPosition());
+            }
+            sqlExpr.updateCommentSet(projectionComments);
+          }
           RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
           if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
