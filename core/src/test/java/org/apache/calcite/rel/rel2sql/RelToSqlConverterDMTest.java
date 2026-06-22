@@ -2901,6 +2901,39 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflake));
   }
 
+  @Test public void testArrayFirst() {
+    final RelBuilder builder = relBuilder();
+
+    RexNode arrayNode =
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal(1), builder.literal(1), builder.literal(2));
+    RexNode arrayFirstNode =
+        builder.call(SqlLibraryOperators.ARRAY_FIRST, arrayNode);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(arrayFirstNode, "arrayFirst"))
+        .build();
+    final String expectedQuery = "SELECT ARRAY_FIRST(ARRAY[1, 1, 2]) AS arrayFirst\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testArrayLast() {
+    final RelBuilder builder = relBuilder();
+    RexNode arrayNode =
+        builder.call(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+            builder.literal(1), builder.literal(2), builder.literal(3));
+    RexNode arrayLastNode =
+        builder.call(SqlLibraryOperators.ARRAY_LAST, arrayNode);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(arrayLastNode, "arrayLast"))
+        .build();
+    final String expectedQuery = "SELECT ARRAY_LAST(ARRAY[1, 2, 3]) AS arrayLast\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedQuery));
+  }
+
   @Test void testLagFunctionForPrintingitgOfFrameBoundary() {
     String query = "SELECT lag(\"employee_id\",1,'NA') over "
         + "(partition by \"hire_date\" order by \"employee_id\") FROM \"employee\"";
