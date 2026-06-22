@@ -70,7 +70,24 @@ public final class LogicalAggregate extends Aggregate {
       ImmutableBitSet groupSet,
       @Nullable List<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
-    super(cluster, traitSet, hints, input, groupSet, groupSets, aggCalls);
+    super(cluster, traitSet, hints, input, false, groupSet, groupSets, aggCalls);
+  }
+
+  /**
+   * Creates a LogicalAggregate with the GROUP BY ALL quantifier flag.
+   *
+   * @param groupByAll Whether the original GROUP BY clause used the ALL quantifier
+   */
+  public LogicalAggregate(
+      RelOptCluster cluster,
+      RelTraitSet traitSet,
+      List<RelHint> hints,
+      RelNode input,
+      boolean groupByAll,
+      ImmutableBitSet groupSet,
+      @Nullable List<ImmutableBitSet> groupSets,
+      List<AggregateCall> aggCalls) {
+    super(cluster, traitSet, hints, input, groupByAll, groupSet, groupSets, aggCalls);
   }
 
   /**
@@ -130,7 +147,17 @@ public final class LogicalAggregate extends Aggregate {
       ImmutableBitSet groupSet,
       @Nullable List<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
-    return create_(input, hints, groupSet, groupSets, aggCalls);
+    return create_(input, hints, false, groupSet, groupSets, aggCalls);
+  }
+
+  /** Creates a LogicalAggregate with an explicit GROUP BY ALL flag. */
+  public static LogicalAggregate create(final RelNode input,
+      List<RelHint> hints,
+      boolean groupByAll,
+      ImmutableBitSet groupSet,
+      @Nullable List<ImmutableBitSet> groupSets,
+      List<AggregateCall> aggCalls) {
+    return create_(input, hints, groupByAll, groupSet, groupSets, aggCalls);
   }
 
   @Deprecated // to be removed before 2.0
@@ -138,7 +165,7 @@ public final class LogicalAggregate extends Aggregate {
       ImmutableBitSet groupSet,
       List<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
-    return create_(input, ImmutableList.of(), groupSet, groupSets, aggCalls);
+    return create_(input, ImmutableList.of(), false, groupSet, groupSets, aggCalls);
   }
 
   @Deprecated // to be removed before 2.0
@@ -148,18 +175,19 @@ public final class LogicalAggregate extends Aggregate {
       List<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
     checkIndicator(indicator);
-    return create_(input, ImmutableList.of(), groupSet, groupSets, aggCalls);
+    return create_(input, ImmutableList.of(), false, groupSet, groupSets, aggCalls);
   }
 
   private static LogicalAggregate create_(final RelNode input,
       List<RelHint> hints,
+      boolean groupByAll,
       ImmutableBitSet groupSet,
       @Nullable List<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
     final RelOptCluster cluster = input.getCluster();
     final RelTraitSet traitSet = cluster.traitSetOf(Convention.NONE);
-    return new LogicalAggregate(cluster, traitSet, hints, input, groupSet,
-        groupSets, aggCalls);
+    return new LogicalAggregate(cluster, traitSet, hints, input, groupByAll,
+        groupSet, groupSets, aggCalls);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -169,7 +197,7 @@ public final class LogicalAggregate extends Aggregate {
       @Nullable List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
     assert traitSet.containsIfApplicable(Convention.NONE);
     return new LogicalAggregate(getCluster(), traitSet, hints, input,
-        groupSet, groupSets, aggCalls);
+        groupByAll, groupSet, groupSets, aggCalls);
   }
 
   @Override public RelNode accept(RelShuttle shuttle) {
@@ -178,6 +206,6 @@ public final class LogicalAggregate extends Aggregate {
 
   @Override public RelNode withHints(List<RelHint> hintList) {
     return new LogicalAggregate(getCluster(), traitSet, hintList, input,
-        groupSet, groupSets, aggCalls);
+        groupByAll, groupSet, groupSets, aggCalls);
   }
 }

@@ -1394,6 +1394,15 @@ public class SqlDialect {
   }
 
   /**
+   * Returns whether this dialect supports "GROUP BY ALL" syntax, where the
+   * database infers grouping columns from the non-aggregated SELECT expressions
+   * (e.g. Snowflake, BigQuery).
+   */
+  public boolean supportsGroupByAll() {
+    return false;
+  }
+
+  /**
    * Return whether this dialect requires Column names in the INSERT clause of MERGE statements.
    */
   public boolean requiresColumnsInMergeInsertClause() {

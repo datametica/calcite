@@ -1141,13 +1141,16 @@ public class RelToSqlConverter extends SqlImplementor
       // final SqlNode field = getGroupBySqlNode(builder,key);
       addSelect(selectList, field, aggregate.getRowType());
     }
+    final List<SqlNode> groupByItems;
     switch (aggregate.getGroupType()) {
     case SIMPLE:
-      return ImmutableList.copyOf(groupKeys);
+      groupByItems = ImmutableList.copyOf(groupKeys);
+      break;
     case CUBE:
       if (aggregate.getGroupSet().cardinality() > 1) {
-        return ImmutableList.of(
-            SqlStdOperatorTable.CUBE.createCall(SqlParserPos.ZERO, groupKeys));
+        groupByItems =
+            ImmutableList.of(SqlStdOperatorTable.CUBE.createCall(SqlParserPos.ZERO, groupKeys));
+        break;
       }
       // a singleton CUBE and ROLLUP are the same but we prefer ROLLUP;
       // fall through
@@ -1157,8 +1160,9 @@ public class RelToSqlConverter extends SqlImplementor
           .stream()
           .map(bit -> builder.context.field(bit, dialect.getConformance().isGroupByAlias()))
           .collect(Collectors.toList());
-      return ImmutableList.of(
-          SqlStdOperatorTable.ROLLUP.createCall(SqlParserPos.ZERO, rollupKeys));
+      groupByItems =
+          ImmutableList.of(SqlStdOperatorTable.ROLLUP.createCall(SqlParserPos.ZERO, rollupKeys));
+      break;
     default:
     case OTHER:
       // Make sure that the group sets contains all bits.
@@ -1171,13 +1175,25 @@ public class RelToSqlConverter extends SqlImplementor
         groupSets.add(aggregate.getGroupSet());
         groupSets.addAll(aggregate.getGroupSets());
       }
-      return ImmutableList.of(
-          SqlStdOperatorTable.GROUPING_SETS.createCall(SqlParserPos.ZERO,
+      groupByItems =
+          ImmutableList.of(
+              SqlStdOperatorTable.GROUPING_SETS.createCall(SqlParserPos.ZERO,
               groupSets.stream()
                   .map(groupSet ->
                       groupItem(groupKeys, groupSet, aggregate.getGroupSet()))
                   .collect(Collectors.toList())));
+      break;
     }
+
+    if (aggregate.isGroupByAll() && dialect.supportsGroupByAll()) {
+      // GROUP BY ALL stands alone — the database infers grouping columns from
+      // the SELECT list. Return only the zero-operand marker; SqlSelectOperator
+      // will emit "GROUP BY ALL" with no column list.
+      // (selectList was already populated above for the SELECT clause.)
+      return ImmutableList.of(
+          SqlInternalOperators.GROUP_BY_ALL.createCall(SqlParserPos.ZERO));
+    }
+    return groupByItems;
   }
 
 
