@@ -208,4 +208,11 @@ public final class LogicalAggregate extends Aggregate {
     return new LogicalAggregate(getCluster(), traitSet, hintList, input,
         groupByAll, groupSet, groupSets, aggCalls);
   }
+
+  /** Returns a copy of this aggregate with the given GROUP BY ALL flag. */
+  public LogicalAggregate withGroupByAll(boolean groupByAll) {
+    return this.groupByAll == groupByAll ? this
+        : new LogicalAggregate(getCluster(), traitSet, hints, input,
+            groupByAll, groupSet, groupSets, aggCalls);
+  }
 }

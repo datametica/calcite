@@ -63,6 +63,7 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.hint.Hintable;
 import org.apache.calcite.rel.hint.RelHint;
+import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.metadata.RelColumnMapping;
@@ -2417,21 +2418,42 @@ public class RelBuilder {
   /** Creates an {@link Aggregate} that makes the
    * relational expression distinct on all fields. */
   public RelBuilder distinct() {
-    return aggregate_((GroupKeyImpl) groupKey(fields()), ImmutableList.of());
+    return aggregate_((GroupKeyImpl) groupKey(fields()), ImmutableList.of(), false);
   }
 
-  /** Creates an {@link Aggregate} with an array of
-   * calls. */
+  /** Creates a {@code GROUP BY ALL} distinct — equivalent to {@link #distinct()}
+   * but emits {@code GROUP BY ALL} on dialects that support it
+   * (e.g. Snowflake, BigQuery). */
+  public RelBuilder distinct(boolean groupByAll) {
+    return aggregate_((GroupKeyImpl) groupKey(fields()), ImmutableList.of(), groupByAll);
+  }
+
+  /** Creates an {@link Aggregate} with an array of calls. */
   @SuppressWarnings({"unchecked", "rawtypes"})
   public RelBuilder aggregate(GroupKey groupKey, AggCall... aggCalls) {
     return aggregate_((GroupKeyImpl) groupKey,
-        (ImmutableList) ImmutableList.copyOf(aggCalls));
+        (ImmutableList) ImmutableList.copyOf(aggCalls), false);
   }
 
-  /** Creates an {@link Aggregate} with an array of
-   * {@link AggregateCall}s. */
+  /** Creates an {@link Aggregate} with an array of calls and a GROUP BY ALL flag.
+   * When {@code groupByAll} is true and the target dialect supports it
+   * (e.g. Snowflake, BigQuery), the query is unparsed as {@code GROUP BY ALL}. */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public RelBuilder aggregate(GroupKey groupKey, boolean groupByAll, AggCall... aggCalls) {
+    return aggregate_((GroupKeyImpl) groupKey,
+        (ImmutableList) ImmutableList.copyOf(aggCalls), groupByAll);
+  }
+
+  /** Creates an {@link Aggregate} with an array of {@link AggregateCall}s. */
   public RelBuilder aggregate(GroupKey groupKey,
       List<AggregateCall> aggregateCalls) {
+    return aggregate(groupKey, aggregateCalls, false);
+  }
+
+  /** Creates an {@link Aggregate} with an array of {@link AggregateCall}s and
+   * a GROUP BY ALL flag. */
+  public RelBuilder aggregate(GroupKey groupKey,
+      List<AggregateCall> aggregateCalls, boolean groupByAll) {
     return aggregate_((GroupKeyImpl) groupKey,
         aggregateCalls.stream()
             .map(aggregateCall ->
@@ -2439,20 +2461,28 @@ public class RelBuilder {
                     aggregateCall.getArgList().stream()
                         .map(this::field)
                         .collect(toImmutableList())))
-            .collect(toImmutableList()));
+            .collect(toImmutableList()),
+        groupByAll);
   }
 
   /** Creates an {@link Aggregate} with multiple calls. */
   @SuppressWarnings({"unchecked", "rawtypes"})
   public RelBuilder aggregate(GroupKey groupKey,
       Iterable<? extends AggCall> aggCalls) {
+    return aggregate(groupKey, aggCalls, false);
+  }
+
+  /** Creates an {@link Aggregate} with multiple calls and a GROUP BY ALL flag. */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public RelBuilder aggregate(GroupKey groupKey,
+      Iterable<? extends AggCall> aggCalls, boolean groupByAll) {
     return aggregate_((GroupKeyImpl) groupKey,
-        ImmutableList.<AggCallPlus>copyOf((Iterable) aggCalls));
+        ImmutableList.<AggCallPlus>copyOf((Iterable) aggCalls), groupByAll);
   }
 
   /** Creates an {@link Aggregate} with multiple calls. */
   private RelBuilder aggregate_(GroupKeyImpl groupKey,
-      final ImmutableList<AggCallPlus> aggCalls) {
+      final ImmutableList<AggCallPlus> aggCalls, boolean groupByAll) {
     if (groupKey.nodes.isEmpty()
         && aggCalls.isEmpty()
         && config.pruneInputOfAggregate()) {
@@ -2602,7 +2632,7 @@ public class RelBuilder {
 
     if (!config.dedupAggregateCalls() || Util.isDistinct(aggregateCalls)) {
       return aggregate_(groupSet2, groupSets2, r, aggregateCalls,
-          registrar.extraNodes, inFields);
+          registrar.extraNodes, inFields, groupByAll);
     }
 
     // There are duplicate aggregate calls. Rebuild the list to eliminate
@@ -2624,7 +2654,7 @@ public class RelBuilder {
       projects.add(groupSet.cardinality() + i, aggregateCall.name);
     }
     aggregate_(groupSet2, groupSets2, r, distinctAggregateCalls,
-        registrar.extraNodes, inFields);
+        registrar.extraNodes, inFields, groupByAll);
     return project(projects.transform((i, name) -> aliasMaybe(field(i), name)));
   }
 
@@ -2720,10 +2750,14 @@ public class RelBuilder {
   private RelBuilder aggregate_(ImmutableBitSet groupSet,
       ImmutableList<ImmutableBitSet> groupSets, RelNode input,
       List<AggregateCall> aggregateCalls, List<RexNode> extraNodes,
-      PairList<ImmutableSet<String>, RelDataTypeField> inFields) {
-    final RelNode aggregate =
+      PairList<ImmutableSet<String>, RelDataTypeField> inFields,
+      boolean groupByAll) {
+    RelNode aggregate =
         struct.aggregateFactory.createAggregate(input,
             ImmutableList.of(), groupSet, groupSets, aggregateCalls);
+    if (groupByAll && aggregate instanceof LogicalAggregate) {
+      aggregate = ((LogicalAggregate) aggregate).withGroupByAll(true);
+    }
 
     // build field list
     final PairList<ImmutableSet<String>, RelDataTypeField> fields =
