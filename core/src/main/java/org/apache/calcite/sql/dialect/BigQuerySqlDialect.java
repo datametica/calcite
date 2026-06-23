@@ -462,7 +462,7 @@ public class BigQuerySqlDialect extends SqlDialect {
     return false;
   }
 
-  @Override public boolean castsToNumberViaBigNumeric() {
+  @Override public boolean isToNumberCastToBigNumeric() {
     return true;
   }
 

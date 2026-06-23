@@ -161,13 +161,13 @@ public class ToNumberUtils {
   /**
    * Resolves the SQL type used when unparsing {@code TO_NUMBER} to a {@code CAST}.
    *
-   * <p>When {@link SqlDialect#castsToNumberViaBigNumeric()} is enabled, string literals use
+   * <p>When {@link SqlDialect#isToNumberCastToBigNumeric()} is enabled, string literals use
    * finer-grained rules so that high-magnitude decimals can remain as {@code BIGNUMERIC} while
    * other literals still map to {@code INT64} or {@code FLOAT64} as before.
    */
   private static RelDataType resolveToNumberTargetType(
       SqlCall call, SqlDialect dialect, @Nullable Boolean scientificFormat) {
-    if (dialect.castsToNumberViaBigNumeric()
+    if (dialect.isToNumberCastToBigNumeric()
         && call.operand(0) instanceof SqlCharStringLiteral) {
       if (Boolean.TRUE.equals(scientificFormat)) {
         return new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.DECIMAL);
@@ -233,7 +233,7 @@ public class ToNumberUtils {
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
       RelDataType targetType, SqlDialect dialect, boolean skipBigNumericBridge) {
     final SqlTypeName typeName = targetType.getSqlTypeName();
-    if (dialect.castsToNumberViaBigNumeric()
+    if (dialect.isToNumberCastToBigNumeric()
         && !skipBigNumericBridge
         && (typeName == SqlTypeName.BIGINT || typeName == SqlTypeName.FLOAT)) {
       final SqlParserPos pos = SqlParserPos.ZERO;

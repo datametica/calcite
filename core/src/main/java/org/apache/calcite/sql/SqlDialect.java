@@ -924,7 +924,7 @@ public class SqlDialect {
    *
    * <p>The default is {@code false}. BigQuery enables this behavior.
    */
-  public boolean castsToNumberViaBigNumeric() {
+  public boolean isToNumberCastToBigNumeric() {
     return false;
   }
 
