@@ -125,7 +125,18 @@ public abstract class SqlInternalOperators {
    * Unlike DISTINCT, this is a zero-operand marker — the grouping items
    * remain as separate entries in the groupBy list. */
   public static final SqlInternalOperator GROUP_BY_ALL =
-      new SqlInternalOperator("GROUP BY ALL", SqlKind.GROUP_BY_ALL);
+      new SqlInternalOperator("GROUP BY ALL", SqlKind.GROUP_BY_ALL) {
+        @Override public void unparse(SqlWriter writer, SqlCall call,
+            int leftPrec, int rightPrec) {
+          final SqlWriter.Frame frame =
+              writer.startList(SqlWriter.FrameTypeEnum.OTHER);
+          for (SqlNode operand : call.getOperandList()) {
+            writer.sep(",");
+            operand.unparse(writer, leftPrec, rightPrec);
+          }
+          writer.endList(frame);
+        }
+      };
 
   /** Fetch operator is ONLY used for its precedence during unparsing. */
   public static final SqlOperator FETCH =

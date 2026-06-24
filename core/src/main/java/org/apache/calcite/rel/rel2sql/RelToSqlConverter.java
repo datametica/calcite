@@ -1191,7 +1191,7 @@ public class RelToSqlConverter extends SqlImplementor
       // will emit "GROUP BY ALL" with no column list.
       // (selectList was already populated above for the SELECT clause.)
       return ImmutableList.of(
-          SqlInternalOperators.GROUP_BY_ALL.createCall(SqlParserPos.ZERO));
+          SqlInternalOperators.GROUP_BY_ALL.createCall(SqlNodeList.EMPTY));
     }
     return groupByItems;
   }
