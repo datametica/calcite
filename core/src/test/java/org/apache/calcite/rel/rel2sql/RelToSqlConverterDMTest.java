@@ -27,6 +27,8 @@ import org.apache.calcite.plan.QualifyRelTraitDef;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.SourceJoinFormTrait;
+import org.apache.calcite.plan.SourceJoinKind;
 import org.apache.calcite.plan.TableAliasTrait;
 import org.apache.calcite.plan.ViewChildProjectRelTrait;
 import org.apache.calcite.plan.hep.HepPlanner;
@@ -14768,5 +14770,40 @@ class RelToSqlConverterDMTest {
     final String expectedQuery = "SELECT REGEXP_CONTAINS('Mike Bird', r'^[a-zA-Z ]*$') AS `$f0`\n"
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedQuery));
+  }
+
+  /**
+   * Test that {@link SourceJoinFormTrait} with {@link SourceJoinKind#CROSS_OR_COMMA} causes
+   * an INNER JOIN ON TRUE to be rendered as a cross/comma join rather than an explicit INNER JOIN.
+   */
+  @Test public void testInnerJoinOnTrueWithSourceJoinFormTrait() {
+    final RelBuilder builder = relBuilder();
+
+    final RelNode emp = builder.scan("EMP").build();
+    final RelNode dept = builder.scan("DEPT").build();
+
+    // INNER JOIN with no explicit condition defaults to ON TRUE (always true)
+    final RelNode join = builder.push(emp).push(dept)
+        .join(JoinRelType.INNER)
+        .build();
+
+    // Attach CROSS_OR_COMMA to signal this was a cross/comma join in source SQL.
+    // This causes the converter to render the INNER JOIN ON TRUE as CROSS JOIN
+    // rather than an explicit INNER JOIN with ON TRUE.
+    final SourceJoinFormTrait joinTrait =
+        new SourceJoinFormTrait(SourceJoinKind.CROSS_OR_COMMA);
+    final RelTraitSet traitSet = join.getTraitSet().plus(joinTrait);
+    final RelNode joinWithTrait = join.copy(traitSet, join.getInputs());
+
+    final RelNode root = builder.push(joinWithTrait)
+        .project(builder.field("EMPNO"), builder.field("DNAME"))
+        .build();
+
+    final String actualSql = toSql(root, DatabaseProduct.SPARK.getDialect());
+
+    final String expectedSql = "SELECT EMP.EMPNO, DEPT.DNAME\n"
+        + "FROM scott.EMP\n"
+        + "CROSS JOIN scott.DEPT";
+    assertThat(actualSql, isLinux(expectedSql));
   }
 }
