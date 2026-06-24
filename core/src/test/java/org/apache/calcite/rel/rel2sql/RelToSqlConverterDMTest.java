@@ -14806,4 +14806,46 @@ class RelToSqlConverterDMTest {
         + "CROSS JOIN scott.DEPT";
     assertThat(actualSql, isLinux(expectedSql));
   }
+
+  /**
+   * Test that {@link SourceJoinFormTrait} with {@link SourceJoinKind#NON_CROSS_OR_COMMA} preserves
+   * an INNER JOIN with a logically trivial condition (1=1, which Calcite simplifies to TRUE) as an
+   * explicit INNER JOIN ON TRUE, preventing cross/comma join rendering even though the condition is
+   * always true.
+   */
+  @Test public void testInnerJoinWithOneEqualsOneConditionAndNonCrossOrCommaTrait() {
+    final RelBuilder builder = relBuilder();
+
+    final RelNode emp = builder.scan("EMP").build();
+    final RelNode dept = builder.scan("DEPT").build();
+
+    // INNER JOIN with 1=1 condition — Calcite's simplifier reduces this to literal TRUE,
+    // so the condition is always true. Without the NON_CROSS_OR_COMMA trait this would
+    // qualify as a cross join and be rendered as CROSS JOIN on Spark.
+    final RelNode join = builder.push(emp).push(dept)
+        .join(JoinRelType.INNER,
+            builder.equals(builder.literal(1), builder.literal(1)))
+        .build();
+
+    // Attach NON_CROSS_OR_COMMA to signal this was an explicit qualified join in source SQL.
+    // Even though the simplified condition is TRUE, the trait prevents the converter from
+    // treating it as a cross join.
+    final SourceJoinFormTrait joinTrait =
+        new SourceJoinFormTrait(SourceJoinKind.NON_CROSS_OR_COMMA);
+    final RelTraitSet traitSet = join.getTraitSet().plus(joinTrait);
+    final RelNode joinWithTrait = join.copy(traitSet, join.getInputs());
+
+    final RelNode root = builder.push(joinWithTrait)
+        .filter(builder.greaterThan(builder.field("EMPNO"), builder.literal(5)))
+        .project(builder.field("EMPNO"), builder.field("DNAME"))
+        .build();
+
+    final String actualSql = toSql(root, DatabaseProduct.SPARK.getDialect());
+
+    final String expectedSql = "SELECT EMP.EMPNO, DEPT.DNAME\n"
+        + "FROM scott.EMP\n"
+        + "INNER JOIN scott.DEPT ON TRUE\n"
+        + "WHERE EMP.EMPNO > 5";
+    assertThat(actualSql, isLinux(expectedSql));
+  }
 }
