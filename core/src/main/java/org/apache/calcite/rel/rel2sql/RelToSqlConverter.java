@@ -2230,8 +2230,8 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   private static boolean isAliased(SqlNode sourceNode) {
-    return sourceNode instanceof SqlBasicCall &&
-        ((SqlBasicCall) sourceNode).getOperator().getKind() == SqlKind.AS;
+    return sourceNode instanceof SqlBasicCall
+        && ((SqlBasicCall) sourceNode).getOperator().getKind() == SqlKind.AS;
   }
 
   private static boolean isAliasReusedAsColumnInProjection(SqlNodeList sqlNodeList, String name) {
