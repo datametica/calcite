@@ -12295,6 +12295,11 @@ class RelToSqlConverterDMTest {
     assertThat(actualSql, isLinux(expectedSql));
   }
 
+  /**
+   * Verifies that a comment captured around a CTE name (carried on the {@link CTEDefinationTrait})
+   * renders before the name at the WITH-clause definition only; the body reference, which reuses
+   * the name node, is left untouched.
+   */
   @Test public void testCTEWithTraitsRetainsNameComment() {
     final RelBuilder builder = foodmartRelBuilder();
 
@@ -12304,7 +12309,6 @@ class RelToSqlConverterDMTest {
         .aggregate(builder.groupKey(0, 1, 2))
         .build();
 
-    // CTE definition trait carrying a comment captured around the CTE name.
     final Comment nameComment = new Comment("my cte", AnchorType.LEFT, CommentType.MULTIPLE);
     final CTEDefinationTrait cteTrait =
         new CTEDefinationTrait(true, "RUNDATE", false,
@@ -12327,8 +12331,6 @@ class RelToSqlConverterDMTest {
     final String actualSql =
         toSql(cteScopeRelNodeWithRelTrait, DatabaseProduct.BIG_QUERY.getDialect());
 
-    // The comment captured around the CTE name renders before the name at the WITH-clause
-    // definition only; the body reference (which reuses the name node) is left untouched.
     final String expectedSql = "WITH /* my cte */ RUNDATE AS (SELECT first_name, last_name, birth_date"
         + "\nFROM foodmart.employee\nGROUP BY first_name, last_name, birth_date)"
         + " (SELECT first_name AS FNAME\nFROM RUNDATE)";
@@ -12344,6 +12346,11 @@ class RelToSqlConverterDMTest {
     return count;
   }
 
+  /**
+   * The comment keyed to the top-level projected expression is reachable both via
+   * {@code rehydrateNestedComments} and via the {@code getCommentsInMap} fallback, but the SqlNode
+   * comment set (a LinkedHashSet keyed on comment UUID) collapses the duplicate, so it renders once.
+   */
   @Test public void testTopLevelProjectedExpressionCommentRendersOnce() {
     final RelBuilder builder = foodmartRelBuilder();
     builder.scan("employee");
@@ -12360,15 +12367,16 @@ class RelToSqlConverterDMTest {
         rel.copy(rel.getTraitSet().plus(commentTrait), rel.getInputs());
 
     final String actualSql = toSql(relWithComment, DatabaseProduct.BIG_QUERY.getDialect());
-    // The comment keyed to the top-level projected expression is reachable both via
-    // rehydrateNestedComments and via the getCommentsInMap fallback, but the SqlNode comment
-    // set (LinkedHashSet keyed on comment UUID) collapses the duplicate, so it renders once.
     final String expectedSql = "SELECT /* top level */ salary + salary AS `$f0`"
         + "\nFROM foodmart.employee";
     assertThat(actualSql, isLinux(expectedSql));
     assertThat(countOccurrences(actualSql, "/* top level */"), is(1));
   }
 
+  /**
+   * The comment is anchored to a nested operand (the THEN value), not the top-level CASE, so
+   * {@code rehydrateNestedComments} must walk into the RexCall operands and re-attach it there.
+   */
   @Test public void testRehydrateNestedCaseThenComment() {
     final RelBuilder builder = foodmartRelBuilder();
     builder.scan("employee");
@@ -12381,8 +12389,6 @@ class RelToSqlConverterDMTest {
         builder.call(SqlStdOperatorTable.CASE, cond, thenVal, elseVal);
     final RelNode rel = builder.project(caseExpr).build();
 
-    // Comment anchored to a nested operand (the THEN value), not the top-level CASE.
-    // rehydrateNestedComments must walk into the RexCall operands and re-attach it there.
     final Comment comment = new Comment("then branch", AnchorType.LEFT, CommentType.MULTIPLE);
     final Map<RexNode, java.util.Set<Comment>> commentMap = new HashMap<>();
     commentMap.put(thenVal, new java.util.LinkedHashSet<>(Collections.singletonList(comment)));
@@ -12397,6 +12403,11 @@ class RelToSqlConverterDMTest {
     assertThat(countOccurrences(actualSql, "/* then branch */"), is(1));
   }
 
+  /**
+   * The comment is keyed to the grouping input ref. {@code getGroupBySqlNode} may hand back the
+   * very SqlNode the SELECT list reuses; the {@code generateGroupList} clone fix must keep the
+   * comment on a node exclusive to GROUP BY so it is not duplicated into SELECT.
+   */
   @Test public void testGroupByCommentNotDuplicatedInSelect() {
     final RelBuilder builder = foodmartRelBuilder();
     final RelNode agg = builder.scan("employee")
@@ -12404,9 +12415,6 @@ class RelToSqlConverterDMTest {
         .aggregate(builder.groupKey(0))
         .build();
 
-    // Comment keyed to the grouping input ref. getGroupBySqlNode may hand back the very
-    // SqlNode the SELECT list reuses; the generateGroupList clone fix must keep the comment
-    // on a node exclusive to GROUP BY so it is not duplicated into SELECT.
     final Comment comment = new Comment("group key", AnchorType.LEFT, CommentType.MULTIPLE);
     final Map<RexNode, java.util.Set<Comment>> commentMap = new HashMap<>();
     commentMap.put(new RexInputRef(0, agg.getRowType().getFieldList().get(0).getType()),
@@ -12422,6 +12430,11 @@ class RelToSqlConverterDMTest {
     assertThat(countOccurrences(actualSql, "/* group key */"), is(1));
   }
 
+  /**
+   * A comment captured around the 2nd CTE name must survive {@code modifyWithItemList}, which
+   * rebuilds every non-first CTE item; without the explicit comment copy this comment would be
+   * dropped.
+   */
   @Test public void testModifyWithItemListRetainsSecondCteNameComment() {
     final SqlNodeList selectList =
         new SqlNodeList(Collections.singletonList(new SqlIdentifier("c", SqlParserPos.ZERO)),
@@ -12437,8 +12450,6 @@ class RelToSqlConverterDMTest {
         new SqlWithItem(SqlParserPos.ZERO, new SqlIdentifier("A", SqlParserPos.ZERO), null, query1);
     final SqlWithItem item2 =
         new SqlWithItem(SqlParserPos.ZERO, new SqlIdentifier("B", SqlParserPos.ZERO), null, query2);
-    // Comment captured around the 2nd CTE name. modifyWithItemList rebuilds every non-first
-    // CTE item, so without the explicit comment copy this comment would be dropped.
     final Comment comment = new Comment("second cte", AnchorType.LEFT, CommentType.MULTIPLE);
     item2.setCommentList(new java.util.LinkedHashSet<>(Collections.singletonList(comment)));
 
