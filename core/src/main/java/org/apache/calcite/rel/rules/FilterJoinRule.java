@@ -19,6 +19,10 @@ package org.apache.calcite.rel.rules;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelRule;
+import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.SourceJoinFormTrait;
+import org.apache.calcite.plan.SourceJoinFormTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
@@ -209,9 +213,20 @@ public abstract class FilterJoinRule<C extends FilterJoinRule.Config>
       return;
     }
 
+    RelTraitSet traitSet = join.getTraitSet();
+    if (shouldRemoveSourceJoinFormTrait(join, joinFilter)) {
+      traitSet = join.getCluster().traitSet();
+      for (int i = 0; i < join.getTraitSet().size(); i++) {
+        RelTrait trait = join.getTraitSet().getTrait(i);
+        if (!(trait instanceof SourceJoinFormTrait)) {
+          traitSet = traitSet.plus(trait);
+        }
+      }
+    }
+
     RelNode newJoinRel =
         join.copy(
-            join.getTraitSet(),
+            traitSet,
             joinFilter,
             leftRel,
             rightRel,
@@ -237,6 +252,22 @@ public abstract class FilterJoinRule<C extends FilterJoinRule.Config>
         RexUtil.fixUp(rexBuilder, aboveFilters,
             RelOptUtil.getFieldTypeList(relBuilder.peek().getRowType())));
     call.transformTo(relBuilder.build());
+  }
+
+  /**
+   * Returns whether {@link SourceJoinFormTrait} should be dropped when rebuilding
+   * a join after filter pushdown.
+   *
+   * <p>True when the original join had a qualified ON clause
+   * ({@code NON_CROSS_OR_COMMA}) and pushdown left no join predicates.
+   */
+  private static boolean shouldRemoveSourceJoinFormTrait(Join join, RexNode joinFilter) {
+    SourceJoinFormTrait joinForm =
+        join.getTraitSet().getTrait(SourceJoinFormTraitDef.instance);
+    return !join.getCondition().isAlwaysTrue()
+        && joinForm != null
+        && !joinForm.isCrossOrComma()
+        && joinFilter.isAlwaysTrue();
   }
 
   /**
