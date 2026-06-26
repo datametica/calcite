@@ -717,6 +717,14 @@ public class RelToSqlConverter extends SqlImplementor
           rehydrateNestedComments(e, ref);
           SqlNode sqlExpr = builder.context.toSql(null, ref);
           Set<Comment> projectionComments = SqlCommentUtil.getCommentsInMap(e, ref);
+          // Comments toSql already placed on the expression are IN-PLACE comments: a comment that
+          // sits between the expression and its alias in the source ("expr /* note */ AS a") is
+          // captured inline on the expression's RexNode and rendered here. Capture them now -- before
+          // the clone below (which does not copy the comment list) and before merging in the
+          // map-keyed projectionComments -- so the lift below can tell an in-place comment (keep on
+          // the expression, before the alias) from an after-alias comment (present only in the map,
+          // lift past the alias).
+          Set<Comment> inlineOnExpr = new LinkedHashSet<>(sqlExpr.getCommentList());
           if (!projectionComments.isEmpty()) {
             // AliasContext.field(ordinal) returns a SqlNode shared via ordinalMap, so a bare
             // INPUT_REF projection's SqlNode may also be embedded inside another projection (e.g. a
@@ -744,22 +752,34 @@ public class RelToSqlConverter extends SqlImplementor
           }
           addSelect(selectList, sqlExpr, e.getRowType());
 
-          // SqlAsOperator (the select-item wrapper) is what emits a node's comments. When addSelect
-          // wraps sqlExpr in a fresh AS, a LEADING (LEFT) comment on a bare inner call (e.g. a
-          // window-function OVER call, whose own unparse emits nothing) would be orphaned. Lift only
-          // the LEFT comments onto the AS select item so they render before the column; RIGHT
-          // (trailing) comments stay on the inner node to keep their in-place position.
+          // SqlAsOperator (the select-item wrapper) is what emits a node's comments at unparse:
+          // LEFT comments before the column body, RIGHT (trailing) comments after the alias. When
+          // addSelect wraps sqlExpr in a fresh AS, decide which of sqlExpr's comments belong on the
+          // wrapper:
+          //   - LEFT (leading) comments: lift, so they render before the whole column -- a leading
+          //     comment on a bare inner call whose own unparse emits nothing (e.g. a window-function
+          //     OVER call) would otherwise be orphaned.
+          //   - RIGHT (trailing) comments captured PAST the alias (present only in the map, never
+          //     inline on the expression): lift, so they render after the alias.
+          //   - RIGHT comments that are IN-PLACE on the expression (a comment between the expression
+          //     and AS, "expr /* note */ AS a", captured inline on the RexNode): keep on sqlExpr so
+          //     they stay before the alias.
           SqlNode selectItem = selectList.get(selectList.size() - 1);
-          if (selectItem != sqlExpr) {
-            Set<Comment> onExpr = sqlExpr.getCommentList();
-            Set<Comment> leftComments = new LinkedHashSet<>();
-            Set<Comment> remaining = new LinkedHashSet<>();
-            for (Comment comment : onExpr) {
-              (comment.getAnchorType() == AnchorType.LEFT ? leftComments : remaining).add(comment);
+          if (selectItem != sqlExpr && !projectionComments.isEmpty()) {
+            Set<Comment> toLift = new LinkedHashSet<>();
+            for (Comment comment : projectionComments) {
+              if (comment.getAnchorType() == AnchorType.LEFT || !inlineOnExpr.contains(comment)) {
+                toLift.add(comment);
+              }
             }
-            if (!leftComments.isEmpty()) {
+            if (!toLift.isEmpty()) {
+              // getCommentList() returns a copy, so remove the lifted comments and write the
+              // remainder back explicitly; otherwise sqlExpr would keep them and the comment would
+              // render in both places.
+              Set<Comment> remaining = sqlExpr.getCommentList();
+              remaining.removeAll(toLift);
               sqlExpr.setCommentList(remaining);
-              selectItem.updateCommentSet(leftComments);
+              selectItem.updateCommentSet(toLift);
             }
           }
         }
