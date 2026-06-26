@@ -16,9 +16,14 @@
  */
 package org.apache.calcite.rel.rules;
 
+import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelRule;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.SourceJoinFormTrait;
+import org.apache.calcite.plan.SourceJoinFormTraitDef;
 import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
@@ -44,6 +49,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.immutables.value.Value;
 
 import java.util.ArrayList;
@@ -96,8 +102,10 @@ public class FilterExtractInnerJoinRule
 
     Stack<Triple<RelNode, Integer, JoinRelType>> stackForTableScanWithEndColumnIndex =
         new Stack<>();
+    Stack<Join> sourceJoins = new Stack<>();
     List<RexNode> allConditions = new ArrayList<>();
-    populateStackWithEndIndexesForTables(join, stackForTableScanWithEndColumnIndex, allConditions);
+    populateStackWithEndIndexesForTables(join, stackForTableScanWithEndColumnIndex,
+        sourceJoins, allConditions);
     RexNode conditions = filter.getCondition();
     Set<CorrelationId> correlationIdSet =
         filter instanceof LogicalFilter ? filter.getVariablesSet() : null;
@@ -109,8 +117,8 @@ public class FilterExtractInnerJoinRule
 
     final RelNode modifiedJoinClauseWithWhereClause =
         moveConditionsFromWhereClauseToJoinOnClause(allConditions,
-            stackForTableScanWithEndColumnIndex, ((RexCall) conditions).op, builder,
-        correlationIdSet);
+            stackForTableScanWithEndColumnIndex, sourceJoins,
+            ((RexCall) conditions).op, builder, correlationIdSet);
 
     call.transformTo(modifiedJoinClauseWithWhereClause);
   }
@@ -136,7 +144,10 @@ public class FilterExtractInnerJoinRule
   /** This method populates the stack, Stack< Triple< RelNode, Integer, JoinRelType > >, with
    * TableScan of a table along with its column's end index and JoinType.*/
   private void populateStackWithEndIndexesForTables(
-      Join join, Stack<Triple<RelNode, Integer, JoinRelType>> stack, List<RexNode> joinConditions) {
+      Join join, Stack<Triple<RelNode, Integer, JoinRelType>> stack,
+      Stack<Join> sourceJoins, List<RexNode> joinConditions) {
+    // Pushed once per join level; popped in the same order during rebuild (innermost first).
+    sourceJoins.push(join);
     RelNode left = ((HepRelVertex) join.getLeft()).getCurrentRel();
     RelNode right = ((HepRelVertex) join.getRight()).getCurrentRel();
     int leftTableColumnSize = join.getLeft().getRowType().getFieldCount();
@@ -153,7 +164,7 @@ public class FilterExtractInnerJoinRule
       }
     }
     if (left instanceof Join && !((Join) left).getJoinType().isOuterJoin()) {
-      populateStackWithEndIndexesForTables((Join) left, stack, joinConditions);
+      populateStackWithEndIndexesForTables((Join) left, stack, sourceJoins, joinConditions);
     } else {
       stack.push(new ImmutableTriple<>(left, leftTableColumnSize - 1, join.getJoinType()));
     }
@@ -162,8 +173,8 @@ public class FilterExtractInnerJoinRule
   /** This method identifies Join Predicates from filter conditions and put them on Joins as
    * ON conditions.*/
   private RelNode moveConditionsFromWhereClauseToJoinOnClause(List<RexNode> allConditions,
-      Stack<Triple<RelNode, Integer, JoinRelType>> stack, SqlOperator op, RelBuilder builder,
-      Set<CorrelationId> correlationIdSet) {
+      Stack<Triple<RelNode, Integer, JoinRelType>> stack, Stack<Join> sourceJoins,
+      SqlOperator op, RelBuilder builder, Set<CorrelationId> correlationIdSet) {
     RelNode left = stack.pop().getLeft();
     while (!stack.isEmpty()) {
       Triple<RelNode, Integer, JoinRelType> rightEntry = stack.pop();
@@ -175,9 +186,10 @@ public class FilterExtractInnerJoinRule
           : builder.and(joinConditions);
 
       allConditions.removeAll(joinConditions);
+      Join sourceJoin = sourceJoins.pop();
       left =
-          LogicalJoin.create(left, rightEntry.getLeft(), ImmutableList.of(),
-              joinPredicate, ImmutableSet.of(), rightEntry.getRight());
+          createJoin(left, rightEntry.getLeft(), joinPredicate, rightEntry.getRight(),
+              retainedSourceJoinFormTrait(sourceJoin, joinPredicate));
     }
     builder.push(left);
     RexNode remainingCondition = allConditions.isEmpty()
@@ -187,6 +199,29 @@ public class FilterExtractInnerJoinRule
     return builder
         .filter(correlationIdSet != null ? correlationIdSet : ImmutableSet.of(), remainingCondition)
         .build();
+  }
+
+  /**
+   * Returns the source join form trait to retain on a rebuilt join, or null if the trait
+   * should not be copied (not present on source, or ON clause is no longer always true).
+   */
+  private static @Nullable SourceJoinFormTrait retainedSourceJoinFormTrait(
+      Join sourceJoin, RexNode resultPredicate) {
+    if (!resultPredicate.isAlwaysTrue() || !sourceJoin.getCondition().isAlwaysTrue()) {
+      return null;
+    }
+    return sourceJoin.getTraitSet().getTrait(SourceJoinFormTraitDef.instance);
+  }
+
+  private static LogicalJoin createJoin(RelNode left, RelNode right, RexNode condition,
+      JoinRelType joinType, @Nullable SourceJoinFormTrait sourceJoinFormTrait) {
+    final RelOptCluster cluster = left.getCluster();
+    RelTraitSet traitSet = cluster.traitSetOf(Convention.NONE);
+    if (sourceJoinFormTrait != null) {
+      traitSet = traitSet.plus(sourceJoinFormTrait);
+    }
+    return new LogicalJoin(cluster, traitSet, ImmutableList.of(), left, right, condition,
+        ImmutableSet.of(), joinType, false, ImmutableList.of());
   }
 
   /** Gets all the conditions that are part of the current join.*/
