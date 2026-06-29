@@ -2812,7 +2812,8 @@ public abstract class SqlImplementor {
       int inputFieldIndex = 0;
       for (RelDataTypeField inputField : inputRelDataType.getFieldList()) {
         if (!inputField.getName().startsWith(SqlUtil.GENERATED_EXPR_ALIAS_PREFIX)
-            && !(fieldsProjected.containsKey(inputFieldIndex)
+            && !(fieldsProjected.containsKey(inputFieldIndex))
+            && (fieldsProjected.get(inputFieldIndex) != null
             && fieldsProjected.get(inputFieldIndex).contains(inputField.getName()))) {
           return false;
         }
