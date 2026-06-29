@@ -225,6 +225,14 @@ public class ToNumberUtils {
     return resolveBigQueryCastSpecFromValue(value, dialect);
   }
 
+  /**
+   * Resolves the CAST target type spec that {@link #unparseToNumberBigQuery} would use for a
+   * {@code TO_NUMBER} call. Used to detect redundant {@code CAST(TO_NUMBER(...) AS T)} wrappers.
+   */
+  public static SqlNode resolveBigQueryCastSpecForCall(SqlCall call, SqlDialect dialect) {
+    return resolveBigQueryCastSpec(call, dialect);
+  }
+
   private static SqlNode resolveBigQueryCastSpecFromValue(String value, SqlDialect dialect) {
     if (isScientificNotation(value)) {
       return castSpecForType(dialect, SqlTypeName.DECIMAL);
