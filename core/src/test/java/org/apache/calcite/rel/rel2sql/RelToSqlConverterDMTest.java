@@ -12299,8 +12299,8 @@ class RelToSqlConverterDMTest {
 
     final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "TMP", false);
     final TableAliasTrait aliasTrait = new TableAliasTrait("a");
-    final RelNode cteRel = cteBody.copy(
-        cteBody.getTraitSet().plus(cteTrait).plus(aliasTrait), cteBody.getInputs());
+    final RelNode cteRel =
+        cteBody.copy(cteBody.getTraitSet().plus(cteTrait).plus(aliasTrait), cteBody.getInputs());
 
     final RelNode unpivotRel = builder
         .push(cteRel)
@@ -12317,8 +12317,8 @@ class RelToSqlConverterDMTest {
         .build();
 
     final CTEScopeTrait cteScopeTrait = new CTEScopeTrait(true);
-    final RelNode root = unpivotRel.copy(
-        unpivotRel.getTraitSet().plus(cteScopeTrait), unpivotRel.getInputs());
+    final RelNode root =
+        unpivotRel.copy(unpivotRel.getTraitSet().plus(cteScopeTrait), unpivotRel.getInputs());
 
     // Key: "FROM TMP AS a UNPIVOT" must appear - not the full CTE body inlined
     final String expectedSql = "WITH TMP AS (SELECT jansales, febsales, marsales\n"
