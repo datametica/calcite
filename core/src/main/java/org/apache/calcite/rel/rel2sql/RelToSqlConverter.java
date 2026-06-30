@@ -683,12 +683,14 @@ public class RelToSqlConverter extends SqlImplementor
    * THEN branch). A direct (non-fallback) map lookup is used so a comment is restored
    * only onto the node it annotates, never smeared onto that node's operands.
    *
-   * <p>Comments are re-hydrated only onto nested expression ({@link RexCall}) nodes. A comment
-   * keyed by a bare {@link RexInputRef} is a column-level comment owned by its top-level
-   * projection (applied via {@code getCommentsInMap} at the projection site); applying it to a
-   * nested RexInputRef occurrence would smear the same comment onto every re-use of that
-   * aggregate/column output (e.g. a GROUP BY aggregate referenced again inside a later
-   * projection's expression).
+   * <p>Comments are re-hydrated onto nested expression ({@link RexCall}) nodes and onto nested
+   * leaf operands that are not bare column references (e.g. a literal on a CASE THEN branch,
+   * which {@code toSql} then renders before its branch value). A comment keyed by a bare
+   * {@link RexInputRef} is a column-level comment owned by its top-level projection (applied via
+   * {@code getCommentsInMap} at the projection site); applying it to a nested RexInputRef
+   * occurrence would smear the same comment onto every re-use of that aggregate/column output
+   * (e.g. a GROUP BY aggregate referenced again inside a later projection's expression), so such
+   * bare column references are skipped.
    */
   private static void rehydrateNestedComments(RelNode rel, RexNode rex) {
     if (rex instanceof RexCall) {
@@ -697,6 +699,12 @@ public class RelToSqlConverter extends SqlImplementor
         rex.getComment().addAll(mapped);
       }
       for (RexNode operand : ((RexCall) rex).operands) {
+        if (!(operand instanceof RexCall) && !(operand instanceof RexInputRef)) {
+          Set<Comment> operandMapped = SqlCommentUtil.getDirectCommentsInMap(rel, operand);
+          if (!operandMapped.isEmpty()) {
+            operand.getComment().addAll(operandMapped);
+          }
+        }
         rehydrateNestedComments(rel, operand);
       }
     }
