@@ -84,6 +84,26 @@ public class PivotRelToSqlUtil {
 
     //create axisList parameter
     SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery, e);
+    boolean hasQualifiedAxis = false;
+    for (SqlNode axisNode : axisNodeList) {
+      if (axisNode instanceof SqlIdentifier
+          && ((SqlIdentifier) axisNode).names.size() > 1) {
+        hasQualifiedAxis = true;
+        break;
+      }
+      if (axisNode instanceof SqlBasicCall) {
+        SqlNode firstOperand = ((SqlBasicCall) axisNode).operand(0);
+        if (firstOperand instanceof SqlIdentifier
+            && ((SqlIdentifier) firstOperand).names.size() > 1) {
+          hasQualifiedAxis = true;
+          break;
+        }
+      }
+    }
+    String subQueryAlias = getSubQueryAlias(e.getInput().getTraitSet());
+    if (!subQueryAlias.isEmpty() && hasQualifiedAxis) {
+      query = SqlStdOperatorTable.AS.createCall(pos, query, new SqlIdentifier(subQueryAlias, pos));
+    }
 
     //create pivotAggregateColumnList parameter
     SqlNodeList pivotAggregateColumnList = getAggregateColumnNode(e);
