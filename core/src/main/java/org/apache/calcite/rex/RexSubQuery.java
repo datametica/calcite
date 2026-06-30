@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -188,11 +189,11 @@ public class RexSubQuery extends RexCall {
 
   @Override public RexSubQuery clone(RelDataType type, List<RexNode> operands) {
     return new RexSubQuery(type, getOperator(),
-        ImmutableList.copyOf(operands), rel);
+        ImmutableList.copyOf(operands), rel, new LinkedHashSet<>(getComment()));
   }
 
   public RexSubQuery clone(RelNode rel) {
-    return new RexSubQuery(type, getOperator(), operands, rel);
+    return new RexSubQuery(type, getOperator(), operands, rel, new LinkedHashSet<>(getComment()));
   }
 
   @Override public boolean equals(@Nullable Object obj) {

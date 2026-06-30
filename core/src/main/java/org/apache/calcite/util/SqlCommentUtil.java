@@ -56,6 +56,21 @@ public final class SqlCommentUtil {
     }
   }
 
+  /**
+   * Retrieves comments mapped to exactly this RexNode (structural/digest match),
+   * with no operand-contains fallback. Used to re-hydrate comments onto the
+   * precise nested RexNode they annotate, so a comment keyed to an inner
+   * expression is not also smeared onto the inner expression's own operands.
+   */
+  public static Set<Comment> getDirectCommentsInMap(RelNode relNode, RexNode rex) {
+    CommentTrait commentTrait = relNode.getTraitSet().getTrait(CommentTraitDef.INSTANCE);
+    if (commentTrait == null) {
+      return Collections.emptySet();
+    }
+    Set<Comment> result = commentTrait.getCommentsMap().get(rex);
+    return result == null ? Collections.emptySet() : result;
+  }
+
   /** Retrieves comments for a given RexNode from a RelNode’s CommentTrait map. */
   public static Set<Comment> getCommentsInMap(RelNode relNode, RexNode rex) {
     CommentTrait commentTrait = relNode.getTraitSet().getTrait(CommentTraitDef.INSTANCE);

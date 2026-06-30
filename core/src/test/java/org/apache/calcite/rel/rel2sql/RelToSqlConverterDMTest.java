@@ -21,6 +21,7 @@ import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEScopeTrait;
+import org.apache.calcite.plan.CommentTrait;
 import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
 import org.apache.calcite.plan.QualifyRelTrait;
 import org.apache.calcite.plan.QualifyRelTraitDef;
@@ -81,9 +82,14 @@ import org.apache.calcite.sql.SqlDialect.Context;
 import org.apache.calcite.sql.SqlDialect.DatabaseProduct;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlWith;
+import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.SqlWriterConfig;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.dialect.HiveSqlDialect;
@@ -125,6 +131,9 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
+import org.apache.calcite.util.AnchorType;
+import org.apache.calcite.util.Comment;
+import org.apache.calcite.util.CommentType;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -12286,6 +12295,191 @@ class RelToSqlConverterDMTest {
                                 + "foodmart.employee\nGROUP BY first_name, last_name, birth_date)"
                                 + " (SELECT first_name AS FNAME\nFROM RUNDATE)";
     assertThat(actualSql, isLinux(expectedSql));
+  }
+
+  /**
+   * Verifies that a comment captured around a CTE name (carried on the {@link CTEDefinationTrait})
+   * renders before the name at the WITH-clause definition only; the body reference, which reuses
+   * the name node, is left untouched.
+   */
+  @Test public void testCTEWithTraitsRetainsNameComment() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode rundate = builder.scan("employee")
+        .project(builder.field("first_name"), builder.field("last_name"),
+            builder.field("birth_date"))
+        .aggregate(builder.groupKey(0, 1, 2))
+        .build();
+
+    final Comment nameComment = new Comment("my cte", AnchorType.LEFT, CommentType.MULTIPLE);
+    final CTEDefinationTrait cteTrait =
+        new CTEDefinationTrait(true, "RUNDATE", false,
+            new java.util.LinkedHashSet<>(Collections.singletonList(nameComment)));
+    final RelTraitSet cteRelTraitSet = rundate.getTraitSet().plus(cteTrait);
+    final RelNode cteRelNodeWithRelTrait = rundate.copy(cteRelTraitSet, rundate.getInputs());
+
+    final RelNode innerSelect = builder
+        .push(cteRelNodeWithRelTrait)
+        .project(
+            builder.alias(
+                builder.field("first_name"),
+                "FNAME")).build();
+
+    final CTEScopeTrait cteScopeTrait = new CTEScopeTrait(true);
+    final RelTraitSet cteScopeRelTraitSet = innerSelect.getTraitSet().plus(cteScopeTrait);
+    final RelNode cteScopeRelNodeWithRelTrait =
+        innerSelect.copy(cteScopeRelTraitSet, innerSelect.getInputs());
+
+    final String actualSql =
+        toSql(cteScopeRelNodeWithRelTrait, DatabaseProduct.BIG_QUERY.getDialect());
+
+    final String expectedSql = "WITH /* my cte */ RUNDATE AS (SELECT first_name, last_name, birth_date"
+        + "\nFROM foodmart.employee\nGROUP BY first_name, last_name, birth_date)"
+        + " (SELECT first_name AS FNAME\nFROM RUNDATE)";
+    assertThat(actualSql, isLinux(expectedSql));
+  }
+
+  private static int countOccurrences(String haystack, String needle) {
+    int count = 0;
+    for (int idx = haystack.indexOf(needle); idx >= 0;
+        idx = haystack.indexOf(needle, idx + needle.length())) {
+      count++;
+    }
+    return count;
+  }
+
+  /**
+   * The comment keyed to the top-level projected expression is reachable both via
+   * {@code rehydrateNestedComments} and via the {@code getCommentsInMap} fallback, but the SqlNode
+   * comment set (a LinkedHashSet keyed on comment UUID) collapses the duplicate, so it renders once.
+   */
+  @Test public void testTopLevelProjectedExpressionCommentRendersOnce() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.scan("employee");
+    final RexNode expr =
+        builder.call(SqlStdOperatorTable.PLUS, builder.field("salary"), builder.field("salary"));
+    final RelNode rel = builder.project(expr).build();
+
+    final Comment comment =
+        new Comment("top level", AnchorType.LEFT, CommentType.MULTIPLE);
+    final Map<RexNode, java.util.Set<Comment>> commentMap = new HashMap<>();
+    commentMap.put(expr, new java.util.LinkedHashSet<>(Collections.singletonList(comment)));
+    final CommentTrait commentTrait = new CommentTrait(commentMap, new java.util.LinkedHashSet<>());
+    final RelNode relWithComment =
+        rel.copy(rel.getTraitSet().plus(commentTrait), rel.getInputs());
+
+    final String actualSql = toSql(relWithComment, DatabaseProduct.BIG_QUERY.getDialect());
+    final String expectedSql = "SELECT /* top level */ salary + salary AS `$f0`"
+        + "\nFROM foodmart.employee";
+    assertThat(actualSql, isLinux(expectedSql));
+    assertThat(countOccurrences(actualSql, "/* top level */"), is(1));
+  }
+
+  /**
+   * The comment is anchored to a nested operand (the THEN value), not the top-level CASE, so
+   * {@code rehydrateNestedComments} must walk into the RexCall operands and re-attach it there.
+   */
+  @Test public void testRehydrateNestedCaseThenComment() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.scan("employee");
+    final RexNode cond =
+        builder.call(SqlStdOperatorTable.GREATER_THAN, builder.field("salary"),
+            builder.literal(1000));
+    final RexNode thenVal = builder.literal(1);
+    final RexNode elseVal = builder.literal(0);
+    final RexNode caseExpr =
+        builder.call(SqlStdOperatorTable.CASE, cond, thenVal, elseVal);
+    final RelNode rel = builder.project(caseExpr).build();
+
+    final Comment comment = new Comment("then branch", AnchorType.LEFT, CommentType.MULTIPLE);
+    final Map<RexNode, java.util.Set<Comment>> commentMap = new HashMap<>();
+    commentMap.put(thenVal, new java.util.LinkedHashSet<>(Collections.singletonList(comment)));
+    final CommentTrait commentTrait = new CommentTrait(commentMap, new java.util.LinkedHashSet<>());
+    final RelNode relWithComment =
+        rel.copy(rel.getTraitSet().plus(commentTrait), rel.getInputs());
+
+    final String actualSql = toSql(relWithComment, DatabaseProduct.BIG_QUERY.getDialect());
+    final String expectedSql = "SELECT CASE WHEN salary > 1000 THEN /* then branch */ 1 ELSE 0 END"
+        + " AS `$f0`\nFROM foodmart.employee";
+    assertThat(actualSql, isLinux(expectedSql));
+    assertThat(countOccurrences(actualSql, "/* then branch */"), is(1));
+  }
+
+  /**
+   * The comment is keyed to the grouping input ref. {@code getGroupBySqlNode} may hand back the
+   * very SqlNode the SELECT list reuses; the {@code generateGroupList} clone fix must keep the
+   * comment on a node exclusive to GROUP BY so it is not duplicated into SELECT.
+   */
+  @Test public void testGroupByCommentNotDuplicatedInSelect() {
+    final RelBuilder builder = foodmartRelBuilder();
+    final RelNode agg = builder.scan("employee")
+        .project(builder.field("first_name"))
+        .aggregate(builder.groupKey(0))
+        .build();
+
+    final Comment comment = new Comment("group key", AnchorType.LEFT, CommentType.MULTIPLE);
+    final Map<RexNode, java.util.Set<Comment>> commentMap = new HashMap<>();
+    commentMap.put(new RexInputRef(0, agg.getRowType().getFieldList().get(0).getType()),
+        new java.util.LinkedHashSet<>(Collections.singletonList(comment)));
+    final CommentTrait commentTrait = new CommentTrait(commentMap, new java.util.LinkedHashSet<>());
+    final RelNode relWithComment =
+        agg.copy(agg.getTraitSet().plus(commentTrait), agg.getInputs());
+
+    final String actualSql = toSql(relWithComment, DatabaseProduct.BIG_QUERY.getDialect());
+    final String expectedSql = "SELECT first_name\nFROM foodmart.employee"
+        + "\nGROUP BY /* group key */ first_name";
+    assertThat(actualSql, isLinux(expectedSql));
+    assertThat(countOccurrences(actualSql, "/* group key */"), is(1));
+  }
+
+  /**
+   * A comment captured around the 2nd CTE name must survive {@code modifyWithItemList}, which
+   * rebuilds every non-first CTE item; without the explicit comment copy this comment would be
+   * dropped.
+   */
+  @Test public void testModifyWithItemListRetainsSecondCteNameComment() {
+    final SqlNodeList selectList =
+        new SqlNodeList(Collections.singletonList(new SqlIdentifier("c", SqlParserPos.ZERO)),
+            SqlParserPos.ZERO);
+    final SqlSelect query1 =
+        new SqlSelect(SqlParserPos.ZERO, null, selectList, null, null, null, null, null, null, null, null, null, null);
+    final SqlSelect query2 =
+        new SqlSelect(SqlParserPos.ZERO, null, selectList, null, null, null, null, null, null, null, null, null, null);
+    final SqlSelect body =
+        new SqlSelect(SqlParserPos.ZERO, null, selectList, null, null, null, null, null, null, null, null, null, null);
+
+    final SqlWithItem item1 =
+        new SqlWithItem(SqlParserPos.ZERO, new SqlIdentifier("A", SqlParserPos.ZERO), null, query1);
+    final SqlWithItem item2 =
+        new SqlWithItem(SqlParserPos.ZERO, new SqlIdentifier("B", SqlParserPos.ZERO), null, query2);
+    final Comment comment = new Comment("second cte", AnchorType.LEFT, CommentType.MULTIPLE);
+    item2.setCommentList(new java.util.LinkedHashSet<>(Collections.singletonList(comment)));
+
+    final SqlNodeList withItems =
+        new SqlNodeList(Arrays.asList(item1, item2), SqlParserPos.ZERO);
+    final SqlWith with = new SqlWith(SqlParserPos.ZERO, withItems, body);
+
+    final SqlWith modified = CTERelToSqlUtil.modifyWithNode(with);
+    final SqlNodeList modifiedItems = (SqlNodeList) modified.getOperandList().get(0);
+    final SqlWithItem modifiedSecondItem = (SqlWithItem) modifiedItems.get(1);
+
+    assertThat(modifiedSecondItem.getCommentList().contains(comment), is(true));
+  }
+
+  @Test public void testRexSubQueryCloneRetainsComment() {
+    final RelBuilder builder = relBuilder();
+    final RelNode rel = builder.scan("EMP").build();
+    final RexSubQuery subQuery = RexSubQuery.exists(rel);
+
+    final Comment comment = new Comment("subquery", AnchorType.LEFT, CommentType.MULTIPLE);
+    subQuery.getComment().add(comment);
+
+    final RexSubQuery clonedViaOperands =
+        subQuery.clone(subQuery.getType(), subQuery.getOperands());
+    final RexSubQuery clonedViaRel = subQuery.clone(rel);
+
+    assertThat(clonedViaOperands.getComment().contains(comment), is(true));
+    assertThat(clonedViaRel.getComment().contains(comment), is(true));
   }
 
   @Test public void testGenerateUUID() {
