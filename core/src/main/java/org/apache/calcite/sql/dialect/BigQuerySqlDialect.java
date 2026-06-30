@@ -2980,4 +2980,8 @@ public class BigQuerySqlDialect extends SqlDialect {
     }
     writer.literal(quoteStringLiteral(val));
   }
+
+  @Override public boolean supportsGroupByAll() {
+    return true;
+  }
 }

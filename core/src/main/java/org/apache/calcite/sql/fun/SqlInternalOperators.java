@@ -121,6 +121,23 @@ public abstract class SqlInternalOperators {
   public static final SqlInternalOperator GROUP_BY_DISTINCT =
       new SqlRollupOperator("GROUP BY DISTINCT", SqlKind.GROUP_BY_DISTINCT);
 
+  /** {@code ALL} operator, occurs within {@code GROUP BY} clause.
+   * Unlike DISTINCT, this is a zero-operand marker — the grouping items
+   * remain as separate entries in the groupBy list. */
+  public static final SqlInternalOperator GROUP_BY_ALL =
+      new SqlInternalOperator("GROUP BY ALL", SqlKind.GROUP_BY_ALL) {
+        @Override public void unparse(SqlWriter writer, SqlCall call,
+            int leftPrec, int rightPrec) {
+          final SqlWriter.Frame frame =
+              writer.startList(SqlWriter.FrameTypeEnum.OTHER);
+          for (SqlNode operand : call.getOperandList()) {
+            writer.sep(",");
+            operand.unparse(writer, leftPrec, rightPrec);
+          }
+          writer.endList(frame);
+        }
+      };
+
   /** Fetch operator is ONLY used for its precedence during unparsing. */
   public static final SqlOperator FETCH =
       SqlBasicOperator.create("FETCH")
