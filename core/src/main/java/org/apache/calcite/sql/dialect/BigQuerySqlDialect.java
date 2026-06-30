@@ -761,7 +761,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseDiffFunction(writer, call, leftPrec, rightPrec, call.getOperator().getName());
       break;
     case TO_NUMBER:
-      ToNumberUtils.unparseToNumber(writer, call, leftPrec, rightPrec, this);
+      ToNumberUtils.unparseToNumberBigQuery(writer, call, leftPrec, rightPrec, this);
       break;
     case NVL:
       SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};
