@@ -35,6 +35,7 @@ import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.util.SqlShuttle;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -84,24 +85,17 @@ public class PivotRelToSqlUtil {
 
     //create axisList parameter
     SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery, e);
-    boolean hasQualifiedAxis = false;
-    for (SqlNode axisNode : axisNodeList) {
-      if (axisNode instanceof SqlIdentifier
-          && ((SqlIdentifier) axisNode).names.size() > 1) {
-        hasQualifiedAxis = true;
-        break;
-      }
-      if (axisNode instanceof SqlBasicCall) {
-        SqlNode firstOperand = ((SqlBasicCall) axisNode).operand(0);
-        if (firstOperand instanceof SqlIdentifier
-            && ((SqlIdentifier) firstOperand).names.size() > 1) {
-          hasQualifiedAxis = true;
-          break;
-        }
-      }
-    }
+    boolean[] hasQualifiedAxis = {false};
     String subQueryAlias = getSubQueryAlias(e.getInput().getTraitSet());
-    if (!subQueryAlias.isEmpty() && hasQualifiedAxis) {
+    axisNodeList.accept(new SqlShuttle() {
+      @Override public SqlNode visit(SqlIdentifier alias) {
+        if (alias.names.size() > 1 && subQueryAlias.equalsIgnoreCase(alias.names.get(0))) {
+          hasQualifiedAxis[0] = true;
+        }
+        return alias;
+      }
+    });
+    if (hasQualifiedAxis[0]) {
       query = SqlStdOperatorTable.AS.createCall(pos, query, new SqlIdentifier(subQueryAlias, pos));
     }
 
