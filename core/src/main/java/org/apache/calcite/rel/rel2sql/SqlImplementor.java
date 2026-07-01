@@ -2438,12 +2438,16 @@ public abstract class SqlImplementor {
           }
         }
         List<Integer> groupKeyIndexes = rel.getGroupSet().asList();
-        SqlNodeList sqlNodeList = ((SqlSelect) node).getSelectList();
-        if (!sqlNodeList.isEmpty()) {
-          for (int index : groupKeyIndexes) {
-            SqlNode targetNode = sqlNodeList.get(index);
-            if (hasAnalyticalFunctionInOperandList(targetNode)) {
-              return true;
+        RelNode projectNode = projectRel.getInput().accept(new RelShuttleImpl() {
+          @Override public RelNode visit(LogicalProject logicalProject) {
+            return logicalProject;
+          }
+        });
+        if (projectNode instanceof LogicalProject) {
+          List<RexNode> projectionNode = ((Project) projectNode).getProjects();
+          for (int i = 1; i < projectionNode.size(); i++) {
+            if (RelToSqlUtils.isAnalyticalRex(projectionNode.get(i))) {
+              return groupKeyIndexes.contains(i);
             }
           }
         }
@@ -2822,8 +2826,7 @@ public abstract class SqlImplementor {
       int inputFieldIndex = 0;
       for (RelDataTypeField inputField : inputRelDataType.getFieldList()) {
         if (!inputField.getName().startsWith(SqlUtil.GENERATED_EXPR_ALIAS_PREFIX)
-            && !(fieldsProjected.containsKey(inputFieldIndex))
-            && (fieldsProjected.get(inputFieldIndex) != null
+            && !(fieldsProjected.containsKey(inputFieldIndex)
             && fieldsProjected.get(inputFieldIndex).contains(inputField.getName()))) {
           return false;
         }
