@@ -2310,7 +2310,7 @@ public class RelToSqlConverter extends SqlImplementor
             boolean isMatch = selectListAliases.stream().anyMatch(alias -> alias.equals(name))
                 && tableFieldNames.stream().anyMatch(alias -> alias.equals(name));
             if (isMatch && (groupByColumnPresentInSelect.get(name) != Boolean.TRUE
-                || isAliasReusedAsColumnInProjection(sqlSelect.getSelectList(), name))) {
+                || isAliasReusedAsColumnInProjection(getNodesAfterAliasMatch(sqlSelect.getSelectList(), name), name))) {
               return new SqlIdentifier(Arrays.asList(tableAlias, name), node.getParserPosition());
             }
           }
@@ -2318,16 +2318,44 @@ public class RelToSqlConverter extends SqlImplementor
         }).collect(Collectors.toList());
   }
 
+  /**
+   * Returns all nodes in {@code nodeList} that appear <em>after</em> the first node
+   * whose alias equals {@code aliasName} (case-insensitive). Returns an empty list if
+   * no match is found or the match is the last node.
+   */
+  private static SqlNodeList getNodesAfterAliasMatch(SqlNodeList nodeList, String aliasName) {
+    int matchIndex = -1;
+    for (int i = 0; i < nodeList.size(); i++) {
+      SqlIdentifier alias = getAliasFromNode(nodeList.get(i));
+      if (alias != null && alias.getSimple().equalsIgnoreCase(aliasName)) {
+        matchIndex = i;
+        break;
+      }
+    }
+    if (matchIndex == -1 || matchIndex >= nodeList.size() - 1) {
+      return new SqlNodeList(POS);
+    }
+    return new SqlNodeList(nodeList.getList().subList(matchIndex + 1, nodeList.size()), POS);
+  }
+
+  private static @Nullable SqlIdentifier getAliasFromNode(SqlNode sqlNode) {
+    return isAliased(sqlNode) ? (SqlIdentifier) ((SqlBasicCall) sqlNode).getOperandList().get(1)
+        : null;
+  }
+
+  private static boolean isAliased(SqlNode sourceNode) {
+    return sourceNode instanceof SqlBasicCall
+        && ((SqlBasicCall) sourceNode).getOperator().getKind() == SqlKind.AS;
+  }
+
   private static boolean isAliasReusedAsColumnInProjection(SqlNodeList sqlNodeList, String name) {
     for (SqlNode sqlNode : sqlNodeList) {
-      if (isAliasWithDifferentName(sqlNode, name)) {
-        ProjectExpansionUtil expansionUtil = new ProjectExpansionUtil();
-        List<SqlIdentifier> sqlIdentifiers =
-            expansionUtil.collectSqlIdentifiers(Collections.singletonList(sqlNode));
-        for (SqlIdentifier sqlIdentifier : sqlIdentifiers) {
-          if (sqlIdentifier.names.contains(name)) {
-            return true;
-          }
+      ProjectExpansionUtil expansionUtil = new ProjectExpansionUtil();
+      List<SqlIdentifier> sqlIdentifiers =
+          expansionUtil.collectSqlIdentifiers(Collections.singletonList(sqlNode));
+      for (SqlIdentifier sqlIdentifier : sqlIdentifiers) {
+        if (sqlIdentifier.names.contains(name)) {
+          return true;
         }
       }
     }

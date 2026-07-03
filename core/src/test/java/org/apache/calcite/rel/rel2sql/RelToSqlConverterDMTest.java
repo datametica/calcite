@@ -14966,6 +14966,18 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedQuery));
   }
 
+  @Test public void testGroupByUsesSourceColumnWhenLaterAliasHasSameName() {
+    String query = "select \"product_id\" + 1, "
+        + "5 * 2 as \"product_id\", "
+        + "count(1) as \"cnt\" "
+        + "from \"product\" "
+        + "group by \"product_id\"";
+    final String expected = "SELECT product_id + 1, 5 * 2 AS product_id, COUNT(*) AS cnt\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY product_id";
+    sql(query).withBigQuery().ok(expected);
+  }
+
   /**
    * Test that {@link SourceJoinFormTrait} with {@link SourceJoinKind#CROSS_OR_COMMA} causes
    * an INNER JOIN ON TRUE to be rendered as a cross/comma join rather than an explicit INNER JOIN.
