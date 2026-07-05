@@ -2587,6 +2587,9 @@ public abstract class SqlImplementor {
       }
 
       if (rel instanceof Project && relInput instanceof Sort) {
+        if (areGroupByWithExprAlias((Project) rel, (Sort) relInput)) {
+          return false;
+        }
         return !areAllNamedInputFieldsProjected(((Project) rel).getProjects(), rel.getRowType(),
             relInput.getRowType());
       }
@@ -2819,6 +2822,34 @@ public abstract class SqlImplementor {
           || ((RexCall) rexNode).op.getName().equals("UPPER");
     }
 
+    private boolean areGroupByWithExprAlias(Project projectNode, Sort sortNode) {
+      if (projectNode.getProjects().stream().allMatch(RexInputRef.class::isInstance)
+          && sortNode.getInput(0) instanceof LogicalProject
+          && sortNode.getInput(0).getInput(0) instanceof Aggregate) {
+        LogicalProject project = (LogicalProject) sortNode.getInput(0);
+        Aggregate aggregate = (Aggregate) project.getInput(0);
+        Map<Integer, List<String>> fieldsProjected =
+            fieldsProjected(project.getProjects(), project.getRowType());
+        List<Integer> aggCallIndexes =
+            IntStream.range(aggregate.getGroupCount(),
+                    aggregate.getRowType().getFieldNames().size())
+                .filter(i ->
+                    fieldsProjected.containsKey(i) && !fieldsProjected.get(i).isEmpty()
+                        && fieldsProjected.get(i).get(0).startsWith(SqlUtil.GENERATED_EXPR_ALIAS_PREFIX))
+                .boxed()
+                .collect(Collectors.toList());
+        if (aggCallIndexes.isEmpty()) {
+          return false;
+        }
+        return sortNode.getCollation().getFieldCollations().stream()
+            .map(fc -> project.getChildExps().get(fc.getFieldIndex()))
+            .filter(RexInputRef.class::isInstance)
+            .map(RexInputRef.class::cast)
+            .noneMatch(ref -> aggCallIndexes.contains(ref.getIndex()));
+      }
+      return false;
+    }
+
     private boolean areAllNamedInputFieldsProjected(List<RexNode> projects,
         RelDataType projectRelDataType,
         RelDataType inputRelDataType) {
@@ -2826,8 +2857,7 @@ public abstract class SqlImplementor {
       int inputFieldIndex = 0;
       for (RelDataTypeField inputField : inputRelDataType.getFieldList()) {
         if (!inputField.getName().startsWith(SqlUtil.GENERATED_EXPR_ALIAS_PREFIX)
-            && !(fieldsProjected.containsKey(inputFieldIndex))
-            && (fieldsProjected.get(inputFieldIndex) != null
+            && !(fieldsProjected.containsKey(inputFieldIndex)
             && fieldsProjected.get(inputFieldIndex).contains(inputField.getName()))) {
           return false;
         }
