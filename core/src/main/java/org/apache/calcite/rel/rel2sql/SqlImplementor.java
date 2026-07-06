@@ -2437,6 +2437,20 @@ public abstract class SqlImplementor {
             return true;
           }
         }
+        List<Integer> groupKeyIndexes = rel.getGroupSet().asList();
+        RelNode projectNode = projectRel.getInput().accept(new RelShuttleImpl() {
+          @Override public RelNode visit(LogicalProject logicalProject) {
+            return logicalProject;
+          }
+        });
+        if (projectNode instanceof LogicalProject) {
+          List<RexNode> projectionNode = ((Project) projectNode).getProjects();
+          for (int i = 1; i < projectionNode.size(); i++) {
+            if (RelToSqlUtils.isAnalyticalRex(projectionNode.get(i))) {
+              return groupKeyIndexes.contains(i);
+            }
+          }
+        }
       }
       return false;
     }
