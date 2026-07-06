@@ -1245,7 +1245,9 @@ public class RelDecorrelator implements ReflectiveVisitor {
         return register(rel.getInput(0), r, inputFrame.oldToNewOutputs, map);
       }
     }
-
+    if (missingCorVarList.isEmpty()) {
+      missingCorVarList.addAll(corVarList);
+    }
     // Fall back to a value generator for correlation variables that could not
     // be derived from local fields.
     return createFrameWithValueGenerator(rel.getInput(0), inputFrame,
