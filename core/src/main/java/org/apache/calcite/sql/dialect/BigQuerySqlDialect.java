@@ -73,7 +73,7 @@ import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.TimestampString;
-import org.apache.calcite.util.ToNumberUtils;
+import org.apache.calcite.util.BQToNumberUtils;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.format.FormatModel;
 import org.apache.calcite.util.format.FormatModels;
@@ -761,7 +761,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       unparseDiffFunction(writer, call, leftPrec, rightPrec, call.getOperator().getName());
       break;
     case TO_NUMBER:
-      ToNumberUtils.unparseToNumberBigQuery(writer, call, leftPrec, rightPrec, this);
+      BQToNumberUtils.unparseToNumber(writer, call, leftPrec, rightPrec, this);
       break;
     case NVL:
       SqlNode[] extractNodeOperands = new SqlNode[]{call.operand(0), call.operand(1)};

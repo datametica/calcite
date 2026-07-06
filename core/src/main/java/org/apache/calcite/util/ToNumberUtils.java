@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.util;
 
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBasicTypeNameSpec;
@@ -34,33 +33,20 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.math.BigInteger;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * This class is specific to BigQuery, Hive, Spark and Snowflake.
+ * Utilities for unparsing the {@code TO_NUMBER} function for Hive, Spark, MSSQL and Snowflake.
+ *
+ * <p>BigQuery-specific logic lives in {@link BQToNumberUtils}.
  */
 public class ToNumberUtils {
 
-  private static final String REGEX_REMOVE = "[',$A-Za-z]+";
-  private static final Pattern HEX_FORMAT_PATTERN = Pattern.compile("^'[Xx]+'$");
+  protected static final String REGEX_REMOVE = "[',$A-Za-z]+";
+  protected static final Pattern HEX_FORMAT_PATTERN = Pattern.compile("^'[Xx]+'$");
 
-  private static final BigInteger INT32_MIN = BigInteger.valueOf(Integer.MIN_VALUE);
-  private static final BigInteger INT32_MAX = BigInteger.valueOf(Integer.MAX_VALUE);
-  private static final BigInteger INT64_MIN = BigInteger.valueOf(Long.MIN_VALUE);
-  private static final BigInteger INT64_MAX = BigInteger.valueOf(Long.MAX_VALUE);
-
-  private ToNumberUtils() {
-  }
-
-  /** Unparses TO_NUMBER for BigQuery with precision-aware CAST target types. */
-  public static void unparseToNumberBigQuery(
-      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlDialect dialect) {
-    unparseToNumberAsCast(writer, call, leftPrec, rightPrec, dialect,
-        ToNumberUtils::resolveBigQueryCastSpec);
+  protected ToNumberUtils() {
   }
 
   public static void unparseToNumber(
@@ -136,11 +122,11 @@ public class ToNumberUtils {
 
   /** Resolves the CAST target type for a TO_NUMBER call. */
   @FunctionalInterface
-  private interface CastSpecResolver {
+  protected interface CastSpecResolver {
     SqlNode resolve(SqlCall call, SqlDialect dialect);
   }
 
-  private static void unparseToNumberAsCast(
+  protected static void unparseToNumberAsCast(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlDialect dialect,
       CastSpecResolver castSpecResolver) {
     if (isOperandLiteral(call) && isOperandNull(call)) {
@@ -171,14 +157,14 @@ public class ToNumberUtils {
     }
   }
 
-  private static void castOperand(
+  protected static void castOperand(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlDialect dialect,
       CastSpecResolver castSpecResolver) {
     SqlNode castSpec = castSpecResolver.resolve(call, dialect);
     handleCastingWithSpec(writer, call, leftPrec, rightPrec, castSpec);
   }
 
-  private static void cleanCharStringLiteralOperand(SqlCall call) {
+  protected static void cleanCharStringLiteralOperand(SqlCall call) {
     if (call.operand(0) instanceof SqlCharStringLiteral) {
       String strippedValue = call.operand(0).toString().replaceAll(REGEX_REMOVE, "");
       call.setOperand(0,
@@ -186,11 +172,11 @@ public class ToNumberUtils {
     }
   }
 
-  private static boolean isHexFormat(SqlCall call) {
+  protected static boolean isHexFormat(SqlCall call) {
     return HEX_FORMAT_PATTERN.matcher(call.operand(1).toString()).matches();
   }
 
-  private static void prependHexPrefix(SqlCall call) {
+  protected static void prependHexPrefix(SqlCall call) {
     SqlCall concatCall =
         new SqlBasicCall(SqlStdOperatorTable.CONCAT,
             new SqlNode[]{
@@ -217,64 +203,19 @@ public class ToNumberUtils {
     return SqlTypeName.BIGINT;
   }
 
-  private static SqlNode resolveBigQueryCastSpec(SqlCall call, SqlDialect dialect) {
-    if (!(call.operand(0) instanceof SqlCharStringLiteral)) {
-      return castSpecForType(dialect, SqlTypeName.BIGINT);
-    }
-    String value = ((SqlCharStringLiteral) call.operand(0)).getValueAs(String.class);
-    return resolveBigQueryCastSpecFromValue(value, dialect);
-  }
-
-  /**
-   * Resolves the CAST target type spec that {@link #unparseToNumberBigQuery} would use for a
-   * {@code TO_NUMBER} call. Used to detect redundant {@code CAST(TO_NUMBER(...) AS T)} wrappers.
-   */
-  public static SqlNode resolveBigQueryCastSpecForCall(SqlCall call, SqlDialect dialect) {
-    return resolveBigQueryCastSpec(call, dialect);
-  }
-
-  private static SqlNode resolveBigQueryCastSpecFromValue(String value, SqlDialect dialect) {
-    if (isScientificNotation(value)) {
-      return castSpecForType(dialect, SqlTypeName.DECIMAL);
-    }
-    NumericParts parts = parseNumericParts(value);
-    if (parts.scale == 0) {
-      BigInteger integerValue = parts.toBigInteger();
-      if (integerValue != null) {
-        if (integerValue.compareTo(INT32_MIN) >= 0
-            && integerValue.compareTo(INT32_MAX) <= 0) {
-          return castSpecForType(dialect, SqlTypeName.INTEGER);
-        }
-        if (integerValue.compareTo(INT64_MIN) >= 0
-            && integerValue.compareTo(INT64_MAX) <= 0) {
-          return castSpecForType(dialect, SqlTypeName.BIGINT);
-        }
-      }
-    }
-    if (parts.precision > 76 || parts.scale > 38) {
-      return castSpecForType(dialect, SqlTypeName.DOUBLE);
-    }
-    RelDataType decimalType =
-        new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.DECIMAL,
-            parts.precision, parts.scale);
-    // BigQuery does not allow parameterized types in CAST expressions; use NUMERIC or
-    // BIGNUMERIC without precision and scale.
-    return Objects.requireNonNull(dialect.getCastSpec(decimalType));
-  }
-
-  private static SqlNode castSpecForType(SqlDialect dialect, SqlTypeName typeName) {
+  protected static SqlNode castSpecForType(SqlDialect dialect, SqlTypeName typeName) {
     return Objects.requireNonNull(
         dialect.getCastSpec(
         new BasicSqlType(RelDataTypeSystem.DEFAULT, typeName)));
   }
 
-  private static void handleCasting(
+  protected static void handleCasting(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
       SqlTypeName sqlTypeName, SqlDialect dialect) {
     handleCastingWithSpec(writer, call, leftPrec, rightPrec, castSpecForType(dialect, sqlTypeName));
   }
 
-  private static void handleCastingWithSpec(
+  protected static void handleCastingWithSpec(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlNode castSpec) {
     SqlCall castCall =
         new SqlBasicCall(SqlStdOperatorTable.CAST,
@@ -283,73 +224,7 @@ public class ToNumberUtils {
     writer.getDialect().unparseCall(writer, castCall, leftPrec, rightPrec);
   }
 
-  private static boolean isScientificNotation(String value) {
-    int eIndex = value.toUpperCase().lastIndexOf('E');
-    return eIndex > 0 && eIndex < value.length() - 1;
-  }
-
-  private static NumericParts parseNumericParts(String value) {
-    String trimmed = value.trim();
-    boolean negative = trimmed.startsWith("-");
-    if (negative || trimmed.startsWith("+")) {
-      trimmed = trimmed.substring(1);
-    }
-    int dotIndex = trimmed.indexOf('.');
-    int integerDigits;
-    int scale;
-    if (dotIndex >= 0) {
-      integerDigits = countDigits(trimmed.substring(0, dotIndex));
-      scale = trimmed.substring(dotIndex + 1).length();
-    } else {
-      integerDigits = countDigits(trimmed);
-      scale = 0;
-    }
-    int precision = scale > 0 ? integerDigits + scale : integerDigits;
-    return new NumericParts(trimmed, negative, scale, precision);
-  }
-
-  private static int countDigits(String s) {
-    int count = 0;
-    for (int i = 0; i < s.length(); i++) {
-      if (Character.isDigit(s.charAt(i))) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  /** Parsed numeric components of a TO_NUMBER operand literal. */
-  private static final class NumericParts {
-    private final String unsignedValue;
-    private final boolean negative;
-    private final int scale;
-    private final int precision;
-
-    private NumericParts(String unsignedValue, boolean negative, int scale, int precision) {
-      this.unsignedValue = unsignedValue;
-      this.negative = negative;
-      this.scale = scale;
-      this.precision = precision;
-    }
-
-    private @Nullable BigInteger toBigInteger() {
-      if (scale > 0) {
-        return null;
-      }
-      try {
-        String digits = unsignedValue.replaceAll("[^0-9]", "");
-        if (digits.isEmpty()) {
-          return BigInteger.ZERO;
-        }
-        BigInteger result = new BigInteger(digits);
-        return negative ? result.negate() : result;
-      } catch (NumberFormatException e) {
-        return null;
-      }
-    }
-  }
-
-  private static void modifyOperand(SqlCall call) {
+  protected static void modifyOperand(SqlCall call) {
     String regEx = call.operand(1).toString().contains("C") ? REGEX_REMOVE : "[',$]+";
     String firstOperand =
         removeSignFromLastOfStringAndAddInBeginning(call,
@@ -358,7 +233,7 @@ public class ToNumberUtils {
         SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO));
   }
 
-  private static String removeSignFromLastOfStringAndAddInBeginning(SqlCall call,
+  protected static String removeSignFromLastOfStringAndAddInBeginning(SqlCall call,
       String firstOperand) {
     if (call.operand(1).toString().contains("MI") || call.operand(1).toString().contains("S")) {
       if (call.operand(0).toString().contains("-")) {
@@ -371,7 +246,7 @@ public class ToNumberUtils {
     return firstOperand;
   }
 
-  private static void handleNullOperand(
+  protected static void handleNullOperand(
       SqlWriter writer, int leftPrec, int rightPrec, SqlDialect dialect) {
     SqlCall castCall =
         new SqlBasicCall(SqlStdOperatorTable.CAST,
@@ -384,7 +259,7 @@ public class ToNumberUtils {
     writer.getDialect().unparseCall(writer, castCall, leftPrec, rightPrec);
   }
 
-  private static boolean isOperandNull(SqlCall call) {
+  protected static boolean isOperandNull(SqlCall call) {
     for (SqlNode sqlNode : call.getOperandList()) {
       SqlLiteral literal = (SqlLiteral) sqlNode;
       if (literal.getValue() == null) {
@@ -394,23 +269,23 @@ public class ToNumberUtils {
     return false;
   }
 
-  private static boolean isOperandLiteral(SqlCall call) {
+  protected static boolean isOperandLiteral(SqlCall call) {
     return call.operand(0) instanceof SqlCharStringLiteral
         || call.operand(0) instanceof SqlLiteral;
   }
 
-  private static boolean isFirstOperandCurrencyType(SqlCall call) {
+  protected static boolean isFirstOperandCurrencyType(SqlCall call) {
     return call.operand(0).toString().contains("$") && (call.operand(1).toString().contains("L")
         || call.operand(1).toString().contains("U"));
   }
 
-  private static boolean isOperandTypeOfCurrencyOrContainSpace(SqlCall call) {
+  protected static boolean isOperandTypeOfCurrencyOrContainSpace(SqlCall call) {
     return call.operand(1).toString().contains("PR")
         || (call.operand(0).toString().contains("USD")
         && call.operand(1).toString().contains("C"));
   }
 
-  private static SqlNode[] prepareSqlNodes(SqlCall call) {
+  protected static SqlNode[] prepareSqlNodes(SqlCall call) {
     if (isOperandNull(call)) {
       return new SqlNode[]{new SqlDataTypeSpec(
           new SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
@@ -428,7 +303,7 @@ public class ToNumberUtils {
         SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO)};
   }
 
-  private static void parseToNumber(SqlWriter writer, int leftPrec, int rightPrec,
+  protected static void parseToNumber(SqlWriter writer, int leftPrec, int rightPrec,
       SqlNode[] operands) {
     SqlCall toNumberCall =
         new SqlBasicCall(SqlStdOperatorTable.TO_NUMBER, operands, SqlParserPos.ZERO);
