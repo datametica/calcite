@@ -12316,6 +12316,47 @@ class RelToSqlConverterDMTest {
     assertThat(actualSql, isLinux(expectedSql));
   }
 
+  /*FROM TMP A UNPIVOT(...) must produce
+    FROM TMP AS A UNPIVOT(...) not FROM (SELECT ...) AS A UNPIVOT(...)*/
+  @Test public void testCTASWithCTEAndAliasedReferenceInUnpivot() {
+    final RelBuilder builder = RelBuilder.create(salesConfig().build());
+    final RelNode cteBody = builder
+        .scan("sales")
+        .project(builder.field("jansales"), builder.field("febsales"), builder.field("marsales"))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "TMP", false);
+    final TableAliasTrait aliasTrait = new TableAliasTrait("a");
+    final RelNode cteRel =
+        cteBody.copy(cteBody.getTraitSet().plus(cteTrait).plus(aliasTrait), cteBody.getInputs());
+
+    final RelNode unpivotRel = builder
+        .push(cteRel)
+        .unpivot(false,
+            ImmutableList.of("monthly_sales"),
+            ImmutableList.of("month"),
+            Pair.zip(
+                Arrays.asList(ImmutableList.of(builder.literal("jan")),
+                    ImmutableList.of(builder.literal("feb")),
+                    ImmutableList.of(builder.literal("march"))),
+                Arrays.asList(ImmutableList.of(builder.field("jansales")),
+                    ImmutableList.of(builder.field("febsales")),
+                    ImmutableList.of(builder.field("marsales")))))
+        .build();
+
+    final CTEScopeTrait cteScopeTrait = new CTEScopeTrait(true);
+    final RelNode root =
+        unpivotRel.copy(unpivotRel.getTraitSet().plus(cteScopeTrait), unpivotRel.getInputs());
+
+    // Key: "FROM TMP AS a UNPIVOT" must appear - not the full CTE body inlined
+    final String expectedSql = "WITH TMP AS (SELECT jansales, febsales, marsales\n"
+        + "FROM SALESSCHEMA.sales) "
+        + "(SELECT month, CAST(monthly_sales AS INTEGER) AS monthly_sales\n"
+        + "FROM TMP AS a UNPIVOT EXCLUDE NULLS (monthly_sales FOR month IN "
+        + "(jansales AS 'jan', febsales AS 'feb', marsales AS 'march')))";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testGenerateUUID() {
     final RelBuilder builder = relBuilder();
     final RexNode generateUUID = builder.call(SqlLibraryOperators.GENERATE_UUID);
