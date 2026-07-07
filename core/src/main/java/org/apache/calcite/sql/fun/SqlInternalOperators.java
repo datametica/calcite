@@ -130,10 +130,6 @@ public abstract class SqlInternalOperators {
             int leftPrec, int rightPrec) {
           final SqlWriter.Frame frame =
               writer.startList(SqlWriter.FrameTypeEnum.OTHER);
-          for (SqlNode operand : call.getOperandList()) {
-            writer.sep(",");
-            operand.unparse(writer, leftPrec, rightPrec);
-          }
           writer.endList(frame);
         }
       };
