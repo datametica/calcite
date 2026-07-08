@@ -12508,6 +12508,8 @@ class RelToSqlConverterDMTest {
 
     assertThat(clonedViaOperands.getComment().contains(comment), is(true));
     assertThat(clonedViaRel.getComment().contains(comment), is(true));
+  }
+
   /*FROM TMP A UNPIVOT(...) must produce
     FROM TMP AS A UNPIVOT(...) not FROM (SELECT ...) AS A UNPIVOT(...)*/
   @Test public void testCTASWithCTEAndAliasedReferenceInUnpivot() {
