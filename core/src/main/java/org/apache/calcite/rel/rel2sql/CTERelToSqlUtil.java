@@ -40,6 +40,7 @@ import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.util.SqlShuttle;
 
@@ -56,14 +57,8 @@ public class CTERelToSqlUtil {
   }
 
   public static boolean isCteScopeTrait(RelTraitSet relTraitSet) {
-    boolean isCteScopeTrait = false;
     RelTrait relTrait = relTraitSet.getTrait(CTEScopeTraitDef.instance);
-    if (relTrait != null && relTrait instanceof CTEScopeTrait) {
-      if (((CTEScopeTrait) relTrait).isCTEScope()) {
-        isCteScopeTrait = true;
-      }
-    }
-    return isCteScopeTrait;
+    return relTrait instanceof CTEScopeTrait && ((CTEScopeTrait) relTrait).isCTEScope();
   }
 
   public static boolean isCTEScopeOrDefinitionTrait(RelTraitSet relTraitSet) {
@@ -71,14 +66,9 @@ public class CTERelToSqlUtil {
   }
 
   public static boolean isCteDefinationTrait(RelTraitSet relTraitSet) {
-    boolean isCteDefinationTrait = false;
     RelTrait relTrait = relTraitSet.getTrait(CTEDefinationTraitDef.instance);
-    if (relTrait != null && relTrait instanceof CTEDefinationTrait) {
-      if (((CTEDefinationTrait) relTrait).isCTEDefination()) {
-        isCteDefinationTrait = true;
-      }
-    }
-    return isCteDefinationTrait;
+    return relTrait instanceof CTEDefinationTrait
+        && ((CTEDefinationTrait) relTrait).isCTEDefination();
   }
 
   /**
@@ -292,15 +282,43 @@ public class CTERelToSqlUtil {
       } else {
         ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
       }
-    } else if (fromNode instanceof SqlUnpivot
-        && ((SqlUnpivot) fromNode).query instanceof SqlWithItem) {
-      SqlIdentifier identifier = ((SqlWithItem) ((SqlUnpivot) fromNode).query).name;
-      SqlUnpivot unpivot = (SqlUnpivot) fromNode;
-      SqlUnpivot unpivotNode =
-          new SqlUnpivot(unpivot.getParserPosition(), identifier, unpivot.includeNulls,
-              unpivot.measureList, unpivot.axisList, unpivot.inList);
-      ((SqlSelect) sqlNode).setFrom(unpivotNode);
+    } else if (fromNode instanceof SqlUnpivot) {
+      // Replace inline CTE body in the UNPIVOT's query with just the CTE identifier
+      // (or AS(identifier, alias) when the CTE reference carries a table alias).
+      SqlNode resolvedQuery = resolveUnpivotCteQuery(((SqlUnpivot) fromNode).query);
+      if (resolvedQuery != null) {
+        SqlUnpivot unpivot = (SqlUnpivot) fromNode;
+        SqlUnpivot unpivotNode =
+            new SqlUnpivot(unpivot.getParserPosition(), resolvedQuery, unpivot.includeNulls,
+                unpivot.measureList, unpivot.axisList, unpivot.inList);
+
+        ((SqlSelect) sqlNode).setFrom(unpivotNode);
+      }
     }
+  }
+
+  /**
+   * Returns the replacement query node for an UNPIVOT whose source is a CTE reference,
+   * or {@code null} if no substitution is needed.
+   *
+   * <ul>
+   *   <li>Unaliased ({@code FROM cte UNPIVOT}): query is {@link SqlWithItem}; returns
+   *       the CTE {@link SqlIdentifier}.</li>
+   *   <li>Aliased ({@code FROM cte alias UNPIVOT}): query is {@code AS(SqlWithItem, alias)};
+   *       returns {@code AS(SqlIdentifier, alias)}.</li>
+   * </ul>
+   */
+  private static SqlNode resolveUnpivotCteQuery(SqlNode query) {
+    if (query instanceof SqlWithItem) {
+      return ((SqlWithItem) query).name;
+    }
+    if (query instanceof SqlBasicCall
+        && ((SqlBasicCall) query).operand(0) instanceof SqlWithItem) {
+      SqlBasicCall asCall = (SqlBasicCall) query;
+      SqlIdentifier identifier = ((SqlWithItem) asCall.operand(0)).name;
+      return SqlStdOperatorTable.AS.createCall(SqlParserPos.ZERO, identifier, asCall.operand(1));
+    }
+    return null;
   }
 
   private static void processBasicCall(SqlNode sqlNode) {
