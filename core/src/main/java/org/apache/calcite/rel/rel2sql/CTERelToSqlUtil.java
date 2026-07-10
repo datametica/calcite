@@ -428,6 +428,13 @@ public class CTERelToSqlUtil {
     return new SqlWith(sqlWith.getParserPosition(), modifiedList, sqlWith.body);
   }
 
+  /**
+   * Rebuilds the WITH-item list, dropping redundant nested WITH items.
+   *
+   * <p>The rebuild only runs for non-first CTEs. When an item is rebuilt, the comments
+   * captured around its CTE name (e.g. a comment before the 2nd+ CTE) are copied onto the
+   * replacement {@link SqlWithItem}; otherwise those name comments would be dropped.
+   */
   private static SqlNodeList modifyWithItemList(SqlNodeList modeList) {
     List<String> names = new ArrayList<>();
     List<SqlNode> modifiedList = new ArrayList<>();
@@ -449,6 +456,7 @@ public class CTERelToSqlUtil {
         });
         SqlWithItem updatedItem =
             new SqlWithItem(SqlParserPos.ZERO, withItem.name, withItem.columnList, modifiedQuery);
+        updatedItem.setCommentList(withItem.getCommentList());
         modifiedList.add(updatedItem);
         names.add(name);
       } else {
