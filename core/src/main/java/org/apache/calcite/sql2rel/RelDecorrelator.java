@@ -114,6 +114,7 @@ import org.slf4j.Logger;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -181,8 +182,6 @@ public class RelDecorrelator implements ReflectiveVisitor {
   protected final Map<RelNode, Frame> map = new HashMap<>();
 
   protected final HashSet<Correlate> generatedCorRels = new HashSet<>();
-
-  List<String> processedCorrelVars = new ArrayList<>();
 
   //~ Constructors -----------------------------------------------------------
 
@@ -624,7 +623,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   }
 
   protected @Nullable Frame decorrelateSortAsAggregate(Sort sort, final Frame frame) {
-    if (sort.offset != null || sort.fetch == null) {
+    if (sort.offset != null || !(sort.fetch instanceof RexLiteral)) {
       return null;
     }
 
@@ -2084,7 +2083,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
         boolean isSpecialCast = false;
         if (operator instanceof SqlFunction) {
           SqlFunction function = (SqlFunction) operator;
-          if (function.getKind().belongsTo(List.of(SqlKind.CAST, SqlKind.SAFE_CAST))) {
+          if (function.getKind().belongsTo(Arrays.asList(SqlKind.CAST, SqlKind.SAFE_CAST))) {
             if (call.operands.size() < 2) {
               isSpecialCast = true;
             }
