@@ -88,7 +88,8 @@ public abstract class FilterJoinRule<C extends FilterJoinRule.Config>
       return;
     }
 
-    if (!join.getVariablesSet().isEmpty()) {
+    if (!join.getVariablesSet().isEmpty()
+        || (filter != null && !filter.getVariablesSet().isEmpty())) {
       return;
     }
 
