@@ -2952,7 +2952,7 @@ public abstract class SqlImplementor {
           && ((LogicalFilter) filter.getInput()).getInput() instanceof LogicalProject;
     }
 
-    boolean grpCallIsAlias(String grpCall, SqlBasicCall selectCall) {
+    boolean isMatchingAlias(String grpCall, SqlBasicCall selectCall) {
       return selectCall.getOperator() instanceof SqlAsOperator
         && grpCall.equals(selectCall.operand(1).toString());
     }
@@ -2972,10 +2972,14 @@ public abstract class SqlImplementor {
       if (selectList != null && columnList != null) {
         for (SqlNode grpNode : columnList) {
           if (grpNode instanceof SqlIdentifier) {
+            SqlIdentifier identifier = (SqlIdentifier) grpNode;
+            if (!identifier.isSimple()) {
+              continue;
+            }
             String grpCall = ((SqlIdentifier) grpNode).names.get(0);
             for (SqlNode selectNode : selectList.getList()) {
               if (selectNode instanceof SqlBasicCall) {
-                if (grpCallIsAlias(grpCall, (SqlBasicCall) selectNode)
+                if (isMatchingAlias(grpCall, (SqlBasicCall) selectNode)
                     && (isgroupByWithSubQueryAlias(project)
                     || !grpCallPresentInFinalProjection(grpCall, project))) {
                   return true;
