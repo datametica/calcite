@@ -116,6 +116,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
+import org.apache.calcite.util.AnchorType;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Permutation;
@@ -140,6 +142,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -670,7 +673,75 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   /**
+   * Re-hydrates comments that were captured on nested expression RexNodes during
+   * canonical building and routed into the {@link org.apache.calcite.plan.CommentTrait}
+   * map (the durable carrier) because the inline comment on a nested {@code RexCall}
+   * does not survive projection/simplification rebuilds. For each RexNode in the
+   * projection expression, comments mapped to exactly that node are copied back onto
+   * its live comment set so {@code toSql} places them on the corresponding nested
+   * SqlNode and the unparser renders them in place (e.g. a comment before a CASE
+   * THEN branch). A direct (non-fallback) map lookup is used so a comment is restored
+   * only onto the node it annotates, never smeared onto that node's operands.
+   *
+   * <p>Comments are re-hydrated onto nested expression ({@link RexCall}) nodes and onto nested
+   * leaf operands that are not bare column references (e.g. a literal on a CASE THEN branch,
+   * which {@code toSql} then renders before its branch value). A comment keyed by a bare
+   * {@link RexInputRef} is a column-level comment owned by its top-level projection (applied via
+   * {@code getCommentsInMap} at the projection site); applying it to a nested RexInputRef
+   * occurrence would smear the same comment onto every re-use of that aggregate/column output
+   * (e.g. a GROUP BY aggregate referenced again inside a later projection's expression), so such
+   * bare column references are skipped.
+   */
+  private static void rehydrateNestedComments(RelNode rel, RexNode rex) {
+    if (rex instanceof RexCall) {
+      Set<Comment> mapped = SqlCommentUtil.getDirectCommentsInMap(rel, rex);
+      if (!mapped.isEmpty()) {
+        rex.getComment().addAll(mapped);
+      }
+      for (RexNode operand : ((RexCall) rex).operands) {
+        if (!(operand instanceof RexCall) && !(operand instanceof RexInputRef)) {
+          Set<Comment> operandMapped = SqlCommentUtil.getDirectCommentsInMap(rel, operand);
+          if (!operandMapped.isEmpty()) {
+            operand.getComment().addAll(operandMapped);
+          }
+        }
+        rehydrateNestedComments(rel, operand);
+      }
+    }
+  }
+
+  /**
    * Visits a Project; called by {@link #dispatch} via reflection.
+   *
+   * <p>Comment handling for each projection expression:
+   *
+   * <ul>
+   * <li><b>In-place comments.</b> Comments that {@code toSql} already placed on the expression are
+   * IN-PLACE comments: a comment that sits between the expression and its alias in the source
+   * ({@code "expr /* note *&#47; AS a"}) is captured inline on the expression's RexNode and
+   * rendered there. They are captured (into {@code inlineOnExpr}) before the clone below (which
+   * does not copy the comment list) and before merging in the map-keyed projection comments, so
+   * the lift step can tell an in-place comment (keep on the expression, before the alias) from an
+   * after-alias comment (present only in the map, lift past the alias).
+   *
+   * <li><b>Shared bare INPUT_REF nodes.</b> {@code AliasContext.field(ordinal)} returns a SqlNode
+   * shared via {@code ordinalMap}, so a bare INPUT_REF projection's SqlNode may also be embedded
+   * inside another projection (e.g. a reused aggregate output inside a COALESCE/NULLIF). Mutating
+   * that shared node with this select item's comment would smear the comment onto every reuse, so
+   * the comment is attached to a private clone instead.
+   *
+   * <li><b>Lifting onto the AS wrapper.</b> {@code SqlAsOperator} (the select-item wrapper) is what
+   * emits a node's comments at unparse: LEFT comments before the column body, RIGHT (trailing)
+   * comments after the alias. When {@code addSelect} wraps the expression in a fresh AS, the
+   * comments that belong on the wrapper are lifted: LEFT (leading) comments — so a leading comment
+   * on a bare inner call whose own unparse emits nothing (e.g. a window-function OVER call) is not
+   * orphaned; and RIGHT (trailing) comments captured PAST the alias (present only in the map, never
+   * inline on the expression) — so they render after the alias. RIGHT comments that are IN-PLACE on
+   * the expression are kept on the expression so they stay before the alias. Because
+   * {@code getCommentList()} returns a copy, the lifted comments are removed and the remainder
+   * written back explicitly, otherwise the expression would keep them and the comment would render
+   * in both places.
+   * </ul>
    */
   public Result visit(Project e) {
     UnpivotRelToSqlUtil unpivotRelToSqlUtil = new UnpivotRelToSqlUtil();
@@ -691,8 +762,16 @@ public class RelToSqlConverter extends SqlImplementor
         final List<SqlNode> selectList = new ArrayList<>();
         List<String> pivotColumnAliases = extractAliasesFromPivot(x);
         for (RexNode ref : e.getProjects()) {
+          rehydrateNestedComments(e, ref);
           SqlNode sqlExpr = builder.context.toSql(null, ref);
-          sqlExpr.updateCommentSet(SqlCommentUtil.getCommentsInMap(e, ref));
+          Set<Comment> projectionComments = SqlCommentUtil.getCommentsInMap(e, ref);
+          Set<Comment> inlineOnExpr = new LinkedHashSet<>(sqlExpr.getCommentList());
+          if (!projectionComments.isEmpty()) {
+            if (ref instanceof RexInputRef) {
+              sqlExpr = sqlExpr.clone(sqlExpr.getParserPosition());
+            }
+            sqlExpr.updateCommentSet(projectionComments);
+          }
           RelDataTypeField targetField = e.getRowType().getFieldList().get(selectList.size());
 
           if (SqlKind.SINGLE_VALUE == sqlExpr.getKind()) {
@@ -708,6 +787,22 @@ public class RelToSqlConverter extends SqlImplementor
             sqlExpr = new SqlIdentifier(pivotColumnAliases.get(index), SqlParserPos.ZERO);
           }
           addSelect(selectList, sqlExpr, e.getRowType());
+
+          SqlNode selectItem = selectList.get(selectList.size() - 1);
+          if (selectItem != sqlExpr && !projectionComments.isEmpty()) {
+            Set<Comment> toLift = new LinkedHashSet<>();
+            for (Comment comment : projectionComments) {
+              if (comment.getAnchorType() == AnchorType.LEFT || !inlineOnExpr.contains(comment)) {
+                toLift.add(comment);
+              }
+            }
+            if (!toLift.isEmpty()) {
+              Set<Comment> remaining = sqlExpr.getCommentList();
+              remaining.removeAll(toLift);
+              sqlExpr.setCommentList(remaining);
+              selectItem.updateCommentSet(toLift);
+            }
+          }
         }
 
         builder.setSelect(new SqlNodeList(selectList, POS));
@@ -1128,6 +1223,13 @@ public class RelToSqlConverter extends SqlImplementor
    * SELECT will be identical; if the GROUP BY list contains GROUPING SETS,
    * CUBE or ROLLUP, the SELECT clause will contain the distinct leaf
    * expressions.
+   *
+   * <p>When a grouping key carries comments, the GROUP BY SqlNode is cloned before the comments
+   * are attached. {@code getGroupBySqlNode} may return the very SqlNode instance that the SELECT
+   * list reuses (e.g. when the aggregate's input is a Project that inlines the grouping expression,
+   * so {@code field(key)} yields a shared node); attaching the comment to that shared node would
+   * render it in both the SELECT list and the GROUP BY clause. Cloning anchors the comment to a
+   * node that is exclusive to the GROUP BY clause.
    */
   private List<SqlNode> generateGroupList(Builder builder,
       List<SqlNode> selectList, Aggregate aggregate, List<Integer> groupList) {
@@ -1139,9 +1241,13 @@ public class RelToSqlConverter extends SqlImplementor
 
     final List<SqlNode> groupKeys = new ArrayList<>();
     for (int key : groupList) {
-      groupKeys.add(getGroupBySqlNode(builder, key));
-      groupKeys.get(groupKeys.size() - 1)
-          .updateCommentSet(SqlCommentUtil.getCommentsInMap(aggregate, key));
+      SqlNode groupByNode = getGroupBySqlNode(builder, key);
+      Set<Comment> groupByComments = SqlCommentUtil.getCommentsInMap(aggregate, key);
+      if (!groupByComments.isEmpty()) {
+        groupByNode = groupByNode.clone(groupByNode.getParserPosition());
+        groupByNode.updateCommentSet(groupByComments);
+      }
+      groupKeys.add(groupByNode);
     }
 
     for (int key : sortedGroupList) {
@@ -2322,6 +2428,11 @@ public class RelToSqlConverter extends SqlImplementor
   /**
    * Creates a SqlWithItem (CTE) with the given CTE definition trait and result.
    *
+   * <p>Comments captured around the CTE name are re-anchored onto the {@link SqlWithItem}
+   * rather than the name identifier: the name node is reused as the body's CTE reference, so a
+   * comment there would render twice and be stripped by comment deduplication. The SqlWithItem
+   * occurs once (the WITH-clause definition) and its operator emits these comments around the name.
+   *
    * @param cteDefinationTrait - The CTE definition trait containing the CTE name
    * @param result - The relational algebra result node
    * @return SqlWithItem - The constructed SqlWithItem for the CTE
@@ -2335,6 +2446,10 @@ public class RelToSqlConverter extends SqlImplementor
     } else {
       columnList = identifierList(new ArrayList<>());
     }
-    return new SqlWithItem(POS, withName, columnList, result.node);
+    SqlWithItem withItem = new SqlWithItem(POS, withName, columnList, result.node);
+    if (!cteDefinationTrait.getComments().isEmpty()) {
+      withItem.setCommentList(cteDefinationTrait.getComments());
+    }
+    return withItem;
   }
 }
