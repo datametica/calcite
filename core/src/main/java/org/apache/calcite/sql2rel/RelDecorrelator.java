@@ -2084,7 +2084,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
         boolean isSpecialCast = false;
         if (operator instanceof SqlFunction) {
           SqlFunction function = (SqlFunction) operator;
-          if (function.getKind() == SqlKind.CAST) {
+          if (function.getKind().belongsTo(List.of(SqlKind.CAST, SqlKind.SAFE_CAST))) {
             if (call.operands.size() < 2) {
               isSpecialCast = true;
             }
