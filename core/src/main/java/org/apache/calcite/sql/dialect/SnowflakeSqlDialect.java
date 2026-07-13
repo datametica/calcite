@@ -855,4 +855,8 @@ public class SnowflakeSqlDialect extends SqlDialect {
     return dayFormatNode;
   }
 
+  @Override public boolean supportsGroupByAll() {
+    return true;
+  }
+
 }

@@ -211,49 +211,61 @@ public class SqlSelectOperator extends SqlOperator {
       SqlNodeList groupBy =
               select.groupBy.size() == 0 ? SqlNodeList.SINGLETON_EMPTY
                       : select.groupBy;
-      // if the DISTINCT keyword of GROUP BY is present it can be the only item
+      // Determine GROUP BY keyword variant and adjust the item list accordingly.
+      // groupByAll=true means "GROUP BY ALL" with no column list (database infers
+      // grouping columns from the SELECT list — Snowflake/BigQuery semantics).
+      boolean groupByAll = false;
       if (groupBy.size() == 1 && groupBy.get(0) != null
               && groupBy.get(0).getKind() == SqlKind.GROUP_BY_DISTINCT) {
         writer.sep("GROUP BY DISTINCT");
         List<SqlNode> operandList = ((SqlCall) groupBy.get(0)).getOperandList();
         groupBy = new SqlNodeList(operandList, groupBy.getParserPosition());
+      } else if (!groupBy.isEmpty() && groupBy.get(0) != null
+              && groupBy.get(0).getKind() == SqlKind.GROUP_BY_ALL) {
+        writer.sep("GROUP BY ALL");
+        groupByAll = true;
       } else {
         writer.sep("GROUP BY");
       }
-      if (select.groupBy.getList().isEmpty()) {
-        final SqlWriter.Frame frame =
-            writer.startList(SqlWriter.FrameTypeEnum.SIMPLE, "(", ")");
-        writer.endList(frame);
-      } else {
-        if (writer.getDialect().getConformance().isGroupByOrdinal()) {
-          final SqlWriter.Frame groupFrame =
-              writer.startList(SqlWriter.FrameTypeEnum.GROUP_BY_LIST);
-          List<SqlNode> visitedSqlNodes = new ArrayList<>();
-          for (SqlNode groupKey : select.groupBy.getList()) {
-            if (!groupKey.toString().equalsIgnoreCase("NULL")) {
-              if (shouldProcessGroupKey(groupKey)) {
-                select.selectList.getList().
-                    forEach(new Consumer<SqlNode>() {
-                      @Override public void accept(SqlNode selectSqlNode) {
-                        SqlNode sqlNode = unwrapSqlNode(selectSqlNode);
-                        if (isLiteralOrDynamicOrMinusUsedInGroupBy(selectSqlNode, sqlNode, groupKey, visitedSqlNodes)
-                            || isCastOperandUsedInGroupBy(selectSqlNode, sqlNode, groupKey, visitedSqlNodes)) {
-                              unparseGroupByOrdinal(selectSqlNode, sqlNode, writer, select, visitedSqlNodes);
+      if (!groupByAll) {
+        if (select.groupBy.getList().isEmpty()) {
+          final SqlWriter.Frame frame =
+              writer.startList(SqlWriter.FrameTypeEnum.SIMPLE, "(", ")");
+          writer.endList(frame);
+        } else {
+          if (writer.getDialect().getConformance().isGroupByOrdinal()) {
+            final SqlWriter.Frame groupFrame =
+                writer.startList(SqlWriter.FrameTypeEnum.GROUP_BY_LIST);
+            List<SqlNode> visitedSqlNodes = new ArrayList<>();
+            for (SqlNode groupKey : select.groupBy.getList()) {
+              if (!groupKey.toString().equalsIgnoreCase("NULL")) {
+                if (shouldProcessGroupKey(groupKey)) {
+                  select.selectList.getList().
+                      forEach(new Consumer<SqlNode>() {
+                        @Override public void accept(SqlNode selectSqlNode) {
+                          SqlNode sqlNode = unwrapSqlNode(selectSqlNode);
+                          if (isLiteralOrDynamicOrMinusUsedInGroupBy(selectSqlNode,
+                              sqlNode, groupKey, visitedSqlNodes)
+                              || isCastOperandUsedInGroupBy(selectSqlNode, sqlNode,
+                              groupKey, visitedSqlNodes)) {
+                                unparseGroupByOrdinal(selectSqlNode, sqlNode,
+                                    writer, select, visitedSqlNodes);
+                          }
                         }
-                      }
-                    });
-                if (isGroupByKeyNotVisited(groupKey, visitedSqlNodes)) {
+                      });
+                  if (isGroupByKeyNotVisited(groupKey, visitedSqlNodes)) {
+                    unparseGroupKey(writer, groupKey);
+                    visitedSqlNodes.add(groupKey);
+                  }
+                } else {
                   unparseGroupKey(writer, groupKey);
-                  visitedSqlNodes.add(groupKey);
                 }
-              } else {
-                unparseGroupKey(writer, groupKey);
               }
             }
+            writer.endList(groupFrame);
+          } else {
+            writer.list(SqlWriter.FrameTypeEnum.GROUP_BY_LIST, SqlWriter.COMMA, groupBy);
           }
-          writer.endList(groupFrame);
-        } else {
-          writer.list(SqlWriter.FrameTypeEnum.GROUP_BY_LIST, SqlWriter.COMMA, groupBy);
         }
       }
     }
