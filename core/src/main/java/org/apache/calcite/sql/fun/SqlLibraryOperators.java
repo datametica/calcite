@@ -1971,6 +1971,24 @@ public abstract class SqlLibraryOperators {
       OperandTypes.ARRAY_INTEGER_INTEGER,
       SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ARRAY_FIRST =
+      new SqlFunction("ARRAY_FIRST",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.ARRAY),
+          SqlFunctionCategory.SYSTEM);
+
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction ARRAY_LAST =
+      new SqlFunction("ARRAY_LAST",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0_NULLABLE,
+          null,
+          OperandTypes.family(SqlTypeFamily.ARRAY),
+          SqlFunctionCategory.SYSTEM);
+
   /** The "ARRAY_UNION(array1, array2)" function. */
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction ARRAY_UNION =
