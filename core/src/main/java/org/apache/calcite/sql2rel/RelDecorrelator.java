@@ -743,14 +743,19 @@ public class RelDecorrelator implements ReflectiveVisitor {
     int newPos = 0;
 
     final List<Integer> groupKeyIndices = rel.getGroupSet().asList();
-    final NavigableMap<Integer, RexLiteral> omittedConstants = new TreeMap<>();
+    final NavigableMap<Integer, RexNode> omittedConstants = new TreeMap<>();
     for (int i = 0; i < oldGroupKeyCount; i++) {
       final int idx = groupKeyIndices.get(i);
       final RexLiteral constant = projectedLiteral(newInput, idx);
       if (constant != null) {
+        String fieldName = newInput.getRowType().getFieldNames().get(idx);
+        RexNode valueNode = constant;
+        if (!fieldName.startsWith("$f")) {
+          valueNode = relBuilder.alias(valueNode, fieldName);
+        }
         // Exclude constants. Aggregate({true}) occurs because Aggregate({})
         // would generate 1 row even when applied to an empty table.
-        omittedConstants.put(idx, constant);
+        omittedConstants.put(idx, valueNode);
         continue;
       }
 
@@ -878,7 +883,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
     if (!omittedConstants.isEmpty()) {
       final List<RexNode> postProjects = new ArrayList<>(relBuilder.fields());
-      for (Map.Entry<Integer, RexLiteral> entry
+      for (Map.Entry<Integer, RexNode> entry
           : omittedConstants.descendingMap().entrySet()) {
         int index = entry.getKey() + frame.corDefOutputs.size();
         postProjects.add(index, entry.getValue());
