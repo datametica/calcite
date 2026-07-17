@@ -17,6 +17,9 @@
 package org.apache.calcite.sql.type;
 
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.util.Comment;
+
+import java.util.Set;
 
 /**
  * BasicSqlTypeWithFormat represents a FORMAT literal in RelDataType.
@@ -26,9 +29,9 @@ public class BasicSqlTypeWithFormat extends BasicSqlType {
   private final String formatValue;
 
   private BasicSqlTypeWithFormat(RelDataTypeSystem typeSystem,
-      SqlTypeName typeName,
-      String formatValue) {
-    super(typeSystem, typeName);
+      SqlTypeName typeName, int precision,
+      String formatValue, Set<Comment> comments) {
+    super(typeSystem, typeName, false, precision, SCALE_NOT_SPECIFIED, null, null, comments);
     this.formatValue = formatValue;
   }
 
@@ -36,12 +39,15 @@ public class BasicSqlTypeWithFormat extends BasicSqlType {
     return formatValue;
   }
 
+  @Override public BasicSqlTypeWithFormat copy(Set<Comment> comments) {
+    return new BasicSqlTypeWithFormat(typeSystem, typeName, getPrecision(), formatValue, comments);
+  }
+
   public static BasicSqlTypeWithFormat from(RelDataTypeSystem relDataTypeSystem,
-      BasicSqlType basicSqlType,
+      BasicSqlType basicSqlType, int precision,
       String format) {
     return new BasicSqlTypeWithFormat(relDataTypeSystem,
-         basicSqlType.typeName,
-         format);
+        basicSqlType.typeName, precision, format, basicSqlType.getComment());
   }
 
 }

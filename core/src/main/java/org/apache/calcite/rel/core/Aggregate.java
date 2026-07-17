@@ -113,6 +113,9 @@ public abstract class Aggregate extends SingleRel implements Hintable {
   @Deprecated // unused field, to be removed before 2.0
   public final boolean indicator = false;
 
+  /** Whether the GROUP BY clause used the ALL quantifier ({@code GROUP BY ALL}). */
+  protected final boolean groupByAll;
+
   protected final List<AggregateCall> aggCalls;
   protected final ImmutableBitSet groupSet;
   public final ImmutableList<ImmutableBitSet> groupSets;
@@ -159,8 +162,22 @@ public abstract class Aggregate extends SingleRel implements Hintable {
       ImmutableBitSet groupSet,
       @Nullable List<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
+    this(cluster, traitSet, hints, input, false, groupSet, groupSets, aggCalls);
+  }
+
+  @SuppressWarnings("method.invocation.invalid")
+  protected Aggregate(
+      RelOptCluster cluster,
+      RelTraitSet traitSet,
+      List<RelHint> hints,
+      RelNode input,
+      boolean groupByAll,
+      ImmutableBitSet groupSet,
+      @Nullable List<ImmutableBitSet> groupSets,
+      List<AggregateCall> aggCalls) {
     super(cluster, traitSet, input);
     this.hints = ImmutableList.copyOf(hints);
+    this.groupByAll = groupByAll;
     this.aggCalls = ImmutableList.copyOf(aggCalls);
     this.groupSet = requireNonNull(groupSet, "groupSet");
     if (groupSets == null) {
@@ -317,6 +334,11 @@ public abstract class Aggregate extends SingleRel implements Hintable {
    */
   public ImmutableBitSet getGroupSet() {
     return groupSet;
+  }
+
+  /** Returns whether the GROUP BY clause used the ALL quantifier. */
+  public boolean isGroupByAll() {
+    return groupByAll;
   }
 
   /**

@@ -21,6 +21,7 @@ import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
 import org.apache.calcite.sql.SqlBasicCall;
@@ -45,6 +46,7 @@ import org.apache.calcite.sql.fun.SqlFloorFunction;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlMonotonicBinaryOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.CurrentTimestampHandler;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
@@ -62,12 +64,17 @@ import com.google.common.collect.Lists;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import static org.apache.calcite.linq4j.Nullness.castNonNull;
 import static org.apache.calcite.sql.SqlDateTimeFormat.ABBREVIATEDDAYOFWEEK;
+import static org.apache.calcite.sql.SqlDateTimeFormat.DDYYYYMM;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MMYYYYDD;
+import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMMDDHH24;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.ADD_MONTHS;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATEDIFF;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_ADD;
@@ -78,6 +85,7 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.RAISE_ERROR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SPLIT;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_CHAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRY_CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CEIL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
@@ -164,7 +172,7 @@ public class SparkSqlDialect extends SqlDialect {
   private static final Map<SqlDateTimeFormat, String> DATE_TIME_FORMAT_MAP =
       new HashMap<SqlDateTimeFormat, String>() {{
         put(DAYOFMONTH, "dd");
-        put(DAYOFYEAR, "D");
+        put(DAYOFYEAR, "DDD");
         put(NUMERICMONTH, "MM");
         put(ABBREVIATEDMONTH, "MMM");
         put(TIMEOFDAY, "EE MMM dd HH:mm:ss yyyy zz");
@@ -179,6 +187,9 @@ public class SparkSqlDialect extends SqlDialect {
         put(MMDDYY, "MMddyy");
         put(YYYYMM, "yyyyMM");
         put(YYYYMMDD, "yyyyMMdd");
+        put(YYYYMMDDHH24, "yyyyMMddHH");
+        put(DDYYYYMM, "ddyyyyMM");
+        put(MMYYYYDD, "MMyyyydd");
         put(YYMMDD, "yyMMdd");
         put(DAYOFWEEK, "EEEE");
         put(ABBREVIATED_NAME_OF_DAY, "EEE");
@@ -215,7 +226,6 @@ public class SparkSqlDialect extends SqlDialect {
   private static final Map<String, String> UDF_MAP =
       new HashMap<String, String>() {{
         put("TO_HEX", "UDF_CHAR2HEX");
-        put("REGEXP_INSTR", "UDF_REGEXP_INSTR");
         put("REGEXP_REPLACE", "UDF_REGEXP_REPLACE");
         put("ROUND", "UDF_ROUND");
         put("STRTOK", "UDF_STRTOK");
@@ -227,6 +237,7 @@ public class SparkSqlDialect extends SqlDialect {
   private static final String AND = "&";
   private static final String OR = "|";
   private static final String XOR = "^";
+  private static final String BITNOT = "~";
 
   /**
    * Creates a SparkSqlDialect.
@@ -337,6 +348,10 @@ public class SparkSqlDialect extends SqlDialect {
     return true;
   }
 
+  @Override public boolean supportsPivotTableAlias() {
+    return false;
+  }
+
   @Override public boolean supportsTimestampPrecision() {
     return false;
   }
@@ -412,6 +427,9 @@ public class SparkSqlDialect extends SqlDialect {
     } else if (castTo.getSqlTypeName() == SqlTypeName.TIME) {
       return new CastCallBuilder(this)
           .makeCastCallForTimeWithTimestamp(operandToCast, castTo.getPrecision());
+    } else if (sqlKind == SqlKind.SAFE_CAST) {
+      return TRY_CAST.createCall(SqlParserPos.ZERO, operandToCast,
+          castNonNull(this.getCastSpec(castTo)));
     }
     return super.getCastCall(sqlKind, operandToCast, castFrom, castTo);
   }
@@ -421,6 +439,22 @@ public class SparkSqlDialect extends SqlDialect {
     return SqlLiteral.createTimestamp(
         new TimestampString(DEFAULT_DATE_FOR_TIME + " " + timeString),
         precision, SqlParserPos.ZERO);
+  }
+
+  @Override public SqlNode getNumericLiteral(RexLiteral literal, SqlParserPos pos) {
+    BigDecimal value = literal.getValueAs(BigDecimal.class);
+    RelDataType type = literal.getType();
+    int typeScale = type.getScale();
+    if (type.getSqlTypeName() == SqlTypeName.DECIMAL
+        && value.scale() > typeScale) {
+      SqlNode numericNode = getCastSpec(type);
+      SqlNode castNode =
+          CAST.createCall(
+              pos, SqlLiteral.createExactNumeric(
+                  value.toPlainString(), pos), numericNode);
+      return castNode;
+    }
+    return super.getNumericLiteral(literal, pos);
   }
 
   @Override public void unparseCall(
@@ -462,8 +496,9 @@ public class SparkSqlDialect extends SqlDialect {
                 timeUnitNode.getParserPosition());
         SqlFloorFunction.unparseDatetimeFunction(writer, call2, "DATE_TRUNC", false);
         break;
-//      case TRIM:
-//        unparseHiveTrim(writer, call, leftPrec, rightPrec);
+      case TRIM:
+        unparseTrim(writer, call, leftPrec, rightPrec);
+        break;
 //        break;
 //      case POSITION:
 //        SqlUtil.unparseFunctionSyntax(SqlStdOperatorTable.POSITION, writer, call, false);
@@ -567,6 +602,9 @@ public class SparkSqlDialect extends SqlDialect {
         unparseIntervalOperandCall(call, writer, leftPrec, rightPrec);
       }
       break;
+    case MINUS :
+      unparseMinusOperandCall(call, writer, leftPrec, rightPrec);
+      break;
     default:
       throw new AssertionError(call.operand(1).getKind() + " is not valid");
     }
@@ -576,8 +614,9 @@ public class SparkSqlDialect extends SqlDialect {
     assert call.operandCount() == 1;
     SqlOperator operator = call.getOperator();
     SqlNode operand = call.operand(0);
+    List<SqlKind> sqlKinds = Lists.newArrayList(SqlKind.IN, SqlKind.LIKE, SqlKind.RLIKE);
     if (operand instanceof SqlCall
-        && ((SqlCall) operand).getOperator().kind == SqlKind.IN) {
+        && sqlKinds.contains(((SqlCall) operand).getOperator().kind)) {
       final SqlWriter.Frame falseFrame = writer.startList("(", ")");
       operand.unparse(writer, operator.getLeftPrec(), operator.getRightPrec());
       writer.endFunCall(falseFrame);
@@ -585,6 +624,16 @@ public class SparkSqlDialect extends SqlDialect {
     } else {
       operator.unparse(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  private void unparseMinusOperandCall(
+      SqlCall call, SqlWriter writer, int leftPrec, int rightPrec) {
+    writer.print(call.getOperator().toString());
+    writer.print("(");
+    call.operand(0).unparse(writer, leftPrec, rightPrec);
+    writer.print(",");
+    call.operand(1).unparse(writer, leftPrec, rightPrec);
+    writer.print(")");
   }
 
   private void unparseIntervalOperandCall(
@@ -668,6 +717,29 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   /**
+   * For usage of TRIM, LTRIM and RTRIM in Hive, see
+   * <a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF">Hive UDF usage</a>.
+   */
+  private void unparseTrim(
+      SqlWriter writer,
+      SqlCall call,
+      int leftPrec,
+      int rightPrec) {
+    final SqlLiteral trimFlag = call.operand(0);
+    switch (trimFlag.getValueAs(SqlTrimFunction.Flag.class)) {
+    case BOTH:
+      final SqlWriter.Frame trimFrame = writer.startFunCall(call.getOperator().getName());
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+      writer.sep("FROM");
+      call.operand(2).unparse(writer, leftPrec, rightPrec);
+      writer.endFunCall(trimFrame);
+      return;
+    }
+
+    super.unparseCall(writer, call, leftPrec, rightPrec);
+  }
+
+  /**
    * Modify the SqlNode Literal call to desired output form.
    * For example :
    * Input: INTERVAL 1 DAY
@@ -741,6 +813,10 @@ public class SparkSqlDialect extends SqlDialect {
         super.unparseCall(writer, call, leftPrec, rightPrec);
       }
       break;
+    case "CURRENT_CATALOG":
+      SqlWriter.Frame frame = writer.startFunCall("CURRENT_CATALOG");
+      writer.endFunCall(frame);
+      break;
     case "CURRENT_TIMESTAMP_TZ":
     case "CURRENT_TIMESTAMP_LTZ":
       final SqlWriter.Frame currentTimestampFunc = writer.startFunCall("CURRENT_TIMESTAMP");
@@ -761,6 +837,9 @@ public class SparkSqlDialect extends SqlDialect {
       SqlCall dateFormatCall =
           DATE_FORMAT.createCall(SqlParserPos.ZERO, call.operand(1), call.operand(0));
       unparseCall(writer, dateFormatCall, leftPrec, rightPrec);
+      break;
+    case "GETDATE":
+      unparseGetDate(writer);
       break;
     case "STR_TO_DATE":
       SqlCall toDateCall =
@@ -824,6 +903,9 @@ public class SparkSqlDialect extends SqlDialect {
     case "BITWISE_XOR":
       unparseBitwiseOperand(writer, call, leftPrec, rightPrec, XOR);
       break;
+    case "BITNOT":
+      unparseBitNotFunction(writer, call);
+      break;
     case "PI":
       SqlWriter.Frame piFrame = writer.startFunCall("PI");
       writer.endFunCall(piFrame);
@@ -849,7 +931,6 @@ public class SparkSqlDialect extends SqlDialect {
       }
       break;
     case "TO_HEX":
-    case "REGEXP_INSTR":
     case "STRTOK":
       unparseUDF(writer, call, leftPrec, rightPrec, UDF_MAP.get(call.getOperator().getName()));
       return;
@@ -879,6 +960,12 @@ public class SparkSqlDialect extends SqlDialect {
     writer.print(",");
     writer.literal("0");
     writer.endFunCall(ifFrame);
+  }
+
+  private void unparseBitNotFunction(SqlWriter writer, SqlCall call) {
+    SqlWriter.Frame frame = writer.startFunCall(BITNOT);
+    call.operand(0).unparse(writer, 0, 0);
+    writer.endFunCall(frame);
   }
 
   private void unparseRegexpReplace(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
@@ -929,6 +1016,10 @@ public class SparkSqlDialect extends SqlDialect {
     default:
       return call.operand(1);
     }
+  }
+  public void unparseGetDate(SqlWriter writer) {
+    final SqlWriter.Frame getDateFrame = writer.startFunCall("GETDATE");
+    writer.endFunCall(getDateFrame);
   }
 
   public void unparseToDate(

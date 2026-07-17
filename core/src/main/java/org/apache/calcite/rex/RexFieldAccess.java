@@ -19,10 +19,13 @@ package org.apache.calcite.rex;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 
 import com.google.common.base.Preconditions;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.util.Set;
 
 /**
  * Access to a field of a row-expression.
@@ -61,6 +64,16 @@ public class RexFieldAccess extends RexNode {
   RexFieldAccess(
       RexNode expr,
       RelDataTypeField field) {
+    checkValid(expr, field);
+    this.expr = expr;
+    this.field = field;
+    this.digest = expr + "." + field.getName();
+  }
+
+  RexFieldAccess(
+      RexNode expr,
+      RelDataTypeField field, Set<Comment> comments) {
+    super(comments);
     checkValid(expr, field);
     this.expr = expr;
     this.field = field;
@@ -122,5 +135,9 @@ public class RexFieldAccess extends RexNode {
     int result = expr.hashCode();
     result = 31 * result + field.hashCode();
     return result;
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexFieldAccess(expr, field, comments);
   }
 }

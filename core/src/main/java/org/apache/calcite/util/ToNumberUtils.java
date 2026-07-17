@@ -33,216 +33,78 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * This class is specific to BigQuery, Hive, Spark and Snowflake.
+ * Utilities for unparsing the {@code TO_NUMBER} function for Hive, Spark, MSSQL and Snowflake.
+ *
+ * <p>BigQuery-specific logic lives in {@link BQToNumberUtils}.
  */
 public class ToNumberUtils {
 
-  private ToNumberUtils() {
-  }
+  protected static final String REGEX_REMOVE = "[',$A-Za-z]+";
+  protected static final Pattern HEX_FORMAT_PATTERN = Pattern.compile("^'[Xx]+'$");
 
-  private static String regExRemove = "[',$A-Za-z]+";
+  protected ToNumberUtils() {
+  }
 
   public static void unparseToNumber(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlDialect dialect) {
-    switch (call.getOperandList().size()) {
-    case 1:
-    case 3:
-      if (isOperandLiteral(call) && isOperandNull(call)) {
-        handleNullOperand(writer, leftPrec, rightPrec, dialect);
-      } else {
-        if (call.operand(0) instanceof SqlCharStringLiteral) {
-          String firstOperand = call.operand(0).toString().replaceAll(regExRemove, "");
-          SqlNode[] sqlNode =
-                  new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(),
-                          SqlParserPos.ZERO)};
-          call.setOperand(0, sqlNode[0]);
-        }
-
-        SqlTypeName sqlTypeName = call.operand(0).toString().contains(".")
-                ? SqlTypeName.FLOAT : SqlTypeName.BIGINT;
-        handleCasting(writer, call, leftPrec, rightPrec, sqlTypeName, dialect);
-      }
-      break;
-    case 2:
-      if (isOperandLiteral(call) && isOperandNull(call)) {
-        handleNullOperand(writer, leftPrec, rightPrec, dialect);
-      } else {
-        if (Pattern.matches("^'[Xx]+'", call.operand(1).toString())) {
-          SqlNode[] sqlNodes =
-                  new SqlNode[]{SqlLiteral.createCharString("0x", SqlParserPos.ZERO),
-                          call.operand(0)};
-          SqlCall extractCall =
-                  new SqlBasicCall(SqlStdOperatorTable.CONCAT, sqlNodes, SqlParserPos.ZERO);
-          call.setOperand(0, extractCall);
-          handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.BIGINT, dialect);
-
-        } else {
-          SqlTypeName sqlType;
-          if (call.operand(0).toString().contains(".")) {
-            sqlType = SqlTypeName.FLOAT;
-          } else {
-            sqlType = call.operand(0).toString().contains("E")
-                    && call.operand(1).toString().contains("E")
-                    ? SqlTypeName.DECIMAL : SqlTypeName.BIGINT;
-          }
-          if (!(call.operand(0) instanceof SqlIdentifier)) {
-            modifyOperand(call);
-          }
-          handleCasting(writer, call, leftPrec, rightPrec, sqlType, dialect);
-        }
-      }
-      break;
-    default:
-      throw new IllegalArgumentException("Illegal Argument Exception");
-    }
+    unparseToNumberAsCast(writer, call, leftPrec, rightPrec, dialect,
+        ToNumberUtils::resolveDefaultCastSpec);
   }
 
   public static void unparseToNumberSnowFlake(SqlWriter writer, SqlCall call,
-                                              int leftPrec, int rightPrec) {
+      int leftPrec, int rightPrec) {
     switch (call.getOperandList().size()) {
     case 1:
     case 3:
-      SqlNode[] extractNodeOperands;
-      extractNodeOperands = prepareSqlNodes(call);
-      parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
+      parseToNumber(writer, leftPrec, rightPrec, prepareSqlNodes(call));
       break;
     case 2:
       if (isFirstOperandCurrencyType(call)) {
         String secondOperand = call.operand(1).toString().replaceAll("[UL]", "\\$")
-                .replace("'", "");
-        extractNodeOperands =
-                new SqlNode[]{call.operand(0), SqlLiteral.createCharString(secondOperand.trim(),
-                        SqlParserPos.ZERO)};
-        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
-
+            .replace("'", "");
+        parseToNumber(writer, leftPrec, rightPrec,
+            new SqlNode[]{call.operand(0),
+                SqlLiteral.createCharString(secondOperand.trim(), SqlParserPos.ZERO)});
       } else if (isOperandNull(call)) {
-
-        extractNodeOperands = new SqlNode[]{new SqlDataTypeSpec(new
-                SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
-                SqlParserPos.ZERO)};
-
-        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
-
+        parseToNumber(writer, leftPrec, rightPrec,
+            new SqlNode[]{new SqlDataTypeSpec(
+                new SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+                SqlParserPos.ZERO)});
       } else if (isOperandTypeOfCurrencyOrContainSpace(call)) {
-
-        extractNodeOperands = prepareSqlNodes(call);
-        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
-
+        parseToNumber(writer, leftPrec, rightPrec, prepareSqlNodes(call));
       } else if (call.operand(0).toString().contains(".")) {
-
         String firstOperand =
-                removeSignFromLastOfStringAndAddInBeginning(call,
-                        call.operand(0).toString().replaceAll("[',]", ""));
+            removeSignFromLastOfStringAndAddInBeginning(call,
+                call.operand(0).toString().replaceAll("[',]", ""));
         int scale = firstOperand.split("\\.")[1].length();
-        extractNodeOperands = new SqlNode[]{SqlLiteral
-            .createCharString(firstOperand.trim(), SqlParserPos.ZERO),
-            SqlLiteral.createExactNumeric
-            ("38", SqlParserPos.ZERO), SqlLiteral.createExactNumeric(scale + "",
-            SqlParserPos.ZERO)};
-        parseToNumber(writer, leftPrec, rightPrec, extractNodeOperands);
-
+        parseToNumber(writer, leftPrec, rightPrec,
+            new SqlNode[]{
+                SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO),
+                SqlLiteral.createExactNumeric("38", SqlParserPos.ZERO),
+                SqlLiteral.createExactNumeric(String.valueOf(scale), SqlParserPos.ZERO)});
       }
       break;
     default:
-      throw new IllegalArgumentException("Illegal Argument Exception");
+      throw new IllegalArgumentException("Unsupported number of operands: "
+          + call.getOperandList().size());
     }
-  }
-
-  private static void handleCasting(
-      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
-      SqlTypeName sqlTypeName, SqlDialect dialect) {
-    SqlNode[] extractNodeOperands =
-            new SqlNode[]{call.operand(0),
-                    dialect.getCastSpec(
-                        new BasicSqlType(
-                            RelDataTypeSystem.DEFAULT, sqlTypeName))};
-    SqlCall extractCallCast =
-        new SqlBasicCall(SqlStdOperatorTable.CAST, extractNodeOperands, SqlParserPos.ZERO);
-    writer.getDialect().unparseCall(writer, extractCallCast, leftPrec, rightPrec);
-  }
-
-  private static void modifyOperand(SqlCall call) {
-    String regEx = "[',$]+";
-    if (call.operand(1).toString().contains("C")) {
-      regEx = "[',$A-Za-z]+";
-    }
-
-    String firstOperand =
-            removeSignFromLastOfStringAndAddInBeginning(call,
-                    call.operand(0).toString().replaceAll(regEx, ""));
-
-    SqlNode[] sqlNode =
-            new SqlNode[]{SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO)};
-    call.setOperand(0, sqlNode[0]);
-  }
-
-  private static String removeSignFromLastOfStringAndAddInBeginning(SqlCall call,
-                                                                    String firstOperand) {
-    if (call.operand(1).toString().contains("MI") || call.operand(1).toString().contains("S")) {
-      if (call.operand(0).toString().contains("-")) {
-        firstOperand = firstOperand.replaceAll("-", "");
-        firstOperand = "-" + firstOperand;
-      } else {
-        firstOperand = firstOperand.replaceAll("\\+", "");
-      }
-    }
-    return firstOperand;
-  }
-
-  private static boolean handleNullOperand(
-      SqlWriter writer, int leftPrec, int rightPrec, SqlDialect dialect) {
-    SqlNode[] extractNodeOperands =
-      new SqlNode[]{new SqlDataTypeSpec(
-          new SqlBasicTypeNameSpec(SqlTypeName.NULL,
-        SqlParserPos.ZERO), SqlParserPos.ZERO),
-        dialect.getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.INTEGER))};
-
-    SqlCall extractCallCast =
-        new SqlBasicCall(SqlStdOperatorTable.CAST, extractNodeOperands, SqlParserPos.ZERO);
-
-    writer.getDialect().unparseCall(writer, extractCallCast, leftPrec, rightPrec);
-    return true;
-  }
-
-  private static boolean isOperandNull(SqlCall call) {
-    for (SqlNode sqlNode : call.getOperandList()) {
-      SqlLiteral literal = (SqlLiteral) sqlNode;
-      if (literal.getValue() == null) {
-        return true;
-      }
-    }
-    return false;
   }
 
   public static void unparseToNumbertoConv(
       SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlDialect dialect) {
-    SqlNode[] sqlNode =
-        new SqlNode[]{call.getOperandList().get(0), SqlLiteral.createExactNumeric("16",
-                SqlParserPos.ZERO),
-        SqlLiteral.createExactNumeric("10", SqlParserPos.ZERO)};
-    SqlCall extractCall =
-        new SqlBasicCall(SqlLibraryOperators.CONV, sqlNode, SqlParserPos.ZERO);
-    call.setOperand(0, extractCall);
+    SqlCall convCall =
+        new SqlBasicCall(SqlLibraryOperators.CONV,
+            new SqlNode[]{
+                call.getOperandList().get(0),
+                SqlLiteral.createExactNumeric("16", SqlParserPos.ZERO),
+                SqlLiteral.createExactNumeric("10", SqlParserPos.ZERO)},
+            SqlParserPos.ZERO);
+    call.setOperand(0, convCall);
     handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.BIGINT, dialect);
-  }
-
-  private static boolean isOperandLiteral(SqlCall call) {
-    return call.operand(0) instanceof SqlCharStringLiteral || call.operand(0)
-            instanceof SqlLiteral;
-  }
-
-  private static boolean isFirstOperandCurrencyType(SqlCall call) {
-    return call.operand(0).toString().contains("$") && (call.operand(1).toString().contains("L")
-            || call.operand(1).toString().contains("U"));
-  }
-
-  private static boolean isOperandTypeOfCurrencyOrContainSpace(SqlCall call) {
-    return call.operand(1).toString().contains("PR")
-            || (call.operand(0).toString().contains("USD")
-            && call.operand(1).toString().contains("C"));
   }
 
   public static boolean needsCustomUnparsing(SqlCall call) {
@@ -258,34 +120,193 @@ public class ToNumberUtils {
     return false;
   }
 
-  private static SqlNode[] prepareSqlNodes(SqlCall call) {
-    if (isOperandNull(call)) {
-      SqlNode[] extractNodeOperands = new SqlNode[]{new SqlDataTypeSpec(new
-              SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
-              SqlParserPos.ZERO)};
-      return extractNodeOperands;
-    }
-    String firstOperand = call.operand(0).toString().replaceAll(regExRemove, "");
-    if (firstOperand.contains(".")) {
-      int scale = firstOperand.split("\\.")[1].length();
-
-      SqlNode[] extractNodeOperands = new SqlNode[]{SqlLiteral
-          .createCharString(firstOperand.trim(), SqlParserPos.ZERO),
-          SqlLiteral.createExactNumeric
-          ("38", SqlParserPos.ZERO), SqlLiteral.createExactNumeric(scale + "",
-          SqlParserPos.ZERO)};
-      return extractNodeOperands;
-    }
-    SqlNode[] extractNodeOperands = new SqlNode[]{SqlLiteral
-            .createCharString(firstOperand.trim(), SqlParserPos.ZERO)};
-    return extractNodeOperands;
+  /** Resolves the CAST target type for a TO_NUMBER call. */
+  @FunctionalInterface
+  protected interface CastSpecResolver {
+    SqlNode resolve(SqlCall call, SqlDialect dialect);
   }
 
-  private static void parseToNumber(SqlWriter writer, int leftPrec, int rightPrec,
-                                    SqlNode[] extractNodeOperands) {
-    SqlCall extractCallCast =
-            new SqlBasicCall(SqlStdOperatorTable.TO_NUMBER, extractNodeOperands, SqlParserPos.ZERO);
+  protected static void unparseToNumberAsCast(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlDialect dialect,
+      CastSpecResolver castSpecResolver) {
+    if (isOperandLiteral(call) && isOperandNull(call)) {
+      handleNullOperand(writer, leftPrec, rightPrec, dialect);
+      return;
+    }
 
-    SqlStdOperatorTable.TO_NUMBER.unparse(writer, extractCallCast, leftPrec, rightPrec);
+    switch (call.getOperandList().size()) {
+    case 1:
+    case 3:
+      cleanCharStringLiteralOperand(call);
+      castOperand(writer, call, leftPrec, rightPrec, dialect, castSpecResolver);
+      break;
+    case 2:
+      if (isHexFormat(call)) {
+        prependHexPrefix(call);
+        handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.BIGINT, dialect);
+      } else {
+        if (!(call.operand(0) instanceof SqlIdentifier)) {
+          modifyOperand(call);
+        }
+        castOperand(writer, call, leftPrec, rightPrec, dialect, castSpecResolver);
+      }
+      break;
+    default:
+      throw new IllegalArgumentException("Unsupported number of operands: "
+          + call.getOperandList().size());
+    }
+  }
+
+  protected static void castOperand(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlDialect dialect,
+      CastSpecResolver castSpecResolver) {
+    SqlNode castSpec = castSpecResolver.resolve(call, dialect);
+    handleCastingWithSpec(writer, call, leftPrec, rightPrec, castSpec);
+  }
+
+  protected static void cleanCharStringLiteralOperand(SqlCall call) {
+    if (call.operand(0) instanceof SqlCharStringLiteral) {
+      String strippedValue = call.operand(0).toString().replaceAll(REGEX_REMOVE, "");
+      call.setOperand(0,
+          SqlLiteral.createCharString(strippedValue.trim(), SqlParserPos.ZERO));
+    }
+  }
+
+  protected static boolean isHexFormat(SqlCall call) {
+    return HEX_FORMAT_PATTERN.matcher(call.operand(1).toString()).matches();
+  }
+
+  protected static void prependHexPrefix(SqlCall call) {
+    SqlCall concatCall =
+        new SqlBasicCall(SqlStdOperatorTable.CONCAT,
+            new SqlNode[]{
+                SqlLiteral.createCharString("0x", SqlParserPos.ZERO),
+                call.operand(0)},
+            SqlParserPos.ZERO);
+    call.setOperand(0, concatCall);
+  }
+
+  private static SqlNode resolveDefaultCastSpec(SqlCall call, SqlDialect dialect) {
+    return castSpecForType(dialect, resolveDefaultSqlTypeName(call));
+  }
+
+  private static SqlTypeName resolveDefaultSqlTypeName(SqlCall call) {
+    String operandText = call.operand(0).toString();
+    if (operandText.contains(".")) {
+      return SqlTypeName.FLOAT;
+    }
+    if (call.getOperandList().size() == 2
+        && operandText.contains("E")
+        && call.operand(1).toString().contains("E")) {
+      return SqlTypeName.DECIMAL;
+    }
+    return SqlTypeName.BIGINT;
+  }
+
+  protected static SqlNode castSpecForType(SqlDialect dialect, SqlTypeName typeName) {
+    return Objects.requireNonNull(
+        dialect.getCastSpec(
+        new BasicSqlType(RelDataTypeSystem.DEFAULT, typeName)));
+  }
+
+  protected static void handleCasting(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec,
+      SqlTypeName sqlTypeName, SqlDialect dialect) {
+    handleCastingWithSpec(writer, call, leftPrec, rightPrec, castSpecForType(dialect, sqlTypeName));
+  }
+
+  protected static void handleCastingWithSpec(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlNode castSpec) {
+    SqlCall castCall =
+        new SqlBasicCall(SqlStdOperatorTable.CAST,
+            new SqlNode[]{call.operand(0), castSpec},
+            SqlParserPos.ZERO);
+    writer.getDialect().unparseCall(writer, castCall, leftPrec, rightPrec);
+  }
+
+  protected static void modifyOperand(SqlCall call) {
+    String regEx = call.operand(1).toString().contains("C") ? REGEX_REMOVE : "[',$]+";
+    String firstOperand =
+        removeSignFromLastOfStringAndAddInBeginning(call,
+            call.operand(0).toString().replaceAll(regEx, ""));
+    call.setOperand(0,
+        SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO));
+  }
+
+  protected static String removeSignFromLastOfStringAndAddInBeginning(SqlCall call,
+      String firstOperand) {
+    if (call.operand(1).toString().contains("MI") || call.operand(1).toString().contains("S")) {
+      if (call.operand(0).toString().contains("-")) {
+        firstOperand = firstOperand.replaceAll("-", "");
+        firstOperand = "-" + firstOperand;
+      } else {
+        firstOperand = firstOperand.replaceAll("\\+", "");
+      }
+    }
+    return firstOperand;
+  }
+
+  protected static void handleNullOperand(
+      SqlWriter writer, int leftPrec, int rightPrec, SqlDialect dialect) {
+    SqlCall castCall =
+        new SqlBasicCall(SqlStdOperatorTable.CAST,
+            new SqlNode[]{
+                new SqlDataTypeSpec(
+                    new SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+                    SqlParserPos.ZERO),
+                castSpecForType(dialect, SqlTypeName.INTEGER)},
+            SqlParserPos.ZERO);
+    writer.getDialect().unparseCall(writer, castCall, leftPrec, rightPrec);
+  }
+
+  protected static boolean isOperandNull(SqlCall call) {
+    for (SqlNode sqlNode : call.getOperandList()) {
+      SqlLiteral literal = (SqlLiteral) sqlNode;
+      if (literal.getValue() == null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  protected static boolean isOperandLiteral(SqlCall call) {
+    return call.operand(0) instanceof SqlCharStringLiteral
+        || call.operand(0) instanceof SqlLiteral;
+  }
+
+  protected static boolean isFirstOperandCurrencyType(SqlCall call) {
+    return call.operand(0).toString().contains("$") && (call.operand(1).toString().contains("L")
+        || call.operand(1).toString().contains("U"));
+  }
+
+  protected static boolean isOperandTypeOfCurrencyOrContainSpace(SqlCall call) {
+    return call.operand(1).toString().contains("PR")
+        || (call.operand(0).toString().contains("USD")
+        && call.operand(1).toString().contains("C"));
+  }
+
+  protected static SqlNode[] prepareSqlNodes(SqlCall call) {
+    if (isOperandNull(call)) {
+      return new SqlNode[]{new SqlDataTypeSpec(
+          new SqlBasicTypeNameSpec(SqlTypeName.NULL, SqlParserPos.ZERO),
+          SqlParserPos.ZERO)};
+    }
+    String firstOperand = call.operand(0).toString().replaceAll(REGEX_REMOVE, "");
+    if (firstOperand.contains(".")) {
+      int scale = firstOperand.split("\\.")[1].length();
+      return new SqlNode[]{
+          SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO),
+          SqlLiteral.createExactNumeric("38", SqlParserPos.ZERO),
+          SqlLiteral.createExactNumeric(String.valueOf(scale), SqlParserPos.ZERO)};
+    }
+    return new SqlNode[]{
+        SqlLiteral.createCharString(firstOperand.trim(), SqlParserPos.ZERO)};
+  }
+
+  protected static void parseToNumber(SqlWriter writer, int leftPrec, int rightPrec,
+      SqlNode[] operands) {
+    SqlCall toNumberCall =
+        new SqlBasicCall(SqlStdOperatorTable.TO_NUMBER, operands, SqlParserPos.ZERO);
+    SqlStdOperatorTable.TO_NUMBER.unparse(writer, toNumberCall, leftPrec, rightPrec);
   }
 }

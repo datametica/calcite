@@ -26,11 +26,17 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexOver;
+import org.apache.calcite.rex.RexVisitor;
 import org.apache.calcite.rex.RexVisitorImpl;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.util.SqlBasicVisitor;
+import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableSet;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -53,7 +59,7 @@ public class RelToSqlUtils {
     if (!(filter.getInput(0) instanceof Project)) {
       return false;
     }
-    InputRefFinder finder = new InputRefFinder();
+    InputRefCollector finder = new InputRefCollector();
     filter.getCondition().accept(finder);
     Set<Integer> fieldsUsedInFilter = finder.getRefs();
     Project inputProject = (Project) filter.getInput();
@@ -91,10 +97,10 @@ public class RelToSqlUtils {
   /**
    * RexVisitor to collect all the fields used in a Rex Expression.
    */
-  private static class InputRefFinder extends RexVisitorImpl<Void> {
+  private static class InputRefCollector extends RexVisitorImpl<Void> {
     Set<Integer> refs = new HashSet<>();
 
-    protected InputRefFinder() {
+    protected InputRefCollector() {
       super(true);
     }
 
@@ -105,6 +111,42 @@ public class RelToSqlUtils {
 
     public Set<Integer> getRefs() {
       return ImmutableSet.copyOf(refs);
+    }
+  }
+
+  /**
+   * SqlVisitor to collect all the names used in this node.
+   */
+  public static class SqlColumnNameCollector extends SqlBasicVisitor<SqlNode> {
+
+    Set<String> names = new HashSet<>();
+
+    @Override public SqlNode visit(SqlIdentifier id) {
+      names.add(id.names.get(0));
+      return id;
+    }
+
+    public Set<String> getNames() {
+      return ImmutableSet.copyOf(names);
+    }
+  }
+
+  public static boolean findInputRef(RexNode node, List<Integer> refsToFind) {
+    try {
+      RexVisitor<Void> visitor =
+          new RexVisitorImpl<Void>(true) {
+            @Override public Void visitInputRef(RexInputRef inputRef) {
+              if (refsToFind.contains(inputRef.getIndex())) {
+                throw new Util.FoundOne(inputRef);
+              }
+              return null;
+            }
+          };
+      node.accept(visitor);
+      return false;
+    } catch (Util.FoundOne e) {
+      Util.swallow(e, null);
+      return true;
     }
   }
 }

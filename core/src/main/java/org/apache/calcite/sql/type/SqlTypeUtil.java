@@ -899,6 +899,13 @@ public abstract class SqlTypeUtil {
     if (toTypeName == SqlTypeName.UNKNOWN) {
       return true;
     }
+
+    if (toType.getSqlTypeName() == SqlTypeName.UUID) {
+      return fromType.getSqlTypeName() == SqlTypeName.UUID
+          || fromType.getFamily() == SqlTypeFamily.CHARACTER
+          || fromType.getFamily() == SqlTypeFamily.BINARY;
+    }
+
     if (toType.isStruct() || fromType.isStruct()) {
       if (toTypeName == SqlTypeName.DISTINCT) {
         if (fromTypeName == SqlTypeName.DISTINCT) {
@@ -1102,6 +1109,7 @@ public abstract class SqlTypeUtil {
     if (isAtomic(type) || isNull(type)
         || type.getSqlTypeName() == SqlTypeName.UNKNOWN
         || type.getSqlTypeName() == SqlTypeName.GEOMETRY
+        || type.getSqlTypeName() == SqlTypeName.GEOGRAPHY
         || type.getSqlTypeName() == SqlTypeName.INTERVAL) {
       int precision = typeName.allowsPrec() ? type.getPrecision() : -1;
       // fix up the precision.
@@ -1735,6 +1743,7 @@ public abstract class SqlTypeUtil {
       return false;
     }
     return type.getSqlTypeName() == SqlTypeName.ARRAY
+        || type.getSqlTypeName() == SqlTypeName.VARRAY
         || type.getSqlTypeName() == SqlTypeName.MULTISET;
   }
 

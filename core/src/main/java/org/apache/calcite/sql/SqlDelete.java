@@ -21,6 +21,7 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -38,6 +39,7 @@ public class SqlDelete extends SqlCall {
   @Nullable SqlNode condition;
   @Nullable SqlSelect sourceSelect;
   @Nullable SqlIdentifier alias;
+  @Nullable SqlNodeList returningList;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -47,11 +49,22 @@ public class SqlDelete extends SqlCall {
       @Nullable SqlNode condition,
       @Nullable SqlSelect sourceSelect,
       @Nullable SqlIdentifier alias) {
+    this(pos, targetTable, condition, sourceSelect, alias, null);
+  }
+
+  public SqlDelete(
+      SqlParserPos pos,
+      SqlNode targetTable,
+      @Nullable SqlNode condition,
+      @Nullable SqlSelect sourceSelect,
+      @Nullable SqlIdentifier alias,
+      @Nullable SqlNodeList returningList) {
     super(pos);
     this.targetTable = targetTable;
     this.condition = condition;
     this.sourceSelect = sourceSelect;
     this.alias = alias;
+    this.returningList = returningList;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -66,7 +79,7 @@ public class SqlDelete extends SqlCall {
 
   @SuppressWarnings("nullness")
   @Override public List<SqlNode> getOperandList() {
-    return ImmutableNullableList.of(targetTable, condition, alias);
+    return ImmutableNullableList.of(targetTable, condition, alias, returningList);
   }
 
   @SuppressWarnings("assignment.type.incompatible")
@@ -83,6 +96,9 @@ public class SqlDelete extends SqlCall {
       break;
     case 3:
       alias = (SqlIdentifier) operand;
+      break;
+    case 4:
+      returningList = (SqlNodeList) operand;
       break;
     default:
       throw new AssertionError(i);
@@ -125,6 +141,11 @@ public class SqlDelete extends SqlCall {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlWriter.Frame openingFrame = null;
+    if (!writer.inQuery() && !writer.inWithBody()) {
+      openingFrame = writer.startList(SqlWriter.FrameTypeEnum.SUB_QUERY, "(", ")");
+    }
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     final SqlWriter.Frame frame =
         writer.startList(SqlWriter.FrameTypeEnum.SELECT, "DELETE FROM", "");
     final int opLeft = getOperator().getLeftPrec();
@@ -140,7 +161,16 @@ public class SqlDelete extends SqlCall {
       writer.sep("WHERE");
       condition.unparse(writer, opLeft, opRight);
     }
+    if (returningList != null && !returningList.isEmpty()) {
+      writer.newlineAndIndent();
+      writer.keyword("RETURNING");
+      returningList.unparse(writer, 0, 0);
+    }
     writer.endList(frame);
+    if (openingFrame != null) {
+      writer.endList(openingFrame);
+    }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @Override public void validate(SqlValidator validator, SqlValidatorScope scope) {

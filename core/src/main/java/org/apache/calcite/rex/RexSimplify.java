@@ -32,6 +32,7 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Bug;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.RangeSets;
@@ -262,6 +263,9 @@ public class RexSimplify {
    * Verify adds an overhead that is only acceptable for a top-level call.
    */
   RexNode simplify(RexNode e, RexUnknownAs unknownAs) {
+    if (e.skipSimplifier) {
+      return e;
+    }
     if (STRONG.isNull(e)) {
       // Only boolean NULL (aka UNKNOWN) can be converted to FALSE. Even in
       // unknownAs=FALSE mode, we must not convert a NULL integer (say) to FALSE
@@ -322,6 +326,7 @@ public class RexSimplify {
     case DIVIDE:
       return simplifyArithmetic((RexCall) e);
     case IF:
+    case IF_FOR_SAFE_CAST:
       return simplifyIf((RexCall) e, unknownAs);
     case NVL:
       // We currently do not optimize the IFNULL function at the MIG end,
@@ -1451,7 +1456,9 @@ public class RexSimplify {
     // but not interfere with the normal simplification recursion
     List<CaseBranch> branches = new ArrayList<>();
     for (CaseBranch branch : inputBranches) {
-      if ((branches.size() > 0 && !isSafeExpression(branch.cond))
+      if ((
+          !branches.isEmpty() && (!isSafeExpression(branch.cond)
+          || hasValueIsNullAndCondIsBooleanValue(branch)))
           || !isSafeExpression(branch.value)) {
         return null;
       }
@@ -1467,6 +1474,11 @@ public class RexSimplify {
 
     result = simplifyBooleanCaseGeneric(rexBuilder, branches, branchType);
     return result;
+  }
+
+  private boolean hasValueIsNullAndCondIsBooleanValue(CaseBranch branch) {
+    return RexLiteral.isNullLiteral(branch.value) && branch.cond instanceof RexLiteral
+        && RexLiteral.booleanValue(branch.cond);
   }
 
   /**
@@ -2269,6 +2281,11 @@ public class RexSimplify {
       // sure to be able to remove the cast.
       if (rexBuilder.canRemoveCastFromLiteral(e.getType(), value, typeName)) {
         return rexBuilder.makeCast(e.getType(), operand);
+      }
+
+      if (e.getType().getSqlTypeName() == SqlTypeName.BOOLEAN
+          && operand.getType().getSqlTypeName() == SqlTypeName.INTEGER) {
+        return e;
       }
 
       // Next, try to convert the value to a different type,
@@ -3081,7 +3098,7 @@ public class RexSimplify {
         return firstSqlTypeName == SqlTypeName.CHAR
                 && firstSqlTypeName == relDataTypes.get(1).getSqlTypeName();
       }
-      return firstSqlTypeName == SqlTypeName.CHAR;
+      return false;
     }
   }
 
@@ -3118,6 +3135,13 @@ public class RexSimplify {
     RexUnknownAs nullAs = FALSE;
 
     RexSargBuilder(RexNode ref, RexBuilder rexBuilder, boolean negate) {
+      this.ref = requireNonNull(ref, "ref");
+      this.rexBuilder = requireNonNull(rexBuilder, "rexBuilder");
+      this.negate = negate;
+    }
+
+    RexSargBuilder(RexNode ref, RexBuilder rexBuilder, boolean negate, Set<Comment> comments) {
+      super(comments);
       this.ref = requireNonNull(ref, "ref");
       this.rexBuilder = requireNonNull(rexBuilder, "rexBuilder");
       this.negate = negate;
@@ -3206,6 +3230,10 @@ public class RexSimplify {
         this.nullAs = this.nullAs.or(UNKNOWN);
         break;
       }
+    }
+
+    @Override public RexNode copy(Set<Comment> comments) {
+      return new RexSargBuilder(ref, rexBuilder, negate, comments);
     }
   }
 }

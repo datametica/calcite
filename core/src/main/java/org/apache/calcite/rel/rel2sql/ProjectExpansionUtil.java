@@ -27,12 +27,14 @@ import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 
 import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
@@ -79,7 +81,7 @@ class ProjectExpansionUtil {
     return columnsUsed;
   }
 
-  private List<SqlIdentifier> collectSqlIdentifiers(List<SqlNode> sqlNodes) {
+  List<SqlIdentifier> collectSqlIdentifiers(List<SqlNode> sqlNodes) {
     List<SqlIdentifier> sqlIdentifiers = new ArrayList<>();
 
     for (SqlNode sqlNode : sqlNodes) {
@@ -102,6 +104,12 @@ class ProjectExpansionUtil {
         sqlIdentifiers.add((SqlIdentifier) operand);
       } else if (operand instanceof SqlBasicCall) {
         collectSqlIdentifiersFromCall((SqlBasicCall) operand, sqlIdentifiers);
+      } else if (operand instanceof SqlCase) {
+        SqlCase sqlCase = (SqlCase) operand;
+        sqlIdentifiers.addAll(collectSqlIdentifiers(sqlCase.getWhenOperands()));
+        sqlIdentifiers.addAll(collectSqlIdentifiers(sqlCase.getThenOperands()));
+        sqlIdentifiers.addAll(
+            collectSqlIdentifiers(Collections.singletonList(sqlCase.getElseOperand())));
       }
     }
   }
@@ -133,6 +141,10 @@ class ProjectExpansionUtil {
           }
         }
       }
+      if (result.node instanceof SqlSelect && ((SqlSelect) result.node).getSelectList().isEmpty()
+          && !hasAliasEndingWithDigit(sqlIdentifierList)) {
+        return;
+      }
       if (result.node instanceof SqlSelect && ((SqlSelect) result.node).getFrom()
           instanceof SqlJoin) {
         updateResultSelectList(result, sqlIdentifierList);
@@ -140,11 +152,23 @@ class ProjectExpansionUtil {
     }
   }
 
+  private boolean hasAliasEndingWithDigit(List<SqlNode> sqlIdentifierList) {
+    return sqlIdentifierList.stream()
+        .filter(obj -> obj instanceof SqlBasicCall)
+        .map(obj -> (SqlBasicCall) obj)
+        .filter(call -> call.getOperator().getName().equalsIgnoreCase("AS"))
+        .map(call -> call.operand(1))
+        .filter(op -> op instanceof SqlIdentifier)
+        .map(op -> (SqlIdentifier) op)
+        .map(id -> id.names.get(0))
+        .anyMatch(ProjectExpansionUtil::endsWithDigit);
+  }
+
   private boolean shouldHandleResultAlias(SqlImplementor.Result result, SqlNode sqlCondition) {
     String backTick = "`";
     return result.neededAlias != null
         && sqlCondition.toString().contains(backTick + result.neededAlias + backTick)
-        && result.asSelect().getSelectList() == null && !hasAmbiguousAlias(result);
+        && result.asSelect().getSelectList().isEmpty() && !hasAmbiguousAlias(result);
   }
 
   private boolean hasAmbiguousAlias(SqlImplementor.Result result) {
@@ -186,7 +210,8 @@ class ProjectExpansionUtil {
   }
 
   private SqlNode createSqlIdentifierForColumn(SqlImplementor.Result result, String columnName) {
-    if (endsWithDigit(columnName) && result.node instanceof SqlSelect) {
+    if (endsWithDigit(columnName) && result.node instanceof SqlSelect
+        && !(((SqlSelect) result.node).getFrom() instanceof SqlIdentifier)) {
       return createAsSqlIdentifierForColumn(result, columnName);
     } else {
       if (isJoinNodeBasicCall(result)) {
@@ -359,7 +384,7 @@ class ProjectExpansionUtil {
   private void updateSelectListInSelectNode(
       SqlSelect sqlSelect, List<SqlIdentifier> sqlIdentifiersNew) {
     SqlNodeList sqlNodeList = sqlSelect.getSelectList();
-    if (sqlNodeList != null) {
+    if (!sqlNodeList.isEmpty()) {
       List<String> columnNamesInSelect = getColumnNamesInSelect(sqlNodeList);
 
       if (sqlIdentifiersNew.size() > sqlNodeList.size()) {
@@ -473,5 +498,36 @@ class ProjectExpansionUtil {
       }
       return false;
     }
+  }
+
+  // Checks if the query's FROM clause is a join whose sides are both SELECT statements.
+  boolean hasNestedJoinWithSelectOperands(SqlImplementor.Builder builder) {
+    SqlNode fromNode = builder.select.getFrom();
+    if (!(fromNode instanceof SqlJoin)) {
+      return false;
+    }
+    SqlJoin join = (SqlJoin) fromNode;
+    if (!(join.getLeft() instanceof SqlBasicCall)) {
+      return false;
+    }
+    SqlBasicCall basicCall = (SqlBasicCall) join.getLeft();
+    List<SqlNode> operands = basicCall.getOperandList();
+    if (operands.isEmpty() || !(operands.get(0) instanceof SqlSelect)) {
+      return false;
+    }
+    SqlSelect innerSelect = (SqlSelect) operands.get(0);
+    if (!(innerSelect.getFrom() instanceof SqlJoin)) {
+      return false;
+    }
+    SqlJoin innerJoin = (SqlJoin) innerSelect.getFrom();
+    return firstOperandIsSelect(innerJoin.getLeft()) && firstOperandIsSelect(innerJoin.getRight());
+  }
+
+  boolean firstOperandIsSelect(SqlNode node) {
+    if (!(node instanceof SqlBasicCall)) {
+      return false;
+    }
+    List<SqlNode> operands = ((SqlBasicCall) node).getOperandList();
+    return !operands.isEmpty() && operands.get(0) instanceof SqlSelect;
   }
 }

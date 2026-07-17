@@ -18,11 +18,13 @@ package org.apache.calcite.rex;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Local variable.
@@ -56,6 +58,12 @@ public class RexLocalRef extends RexSlot {
     assert index >= 0;
   }
 
+  public RexLocalRef(int index, RelDataType type, Set<Comment> comments) {
+    super(createName(index), index, type, comments);
+    assert type != null;
+    assert index >= 0;
+  }
+
   //~ Methods ----------------------------------------------------------------
 
   @Override public SqlKind getKind() {
@@ -83,5 +91,9 @@ public class RexLocalRef extends RexSlot {
 
   private static String createName(int index) {
     return NAMES.get(index);
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexLocalRef(index, type, comments);
   }
 }

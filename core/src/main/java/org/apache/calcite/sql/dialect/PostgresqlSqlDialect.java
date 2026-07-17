@@ -38,7 +38,9 @@ import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -48,6 +50,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.util.List;
 
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
+import static org.apache.calcite.util.Util.removeLeadingAndTrailingSingleQuotes;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A <code>SqlDialect</code> implementation for the PostgreSQL database.
@@ -104,8 +109,12 @@ public class PostgresqlSqlDialect extends SqlDialect {
       break;
     // Postgres has type 'text' with no predefined maximum length,
     // stores values in a variable-length format
+    case TEXT:
     case CLOB:
       castSpec = "text";
+      break;
+    case SERIAL:
+      castSpec = "SERIAL";
       break;
     case DATE:
       castSpec = ((BasicSqlType) type).isDateTypeSupportsTimeParts() ? "TIMESTAMP(0)" : "DATE";
@@ -121,6 +130,9 @@ public class PostgresqlSqlDialect extends SqlDialect {
       return dataTypeSpecWithPrecision(type);
     case BINARY:
       castSpec = "BYTEA";
+      break;
+    case DOUBLE_PRECISION:
+      castSpec = "DOUBLE PRECISION";
       break;
     default:
       return super.getCastSpec(type);
@@ -237,8 +249,15 @@ public class PostgresqlSqlDialect extends SqlDialect {
     return false;
   }
 
+  /**
+   * The comment regarding postgres in parent class is outdated. PostgreSQL 16 added the ability
+   * for subqueries in the FROM clause to omit aliases. See
+   * <a href="https://www.postgresql.org/docs/16/release-16.html">PostgreSQL</a>.
+   * So SELECT * FROM (SELECT * FROM Emp) is now legal in PostgreSQL 16 and later.
+   * So, keeping false here also.
+   */
   @Override public boolean requiresAliasForFromItems() {
-    return true;
+    return false;
   }
 
   @Override public boolean supportsNestedAggregations() {
@@ -287,6 +306,9 @@ public class PostgresqlSqlDialect extends SqlDialect {
       call.operand(1).unparse(writer, leftPrec, rightPrec);
       writer.endFunCall(concat);
       break;
+    case TRIM:
+      unparseTrim(writer, call, leftPrec, rightPrec);
+      break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
@@ -302,6 +324,9 @@ public class PostgresqlSqlDialect extends SqlDialect {
     case "CURRENT_TIMESTAMP_TZ":
     case "CURRENT_TIMESTAMP_LTZ":
       this.unparseCurrentTimestampWithTZ(writer, call, leftPrec, rightPrec);
+      break;
+    case "RAND":
+      writer.keyword("RANDOM()");
       break;
     default:
       super.unparseCall(writer, call, leftPrec, rightPrec);
@@ -392,7 +417,80 @@ public class PostgresqlSqlDialect extends SqlDialect {
     return rewriteMaxMin(aggCall, relDataType);
   }
 
+  private static void unparseTrim(SqlWriter writer, SqlCall call, int leftPrec,
+      int rightPrec) {
+    final String operatorName;
+    SqlLiteral trimFlag = call.operand(0);
+    SqlNode valueToTrim = call.operand(1);
+    requireNonNull(valueToTrim, "valueToTrim in unparseTrim() must not be null");
+    String value = removeLeadingAndTrailingSingleQuotes(valueToTrim.toString());
+    switch (trimFlag.getValueAs(SqlTrimFunction.Flag.class)) {
+    case LEADING:
+      operatorName = "LTRIM";
+      break;
+    case TRAILING:
+      operatorName = "RTRIM";
+      break;
+    default:
+      operatorName = call.getOperator().getName();
+      break;
+    }
+    final SqlWriter.Frame trimFrame = writer.startFunCall(operatorName);
+    call.operand(2).unparse(writer, leftPrec, rightPrec);
+
+    // If the trimmed character is a non-space character, add it to the target SQL.
+    // eg: TRIM(BOTH 'A' from 'ABCD'
+    // Output Query: TRIM('ABC', 'A')
+    if (!value.matches("\\s+")) {
+      writer.literal(",");
+      call.operand(1).unparse(writer, leftPrec, rightPrec);
+    }
+    writer.endFunCall(trimFrame);
+  }
+
   @Override public boolean supportsGroupByLiteral() {
     return false;
+  }
+
+  /**
+   * PostgreSQL supports "FETCH FIRST n ROWS WITH TIES" syntax which is used
+   * when the fetch clause contains a WITH_TIES operator.
+   * This method overrides the base unparseOffsetFetch to handle WITH_TIES
+   * for PostgreSQL while delegating regular offset/fetch to the parent.
+   */
+  @Override public void unparseOffsetFetch(SqlWriter writer, @Nullable SqlNode offset,
+      @Nullable SqlNode fetch) {
+    if (fetch instanceof SqlCall
+        && ((SqlCall) fetch).getOperator() == SqlLibraryOperators.WITH_TIES) {
+      if (offset != null) {
+        writer.newlineAndIndent();
+        final SqlWriter.Frame offsetFrame =
+            writer.startList(SqlWriter.FrameTypeEnum.OFFSET);
+        writer.keyword("OFFSET");
+        offset.unparse(writer, -1, -1);
+        writer.keyword("ROWS");
+        writer.endList(offsetFrame);
+      }
+      unparseFetchWithTies(writer, (SqlCall) fetch);
+    } else {
+      super.unparseOffsetFetch(writer, offset, fetch);
+    }
+  }
+
+  /**
+   * Helper method to unparse "FETCH FIRST n ROWS WITH TIES" syntax for PostgreSQL.
+   */
+  private static void unparseFetchWithTies(SqlWriter writer, SqlCall fetchWithTies) {
+    final SqlNode fetchValue = fetchWithTies.operand(0);
+    writer.newlineAndIndent();
+    final SqlWriter.Frame fetchFrame =
+        writer.startList(SqlWriter.FrameTypeEnum.FETCH);
+    writer.keyword("FETCH");
+    writer.keyword("FIRST");
+    fetchValue.unparse(writer, -1, -1);
+    writer.keyword("ROWS");
+    writer.keyword("WITH");
+    writer.keyword("TIES");
+    writer.endList(fetchFrame);
   }
 }

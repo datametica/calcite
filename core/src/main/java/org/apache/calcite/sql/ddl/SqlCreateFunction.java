@@ -27,6 +27,7 @@ import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Preconditions;
@@ -59,6 +60,7 @@ public class SqlCreateFunction extends SqlCreate {
 
   @Override public void unparse(SqlWriter writer, int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.keyword(getReplace() ? "CREATE OR REPLACE" : "CREATE");
     writer.keyword("FUNCTION");
     if (ifNotExists) {
@@ -78,6 +80,7 @@ public class SqlCreateFunction extends SqlCreate {
       }
       writer.endList(frame);
     }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @SuppressWarnings("unchecked")

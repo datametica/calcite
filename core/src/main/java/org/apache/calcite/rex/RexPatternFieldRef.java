@@ -18,6 +18,9 @@ package org.apache.calcite.rex;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
+
+import java.util.Set;
 
 /**
  * Variable that references a field of an input relational expression.
@@ -27,6 +30,12 @@ public class RexPatternFieldRef extends RexInputRef {
 
   public RexPatternFieldRef(String alpha, int index, RelDataType type) {
     super(index, type);
+    this.alpha = alpha;
+    digest = alpha + ".$" + index;
+  }
+
+  public RexPatternFieldRef(String alpha, int index, RelDataType type, Set<Comment> comments) {
+    super(index, type, comments);
     this.alpha = alpha;
     digest = alpha + ".$" + index;
   }
@@ -53,5 +62,9 @@ public class RexPatternFieldRef extends RexInputRef {
 
   @Override public SqlKind getKind() {
     return SqlKind.PATTERN_INPUT_REF;
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexPatternFieldRef(alpha, index, type, comments);
   }
 }

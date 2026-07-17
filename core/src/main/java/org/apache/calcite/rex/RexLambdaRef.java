@@ -18,10 +18,12 @@ package org.apache.calcite.rex;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Variable that references a field of a lambda expression.
@@ -30,6 +32,10 @@ public class RexLambdaRef extends RexSlot {
 
   public RexLambdaRef(int index, String name, RelDataType type) {
     super(name, index, type);
+  }
+
+  public RexLambdaRef(int index, String name, RelDataType type, Set<Comment> comments) {
+    super(name, index, type, comments);
   }
 
   @Override public SqlKind getKind() {
@@ -53,5 +59,9 @@ public class RexLambdaRef extends RexSlot {
 
   @Override public int hashCode() {
     return Objects.hash(type, index);
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexLambdaRef(index, name, type, comments);
   }
 }

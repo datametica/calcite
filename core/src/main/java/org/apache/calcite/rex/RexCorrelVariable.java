@@ -19,10 +19,12 @@ package org.apache.calcite.rex;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Reference to the current row of a correlating relational expression.
@@ -40,6 +42,14 @@ public class RexCorrelVariable extends RexVariable {
       CorrelationId id,
       RelDataType type) {
     super(id.getName(), type);
+    this.id = Objects.requireNonNull(id, "id");
+  }
+
+  RexCorrelVariable(
+      CorrelationId id,
+      RelDataType type,
+      Set<Comment> comments) {
+    super(id.getName(), type, comments);
     this.id = Objects.requireNonNull(id, "id");
   }
 
@@ -67,5 +77,9 @@ public class RexCorrelVariable extends RexVariable {
 
   @Override public int hashCode() {
     return Objects.hash(digest, type, id);
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexCorrelVariable(id, type, comments);
   }
 }

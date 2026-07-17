@@ -24,6 +24,7 @@ import org.apache.calcite.sql.validate.SqlQualified;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.Litmus;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
@@ -288,7 +289,9 @@ public class SqlIdentifier extends SqlNode {
       SqlWriter writer,
       int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     SqlUtil.unparseSqlIdentifierSyntax(writer, this, false);
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @Override public void validate(SqlValidator validator, SqlValidatorScope scope) {

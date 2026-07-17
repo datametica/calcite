@@ -33,6 +33,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.IntervalSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.CompositeList;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
@@ -65,7 +66,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TimeZone;
+import java.util.UUID;
 
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
 import static org.apache.calcite.rel.type.RelDataTypeImpl.NON_NULLABLE_SUFFIX;
@@ -237,6 +240,20 @@ public class RexLiteral extends RexNode {
     this.digest = computeDigest(RexDigestIncludeType.OPTIONAL);
   }
 
+  RexLiteral(
+      @Nullable Comparable value,
+      RelDataType type,
+      SqlTypeName typeName,
+      Set<Comment> comments) {
+    super(comments);
+    this.value = value;
+    this.type = requireNonNull(type, "type");
+    this.typeName = requireNonNull(typeName, "typeName");
+    Preconditions.checkArgument(valueMatchesType(value, typeName, true));
+    Preconditions.checkArgument((value == null) == type.isNullable());
+    Preconditions.checkArgument(typeName != SqlTypeName.ANY);
+    this.digest = computeDigest(RexDigestIncludeType.OPTIONAL);
+  }
   //~ Methods ----------------------------------------------------------------
 
   /**
@@ -315,6 +332,8 @@ public class RexLiteral extends RexNode {
       return true;
     }
     switch (typeName) {
+    case UUID:
+      return value instanceof UUID;
     case BOOLEAN:
       // Unlike SqlLiteral, we do not allow boolean null.
       return value instanceof Boolean;
@@ -393,6 +412,7 @@ public class RexLiteral extends RexNode {
       return value instanceof Geometry;
     case ANY:
     case VARIANT:
+    case JSON:
       // Literal of type ANY is not legal. "CAST(2 AS ANY)" remains
       // an integer literal surrounded by a cast function.
       return false;
@@ -759,7 +779,7 @@ public class RexLiteral extends RexNode {
   /** Converts a value to a temporary literal, for the purposes of generating a
    * digest. Literals of type ROW and MULTISET require that their components are
    * also literals. */
-  private static RexLiteral toLiteral(RelDataType type, Comparable<?> value) {
+  public static RexLiteral toLiteral(RelDataType type, Comparable<?> value) {
     final SqlTypeName typeName = strictTypeName(type);
     switch (typeName) {
     case ROW:
@@ -1238,5 +1258,9 @@ public class RexLiteral extends RexNode {
 
   @Override public <R, P> R accept(RexBiVisitor<R, P> visitor, P arg) {
     return visitor.visitLiteral(this, arg);
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexLiteral(value, type, typeName, comments);
   }
 }

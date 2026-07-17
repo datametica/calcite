@@ -43,12 +43,13 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.format.FormatModel;
 import org.apache.calcite.util.format.FormatModels;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
@@ -476,6 +477,7 @@ public class SqlDialect {
 
   public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, call, true);
     SqlOperator operator = call.getOperator();
     switch (call.getKind()) {
     case ROW:
@@ -496,6 +498,7 @@ public class SqlDialect {
     default:
       operator.unparse(writer, call, leftPrec, rightPrec);
     }
+    SqlCommentUtil.unparseSqlComment(writer, call, false);
   }
 
   protected void unparseDivideInteger(final SqlWriter writer,
@@ -810,12 +813,59 @@ public class SqlDialect {
     return true;
   }
 
+  /**
+   * Returns whether a SQL dialect supports interpreting a column in the GROUP BY clause
+   * as the alias defined in the SELECT list, when both the alias and the original column name
+   * are identical.
+   *
+   * <p>This behavior is specific to certain SQL dialects like {@link DatabaseProduct#BIG_QUERY},
+   * where the engine treats the alias from
+   * the SELECT clause as the reference in the GROUP BY clause
+   * if the alias name is the same as a column name from the table.
+   *
+   * <p>For example, in BigQuery:
+   * <blockquote><pre>
+   * SELECT
+   *   CAST(e.department_id AS STRING) AS department_id
+   * FROM emp e
+   * GROUP BY department_id
+   * </pre></blockquote>
+   *
+   * <p>In this case, although <code>e.department_id</code> is a table column, the reference
+   * <code>department_id</code> in the GROUP BY clause is interpreted as the SELECT list alias,
+   * not the original column.
+   *
+   * <p>This behavior can lead to ambiguities or unexpected results in dialects that support it.
+   * Other dialects (like {@link DatabaseProduct#SPARK})
+   * do not treat SELECT aliases as valid references
+   * in the GROUP BY clause, and require fully qualified table column references.
+   *
+   * @return {@code true} if the dialect supports treating identical
+   * SELECT aliases and GROUP BY column names
+   * as references to the alias; {@code false} otherwise.
+   */
+  public boolean supportsIdenticalColumnAliasAndGroupByColumnName() {
+    return true;
+  }
+
   public boolean supportsQualifyClause() {
     return false;
   }
 
+  /**
+   * supportsPivotTableAlias method denote whether pivotTableAlias is supported or not
+   * SELECT * FROM query PIVOT (agg, ... FOR axis, ... IN (in, ...)) AS pivotTableAlias;
+   */
+  public boolean supportsPivotTableAlias() {
+    return true;
+  }
+
   public boolean supportsUnpivot() {
     return false;
+  }
+
+  public boolean hasImplicitTypeCoercionInUnpivot() {
+    return true;
   }
 
   /**
@@ -1112,12 +1162,17 @@ public class SqlDialect {
   }
 
   public @Nullable SqlNode emulateNullDirectionForUnsupportedNullsRangeSortDirection(SqlNode node,
-      boolean nullsFirst, boolean desc) {
+      boolean nullsFirst, boolean desc, @Nullable SqlOperator operator) {
     return emulateNullDirection(node, nullsFirst, desc);
   }
 
   public JoinType emulateJoinTypeForCrossJoin() {
     return JoinType.COMMA;
+  }
+
+  protected @Nullable SqlNode emulateNullDirectionWithIsNull(SqlNode node,
+      boolean nullsFirst, boolean desc, @Nullable SqlOperator operator) {
+    return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
   }
 
   protected @Nullable SqlNode emulateNullDirectionWithIsNull(SqlNode node,
@@ -1128,6 +1183,10 @@ public class SqlDialect {
       return null;
     }
 
+    if (node instanceof SqlBasicCall
+        && ((SqlBasicCall) node).getOperator() instanceof SqlBinaryOperator) {
+      node = SqlLibraryOperators.PARENTHESIS.createCall(SqlParserPos.ZERO, node);
+    }
     node = SqlStdOperatorTable.IS_NULL.createCall(SqlParserPos.ZERO, node);
     if (nullsFirst) {
       node = SqlStdOperatorTable.DESC.createCall(SqlParserPos.ZERO, node);
@@ -1335,10 +1394,23 @@ public class SqlDialect {
   }
 
   /**
+   * Returns whether this dialect supports "GROUP BY ALL" syntax, where the
+   * database infers grouping columns from the non-aggregated SELECT expressions
+   * (e.g. Snowflake, BigQuery).
+   */
+  public boolean supportsGroupByAll() {
+    return false;
+  }
+
+  /**
    * Return whether this dialect requires Column names in the INSERT clause of MERGE statements.
    */
   public boolean requiresColumnsInMergeInsertClause() {
     throw new UnsupportedOperationException();
+  }
+
+  public boolean validOperationOnGroupByItem(RexNode node) {
+    return true;
   }
 
   /**
@@ -1745,6 +1817,7 @@ public class SqlDialect {
     VERTICA("Vertica", "\"", NullCollation.HIGH),
     SQLSTREAM("SQLstream", "\"", NullCollation.HIGH),
     SPARK("Spark", null, NullCollation.LOW),
+    DATABRICKS("Databricks", null, NullCollation.HIGH),
 
     /** Paraccel, now called Actian Matrix. Redshift is based on this, so
      * presumably the dialect capabilities are similar. */

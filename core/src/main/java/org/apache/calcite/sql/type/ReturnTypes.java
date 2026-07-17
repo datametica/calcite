@@ -37,6 +37,7 @@ import org.apache.calcite.util.Util;
 import com.google.common.base.Preconditions;
 
 import java.util.AbstractList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
@@ -403,6 +404,12 @@ public abstract class ReturnTypes {
       TIME.andThen(SqlTypeTransforms.TO_NULLABLE);
 
   /**
+   * Type-inference strategy whereby the result type of a call is INTERVAL.
+   */
+  public static final SqlReturnTypeInference INTERVAL =
+      explicit(SqlTypeName.INTERVAL);
+
+  /**
    * Type-inference strategy whereby the result type of a call is TIMESTAMP.
    */
   public static final SqlReturnTypeInference TIMESTAMP =
@@ -549,6 +556,9 @@ public abstract class ReturnTypes {
   public static final SqlReturnTypeInference VARCHAR_2000 =
       explicit(SqlTypeName.VARCHAR, 2000);
 
+  public static final SqlReturnTypeInference UUID =
+      explicit(SqlTypeName.UUID);
+
   public static final SqlReturnTypeInference JSON =
       explicit(SqlTypeName.JSON);
 
@@ -557,6 +567,9 @@ public abstract class ReturnTypes {
    */
   public static final SqlReturnTypeInference VARIANT =
       ReturnTypes.explicit(SqlTypeName.VARIANT);
+
+  public static final SqlReturnTypeInference XML =
+      ReturnTypes.explicit(SqlTypeName.XML);
 
   /**
    * Type-inference strategy that always returns "VARCHAR(2000)" with nulls
@@ -620,6 +633,15 @@ public abstract class ReturnTypes {
   public static final SqlReturnTypeInference LEAST_RESTRICTIVE =
       opBinding -> opBinding.getTypeFactory().leastRestrictive(
           opBinding.collectOperandTypes());
+
+  /**
+   * Type-inference strategy for NVL2 function. It returns the least restrictive type
+   * between the second and third operands.
+   */
+  public static final SqlReturnTypeInference NVL2_RESTRICTIVE = opBinding ->
+      opBinding.getTypeFactory().leastRestrictive(
+          Arrays.asList(opBinding.getOperandType(1),
+              opBinding.getOperandType(2)));
 
   /**
    * Type-inference strategy that returns the type of the first operand, unless it
@@ -1421,4 +1443,11 @@ public abstract class ReturnTypes {
 
   public static final SqlReturnTypeInference PERCENTILE_DISC_CONT = opBinding ->
       opBinding.getCollationType();
+
+  /**
+   * Type-inference strategy that always returns GEOGRAPHY.
+   */
+  public static final SqlReturnTypeInference GEOGRAPHY =
+      explicit(SqlTypeName.GEOGRAPHY);
+
 }

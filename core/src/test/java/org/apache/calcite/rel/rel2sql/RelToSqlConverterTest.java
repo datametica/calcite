@@ -575,7 +575,7 @@ class RelToSqlConverterTest {
         BigQuerySqlDialect.DEFAULT.configureParser(SqlParser.config());
     final Sql sql = fixture()
         .withBigQuery().withLibrary(SqlLibrary.BIG_QUERY).parserConfig(parserConfig);
-    sql.withSql(query).ok("SELECT CAST(TIMESTAMP_SECONDS(CAST(CEIL(3) AS INT64)) AS DATETIME) AS "
+    sql.withSql(query).ok("SELECT TIMESTAMP_SECONDS(CAST(CEIL(3) AS INT64)) AS "
         + "created_thing\nFROM foodmart.product");
   }
 
@@ -586,7 +586,7 @@ class RelToSqlConverterTest {
         BigQuerySqlDialect.DEFAULT.configureParser(SqlParser.config());
     final Sql sql = fixture()
         .withBigQuery().withLibrary(SqlLibrary.BIG_QUERY).parserConfig(parserConfig);
-    sql.withSql(query).ok("SELECT CAST(TIMESTAMP_SECONDS(CAST(FLOOR(3) AS INT64)) AS DATETIME) AS "
+    sql.withSql(query).ok("SELECT TIMESTAMP_SECONDS(CAST(FLOOR(3) AS INT64)) AS "
         + "created_thing\nFROM foodmart.product");
   }
 
@@ -4089,6 +4089,20 @@ class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
+  @Test void testLimitWithParentheses() {
+    final String retainLimitQuery = "(SELECT \"product_id\" FROM \"product\" LIMIT 10)\n"
+        + "UNION ALL\n"
+        + "(SELECT \"product_id\" FROM \"product\" LIMIT 10)\n";
+    final String retainLimitResult = "(SELECT \"product_id\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "FETCH NEXT 10 ROWS ONLY)\n"
+        + "UNION ALL\n"
+        + "(SELECT \"product_id\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "FETCH NEXT 10 ROWS ONLY)";
+    sql(retainLimitQuery).ok(retainLimitResult);
+  }
+
 
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-5013">[CALCITE-5013]
@@ -4127,18 +4141,18 @@ class RelToSqlConverterTest {
         + "FROM \"foodmart\".\"product\"\n"
         + "UNION ALL\n"
         + "SELECT *\n"
-        + "FROM (SELECT \"product_id\"\n"
+        + "FROM ((SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
-        + "FETCH NEXT 10 ROWS ONLY\n"
+        + "FETCH NEXT 10 ROWS ONLY)\n"
         + "INTERSECT ALL\n"
         + "SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "OFFSET 10 ROWS))\n"
         + "EXCEPT ALL\n"
-        + "SELECT \"product_id\"\n"
+        + "(SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "OFFSET 5 ROWS\n"
-        + "FETCH NEXT 5 ROWS ONLY";
+        + "FETCH NEXT 5 ROWS ONLY)";
     sql(allSetOpQuery).ok(allSetOpRes);
 
     // After the config is enabled, order by will be retained, so parentheses are required.
@@ -4160,10 +4174,10 @@ class RelToSqlConverterTest {
     final String retainLimitResult = "SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "UNION ALL\n"
-        + "SELECT \"product_id\"\n"
+        + "(SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"product\"\n"
         + "ORDER BY \"product_id\"\n"
-        + "FETCH NEXT 2 ROWS ONLY";
+        + "FETCH NEXT 2 ROWS ONLY)";
     sql(retainLimitQuery).ok(retainLimitResult);
   }
 
@@ -4692,7 +4706,10 @@ class RelToSqlConverterTest {
 
     final String sql2 = "select  * from \"employee\" where  \"hire_date\" + "
             + "INTERVAL '1 2:34:56.78' DAY TO SECOND > TIMESTAMP '2005-10-17 00:00:00' ";
-    sql(sql2).withBigQuery().throws_("For input string: \"56.78\"");
+    final String expect2 = "SELECT *\n"
+        + "FROM foodmart.employee\n"
+        + "WHERE hire_date + INTERVAL '1 02:34:56.78' DAY TO SECOND > CAST('2005-10-17 00:00:00' AS DATETIME)";
+    sql(sql2).withBigQuery().ok(expect2);
   }
 
   @Test void testUnparseSqlIntervalQualifierFirebolt() {
@@ -6082,7 +6099,7 @@ class RelToSqlConverterTest {
     final String expectedPostgresql = "SELECT \"a\"\n"
         + "FROM (SELECT 1 AS \"a\", 'x ' AS \"b\"\n"
         + "UNION ALL\n"
-        + "SELECT 2 AS \"a\", 'yy' AS \"b\") AS \"t\"";
+        + "SELECT 2 AS \"a\", 'yy' AS \"b\")";
     final String expectedOracle = "SELECT \"a\"\n"
         + "FROM (SELECT 1 \"a\", 'x ' \"b\"\n"
         + "FROM \"DUAL\"\n"
@@ -7901,6 +7918,87 @@ class RelToSqlConverterTest {
     final String expectedPresto = "SELECT MAP (ARRAY['k1', 'k2'], ARRAY['v1', 'v2'])\n"
         + "FROM (VALUES (0)) AS \"t\" (\"ZERO\")";
     sql(query).withPresto().ok(expectedPresto);
+  }
+
+  @Test void testMergeUsingSubqueryWithQualify() {
+    final String sql = "MERGE INTO \"foodmart\".\"salary\" AS A\n"
+        + "USING (\n"
+        + "  SELECT \"employee_id\", \"department_id\", PAY_DATE, SALARY_PAID_\n"
+        + "  FROM (\n"
+        + "    SELECT \n"
+        + "      AWS.\"employee_id\", \n"
+        + "      AWS.\"department_id\", \n"
+        + "      X.\"time_id\" AS PAY_DATE, \n"
+        + "      AWS.\"salary\" AS SALARY_PAID_, \n"
+        + "      COUNT(*) AS ANZAHL\n"
+        + "    FROM \"foodmart\".\"employee\" AS AWS\n"
+        + "    INNER JOIN \"foodmart\".\"time_by_day\" AS X ON TRUE\n"
+        + "    GROUP BY AWS.\"employee_id\", AWS.\"department_id\", X.\"time_id\", AWS.\"salary\"\n"
+        + "  ) AS y\n"
+        + "  QUALIFY (ROW_NUMBER() OVER (PARTITION BY \"employee_id\" ORDER BY ANZAHL DESC)) = 1\n"
+        + ") AS b\n"
+        + "ON A.\"employee_id\" = b.\"employee_id\"\n"
+        + "WHEN MATCHED THEN UPDATE SET \"salary_paid\" = b.SALARY_PAID_";
+
+    final String expectedBigQuery = "MERGE INTO foodmart.salary\n"
+        + "USING (SELECT employee.employee_id, employee.department_id, time_by_day.time_id AS PAY_DATE, employee.salary AS SALARY_PAID_\n"
+        + "FROM foodmart.employee\n"
+        + "INNER JOIN foodmart.time_by_day ON TRUE\n"
+        + "GROUP BY employee.employee_id, employee.department_id, PAY_DATE, SALARY_PAID_\n"
+        + "QUALIFY (ROW_NUMBER() OVER (PARTITION BY employee.employee_id ORDER BY COUNT(*) IS NULL DESC, COUNT(*) DESC)) = 1) AS t3\n"
+        + "ON t3.employee_id = salary.employee_id\n"
+        + "WHEN MATCHED AND t3.employee_id = salary.employee_id THEN UPDATE SET salary_paid = t3.SALARY_PAID_";
+    sql(sql)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  @Test void testLeftJoinForAmbiguityColumn() {
+    final String sql = "SELECT d.deptno, e.deptno\n"
+        + "FROM dept d\n"
+        + "LEFT JOIN emp e\n"
+        + " ON d.deptno = e.deptno\n"
+        + " AND d.deptno < 15\n"
+        + " AND d.deptno > 10\n"
+        + " AND d.deptno = (select e.deptno from emp e where e.empno = 1)\n"
+        + "WHERE e.job LIKE 'PRESIDENT'";
+    final String expected = "SELECT DEPT.DEPTNO, EMP.DEPTNO AS DEPTNO0"
+        + "\nFROM SCOTT.DEPT"
+        + "\nLEFT JOIN SCOTT.EMP ON DEPT.DEPTNO = EMP.DEPTNO "
+        + "AND (DEPT.DEPTNO > 10 AND DEPT.DEPTNO < 15) "
+        + "AND DEPT.DEPTNO = (SELECT DEPTNO\nFROM SCOTT.EMP\nWHERE CAST(EMPNO AS INT64) = 1)"
+        + "\nWHERE EMP.JOB LIKE 'PRESIDENT'";
+    sql(sql).schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
+        .withBigQuery().ok(expected);
+  }
+
+  @Test void testQualifySubQueryKeepsOrderByAliasNotInFinalProjection() {
+    final String sql = ""
+        + "SELECT y.\"employee_id\", y.\"hire_date\", y.\"department_id\" AS new_department_id\n"
+        + "FROM (\n"
+        + "  SELECT e.\"employee_id\", e.\"hire_date\", e.\"department_id\", COUNT(*) AS total_count\n"
+        + "  FROM \"foodmart\".\"employee\" e\n"
+        + "  WHERE e.\"employee_id\" IN (\n"
+        + "    SELECT \"employee_id\"\n"
+        + "    FROM \"foodmart\".\"employee\"\n"
+        + "    WHERE \"department_id\" NOT IN (1, 4))\n"
+        + "  GROUP BY e.\"employee_id\", e.\"hire_date\", e.\"department_id\"\n"
+        + ") y\n"
+        + "QUALIFY ROW_NUMBER() OVER (\n"
+        + "  PARTITION BY y.\"employee_id\", y.\"hire_date\"\n"
+        + "  ORDER BY y.total_count DESC) = 1";
+
+    final String expected = "SELECT employee_id, hire_date, "
+        + "department_id AS NEW_DEPARTMENT_ID\nFROM foodmart.employee\n"
+        + "WHERE employee_id IN (SELECT employee_id\nFROM foodmart.employee\n"
+        + "WHERE NOT (department_id = 1 OR department_id = 4))\n"
+        + "GROUP BY employee_id, hire_date, department_id\n"
+        + "QUALIFY (ROW_NUMBER() OVER (PARTITION BY employee_id, hire_date "
+        + "ORDER BY COUNT(*) IS NULL DESC, COUNT(*) DESC)) = 1";
+
+    sql(sql)
+        .withBigQuery()
+        .ok(expected);
   }
 
   /** Fluid interface to run tests. */

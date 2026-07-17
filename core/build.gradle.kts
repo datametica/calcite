@@ -24,6 +24,7 @@ plugins {
     kotlin("jvm")
     id("com.github.vlsi.crlf")
     id("com.github.vlsi.ide")
+    id("com.github.autostyle")
 //    id("io.freefair.aspectj.post-compile-weaving") version "6.6.2"
     calcite.fmpp
     calcite.javacc
@@ -91,7 +92,6 @@ dependencies {
     testPostgresql("org.postgresql:postgresql")
 
     testImplementation(project(":testkit"))
-    testImplementation("commons-lang:commons-lang")
     testImplementation("net.bytebuddy:byte-buddy")
     testImplementation("net.hydromatic:foodmart-queries")
     testImplementation("net.hydromatic:quidem")

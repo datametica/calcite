@@ -20,6 +20,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.apache.calcite.util.SqlCommentUtil;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
@@ -42,7 +43,8 @@ public class SqlInsert extends SqlCall {
               (SqlNodeList) operands[0],
               operands[1],
               operands[2],
-              (SqlNodeList) operands[3]);
+              (SqlNodeList) operands[3],
+              (SqlNodeList) operands[4]);
         }
       };
 
@@ -50,6 +52,7 @@ public class SqlInsert extends SqlCall {
   SqlNode targetTable;
   SqlNode source;
   @Nullable SqlNodeList columnList;
+  @Nullable SqlNodeList returningList;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -66,6 +69,21 @@ public class SqlInsert extends SqlCall {
     assert keywords != null;
   }
 
+  public SqlInsert(SqlParserPos pos,
+      SqlNodeList keywords,
+      SqlNode targetTable,
+      SqlNode source,
+      @Nullable SqlNodeList columnList,
+      @Nullable SqlNodeList returningList) {
+    super(pos);
+    this.keywords = keywords;
+    this.targetTable = targetTable;
+    this.source = source;
+    this.columnList = columnList;
+    this.returningList = returningList;
+    assert keywords != null;
+  }
+
   //~ Methods ----------------------------------------------------------------
 
   @Override public SqlKind getKind() {
@@ -78,7 +96,7 @@ public class SqlInsert extends SqlCall {
 
   @SuppressWarnings("nullness")
   @Override public List<SqlNode> getOperandList() {
-    return ImmutableNullableList.of(keywords, targetTable, source, columnList);
+    return ImmutableNullableList.of(keywords, targetTable, source, columnList, returningList);
   }
 
   /** Returns whether this is an UPSERT statement.
@@ -105,6 +123,9 @@ public class SqlInsert extends SqlCall {
       break;
     case 3:
       columnList = (SqlNodeList) operand;
+      break;
+    case 4:
+      returningList = (SqlNodeList) operand;
       break;
     default:
       throw new AssertionError(i);
@@ -150,6 +171,11 @@ public class SqlInsert extends SqlCall {
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+    SqlWriter.Frame openingFrame = null;
+    if (!writer.inQuery() && !writer.inWithBody()) {
+      openingFrame = writer.startList(SqlWriter.FrameTypeEnum.SUB_QUERY, "(", ")");
+    }
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     final SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.SELECT);
     writer.sep(isUpsert() ? "UPSERT INTO" : "INSERT INTO");
     final int opLeft = getOperator().getLeftPrec();
@@ -160,7 +186,16 @@ public class SqlInsert extends SqlCall {
     }
     writer.newlineAndIndent();
     source.unparse(writer, 0, 0);
+    if (returningList != null) {
+      writer.newlineAndIndent();
+      writer.keyword("RETURNING");
+      returningList.unparse(writer, 0, 0);
+    }
     writer.endList(frame);
+    if (openingFrame != null) {
+      writer.endList(openingFrame);
+    }
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @Override public void validate(SqlValidator validator, SqlValidatorScope scope) {

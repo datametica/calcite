@@ -18,6 +18,9 @@ package org.apache.calcite.rex;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
+
+import java.util.Set;
 
 /**
  * Variable which references ordinal in an ORDER BY clause.
@@ -28,11 +31,19 @@ public class RexOrdinalRef extends RexInputRef {
     super(index, type);
   }
 
+  RexOrdinalRef(int index, RelDataType type, Set<Comment> comments) {
+    super(index, type, comments);
+  }
+
   public static RexOrdinalRef of(RexInputRef inputRef) {
     return new RexOrdinalRef(inputRef.getIndex(), inputRef.getType());
   }
 
   @Override public SqlKind getKind() {
     return SqlKind.ORDINAL_REF;
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexOrdinalRef(index, type, comments);
   }
 }

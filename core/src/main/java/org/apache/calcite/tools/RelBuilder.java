@@ -18,6 +18,7 @@ package org.apache.calcite.tools;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Experimental;
+import org.apache.calcite.plan.CTEDefinationTraitDef;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.Convention;
@@ -62,6 +63,7 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.hint.Hintable;
 import org.apache.calcite.rel.hint.RelHint;
+import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.metadata.RelColumnMapping;
@@ -109,6 +111,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.TableFunctionReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -2075,7 +2078,7 @@ public class RelBuilder {
 
     // Simplify expressions.
     if (config.simplify()) {
-      nodeList.replaceAll(e -> simplifier.simplifyPreservingType(e));
+      nodeList.replaceAll(e -> e.getSkipSimplifier() ? e : simplifier.simplifyPreservingType(e));
     }
 
     // Replace null names with generated aliases.
@@ -2395,8 +2398,14 @@ public class RelBuilder {
       return inferAlias(exprList, ((RexCall) expr).getOperands().get(0), -1);
     case AS:
       final RexCall call = (RexCall) expr;
+      Set<Comment> comments = new HashSet<>();
+      call.getOperands().forEach(operand -> {
+        comments.addAll(operand.getComment());
+      });
+      comments.addAll(call.getComment());
+      boolean skipSimplifier = call.getSkipSimplifier();
       if (i >= 0) {
-        exprList.set(i, call.getOperands().get(0));
+        exprList.set(i, call.getOperands().get(0).copy(comments).setSkipSimplifier(skipSimplifier));
       }
       NlsString value = (NlsString) ((RexLiteral) call.getOperands().get(1)).getValue();
       return castNonNull(value)
@@ -2409,21 +2418,42 @@ public class RelBuilder {
   /** Creates an {@link Aggregate} that makes the
    * relational expression distinct on all fields. */
   public RelBuilder distinct() {
-    return aggregate_((GroupKeyImpl) groupKey(fields()), ImmutableList.of());
+    return aggregate_((GroupKeyImpl) groupKey(fields()), ImmutableList.of(), false);
   }
 
-  /** Creates an {@link Aggregate} with an array of
-   * calls. */
+  /** Creates a {@code GROUP BY ALL} distinct — equivalent to {@link #distinct()}
+   * but emits {@code GROUP BY ALL} on dialects that support it
+   * (e.g. Snowflake, BigQuery). */
+  public RelBuilder distinct(boolean groupByAll) {
+    return aggregate_((GroupKeyImpl) groupKey(fields()), ImmutableList.of(), groupByAll);
+  }
+
+  /** Creates an {@link Aggregate} with an array of calls. */
   @SuppressWarnings({"unchecked", "rawtypes"})
   public RelBuilder aggregate(GroupKey groupKey, AggCall... aggCalls) {
     return aggregate_((GroupKeyImpl) groupKey,
-        (ImmutableList) ImmutableList.copyOf(aggCalls));
+        (ImmutableList) ImmutableList.copyOf(aggCalls), false);
   }
 
-  /** Creates an {@link Aggregate} with an array of
-   * {@link AggregateCall}s. */
+  /** Creates an {@link Aggregate} with an array of calls and a GROUP BY ALL flag.
+   * When {@code groupByAll} is true and the target dialect supports it
+   * (e.g. Snowflake, BigQuery), the query is unparsed as {@code GROUP BY ALL}. */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public RelBuilder aggregate(GroupKey groupKey, boolean groupByAll, AggCall... aggCalls) {
+    return aggregate_((GroupKeyImpl) groupKey,
+        (ImmutableList) ImmutableList.copyOf(aggCalls), groupByAll);
+  }
+
+  /** Creates an {@link Aggregate} with an array of {@link AggregateCall}s. */
   public RelBuilder aggregate(GroupKey groupKey,
       List<AggregateCall> aggregateCalls) {
+    return aggregate(groupKey, aggregateCalls, false);
+  }
+
+  /** Creates an {@link Aggregate} with an array of {@link AggregateCall}s and
+   * a GROUP BY ALL flag. */
+  public RelBuilder aggregate(GroupKey groupKey,
+      List<AggregateCall> aggregateCalls, boolean groupByAll) {
     return aggregate_((GroupKeyImpl) groupKey,
         aggregateCalls.stream()
             .map(aggregateCall ->
@@ -2431,20 +2461,28 @@ public class RelBuilder {
                     aggregateCall.getArgList().stream()
                         .map(this::field)
                         .collect(toImmutableList())))
-            .collect(toImmutableList()));
+            .collect(toImmutableList()),
+        groupByAll);
   }
 
   /** Creates an {@link Aggregate} with multiple calls. */
   @SuppressWarnings({"unchecked", "rawtypes"})
   public RelBuilder aggregate(GroupKey groupKey,
       Iterable<? extends AggCall> aggCalls) {
+    return aggregate(groupKey, aggCalls, false);
+  }
+
+  /** Creates an {@link Aggregate} with multiple calls and a GROUP BY ALL flag. */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public RelBuilder aggregate(GroupKey groupKey,
+      Iterable<? extends AggCall> aggCalls, boolean groupByAll) {
     return aggregate_((GroupKeyImpl) groupKey,
-        ImmutableList.<AggCallPlus>copyOf((Iterable) aggCalls));
+        ImmutableList.<AggCallPlus>copyOf((Iterable) aggCalls), groupByAll);
   }
 
   /** Creates an {@link Aggregate} with multiple calls. */
   private RelBuilder aggregate_(GroupKeyImpl groupKey,
-      final ImmutableList<AggCallPlus> aggCalls) {
+      final ImmutableList<AggCallPlus> aggCalls, boolean groupByAll) {
     if (groupKey.nodes.isEmpty()
         && aggCalls.isEmpty()
         && config.pruneInputOfAggregate()) {
@@ -2494,7 +2532,7 @@ public class RelBuilder {
           ImmutableSortedMultiset.copyOf(ImmutableBitSet.COMPARATOR,
               groupSetList);
       if (aggCalls.stream().anyMatch(RelBuilder::isGroupId)
-          /*|| !ImmutableBitSet.ORDERING.isStrictlyOrdered(groupSetMultiset)*/) {
+          || !ImmutableBitSet.ORDERING.isStrictlyOrdered(groupSetMultiset)) {
         return rewriteAggregateWithDuplicateGroupSets(groupSet, groupSetMultiset,
             aggCalls);
       }
@@ -2536,8 +2574,8 @@ public class RelBuilder {
     PairList<ImmutableSet<String>, RelDataTypeField> inFields = frame.fields;
     final ImmutableBitSet groupSet2;
     final ImmutableList<ImmutableBitSet> groupSets2;
-    if (config.pruneInputOfAggregate()
-        && r instanceof Project) {
+    if (config.pruneInputOfAggregate() && r instanceof Project
+        && r.getTraitSet().getTrait(CTEDefinationTraitDef.instance) == null) {
       final Set<Integer> fieldsUsed =
           getAllUsedProjectionFields(groupSet, aggregateCalls, hasSubquery, inFields.size());
       // Some parts of the system can't handle rows with zero fields, so
@@ -2594,7 +2632,7 @@ public class RelBuilder {
 
     if (!config.dedupAggregateCalls() || Util.isDistinct(aggregateCalls)) {
       return aggregate_(groupSet2, groupSets2, r, aggregateCalls,
-          registrar.extraNodes, inFields);
+          registrar.extraNodes, inFields, groupByAll);
     }
 
     // There are duplicate aggregate calls. Rebuild the list to eliminate
@@ -2616,7 +2654,7 @@ public class RelBuilder {
       projects.add(groupSet.cardinality() + i, aggregateCall.name);
     }
     aggregate_(groupSet2, groupSets2, r, distinctAggregateCalls,
-        registrar.extraNodes, inFields);
+        registrar.extraNodes, inFields, groupByAll);
     return project(projects.transform((i, name) -> aliasMaybe(field(i), name)));
   }
 
@@ -2712,10 +2750,14 @@ public class RelBuilder {
   private RelBuilder aggregate_(ImmutableBitSet groupSet,
       ImmutableList<ImmutableBitSet> groupSets, RelNode input,
       List<AggregateCall> aggregateCalls, List<RexNode> extraNodes,
-      PairList<ImmutableSet<String>, RelDataTypeField> inFields) {
-    final RelNode aggregate =
+      PairList<ImmutableSet<String>, RelDataTypeField> inFields,
+      boolean groupByAll) {
+    RelNode aggregate =
         struct.aggregateFactory.createAggregate(input,
             ImmutableList.of(), groupSet, groupSets, aggregateCalls);
+    if (groupByAll && aggregate instanceof LogicalAggregate) {
+      aggregate = ((LogicalAggregate) aggregate).withGroupByAll(true);
+    }
 
     // build field list
     final PairList<ImmutableSet<String>, RelDataTypeField> fields =
@@ -3648,11 +3690,24 @@ public class RelBuilder {
       return collation(((RexCall) node).getOperands().get(0), direction,
           RelFieldCollation.NullDirection.LAST, extraNodes);
     default:
-      final int fieldIndex = extraNodes.size();
-      extraNodes.add(node);
+      final int fieldIndex = (node instanceof RexCall
+          && !extraNodes.isEmpty() && hasSortNode((RexCall) node, extraNodes))
+          ? extraNodes.indexOf(node) : extraNodes.size();
+
+      if (!(node instanceof RexCall) || extraNodes.isEmpty()
+          || !hasSortNode((RexCall) node, extraNodes)) {
+        extraNodes.add(node);
+      }
+
       return new RelFieldCollation(fieldIndex, direction,
           first(nullDirection, direction.defaultNullDirection()));
     }
+  }
+
+  private static boolean hasSortNode(RexCall rexCall, List<RexNode> extraNodes) {
+    return extraNodes.stream().filter(i -> i instanceof RexCall)
+        .map(i -> (RexCall) i)
+        .anyMatch(rexCall::equals);
   }
 
   private static RexFieldCollation rexCollation(RexNode node,
@@ -3874,7 +3929,8 @@ public class RelBuilder {
             + expressionList + "], [" + axisList + "]");
       }
       aggCalls.forEach(aggCall -> {
-        final String alias2 = alias + "_" + ((AggCallPlus) aggCall).alias();
+        final String aggAlias = ((AggCallPlus) aggCall).alias();
+        final String alias2 = alias + (aggAlias != null ? "_" + aggAlias : "");
         final List<RexNode> filters = new ArrayList<>();
         Pair.forEach(axisList, expressionList, (axis, expression) ->
             filters.add(equals(axis, expression)));
@@ -4355,7 +4411,7 @@ public class RelBuilder {
               .stream()
               .map(orderKey ->
                   collation(orderKey, RelFieldCollation.Direction.ASCENDING,
-                      null, Collections.emptyList()))
+                      null, registrar.extraNodes))
               .collect(Collectors.toList()));
 //      if (aggFunction instanceof SqlCountAggFunction && !distinct) {
 //        args = args.stream()

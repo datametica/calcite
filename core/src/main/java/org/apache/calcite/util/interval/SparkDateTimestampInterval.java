@@ -88,7 +88,7 @@ public class SparkDateTimestampInterval {
     if ("DATE_ADD".equals(call.getOperator().getName())
         || "DATE_SUB".equals(call.getOperator().getName())) {
       call.operand(0).unparse(writer, leftPrec, rightPrec);
-      writer.sep(sign);
+      writer.keyword(sign);
       writeIntervalLiteral(writer, call);
     } else {
       handleTimeUnitInterval(writer, call, leftPrec, rightPrec, sign);
@@ -226,9 +226,12 @@ public class SparkDateTimestampInterval {
       String typeName, String separator) {
     String value = ((SqlIntervalLiteral) call.operand(1)).getValue().toString();
     String[] dayTimeSplit = value.split(separator);
+    int sign =
+        ((SqlIntervalLiteral.IntervalValue) ((SqlIntervalLiteral) call.operand(1)).getValue()).getSign();
     Queue<String> queue = generateQueueForInterval(typeName);
-    writer.print(" (INTERVAL '" + intValue(dayTimeSplit[0]) + "' " + queue.poll() + " + ");
-    writer.print("INTERVAL '" + intValue(dayTimeSplit[1]) + "' " + queue.poll());
+    String signString = sign == -1 ? "-" : "";
+    writer.print(" (INTERVAL '" + signString + intValue(dayTimeSplit[0]) + "' " + queue.poll() + " + ");
+    writer.print("INTERVAL '" + signString + intValue(dayTimeSplit[1]) + "' " + queue.poll());
     writer.print(")");
   }
 }

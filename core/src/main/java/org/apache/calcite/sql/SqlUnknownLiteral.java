@@ -20,6 +20,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import static java.util.Objects.requireNonNull;
@@ -45,8 +46,10 @@ public class SqlUnknownLiteral extends SqlLiteral {
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
     final NlsString nlsString = new NlsString(getValue(), null, null);
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     writer.keyword(tag);
     writer.literal(nlsString.asSql(true, true, writer.getDialect()));
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
 

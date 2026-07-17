@@ -140,7 +140,11 @@ public class FilterCorrelateRule
         || corr.getLeft() instanceof RelSubset)) {
       HepRelVertex rightHepRelVertex = (HepRelVertex) corr.getRight();
       HepRelVertex leftHepRelVertex = (HepRelVertex) corr.getLeft();
-      if (!(rightHepRelVertex.getCurrentRel() instanceof LogicalCorrelate
+      if (rightHepRelVertex.getCurrentRel() instanceof Uncollect
+          && (leftHepRelVertex.getCurrentRel() instanceof LogicalJoin
+          || leftHepRelVertex.getCurrentRel() instanceof LogicalCorrelate)) {
+        return;
+      } else if (!(rightHepRelVertex.getCurrentRel() instanceof LogicalCorrelate
           || leftHepRelVertex.getCurrentRel() instanceof LogicalCorrelate)
           && (rightHepRelVertex.getCurrentRel() instanceof Uncollect
           || leftHepRelVertex.getCurrentRel() instanceof Uncollect)) {
@@ -168,10 +172,19 @@ public class FilterCorrelateRule
 
     while (!stack.isEmpty()) {
       rightEntry = stack.pop();
+      if (allConditions.size() <= 1) {
+        left =
+            LogicalJoin.create(left, rightEntry.getLeft(), ImmutableList.of(),
+                allConditions.get(0), data, rightEntry.getRight());
+        return builder.push(left).build();
+      }
       left =
           LogicalJoin.create(left, rightEntry.getLeft(), ImmutableList.of(),
-                  allConditions.get(0), data, rightEntry.getRight());
-      return builder.push(left).build();
+              builder.literal(true), data, rightEntry.getRight());
+      RelNode newLeft = builder.push(left).build();
+      return builder.push(newLeft)
+          .filter(builder.and(allConditions))
+          .build();
     }
     return builder.push(left)
         .filter(builder.and(allConditions))

@@ -18,11 +18,13 @@ package org.apache.calcite.rex;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.Comment;
 
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Collection;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
@@ -40,14 +42,25 @@ import static java.util.Objects.requireNonNull;
  *
  * <p>All sub-classes of RexNode are immutable.
  */
-public abstract class RexNode {
+public abstract class RexNode extends CommentNode {
 
   //~ Instance fields --------------------------------------------------------
 
   // Effectively final. Set in each sub-class constructor, and never re-set.
   protected @MonotonicNonNull String digest;
+  protected boolean skipSimplifier = false;
+
+  public RexNode() {
+    super();
+  }
+
+  public RexNode(Set<Comment> comments) {
+    super(comments);
+  }
 
   //~ Methods ----------------------------------------------------------------
+
+  @Override public abstract RexNode copy(Set<Comment> comments);
 
   public abstract RelDataType getType();
 
@@ -82,6 +95,25 @@ public abstract class RexNode {
    */
   public SqlKind getKind() {
     return SqlKind.OTHER;
+  }
+
+  /**
+   * Returns the skipSimplifier of node this is.
+   *
+   * @return Node kind, never null
+   */
+  public boolean getSkipSimplifier() {
+    return skipSimplifier;
+  }
+
+  /**
+   * Returns the RexNode with updated skipSimplifier flag value.
+   *
+   * @return this
+   */
+  public RexNode setSkipSimplifier(boolean skipSimplifier) {
+    this.skipSimplifier = skipSimplifier;
+    return this;
   }
 
   @Override public String toString() {

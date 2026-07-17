@@ -119,7 +119,7 @@ public class RexShuttle implements RexVisitor<RexNode> {
       // To do that, we would need to take a RexBuilder and
       // watch out for special operators like CAST and NEW where
       // the type is embedded in the original call.
-      return call.clone(call.getType(), clonedOperands);
+      return call.clone(call.getType(), clonedOperands).setSkipSimplifier(call.skipSimplifier);
     } else {
       return call;
     }

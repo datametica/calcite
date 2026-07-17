@@ -402,6 +402,12 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker INTEGER =
       family(SqlTypeFamily.INTEGER);
 
+  public static final SqlSingleOperandTypeChecker LESS_THAN_SIX_INTEGERS =
+      family(
+          ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+          number -> number < 6);
+
   public static final SqlSingleOperandTypeChecker NUMERIC_OPTIONAL_NUMERIC =
       family(ImmutableList.of(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
           // Second operand optional (operand index 0, 1)
@@ -428,6 +434,10 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker NUMERIC_NUMERIC =
       family(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC);
 
+  public static final SqlSingleOperandTypeChecker NUMERIC_NUMERIC_OPTIONAL_NUMERIC =
+      family(ImmutableList.of(SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC, SqlTypeFamily.NUMERIC),
+          number -> number == 2);
+
   public static final SqlSingleOperandTypeChecker INTEGER_BOOLEAN =
       family(SqlTypeFamily.INTEGER, SqlTypeFamily.BOOLEAN);
 
@@ -437,8 +447,17 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker EXACT_NUMERIC =
       family(SqlTypeFamily.EXACT_NUMERIC);
 
+  public static final SqlSingleOperandTypeChecker ARRAY_INTEGER =
+      family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER);
+
   public static final SqlSingleOperandTypeChecker ARRAY_INTEGER_INTEGER =
       family(SqlTypeFamily.ARRAY, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
+
+  public static final SqlSingleOperandTypeChecker GEOMETRY_GEOMETRY =
+      family(SqlTypeFamily.GEO, SqlTypeFamily.GEO);
+
+  public static final SqlSingleOperandTypeChecker INTEGER_INTEGER_INTEGER =
+      family(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
 
   public static final SqlSingleOperandTypeChecker EXACT_NUMERIC_EXACT_NUMERIC =
       family(SqlTypeFamily.EXACT_NUMERIC, SqlTypeFamily.EXACT_NUMERIC);
@@ -446,8 +465,14 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker BINARY =
       family(SqlTypeFamily.BINARY);
 
+  public static final SqlSingleOperandTypeChecker CLOB =
+      new TypeNameChecker(SqlTypeName.CLOB);
+
   public static final SqlSingleOperandTypeChecker BINARY_BINARY =
       family(SqlTypeFamily.BINARY, SqlTypeFamily.BINARY);
+
+  public static final SqlSingleOperandTypeChecker BINARY_STRING =
+      family(SqlTypeFamily.BINARY, SqlTypeFamily.STRING);
 
   public static final SqlSingleOperandTypeChecker STRING =
       family(SqlTypeFamily.STRING);
@@ -485,6 +510,12 @@ public abstract class OperandTypes {
           // Third operand optional (operand index 0, 1, 2)
           number -> number == 2);
 
+  public static final FamilyOperandTypeChecker INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER =
+      family(
+          ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+          number -> number == 3);
+
   public static final FamilyOperandTypeChecker STRING_OPTIONAL_STRING_OPTIONAL_STRING =
       family(
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
@@ -499,10 +530,26 @@ public abstract class OperandTypes {
           // Third operand optional (operand index 0, 1, 2)
           number -> number == 2);
 
+  public static final FamilyOperandTypeChecker NUMERIC_STRING_OPTIONAL_STRING =
+      family(
+          ImmutableList.of(SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING,
+              SqlTypeFamily.STRING),
+          // Third operand optional (operand index 0, 1, 2)
+          number -> number == 2);
+
   public static final FamilyOperandTypeChecker STRING_INTEGER_OPTIONAL_STRING =
       family(ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER, SqlTypeFamily.STRING),
       // Third operand optional
         number -> number == 2);
+
+  public static final SqlSingleOperandTypeChecker JSON_ARRAY =
+      family(SqlTypeFamily.JSON, SqlTypeFamily.ARRAY);
+
+  public static final SqlSingleOperandTypeChecker JSON_STRING =
+      family(SqlTypeFamily.JSON, SqlTypeFamily.STRING);
+
+  public static final SqlSingleOperandTypeChecker STRING_JSON =
+      family(SqlTypeFamily.STRING, SqlTypeFamily.JSON);
 
   public static final SqlSingleOperandTypeChecker CHARACTER =
       family(SqlTypeFamily.CHARACTER);
@@ -565,11 +612,17 @@ public abstract class OperandTypes {
   public static final FamilyOperandTypeChecker INTERVAL_INTERVAL =
       family(SqlTypeFamily.DATETIME_INTERVAL, SqlTypeFamily.DATETIME_INTERVAL);
 
+  public static final FamilyOperandTypeChecker TIME_TIME =
+      family(SqlTypeFamily.TIME, SqlTypeFamily.TIME);
+
   public static final SqlSingleOperandTypeChecker MULTISET =
       family(SqlTypeFamily.MULTISET);
 
   public static final SqlSingleOperandTypeChecker ARRAY =
       family(SqlTypeFamily.ARRAY);
+
+  public static final SqlSingleOperandTypeChecker ARRAY_OR_VARRAY =
+      family(SqlTypeFamily.ARRAY).or(family(SqlTypeFamily.VARRAY));
 
   public static final SqlSingleOperandTypeChecker ARRAY_ARRAY =
       family(SqlTypeFamily.ARRAY, SqlTypeFamily.ARRAY);
@@ -976,8 +1029,26 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker STRING_STRING_INTEGER =
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER);
 
+  public static final SqlSingleOperandTypeChecker
+      INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER =
+      family(
+          ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
+          number -> number == 6 || number == 7);
+
+  public static final SqlSingleOperandTypeChecker
+      INTEGER_INTEGER_INTEGER_INTEGER_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER_OPTIONAL_STRING =
+      family(
+          ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.INTEGER, SqlTypeFamily.STRING),
+          number -> number >= 6 && number <= 8);
+
   public static final SqlSingleOperandTypeChecker NULL_STRING_INTEGER =
       family(SqlTypeFamily.NULL, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER);
+
+  public static final SqlSingleOperandTypeChecker NUMERIC_INTEGER_INTEGER =
+      family(SqlTypeFamily.NUMERIC, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER);
 
   public static final SqlSingleOperandTypeChecker STRING_STRING_INTEGER_INTEGER =
       family(SqlTypeFamily.STRING, SqlTypeFamily.STRING,
@@ -988,11 +1059,22 @@ public abstract class OperandTypes {
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,
               SqlTypeFamily.INTEGER), i -> i == 2 || i == 3);
 
+  public static final SqlSingleOperandTypeChecker STRING_INTEGER_OPTIONAL_INTEGER_OPTIONAL_STRING =
+      family(
+          ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER,
+              SqlTypeFamily.STRING), i -> i == 2 || i == 3);
+
   public static final SqlSingleOperandTypeChecker
       STRING_STRING_OPTIONAL_INTEGER_OPTIONAL_INTEGER_OPTIONAL_INTEGER =
       family(
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,
               SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER), i -> i == 2 || i == 3 || i == 4);
+
+  public static final SqlSingleOperandTypeChecker DATETIME_INTEGER_STRING_OPTIONAL_STRING =
+      family(
+          ImmutableList.of(SqlTypeFamily.DATETIME, SqlTypeFamily.INTEGER, SqlTypeFamily.STRING,
+              SqlTypeFamily.STRING),
+          number -> number == 3);
 
   public static final SqlSingleOperandTypeChecker STRING_INTEGER =
       family(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER);
@@ -1005,6 +1087,10 @@ public abstract class OperandTypes {
       family(
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER,
               SqlTypeFamily.INTEGER), i -> i == 2);
+
+  public static final SqlSingleOperandTypeChecker STRING_OPTIONAL_INTEGER =
+      family(
+          ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.INTEGER), i -> i == 1);
 
   public static final SqlSingleOperandTypeChecker STRING_NUMERIC =
       family(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC);
@@ -1048,14 +1134,36 @@ public abstract class OperandTypes {
       family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.ANY);
   public static final SqlSingleOperandTypeChecker ANY_STRING_STRING =
       family(SqlTypeFamily.ANY, SqlTypeFamily.STRING, SqlTypeFamily.STRING);
+  public static final SqlSingleOperandTypeChecker ANY_DATETIME_DATETIME =
+      family(SqlTypeFamily.ANY, SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME);
   public static final SqlSingleOperandTypeChecker ANY_STRING_OPTIONAL_STRING =
       family(ImmutableList.of(SqlTypeFamily.ANY, SqlTypeFamily.STRING, SqlTypeFamily.STRING),
           // Third operand optional (operand index 0, 1, 2)
           number -> number == 2);
+
+  public static final SqlSingleOperandTypeChecker ANY_OPTIONAL_BOOLEAN =
+      family(ImmutableList.of(SqlTypeFamily.ANY, SqlTypeFamily.BOOLEAN),
+          // Second operand optional (operand index 0, 1)
+          number -> number == 1);
+
   public static final SqlSingleOperandTypeChecker ANY_DATETIME_DATETIME_STRING =
       family(ImmutableList.of(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME, SqlTypeFamily.STRING),
           // Third operand optional (operand index 0, 1, 2)
         number -> number == 2);
+
+
+  /**
+   * Operand type-checking strategy where the second and third operands must be comparable.
+   * This is used when the operator has three operands and only the
+   * second and third operands need to be comparable.
+   */
+  public static final SqlSingleOperandTypeChecker SECOND_THIRD_SAME =
+      new SameOperandTypeChecker(3) {
+        @Override protected List<Integer> getOperandList(int operandCount) {
+          // Only check the second and third operands
+          return ImmutableList.of(1, 2);
+        }
+      };
 
   /**
    * Operand type-checking strategy used by {@code ARG_MIN(value, comp)} and
@@ -1161,6 +1269,22 @@ public abstract class OperandTypes {
   public static final SqlSingleOperandTypeChecker INTERVALINTERVAL_INTERVALDATETIME =
       INTERVAL_SAME_SAME.or(INTERVAL_DATETIME);
 
+  public static final FamilyOperandTypeChecker
+      GEOGRAPHY_NUMERIC_OPTIONAL_NUMERIC_OPTIONAL_STRING_OPTIONAL_STRING_OPTIONAL_BOOLEAN =
+      family(
+          ImmutableList.of(
+              SqlTypeFamily.GEOGRAPHY,
+              SqlTypeFamily.NUMERIC,
+              SqlTypeFamily.NUMERIC,
+              SqlTypeFamily.STRING,
+              SqlTypeFamily.STRING,
+              SqlTypeFamily.BOOLEAN),
+          number ->
+              number == 2
+                  || number == 3
+                  || number == 4
+                  || number == 5);
+
   // TODO: datetime+interval checking missing
   // TODO: interval+datetime checking missing
   public static final SqlSingleOperandTypeChecker PLUS_OPERATOR =
@@ -1185,7 +1309,7 @@ public abstract class OperandTypes {
 
   public static final SqlSingleOperandTypeChecker MINUS_OPERATOR =
       // TODO:  compatibility check
-      NUMERIC_NUMERIC.or(INTERVAL_SAME_SAME).or(DATETIME_INTERVAL).or(DATE_DATE);
+      NUMERIC_NUMERIC.or(INTERVAL_SAME_SAME).or(DATETIME_INTERVAL).or(DATE_DATE).or(TIME_TIME);
 
   public static final FamilyOperandTypeChecker MINUS_DATE_OPERATOR =
       new FamilyOperandTypeChecker(

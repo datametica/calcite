@@ -19,6 +19,7 @@ package org.apache.calcite.rex;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlWindow;
+import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ControlFlowException;
 import org.apache.calcite.util.Util;
 
@@ -28,6 +29,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Call to an aggregate function over a window.
@@ -70,6 +72,21 @@ public class RexOver extends RexCall {
       boolean distinct,
       boolean ignoreNulls) {
     super(type, op, operands);
+    Preconditions.checkArgument(op.isAggregator());
+    this.window = Objects.requireNonNull(window, "window");
+    this.distinct = distinct;
+    this.ignoreNulls = ignoreNulls;
+  }
+
+  RexOver(
+      RelDataType type,
+      SqlAggFunction op,
+      List<RexNode> operands,
+      RexWindow window,
+      boolean distinct,
+      boolean ignoreNulls,
+      Set<Comment> comments) {
+    super(type, op, operands, comments);
     Preconditions.checkArgument(op.isAggregator());
     this.window = Objects.requireNonNull(window, "window");
     this.distinct = distinct;
@@ -222,5 +239,9 @@ public class RexOver extends RexCall {
               op.allowsFraming());
     }
     return hash;
+  }
+
+  @Override public RexNode copy(Set<Comment> comments) {
+    return new RexOver(type, getAggOperator(), operands, window, distinct, ignoreNulls, comments);
   }
 }

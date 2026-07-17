@@ -19,6 +19,9 @@ package org.apache.calcite.rel.rel2sql;
 import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.PivotRelTraitDef;
 import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.SubQueryAliasTrait;
+import org.apache.calcite.plan.SubQueryAliasTraitDef;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
@@ -29,14 +32,18 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.util.SqlShuttle;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Class to identify Rel structure which is of UNPIVOT Type.
@@ -77,7 +84,20 @@ public class PivotRelToSqlUtil {
     }
 
     //create axisList parameter
-    SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery);
+    SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery, e);
+    boolean[] hasQualifiedAxis = {false};
+    String subQueryAlias = getSubQueryAlias(e.getInput().getTraitSet());
+    axisNodeList.accept(new SqlShuttle() {
+      @Override public SqlNode visit(SqlIdentifier alias) {
+        if (alias.names.size() > 1 && subQueryAlias.equalsIgnoreCase(alias.names.get(0))) {
+          hasQualifiedAxis[0] = true;
+        }
+        return alias;
+      }
+    });
+    if (hasQualifiedAxis[0]) {
+      query = SqlStdOperatorTable.AS.createCall(pos, query, new SqlIdentifier(subQueryAlias, pos));
+    }
 
     //create pivotAggregateColumnList parameter
     SqlNodeList pivotAggregateColumnList = getAggregateColumnNode(e);
@@ -97,15 +117,14 @@ public class PivotRelToSqlUtil {
     SqlPivot sqlPivot =
         new SqlPivot(pos, query, pivotAggregateColumnList, axisNodeList, pivotInClauseValueNodes);
     SqlNode sqlTableAlias = sqlPivot;
-    if (pivotTableAlias != null) {
+    if (pivotTableAlias != null && builder.context.dialect.supportsPivotTableAlias()) {
       sqlTableAlias =
           SqlStdOperatorTable.AS.createCall(pos, sqlPivot,
               new SqlIdentifier(pivotTableAlias, pos));
     }
     SqlNode select =
-        new SqlSelect(SqlParserPos.ZERO, null, null, sqlTableAlias,
-            builder.select.getWhere(), null,
-            builder.select.getHaving(), null, builder.select.getOrderList(),
+        new SqlSelect(SqlParserPos.ZERO, null, SqlNodeList.EMPTY, sqlTableAlias,
+            null, null, null, null, builder.select.getOrderList(),
             null, null, SqlNodeList.EMPTY);
     return select;
   }
@@ -119,49 +138,70 @@ public class PivotRelToSqlUtil {
           .filter(x -> !(x instanceof SqlIdentifier))
           .map(node -> {
             // Extract the specific node as per your expression
-            SqlNode secondOperand = ((SqlBasicCall)
-                ((SqlCase)
-                    ((SqlBasicCall)
-                        ((SqlBasicCall) node)
-                            .getOperandList().get(0))
-                        .operand(0))
-                    .getWhenOperands().get(0))
-                .operand(1);
+            SqlBasicCall sqlBasicCall = (SqlBasicCall) ((SqlBasicCall) node).getOperandList().get(0);
+            if (sqlBasicCall.getOperator().kind == SqlKind.IS_TRUE) {
+              sqlBasicCall = sqlBasicCall.operand(0);
+            }
+            SqlNode secondOperand = extractSecondOperand(sqlBasicCall);
 
-            if (secondOperand.getKind() == SqlKind.AS
+            if (secondOperand instanceof SqlBasicCall && secondOperand.getKind() == SqlKind.AS
                 && ((SqlBasicCall) secondOperand).operand(1) instanceof SqlCharStringLiteral) {
-              return SqlStdOperatorTable.AS.createCall(pos,
-                  ((SqlBasicCall) secondOperand).operand(0),
-                  new SqlIdentifier(((SqlBasicCall) secondOperand).operand(1).toString().replaceAll("'", ""), pos));
+              return modifyAlias(secondOperand);
             }
 
             return secondOperand;
           })
+          .filter(Objects::nonNull)
           .forEach(inColumnList::add);
     }
 
-    inColumnList.addAll(aggregateInClauseFieldList);
+    inColumnList.addAll(modifyInClauseAliases(aggregateInClauseFieldList));
 
     return inColumnList;
+  }
+
+  private List<SqlNode> modifyInClauseAliases(List<SqlNode> aggregateInClauseFieldList) {
+    return aggregateInClauseFieldList.stream().map(this::modifyAlias).collect(Collectors.toList());
+  }
+
+  private SqlNode modifyAlias(SqlNode sqlNode) {
+    if (sqlNode instanceof SqlBasicCall) {
+      SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlNode;
+      if (sqlBasicCall.getOperator() == SqlStdOperatorTable.AS
+          && (sqlBasicCall.operand(1) instanceof SqlCharStringLiteral)) {
+        String alias = ((SqlCharStringLiteral) sqlBasicCall.operand(1)).toValue();
+        assert alias != null;
+        return SqlStdOperatorTable.AS.createCall(pos, sqlBasicCall.operand(0),
+            new SqlIdentifier(alias, pos));
+      }
+    }
+    return sqlNode;
   }
 
   private SqlNodeList getAggregateColumnNode(Aggregate e) {
     Set<SqlNode> aggArgList = new HashSet<>();
     Set<String> columnName = new HashSet<>();
     for (int i = 0; i < e.getAggCallList().size(); i++) {
-      columnName.add(
-          e.getInput().getRowType().getFieldList().get(
-                  e.getAggCallList().get(i).getArgList().get(0))
-              .getKey());
+      if (e.getAggCallList().get(i).getAggregation() instanceof SqlCountAggFunction
+          && e.getAggCallList().get(i).getArgList().isEmpty()) {
+        // If there is no parameter in "count" function, add a star
+        // to it.
+        columnName.add("*");
+      } else {
+        columnName.add(e.getInput().getRowType().getFieldList()
+            .get(e.getAggCallList().get(i).getArgList().get(0)).getKey());
+      }
     }
-    SqlNode tempNode = new SqlIdentifier(new ArrayList<>(columnName).get(0), pos);
+    String column = new ArrayList<>(columnName).get(0);
+    SqlNode tempNode = column.equals("*") ? SqlIdentifier.STAR
+        : new SqlIdentifier(new ArrayList<>(columnName).get(0), pos);
     SqlNode aggFunctionNode =
         e.getAggCallList().get(0).getAggregation().createCall(pos, tempNode);
     aggArgList.add(aggFunctionNode);
     return new SqlNodeList(aggArgList, pos);
   }
 
-  private SqlNodeList getAxisNodeList(List<SqlNode> selectColumnList, boolean hasSubquery) {
+  private SqlNodeList getAxisNodeList(List<SqlNode> selectColumnList, boolean hasSubquery, Aggregate e) {
 
     final Set<SqlNode> modifiedAxisNodeList = new HashSet<>();
 
@@ -176,20 +216,31 @@ public class PivotRelToSqlUtil {
                   .getOperandList().get(0)).getOperandList().get(0);
       SqlBasicCall caseConditionCall =
           (SqlBasicCall) pivotColumnAggregationCaseCall.getWhenOperands().get(0);
-      SqlIdentifier aggregateCol = caseConditionCall.operand(0);
+      SqlNode aggregateCol = caseConditionCall.operand(0) instanceof SqlBasicCall
+          ? ((SqlBasicCall) caseConditionCall.operand(0)).operand(0)
+          : caseConditionCall.operand(0);
       modifiedAxisNodeList.add(aggregateCol);
       return new SqlNodeList(modifiedAxisNodeList, pos);
     }
 
-    SqlBasicCall axisNodeList =
-        ((SqlBasicCall) pivotColumnAggregation.getOperandList().get(0)).operand(0);
+    SqlBasicCall sqlBasicCall = (SqlBasicCall) pivotColumnAggregation.getOperandList().get(0);
+    if (sqlBasicCall.getOperator().kind == SqlKind.IS_TRUE) {
+      sqlBasicCall = sqlBasicCall.operand(0);
+    }
+    SqlNode axisSqlNodeList = sqlBasicCall.operand(0);
+
+    if (axisSqlNodeList instanceof SqlIdentifier) {
+      modifiedAxisNodeList.add(axisSqlNodeList);
+      return new SqlNodeList(modifiedAxisNodeList, pos);
+    }
+    assert axisSqlNodeList instanceof SqlBasicCall;
+    SqlBasicCall axisNodeList = (SqlBasicCall) axisSqlNodeList;
 
     if (axisNodeList.getOperator().kind == SqlKind.AS) {
-      if (!(axisNodeList.operand(1) instanceof SqlIdentifier)) {
-        modifiedAxisNodeList.add(
-            new SqlIdentifier(
-                axisNodeList.operand(1).toString().replaceAll("'", ""),
-                SqlParserPos.QUOTED_ZERO));
+      if (isLowerFunction(axisNodeList.operand(0))) {
+        addAxisNodeOperand(modifiedAxisNodeList, axisNodeList.operand(0), e);
+      } else if (axisNodeList.operand(1) instanceof SqlCharStringLiteral) {
+        modifiedAxisNodeList.add(getSqlIdentifier(axisNodeList.operand(1)));
       } else {
         modifiedAxisNodeList.add(axisNodeList);
       }
@@ -197,5 +248,65 @@ public class PivotRelToSqlUtil {
       modifiedAxisNodeList.add(new SqlIdentifier(axisNodeList.toString(), SqlParserPos.QUOTED_ZERO));
     }
     return new SqlNodeList(modifiedAxisNodeList, pos);
+  }
+
+  private SqlIdentifier getSqlIdentifier(SqlCharStringLiteral alias) {
+    return new SqlIdentifier(Objects.requireNonNull(alias.toValue()), SqlParserPos.QUOTED_ZERO);
+  }
+
+  private boolean isLowerFunction(SqlNode node) {
+    return node instanceof SqlBasicCall
+        && ((SqlBasicCall) node).getOperator() == SqlStdOperatorTable.LOWER;
+  }
+
+  private String getSubQueryAlias(RelTraitSet relTraitSet) {
+    SubQueryAliasTrait relTrait = relTraitSet.getTrait(SubQueryAliasTraitDef.instance);
+    if (relTrait  != null) {
+      return relTrait.getSubQueryAlias();
+    }
+    return null;
+  }
+
+  private boolean hasSameAliasNotInAxisColumn(SqlBasicCall call, String subQueryAlias) {
+    if (!(call.getOperandList().get(0) instanceof SqlIdentifier)) {
+      return false;
+    }
+    SqlIdentifier sqlIdentifier = (SqlIdentifier) call.getOperandList().get(0);
+    return sqlIdentifier.names.size() == 2 && !Objects.equals(sqlIdentifier.names.get(0),
+        subQueryAlias);
+  }
+
+  private void addAxisNodeOperand(Set<SqlNode> modifiedAxisNodeList, SqlBasicCall call,
+      Aggregate e) {
+    String subQueryAlias = getSubQueryAlias(e.getInput().getTraitSet());
+    if (hasSameAliasNotInAxisColumn(call, subQueryAlias)) {
+      SqlIdentifier columnIdentifier =
+          new SqlIdentifier(((SqlIdentifier) call.getOperandList().get(0)).names.get(1), pos);
+      modifiedAxisNodeList.add(
+          SqlStdOperatorTable.LOWER.createCall(SqlParserPos.ZERO,
+          columnIdentifier));
+    } else {
+      modifiedAxisNodeList.add(call);
+    }
+  }
+
+  private SqlNode extractSecondOperand(SqlBasicCall sqlBasicCall) {
+    SqlNode firstOperand = sqlBasicCall.operand(0);
+    if (firstOperand instanceof SqlCase) {
+      SqlCase sqlCase = (SqlCase) firstOperand;
+      List<SqlNode> whenOperands = sqlCase.getWhenOperands();
+      if (!whenOperands.isEmpty()) {
+        SqlNode when = whenOperands.get(0);
+        if (when instanceof SqlBasicCall) {
+          SqlBasicCall whenCall = (SqlBasicCall) when;
+          List<SqlNode> whenCallOperands = whenCall.getOperandList();
+          if (whenCallOperands.size() > 1) {
+            return whenCallOperands.get(1);
+          }
+        }
+      }
+    }
+    List<SqlNode> operands = sqlBasicCall.getOperandList();
+    return operands.size() > 1 ? operands.get(1) : null;
   }
 }

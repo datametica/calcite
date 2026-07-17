@@ -191,6 +191,9 @@ public enum SqlKind {
   /** The DISTINCT keyword of the GROUP BY clause. */
   GROUP_BY_DISTINCT,
 
+  /** The ALL keyword of the GROUP BY clause. */
+  GROUP_BY_ALL,
+
   /**
    * ORDER BY clause.
    *
@@ -248,6 +251,9 @@ public enum SqlKind {
 
   /** {@code WITHIN DISTINCT} operator. */
   WITHIN_DISTINCT,
+
+  /** {@code RANGE_SESSIONIZE} operator. */
+  RANGE_SESSIONIZE,
 
   /** Window specification. */
   WINDOW,
@@ -477,6 +483,18 @@ public enum SqlKind {
   /** {@code NVL} function (Oracle). */
   NVL,
 
+  /** {@code NVL} function (Redshift). */
+  REDSHIFT_NVL,
+
+  /** {@code CONVERT} function (Redshift). */
+  REDSHIFT_CONVERT,
+
+  /** {@code TRUNC} function (Redshift). */
+  REDSHIFT_TRUNC,
+
+  /** {@code NVL} function (Oracle, Vertica and Spark). */
+  NVL2,
+
   /** {@code GREATEST} function (Oracle). */
   GREATEST,
 
@@ -491,6 +509,9 @@ public enum SqlKind {
 
   /** The "IF" function (BigQuery, Hive, Spark). */
   IF,
+
+  /** The "IF_FOR_SAFE_CAST" function (Hive). */
+  IF_FOR_SAFE_CAST,
 
   /** {@code LEAST} function (Oracle). */
   LEAST,
@@ -735,6 +756,11 @@ public enum SqlKind {
   SAFE_CAST,
 
   /**
+   * The "CONVERT(type, expr [,style])" function (Microsoft SQL Server).
+   */
+  MSSQL_CONVERT,
+
+  /**
    * The "NEXT VALUE OF sequence" operator.
    */
   NEXT_VALUE,
@@ -755,6 +781,9 @@ public enum SqlKind {
 
   /** {@code SF_FLOOR} function only for SNOWFLAKE. */
   SF_FLOOR,
+
+  /** The {@code RATIO_TO_REPORT} aggregate function. */
+  RATIO_TO_REPORT,
 
   /** {@code LTRIM} function (Oracle). */
   LTRIM,
@@ -795,6 +824,15 @@ public enum SqlKind {
   /** {@code ARRAY_LENGTH} function (Spark semantics). */
   ARRAY_LENGTH,
 
+  /** {@code ARRAY_START_INDEX} function (Spark semantics). */
+  ARRAY_START_INDEX,
+
+  /** {@code ARRAY_LAST_INDEX} function (Spark semantics). */
+  ARRAY_LAST_INDEX,
+
+  /** {@code LEN} function (Spark semantics). */
+  LEN,
+
   /** {@code ARRAY_MAX} function (Spark semantics). */
   ARRAY_MAX,
 
@@ -831,6 +869,9 @@ public enum SqlKind {
   /** {@code ARRAYS_ZIP} function (Spark semantics). */
   ARRAYS_ZIP,
 
+  /** {@code APPROX_QUANTILES} function. */
+  APPROX_QUANTILES,
+
   /** {@code SORT_ARRAY} function (Spark semantics). */
   SORT_ARRAY,
 
@@ -863,6 +904,9 @@ public enum SqlKind {
    * The "TO_NUMBER" function.
    */
   TO_NUMBER,
+
+  /** {@code HOST} function (Postgres). */
+  NET_HOST,
 
    /**
    * The "ASCII" function.
@@ -1068,6 +1112,9 @@ public enum SqlKind {
   /** The {@code AVG} aggregate function. */
   AVG,
 
+  /** The {@code BOOLOR_AGG} aggregate function. */
+  BOOLOR_AGG,
+
   /** The {@code STDDEV_POP} aggregate function. */
   STDDEV_POP,
 
@@ -1097,6 +1144,12 @@ public enum SqlKind {
 
   /** The {@code ARRAY_AGG} aggregate function. */
   ARRAY_AGG,
+
+  /** The {@code ARRAY_UNIQUE_AGG} aggregate function. */
+  ARRAY_UNIQUE_AGG,
+
+  /** The {@code JSON_AGG} aggregate function. */
+  JSON_AGG,
 
   /** The {@code ARRAY_CONCAT_AGG} aggregate function. */
   ARRAY_CONCAT_AGG,
@@ -1157,6 +1210,9 @@ public enum SqlKind {
 
   /** The {@code ROW_NUMBER} window function. */
   CUME_DIST,
+
+  /** The {@code CONDITIONAL_TRUE_EVENT} window function. */
+  CONDITIONAL_TRUE_EVENT,
 
   /** The {@code DESCRIPTOR(column_name, ...)}. */
   DESCRIPTOR,
@@ -1340,7 +1396,13 @@ public enum SqlKind {
   /**
    * format standard function.
    */
-  FORMAT;
+  FORMAT,
+
+  /** {@code DATEDIFF} function (Databricks semantics). */
+  DATABRICKS_DATEDIFF,
+
+  /** {@code JSON_EXTRACT_PATH_TEXT} function (Redshift semantics). */
+  REDSHIFT_JSON_EXTRACT_PATH_TEXT;
 
   //~ Static fields/initializers ---------------------------------------------
 

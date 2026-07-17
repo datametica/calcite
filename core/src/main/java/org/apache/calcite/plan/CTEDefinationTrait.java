@@ -16,6 +16,11 @@
  */
 package org.apache.calcite.plan;
 
+import org.apache.calcite.util.Comment;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
  * CTEDefinationTrait is used to identify if a given rel has a CTE Definition.
  */
@@ -23,18 +28,40 @@ public class CTEDefinationTrait implements RelTrait {
 
   private final boolean isCTEDefination;
   private final String cteName;
+  /** Whether the CTE was declared with an explicit column list (e.g., {@code WITH cte(col1, col2) AS (...)}). */
+  private final boolean hasExplicitColumns;
+  /**
+   * Comments captured around the CTE name in the source (e.g. {@code WITH /* c *​/ cte AS (...)}).
+   * They retain their injected UUID and are re-anchored onto the unparsed name identifier.
+   */
+  private final Set<Comment> comments;
 
-  public CTEDefinationTrait(boolean isCTEDefination, String cteName) {
+  public CTEDefinationTrait(boolean isCTEDefination, String cteName, boolean hasExplicitColumns) {
+    this(isCTEDefination, cteName, hasExplicitColumns, new LinkedHashSet<>());
+  }
+
+  public CTEDefinationTrait(boolean isCTEDefination, String cteName, boolean hasExplicitColumns,
+      Set<Comment> comments) {
     this.isCTEDefination = isCTEDefination;
     this.cteName = cteName;
+    this.hasExplicitColumns = hasExplicitColumns;
+    this.comments = comments == null ? new LinkedHashSet<>() : comments;
   }
 
   public boolean isCTEDefination() {
     return this.isCTEDefination;
   }
 
+  public boolean hasExplicitColumns() {
+    return this.hasExplicitColumns;
+  }
+
   public String getCteName() {
     return this.cteName;
+  }
+
+  public Set<Comment> getComments() {
+    return this.comments;
   }
 
   @Override public RelTraitDef<CTEDefinationTrait> getTraitDef() {

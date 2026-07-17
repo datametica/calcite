@@ -25,13 +25,27 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBinaryOperator;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlDelete;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlJoin;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSetOperator;
+import org.apache.calcite.sql.SqlUnpivot;
+import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
+import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.util.SqlShuttle;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -43,14 +57,8 @@ public class CTERelToSqlUtil {
   }
 
   public static boolean isCteScopeTrait(RelTraitSet relTraitSet) {
-    boolean isCteScopeTrait = false;
     RelTrait relTrait = relTraitSet.getTrait(CTEScopeTraitDef.instance);
-    if (relTrait != null && relTrait instanceof CTEScopeTrait) {
-      if (((CTEScopeTrait) relTrait).isCTEScope()) {
-        isCteScopeTrait = true;
-      }
-    }
-    return isCteScopeTrait;
+    return relTrait instanceof CTEScopeTrait && ((CTEScopeTrait) relTrait).isCTEScope();
   }
 
   public static boolean isCTEScopeOrDefinitionTrait(RelTraitSet relTraitSet) {
@@ -58,23 +66,38 @@ public class CTERelToSqlUtil {
   }
 
   public static boolean isCteDefinationTrait(RelTraitSet relTraitSet) {
-    boolean isCteDefinationTrait = false;
     RelTrait relTrait = relTraitSet.getTrait(CTEDefinationTraitDef.instance);
-    if (relTrait != null && relTrait instanceof CTEDefinationTrait) {
-      if (((CTEDefinationTrait) relTrait).isCTEDefination()) {
-        isCteDefinationTrait = true;
-      }
-    }
-    return isCteDefinationTrait;
+    return relTrait instanceof CTEDefinationTrait
+        && ((CTEDefinationTrait) relTrait).isCTEDefination();
   }
 
   /**
    * This Method fetches and add sqlNodes from sqlSelect node.
    */
   public static List<SqlNode> fetchSqlWithItemNodes(SqlNode sqlSelect, List<SqlNode> sqlNodes) {
-    SqlNode sqlNode = ((SqlSelect) sqlSelect).getFrom();
-    fetchSqlWithItems(sqlNode, sqlNodes);
+    if (sqlSelect instanceof SqlBasicCall) {
+      fetchFromSqlBasicCall(sqlSelect, sqlNodes);
+    } else if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlSelect).getFrom() != null) {
+      fetchSqlWithItems(((SqlSelect) sqlSelect).getFrom(), sqlNodes);
+    }
+    if (sqlSelect instanceof SqlSelect && !((SqlSelect) sqlSelect).getSelectList().isEmpty()) {
+      fetchSqlWithSelectList(((SqlSelect) sqlSelect).getSelectList(), sqlNodes);
+    }
+    if (sqlSelect instanceof SqlSelect && ((SqlSelect) sqlSelect).getWhere() != null) {
+      fetchSqlWithSelectList(Arrays.asList(((SqlSelect) sqlSelect).getWhere()), sqlNodes);
+    }
+    if (sqlSelect instanceof SqlDelete && ((SqlDelete) sqlSelect).getSourceSelect() != null) {
+      fetchSqlWithItems(((SqlDelete) sqlSelect).getSourceSelect(), sqlNodes);
+    }
+    if (sqlSelect instanceof SqlUpdate && ((SqlUpdate) sqlSelect).getSourceSelect() != null) {
+      fetchSqlWithItems(((SqlUpdate) sqlSelect).getSourceSelect(), sqlNodes);
+    }
     return sqlNodes;
+  }
+
+  public static void fetchSqlWithSelectList(List<SqlNode> selectItems, List<SqlNode> sqlNodes) {
+    selectItems.stream().filter(item -> item instanceof SqlBasicCall)
+        .forEach(item -> fetchFromSqlBasicCall(item, sqlNodes));
   }
 
   /**
@@ -97,6 +120,9 @@ public class CTERelToSqlUtil {
       if (((SqlWith) sqlNode).withList.size() > 0) {
         fetchSqlWithItems(((SqlWith) sqlNode).withList.get(0), sqlNodes);
       }
+    } else if (sqlNode instanceof SqlUnpivot) {
+      SqlUnpivot unpivot = (SqlUnpivot) sqlNode;
+      fetchSqlWithItems(unpivot.query, sqlNodes);
     }
   }
 
@@ -132,6 +158,11 @@ public class CTERelToSqlUtil {
       fetchFromSqlBasicCall(sqlNode, sqlNodes);
     } else if (sqlNode instanceof SqlWithItem) {
       fetchFromSqlWithItemNode(sqlNode, sqlNodes);
+    } else if (sqlNode instanceof SqlPivot) {
+      fetchFromSqlWithItemNode(((SqlPivot) sqlNode).query, sqlNodes);
+    } else if (sqlNode instanceof SqlCase) {
+      fetchSqlWithSelectList(((SqlCase) sqlNode).getWhenOperands(), sqlNodes);
+      fetchSqlWithSelectList(((SqlCase) sqlNode).getThenOperands(), sqlNodes);
     }
   }
 
@@ -139,6 +170,10 @@ public class CTERelToSqlUtil {
    * This method fetches sqlNodes from SqlNode having sqlWithItem node and add it to sqlNodes list.
    */
   public static void fetchFromSqlWithItemNode(SqlNode sqlWithItem, List<SqlNode> sqlNodes) {
+    if ((sqlWithItem instanceof SqlBasicCall)
+        && (((SqlBasicCall) sqlWithItem).operand(0)) instanceof SqlWithItem) {
+      sqlWithItem = ((SqlBasicCall) sqlWithItem).operand(0);
+    }
     fetchSqlWithItems(((SqlWithItem) sqlWithItem).query, sqlNodes);
     updateSqlNode(((SqlWithItem) sqlWithItem).query);
     addSqlWithItemNode((SqlWithItem) sqlWithItem, sqlNodes);
@@ -149,21 +184,25 @@ public class CTERelToSqlUtil {
    * This method fetches sqlNodes from SqlWithItem node and add it to sqlNodes list.
    */
   public static void addSqlWithItemNode(SqlWithItem sqlWithItem, List<SqlNode> sqlNodes) {
-    if (sqlNodes.isEmpty()) {
-      sqlNodes.add(sqlWithItem);
-    } else {
-      boolean status = false;
-      for (SqlNode sqlWithItemNode : sqlNodes) {
-        if (((SqlWithItem) sqlWithItemNode).name.toString()
-            .equalsIgnoreCase(sqlWithItem.name.toString())) {
-          status = true;
-          break;
+    if (sqlWithItem.query instanceof SqlWith) {
+      SqlWith innerWith = (SqlWith) sqlWithItem.query;
+      sqlNodes.removeIf(node -> {
+        SqlWithItem existingNode = (SqlWithItem) node;
+        for (SqlNode innerNode : innerWith.withList) {
+          if (innerNode.equals(existingNode)) {
+            return true;
+          }
         }
-      }
-      if (!status) {
-        sqlNodes.add(sqlWithItem);
+        return false;
+      });
+    }
+    for (SqlNode sqlWithItemNode : sqlNodes) {
+      if (((SqlWithItem) sqlWithItemNode).name.toString()
+          .equalsIgnoreCase(sqlWithItem.name.toString())) {
+        return;
       }
     }
+    sqlNodes.add(sqlWithItem);
   }
 
   /**
@@ -187,6 +226,45 @@ public class CTERelToSqlUtil {
         if (whereNode instanceof SqlBasicCall) {
           updateNode(whereNode);
         }
+        if (!sqlSelect.getSelectList().isEmpty()) {
+          sqlSelect.getSelectList().stream().filter(item -> item instanceof SqlBasicCall)
+              .forEach(CTERelToSqlUtil::updateNode);
+        }
+      } else if (sqlNode instanceof SqlBasicCall
+          && ((SqlBasicCall) sqlNode).getOperator() instanceof SqlSetOperator) {
+        SqlBasicCall setOpCall = (SqlBasicCall) sqlNode;
+        for (SqlNode operand : setOpCall.getOperandList()) {
+          updateSqlNode(operand);
+        }
+      } else if (sqlNode instanceof SqlDelete) {
+        SqlDelete sqlDelete = (SqlDelete) sqlNode;
+        // Handle targetTable
+        SqlNode targetTable = sqlDelete.getTargetTable();
+        processFromNode(sqlDelete, targetTable);
+        if (isNestedCte(targetTable)
+            && targetTable instanceof SqlBasicCall
+            && ((SqlBasicCall) targetTable).getOperator() instanceof SqlAsOperator) {
+          updateNode(targetTable);
+        }
+        if (sqlDelete.getCondition() != null) {
+          updateNode(sqlDelete.getCondition());
+        }
+      } else if (sqlNode instanceof SqlUpdate) {
+        SqlUpdate sqlUpdate = (SqlUpdate) sqlNode;
+        // Handle targetTable
+        SqlNode targetTable = sqlUpdate.getTargetTable();
+        processFromNode(sqlUpdate, targetTable);
+        if (sqlUpdate.getSourceSelect() != null) {
+          updateSqlNode(sqlUpdate.getSourceSelect());
+        }
+        if (isNestedCte(targetTable)
+            && targetTable instanceof SqlBasicCall
+            && ((SqlBasicCall) targetTable).getOperator() instanceof SqlAsOperator) {
+          updateNode(targetTable);
+        }
+        if (sqlUpdate.getCondition() != null) {
+          updateNode(sqlUpdate.getCondition());
+        }
       }
     }
   }
@@ -204,7 +282,43 @@ public class CTERelToSqlUtil {
       } else {
         ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
       }
+    } else if (fromNode instanceof SqlUnpivot) {
+      // Replace inline CTE body in the UNPIVOT's query with just the CTE identifier
+      // (or AS(identifier, alias) when the CTE reference carries a table alias).
+      SqlNode resolvedQuery = resolveUnpivotCteQuery(((SqlUnpivot) fromNode).query);
+      if (resolvedQuery != null) {
+        SqlUnpivot unpivot = (SqlUnpivot) fromNode;
+        SqlUnpivot unpivotNode =
+            new SqlUnpivot(unpivot.getParserPosition(), resolvedQuery, unpivot.includeNulls,
+                unpivot.measureList, unpivot.axisList, unpivot.inList);
+
+        ((SqlSelect) sqlNode).setFrom(unpivotNode);
+      }
     }
+  }
+
+  /**
+   * Returns the replacement query node for an UNPIVOT whose source is a CTE reference,
+   * or {@code null} if no substitution is needed.
+   *
+   * <ul>
+   *   <li>Unaliased ({@code FROM cte UNPIVOT}): query is {@link SqlWithItem}; returns
+   *       the CTE {@link SqlIdentifier}.</li>
+   *   <li>Aliased ({@code FROM cte alias UNPIVOT}): query is {@code AS(SqlWithItem, alias)};
+   *       returns {@code AS(SqlIdentifier, alias)}.</li>
+   * </ul>
+   */
+  private static SqlNode resolveUnpivotCteQuery(SqlNode query) {
+    if (query instanceof SqlWithItem) {
+      return ((SqlWithItem) query).name;
+    }
+    if (query instanceof SqlBasicCall
+        && ((SqlBasicCall) query).operand(0) instanceof SqlWithItem) {
+      SqlBasicCall asCall = (SqlBasicCall) query;
+      SqlIdentifier identifier = ((SqlWithItem) asCall.operand(0)).name;
+      return SqlStdOperatorTable.AS.createCall(SqlParserPos.ZERO, identifier, asCall.operand(1));
+    }
+    return null;
   }
 
   private static void processBasicCall(SqlNode sqlNode) {
@@ -254,17 +368,21 @@ public class CTERelToSqlUtil {
 
   public static void updateNode(SqlNode sqlNode) {
     SqlBasicCall basicCall = (SqlBasicCall) sqlNode;
-    if (basicCall.getOperator() instanceof SqlBinaryOperator) {
+    if (basicCall.getOperator() instanceof SqlBinaryOperator
+        || basicCall.getOperator().getKind() == SqlKind.BETWEEN) {
       for (SqlNode operand : basicCall.getOperandList()) {
         if (operand instanceof SqlBasicCall) {
           handleBasicCallOperand((SqlBasicCall) operand);
         } else if (operand instanceof SqlSelect) {
           updateSqlNode(operand);
+        } else if (operand instanceof SqlCase) {
+          ((SqlCase) operand).getWhenOperands().forEach(CTERelToSqlUtil::processBasicCall);
         }
       }
     } else {
-      SqlNode operand = basicCall.operand(0);
-      handleOperand(sqlNode, operand);
+      for (SqlNode operand : basicCall.getOperandList()) {
+        handleOperand(sqlNode, operand);
+      }
     }
   }
 
@@ -273,11 +391,21 @@ public class CTERelToSqlUtil {
       handleBasicCallOperand((SqlBasicCall) operand);
     } else if (operand instanceof SqlSelect) {
       updateSqlNode(operand);
+    } else if (operand instanceof SqlPivot && ((SqlPivot) operand).query instanceof SqlWithItem) {
+      ((SqlPivot) ((SqlBasicCall) parentNode).getOperandList().get(0)).setOperand(0,
+          ((SqlWithItem) ((SqlPivot) operand).query).name);
+    } else if (operand instanceof SqlPivot && (((SqlPivot) operand).query instanceof SqlBasicCall)
+        && ((SqlBasicCall) ((SqlPivot) operand).query).operand(0) instanceof SqlWithItem) {
+      ((SqlPivot) ((SqlBasicCall) parentNode).getOperandList().get(0)).setOperand(0,
+          ((SqlWithItem) ((SqlBasicCall) ((SqlPivot) operand).query).operand(0)).name);
     } else if (operand instanceof SqlWithItem) {
       SqlIdentifier identifier = fetchCTEIdentifier(parentNode);
       if (identifier != null) {
         ((SqlBasicCall) parentNode).setOperand(0, identifier);
       }
+    } else if (operand instanceof SqlCase) {
+      ((SqlCase) operand).getWhenOperands().forEach(CTERelToSqlUtil::processBasicCall);
+      ((SqlCase) operand).getThenOperands().forEach(CTERelToSqlUtil::processBasicCall);
     }
   }
 
@@ -292,5 +420,68 @@ public class CTERelToSqlUtil {
       name = ((SqlWithItem) ((SqlBasicCall) sqlNode).operand(0)).name;
     }
     return name;
+  }
+
+  public static SqlWith modifyWithNode(SqlWith sqlWith) {
+    SqlNodeList withItemList = (SqlNodeList) sqlWith.getOperandList().get(0);
+    SqlNodeList modifiedList = modifyWithItemList(withItemList);
+    return new SqlWith(sqlWith.getParserPosition(), modifiedList, sqlWith.body);
+  }
+
+  /**
+   * Rebuilds the WITH-item list, dropping redundant nested WITH items.
+   *
+   * <p>The rebuild only runs for non-first CTEs. When an item is rebuilt, the comments
+   * captured around its CTE name (e.g. a comment before the 2nd+ CTE) are copied onto the
+   * replacement {@link SqlWithItem}; otherwise those name comments would be dropped.
+   */
+  private static SqlNodeList modifyWithItemList(SqlNodeList modeList) {
+    List<String> names = new ArrayList<>();
+    List<SqlNode> modifiedList = new ArrayList<>();
+
+    for (SqlNode node : modeList) {
+      SqlWithItem withItem = (SqlWithItem) node;
+      String name = withItem.name.names.get(0);
+      SqlNode query = withItem.query;
+      if (!names.isEmpty()) {
+        SqlNode modifiedQuery = query.accept(new SqlShuttle() {
+          @Override public SqlNode visit(SqlCall call) {
+            switch (call.getKind()) {
+            case WITH:
+              return removingRedundantWithItems(call, names);
+            default:
+              return super.visit(call);
+            }
+          }
+        });
+        SqlWithItem updatedItem =
+            new SqlWithItem(SqlParserPos.ZERO, withItem.name, withItem.columnList, modifiedQuery);
+        updatedItem.setCommentList(withItem.getCommentList());
+        modifiedList.add(updatedItem);
+        names.add(name);
+      } else {
+        names.add(name);
+        modifiedList.add(withItem);
+      }
+    }
+    return new SqlNodeList(modifiedList, SqlParserPos.ZERO);
+  }
+
+  private static SqlNode removingRedundantWithItems(SqlNode sqlCall, List<String> existNames) {
+    SqlWith sqlWith = (SqlWith) sqlCall;
+    List<SqlNode> nodeList = new ArrayList<>();
+    for (SqlNode node : (SqlNodeList) sqlWith.getOperandList().get(0)) {
+      SqlWithItem item = (SqlWithItem) node;
+      String itemName = item.name.names.get(0);
+      boolean isExists = existNames.stream().anyMatch(n -> n.equals(itemName));
+      if (!isExists) {
+        nodeList.add(item);
+      }
+    }
+    if (nodeList.isEmpty()) {
+      return sqlWith.body;
+    }
+    return new SqlWith(SqlParserPos.ZERO, new SqlNodeList(nodeList, SqlParserPos.ZERO),
+        sqlWith.body);
   }
 }

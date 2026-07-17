@@ -20,6 +20,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.Util;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -71,6 +72,7 @@ public class SqlCharStringLiteral extends SqlAbstractStringLiteral {
       SqlWriter writer,
       int leftPrec,
       int rightPrec) {
+    SqlCommentUtil.unparseSqlComment(writer, this, true);
     final NlsString nlsString = getValueNonNull();
     if (false) {
       Util.discard(Bug.FRG78_FIXED);
@@ -79,6 +81,7 @@ public class SqlCharStringLiteral extends SqlAbstractStringLiteral {
           writer.getDialect().quoteStringLiteral(stringValue));
     }
     writer.literal(nlsString.asSql(true, true, writer.getDialect()));
+    SqlCommentUtil.unparseSqlComment(writer, this, false);
   }
 
   @Override protected SqlAbstractStringLiteral concat1(List<SqlLiteral> literals) {
