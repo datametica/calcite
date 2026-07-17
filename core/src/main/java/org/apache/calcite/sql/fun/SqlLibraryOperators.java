@@ -2299,15 +2299,6 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {ORACLE})
-  public static final SqlFunction ORACLE_TO_DATE =
-      new SqlFunction("TO_DATE",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.TIMESTAMP_NULLABLE,
-          null,
-          OperandTypes.STRING_STRING,
-          SqlFunctionCategory.TIMEDATE);
-
-  @LibraryOperator(libraries = {ORACLE})
   public static final SqlFunction UNISTR =
       new SqlFunction("UNISTR",
           SqlKind.OTHER_FUNCTION,
@@ -3412,14 +3403,6 @@ public abstract class SqlLibraryOperators {
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.DECIMAL_NULLABLE, null,
           OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.DATE),
-          SqlFunctionCategory.NUMERIC);
-
-  @LibraryOperator(libraries = {ORACLE})
-  public static final SqlFunction ORACLE_MONTHS_BETWEEN =
-      new SqlFunction("MONTHS_BETWEEN",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DECIMAL_NULLABLE, null,
-          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME),
           SqlFunctionCategory.NUMERIC);
 
   @LibraryOperator(libraries = {BIG_QUERY})
