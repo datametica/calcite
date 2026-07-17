@@ -265,7 +265,11 @@ class ProjectExpansionUtil {
   }
 
   private SqlBasicCall extractSqlBasicCallFromJoin(SqlJoin sqlJoin) {
-    return (SqlBasicCall) ((SqlJoin) sqlJoin.getLeft()).getLeft();
+    SqlNode node = sqlJoin.getLeft();
+    while (node instanceof SqlJoin) {
+      node = ((SqlJoin) node).getLeft();
+    }
+    return (SqlBasicCall) node;
   }
 
   private SqlBasicCall extractSqlBasicCallFromResult(SqlImplementor.Result result) {
