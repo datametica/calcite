@@ -15156,4 +15156,16 @@ class RelToSqlConverterDMTest {
         + "WHERE EMP.EMPNO > 5";
     assertThat(actualSql, isLinux(expectedSql));
   }
+
+  @Test public void testCeilFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode ceilNode =
+        builder.call(SqlLibraryOperators.CEIL_SNOWFLAKE,
+            builder.call(SqlStdOperatorTable.DIVIDE, builder.literal(10), builder.literal(3)),
+            builder.literal(5));
+    final RelNode root = builder.project(ceilNode).build();
+
+    final String expectedQuery = "SELECT CEIL(10 / 3, 5) AS \"$f0\"\nFROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
 }

@@ -147,7 +147,8 @@ public enum SqlTypeName {
   DOUBLE_PRECISION(PrecScale.NO_NO, false, Types.FLOAT, SqlTypeFamily.NUMERIC),
   HIERARCHYID(PrecScale.NO_NO, false, Types.OTHER, SqlTypeFamily.HIERARCHYID),
   UUID(PrecScale.NO_NO, false, Types.OTHER, SqlTypeFamily.UUID),
-  XML(PrecScale.NO_NO, false, ExtraSqlTypes.SQLXML,  null);
+  XML(PrecScale.NO_NO, false, ExtraSqlTypes.SQLXML,  null),
+  ROWVERSION(PrecScale.NO_NO, false, Types.BINARY, SqlTypeFamily.BINARY);
 
   public static final int MAX_DATETIME_PRECISION = 3;
 
@@ -186,7 +187,7 @@ public enum SqlTypeName {
       ImmutableList.of(BOOLEAN);
 
   public static final List<SqlTypeName> BINARY_TYPES =
-      ImmutableList.of(BINARY, VARBINARY);
+      ImmutableList.of(BINARY, VARBINARY, ROWVERSION);
 
   public static final List<SqlTypeName> ARRAY_TYPES =
       ImmutableList.of(ARRAY, VARRAY);
