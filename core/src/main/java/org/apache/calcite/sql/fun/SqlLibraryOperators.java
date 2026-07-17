@@ -3405,6 +3405,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.family(SqlTypeFamily.DATE, SqlTypeFamily.DATE),
           SqlFunctionCategory.NUMERIC);
 
+  @LibraryOperator(libraries = {ORACLE})
+  public static final SqlFunction ORACLE_MONTHS_BETWEEN =
+      new SqlFunction("MONTHS_BETWEEN",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DECIMAL_NULLABLE, null,
+          OperandTypes.family(SqlTypeFamily.DATETIME, SqlTypeFamily.DATETIME),
+          SqlFunctionCategory.NUMERIC);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction REGEXP_MATCH_COUNT =
       new SqlFunction("REGEXP_MATCH_COUNT",

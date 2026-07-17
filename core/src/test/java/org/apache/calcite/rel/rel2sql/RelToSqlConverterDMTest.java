@@ -9996,7 +9996,7 @@ class RelToSqlConverterDMTest {
   @Test public void testToDateforOracle() {
     RelBuilder builder = relBuilder().scan("EMP");
     final RexNode oracleToDateCall =
-        builder.call(SqlLibraryOperators.ORACLE_TO_DATE, builder.call(CURRENT_DATE));
+        builder.call(SqlLibraryOperators.TO_DATE, builder.call(CURRENT_DATE));
     RelNode root = builder
         .project(oracleToDateCall)
         .build();
@@ -10398,7 +10398,7 @@ class RelToSqlConverterDMTest {
         .scan("EMP")
         .project(builder.alias(nextDayRexNode, "next_day"))
         .build();
-    final String expectedOracle = "SELECT ORACLE_NEXT_DAY(CURRENT_DATE, 'SATURDAY') \"next_day\"\n"
+    final String expectedOracle = "SELECT NEXT_DAY(CURRENT_DATE, 'SATURDAY') \"next_day\"\n"
         + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracle));
