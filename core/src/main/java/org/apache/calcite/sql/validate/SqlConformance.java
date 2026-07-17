@@ -134,6 +134,18 @@ public interface SqlConformance {
   boolean isHavingAlias();
 
   /**
+   * Whether to allow aliases from the {@code SELECT} clause to be used as
+   * column names in the {@code QUALIFY} clause.
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#DEFAULT},
+   * {@link SqlConformanceEnum#BABEL},
+   * {@link SqlConformanceEnum#BIG_QUERY};
+   * false otherwise.
+   */
+  boolean isQualifyAlias();
+
+  /**
    * Whether '{@code ORDER BY 2}' is interpreted to mean 'sort by the 2nd
    * column in the select list'.
    *
