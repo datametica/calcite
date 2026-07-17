@@ -4981,4 +4981,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.BIGINT_NULLABLE,
           OperandTypes.NUMERIC,
           SqlFunctionCategory.NUMERIC);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction CEIL_SNOWFLAKE =
+      new SqlFunction("CEIL",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.ARG0, null,
+          OperandTypes.NUMERIC_OPTIONAL_NUMERIC,
+          SqlFunctionCategory.NUMERIC);
 }

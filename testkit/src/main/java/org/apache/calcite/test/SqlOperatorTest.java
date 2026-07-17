@@ -9265,7 +9265,9 @@ public class SqlOperatorTest {
             + "'SUBSTRING\\(<BINARY> FROM <INTEGER>\\)'\n"
             + "'SUBSTRING\\(<BINARY> FROM <INTEGER> FOR <INTEGER>\\)'\n"
             + "'SUBSTRING\\(<VARBINARY> FROM <INTEGER>\\)'\n"
-            + "'SUBSTRING\\(<VARBINARY> FROM <INTEGER> FOR <INTEGER>\\)'", false);
+            + "'SUBSTRING\\(<VARBINARY> FROM <INTEGER> FOR <INTEGER>\\)'\n"
+            + "'SUBSTRING\\(<ROWVERSION> FROM <INTEGER>\\)'\n"
+            + "'SUBSTRING\\(<ROWVERSION> FROM <INTEGER> FOR <INTEGER>\\)'", false);
   }
 
   /** Tests the {@code SUBSTRING} operator. Many test cases that used to be
