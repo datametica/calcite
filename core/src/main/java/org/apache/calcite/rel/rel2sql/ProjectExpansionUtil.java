@@ -126,11 +126,18 @@ class ProjectExpansionUtil {
         instanceof SqlJoin;
   }
 
-  protected void handleResultAliasIfNeeded(SqlImplementor.Result result, SqlNode sqlCondition) {
+  protected void handleResultAliasIfNeeded(SqlImplementor.Result result, SqlNode sqlCondition,
+      List<String> parentReferencedColumns) {
     if (shouldHandleResultAlias(result, sqlCondition)) {
       List<String> fieldNames = result.neededType.getFieldNames();
       List<String> columnsUsed =
           getColumnsUsedInOnConditionWithSubQueryAlias(sqlCondition, result.neededAlias);
+
+      for (String columnName : parentReferencedColumns) {
+        if (fieldNames.contains(columnName) && !columnsUsed.contains(columnName)) {
+          columnsUsed.add(columnName);
+        }
+      }
 
       List<SqlNode> sqlIdentifierList = new ArrayList<>();
       for (String columnName : columnsUsed) {
