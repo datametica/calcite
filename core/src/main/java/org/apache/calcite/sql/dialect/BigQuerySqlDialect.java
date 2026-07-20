@@ -2675,9 +2675,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       case VARBINARY:
         return createSqlDataTypeSpecByName("BYTES", type);
       case DATE:
-        String typeAlias =
-            ((BasicSqlType) type).isDateTypeSupportsTimeParts() ? "DATETIME" : "DATE";
-        return createSqlDataTypeSpecByName(typeAlias, typeName);
+        return createSqlDataTypeSpecByName("DATE", typeName);
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
         return createSqlDataTypeSpecByName("TIME", typeName);

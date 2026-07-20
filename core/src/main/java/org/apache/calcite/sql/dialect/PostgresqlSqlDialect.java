@@ -116,9 +116,6 @@ public class PostgresqlSqlDialect extends SqlDialect {
     case SERIAL:
       castSpec = "SERIAL";
       break;
-    case DATE:
-      castSpec = ((BasicSqlType) type).isDateTypeSupportsTimeParts() ? "TIMESTAMP(0)" : "DATE";
-      break;
     case INTERVAL_DAY_SECOND:
       castSpec = "INTERVAL DAY TO SECOND";
       break;

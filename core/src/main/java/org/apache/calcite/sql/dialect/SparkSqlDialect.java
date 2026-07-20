@@ -1145,10 +1145,6 @@ public class SparkSqlDialect extends SqlDialect {
           return createSqlDataTypeSpecByName("STRING", typeName);
         }
         break;
-      case DATE:
-        String typeAlias =
-            ((BasicSqlType) type).isDateTypeSupportsTimeParts() ? "TIMESTAMP" : "DATE";
-        return createSqlDataTypeSpecByName(typeAlias, typeName);
       case INTEGER:
         return createSqlDataTypeSpecByName("INT", typeName);
       case TIME:
