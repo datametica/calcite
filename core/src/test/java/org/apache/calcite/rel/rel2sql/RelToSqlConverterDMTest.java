@@ -19,6 +19,7 @@ package org.apache.calcite.rel.rel2sql;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.config.NullCollation;
+import org.apache.calcite.plan.AdditionalProjectionTrait;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.CommentTrait;
@@ -29,9 +30,8 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.SourceJoinFormTrait;
-import org.apache.calcite.plan.SubQueryAliasTrait;
-import org.apache.calcite.plan.AdditionalProjectionTrait;
 import org.apache.calcite.plan.SourceJoinKind;
+import org.apache.calcite.plan.SubQueryAliasTrait;
 import org.apache.calcite.plan.TableAliasTrait;
 import org.apache.calcite.plan.ViewChildProjectRelTrait;
 import org.apache.calcite.plan.hep.HepPlanner;
@@ -15193,7 +15193,8 @@ class RelToSqlConverterDMTest {
 
     RelNode existsSubquery = builder
         .scan("reserve_employee")
-        .filter(builder.equals(
+        .filter(
+            builder.equals(
             builder.field("employee_id"),
             builder.getRexBuilder().makeFieldAccess(correlVariable, employeeIdIndex)))
         .project(builder.literal(1))
@@ -15205,8 +15206,8 @@ class RelToSqlConverterDMTest {
             builder.call(SqlStdOperatorTable.NOT, RexSubQuery.exists(existsSubquery)))
         .build();
 
-    filteredInner = filteredInner.copy(
-        filteredInner.getTraitSet()
+    filteredInner =
+        filteredInner.copy(filteredInner.getTraitSet()
             .plus(new SubQueryAliasTrait("t1"))
             .plus(new AdditionalProjectionTrait()),
         filteredInner.getInputs());
@@ -15246,15 +15247,17 @@ class RelToSqlConverterDMTest {
             builder.call(SqlStdOperatorTable.CURRENT_DATE))
         .build();
 
-    root = root.copy(
-        root.getTraitSet().plus(new AdditionalProjectionTrait()),
+    root =
+        root.copy(root.getTraitSet().plus(new AdditionalProjectionTrait()),
         root.getInputs());
 
     final String actual = toSql(root, DatabaseProduct.BIG_QUERY.getDialect());
     assertThat(actual, containsString("hire_date"));
     assertThat(actual, containsString("first_name"));
     assertThat(actual, containsString("department_description"));
-    assertThat(actual, not(containsString("FROM (SELECT employee.employee_id AS employee_id0\n"
+    assertThat(
+        actual, not(
+            containsString("FROM (SELECT employee.employee_id AS employee_id0\n"
         + "  FROM foodmart.employee")));
   }
 }
