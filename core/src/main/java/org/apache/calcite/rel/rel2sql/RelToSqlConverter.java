@@ -574,6 +574,10 @@ public class RelToSqlConverter extends SqlImplementor
       } else if (rel instanceof Filter) {
         collectInputRefIndices(((Filter) rel).getCondition(), indexOffset, indexEnd,
             indices);
+      } else if (rel instanceof Sort) {
+        for (RexNode sortKey : ((Sort) rel).getSortExps()) {
+          collectInputRefIndices(sortKey, indexOffset, indexEnd, indices);
+        }
       }
     }
     final List<String> columnNames = new ArrayList<>();

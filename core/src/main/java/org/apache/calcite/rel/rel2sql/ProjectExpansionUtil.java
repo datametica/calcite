@@ -35,7 +35,9 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
 
@@ -134,10 +136,15 @@ class ProjectExpansionUtil {
           getColumnsUsedInOnConditionWithSubQueryAlias(sqlCondition, result.neededAlias);
 
       for (String columnName : parentReferencedColumns) {
-        if (fieldNames.contains(columnName) && !columnsUsed.contains(columnName)) {
+        if (fieldNames.contains(columnName) && !columnsUsed.contains(columnName)
+            && !isAmbiguousColumnInJoin(result, columnName)) {
           columnsUsed.add(columnName);
         }
       }
+
+      final Set<String> parentRefSet = new HashSet<>(parentReferencedColumns);
+      columnsUsed.removeIf(columnName ->
+          !parentRefSet.contains(columnName) && isAmbiguousColumnInJoin(result, columnName));
 
       List<SqlNode> sqlIdentifierList = new ArrayList<>();
       for (String columnName : columnsUsed) {
@@ -216,6 +223,82 @@ class ProjectExpansionUtil {
     return false;
   }
 
+  private static String findSqlAliasForColumn(SqlNode from, String columnName,
+      SqlImplementor.Result result) {
+    if (from == null || result.expectedRel == null) {
+      return null;
+    }
+    List<TableInfo> tableInfoList = new ArrayList<>();
+    populateTableInfo(result.expectedRel, tableInfoList);
+    return findSqlAliasForColumnImpl(from, columnName, tableInfoList);
+  }
+
+  private static String findSqlAliasForColumnImpl(SqlNode from, String columnName,
+      List<TableInfo> tableInfoList) {
+    if (from instanceof SqlJoin) {
+      SqlJoin join = (SqlJoin) from;
+      String qualifier = findSqlAliasForColumnImpl(join.getLeft(), columnName, tableInfoList);
+      if (qualifier != null) {
+        return qualifier;
+      }
+      return findSqlAliasForColumnImpl(join.getRight(), columnName, tableInfoList);
+    }
+    if (from instanceof SqlBasicCall
+        && ((SqlBasicCall) from).getOperator() == SqlStdOperatorTable.AS) {
+      SqlBasicCall asCall = (SqlBasicCall) from;
+      SqlIdentifier aliasId = (SqlIdentifier) asCall.operand(1);
+      String alias = aliasId.names.get(0);
+      List<String> tableNames = extractTableNames(asCall.operand(0));
+      for (TableInfo tableInfo : tableInfoList) {
+        if (tableNamesMatch(tableInfo.tableName, tableNames)
+            && tableInfo.columnExists(columnName)) {
+          return alias;
+        }
+      }
+    }
+    return null;
+  }
+
+  private static List<String> extractTableNames(SqlNode tableNode) {
+    if (tableNode instanceof SqlIdentifier) {
+      return ((SqlIdentifier) tableNode).names;
+    }
+    if (tableNode instanceof SqlBasicCall
+        && ((SqlBasicCall) tableNode).getOperator() == SqlStdOperatorTable.AS) {
+      return extractTableNames(((SqlBasicCall) tableNode).operand(0));
+    }
+    return Collections.emptyList();
+  }
+
+  private static boolean tableNamesMatch(List<String> relTableName,
+      List<String> sqlTableNames) {
+    if (relTableName.isEmpty() || sqlTableNames.isEmpty()) {
+      return false;
+    }
+    String relLeaf = relTableName.get(relTableName.size() - 1);
+    String sqlLeaf = sqlTableNames.get(sqlTableNames.size() - 1);
+    return relLeaf.equalsIgnoreCase(sqlLeaf);
+  }
+
+  private static boolean isAmbiguousColumnInJoin(SqlImplementor.Result result,
+      String columnName) {
+    if (result.expectedRel == null) {
+      return false;
+    }
+    List<TableInfo> tableInfoList = new ArrayList<>();
+    populateTableInfo(result.expectedRel, tableInfoList);
+    int count = 0;
+    for (TableInfo tableInfo : tableInfoList) {
+      if (tableInfo.columnExists(columnName)) {
+        count++;
+        if (count > 1) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   private SqlNode createSqlIdentifierForColumn(SqlImplementor.Result result, String columnName) {
     if (endsWithDigit(columnName) && result.node instanceof SqlSelect
         && !(((SqlSelect) result.node).getFrom() instanceof SqlIdentifier)) {
@@ -228,13 +311,18 @@ class ProjectExpansionUtil {
           return new SqlIdentifier(ImmutableList.of(sqlIdentifier.names.get(0), columnName), POS);
         }
       } else if (isLeftOfJoinNodeSqlJoin(result)) {
-        SqlJoin sqlJoin = getLeftMostSqlJoin((SqlSelect) result.node);
-        List<String> tableName = getQualifiedTableName(result, columnName);
-        return sqlJoin.getLeft() instanceof SqlIdentifier &&  tableName.size() > 0
-            ? new SqlIdentifier(
-                ImmutableList.of(tableName.get(tableName.size() - 1),
-            columnName), POS)
-            : new SqlIdentifier(ImmutableList.of(columnName), POS);
+        String qualifier = findSqlAliasForColumn(
+            ((SqlSelect) result.node).getFrom(), columnName, result);
+        if (qualifier != null) {
+          return new SqlIdentifier(ImmutableList.of(qualifier, columnName), POS);
+        }
+        return new SqlIdentifier(ImmutableList.of(columnName), POS);
+      }
+      String qualifier = findSqlAliasForColumn(
+          result.node instanceof SqlSelect ? ((SqlSelect) result.node).getFrom() : null,
+          columnName, result);
+      if (qualifier != null && isAmbiguousColumnInJoin(result, columnName)) {
+        return new SqlIdentifier(ImmutableList.of(qualifier, columnName), POS);
       }
       return new SqlIdentifier(ImmutableList.of(columnName), POS);
     }
