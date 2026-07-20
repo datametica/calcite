@@ -311,15 +311,15 @@ class ProjectExpansionUtil {
           return new SqlIdentifier(ImmutableList.of(sqlIdentifier.names.get(0), columnName), POS);
         }
       } else if (isLeftOfJoinNodeSqlJoin(result)) {
-        String qualifier = findSqlAliasForColumn(
-            ((SqlSelect) result.node).getFrom(), columnName, result);
+        String qualifier =
+            findSqlAliasForColumn(((SqlSelect) result.node).getFrom(), columnName, result);
         if (qualifier != null) {
           return new SqlIdentifier(ImmutableList.of(qualifier, columnName), POS);
         }
         return new SqlIdentifier(ImmutableList.of(columnName), POS);
       }
-      String qualifier = findSqlAliasForColumn(
-          result.node instanceof SqlSelect ? ((SqlSelect) result.node).getFrom() : null,
+      String qualifier =
+          findSqlAliasForColumn(result.node instanceof SqlSelect ? ((SqlSelect) result.node).getFrom() : null,
           columnName, result);
       if (qualifier != null && isAmbiguousColumnInJoin(result, columnName)) {
         return new SqlIdentifier(ImmutableList.of(qualifier, columnName), POS);
