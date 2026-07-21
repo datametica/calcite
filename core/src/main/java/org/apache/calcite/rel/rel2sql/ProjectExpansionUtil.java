@@ -134,6 +134,7 @@ class ProjectExpansionUtil {
       List<String> fieldNames = result.neededType.getFieldNames();
       List<String> columnsUsed =
           getColumnsUsedInOnConditionWithSubQueryAlias(sqlCondition, result.neededAlias);
+      final Set<String> requiredByCondition = new HashSet<>(columnsUsed);
 
       for (String columnName : parentReferencedColumns) {
         if (fieldNames.contains(columnName) && !columnsUsed.contains(columnName)
@@ -144,7 +145,8 @@ class ProjectExpansionUtil {
 
       final Set<String> parentRefSet = new HashSet<>(parentReferencedColumns);
       columnsUsed.removeIf(columnName ->
-          !parentRefSet.contains(columnName) && isAmbiguousColumnInJoin(result, columnName));
+          !requiredByCondition.contains(columnName) && !parentRefSet.contains(columnName)
+              && isAmbiguousColumnInJoin(result, columnName));
 
       List<SqlNode> sqlIdentifierList = new ArrayList<>();
       for (String columnName : columnsUsed) {
