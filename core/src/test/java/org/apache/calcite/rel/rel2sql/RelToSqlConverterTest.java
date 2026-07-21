@@ -929,6 +929,25 @@ class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
+  @Test public void testGroupByQualifiedColumnNotTreatedAsSelectAlias() {
+    final String query = "select \"product\".\"product_class_id\",\n"
+        + " sum(\"product\".\"shelf_width\") as \"product\",\n"
+        + " sum(\"product\".\"shelf_width\") + 1 as \"widened\"\n"
+        + "from \"product\"\n"
+        + "join \"product_class\" "
+        + "on \"product\".\"product_class_id\" = \"product_class\".\"product_class_id\"\n"
+        + "group by \"product\".\"product_class_id\"";
+    final String bigQueryExpected = "SELECT product.product_class_id, "
+        + "SUM(product.shelf_width) AS product, SUM(product.shelf_width) + 1 AS widened\n"
+        + "FROM foodmart.product\n"
+        + "INNER JOIN foodmart.product_class "
+        + "ON product.product_class_id = product_class.product_class_id\n"
+        + "GROUP BY product.product_class_id";
+    sql(query)
+        .withBigQuery()
+        .ok(bigQueryExpected);
+  }
+
   /** Tests query without GROUP BY but an aggregate function
    * and a sub-query which is with GROUP BY. */
   @Test void testSelectQueryWithGroupBySubQuery2() {
