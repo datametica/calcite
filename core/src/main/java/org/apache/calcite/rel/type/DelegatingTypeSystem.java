@@ -62,6 +62,10 @@ public class DelegatingTypeSystem implements RelDataTypeSystem {
     return typeSystem.isAutoincrement(typeName);
   }
 
+  @Override public boolean isDateSupportsTimeParts() {
+    return typeSystem.isDateSupportsTimeParts();
+  }
+
   @Override public int getNumTypeRadix(SqlTypeName typeName) {
     return typeSystem.getNumTypeRadix(typeName);
   }
