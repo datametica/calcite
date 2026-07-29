@@ -14515,4 +14515,46 @@ class RelToSqlConverterDMTest {
         + "FROM [scott].[EMP]";
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedBiqQuery));
   }
+
+  @Test public void testByteLengthFunctionOnStringOperand() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode byteLength =
+        builder.call(SqlLibraryOperators.BYTE_LENGTH, builder.field(1));
+    final RelNode root = builder
+        .project(builder.alias(byteLength, "len")).build();
+
+    final String expectedBiqQuery = "SELECT BYTE_LENGTH(ENAME) AS len\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  @Test public void testByteLengthFunctionOnStringLiteralPreservesTrailingSpace() {
+    final RelBuilder builder = relBuilder();
+    final RexNode byteLength =
+        builder.call(SqlLibraryOperators.BYTE_LENGTH, builder.literal("abc "));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(byteLength, "len")).build();
+
+    final String expectedBiqQuery = "SELECT BYTE_LENGTH('abc ') AS len\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  /** BYTE_LENGTH over the byte materialization of a fixed-width numeric — the shape a
+   * MS SQL Server DATALENGTH(INT) lowers to (RMSIB-59). Proves the whole composition
+   * BYTE_LENGTH(FROM_HEX(FORMAT('%08x', n))) round-trips through rel2sql for BigQuery. */
+  @Test public void testByteLengthOverFromHexFormatOnIntOperand() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatted =
+        builder.call(SqlLibraryOperators.FORMAT, builder.literal("%08x"), builder.literal(12345));
+    final RexNode fromHex = builder.call(SqlLibraryOperators.FROM_HEX, formatted);
+    final RexNode byteLength = builder.call(SqlLibraryOperators.BYTE_LENGTH, fromHex);
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(byteLength, "len")).build();
+
+    final String expectedBiqQuery =
+        "SELECT BYTE_LENGTH(FROM_HEX(FORMAT('%08x', 12345))) AS len\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
 }
