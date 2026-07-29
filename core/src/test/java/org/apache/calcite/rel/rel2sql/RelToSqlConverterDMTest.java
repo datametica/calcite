@@ -3705,13 +3705,27 @@ class RelToSqlConverterDMTest {
         + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1) AS \"position3\", "
         + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1, 1) AS \"position4\"\n"
         + "FROM \"scott\".\"EMP\"";
-    final String expectedBiqQuery = "SELECT REGEXP_INSTR('Hello, Hello, World!', 'Hello') "
+    final String expectedBiqQuery = "SELECT REGEXP_INSTR('Hello, Hello, World!', r'Hello') "
         + "AS position1, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2) AS position2, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1) AS position3, "
-        + "REGEXP_INSTR('Hello, Hello, World!', 'Hello', 2, 1, 1) AS position4\n"
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2) AS position2, "
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2, 1) AS position3, "
+        + "REGEXP_INSTR('Hello, Hello, World!', r'Hello', 2, 1, 1) AS position4\n"
         + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  /** Proves that a BigQuery REGEXP_INSTR pattern carrying a regex escape is emitted as a raw
+   * string literal, so the backslash reaches BigQuery instead of being read as a string escape. */
+  @Test public void testRegexpInstrEmitsRawStringPatternForEscapedMetacharacter() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpInstr =
+        builder.call(SqlLibraryOperators.REGEXP_INSTR, builder.literal("a.com"),
+                builder.literal("(?i)\\.com$"));
+    final RelNode root = builder.scan("EMP")
+        .project(builder.alias(regexpInstr, "position1")).build();
+    final String expectedBiqQuery = "SELECT REGEXP_INSTR('a.com', r'(?i)\\.com$') AS position1\n"
+        + "FROM scott.EMP";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
   }
 
