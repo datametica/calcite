@@ -133,6 +133,11 @@ public class CTERelToSqlUtil {
     } else if (sqlNode instanceof SqlUnpivot) {
       SqlUnpivot unpivot = (SqlUnpivot) sqlNode;
       fetchSqlWithItems(unpivot.query, sqlNodes);
+    } else if (sqlNode instanceof SqlPivot) {
+      // Without this arm a CTE that is referenced only through a bare (un-aliased) PIVOT is never
+      // hoisted into the WITH list, so the WITH clause is dropped from the emitted SQL entirely.
+      SqlPivot pivot = (SqlPivot) sqlNode;
+      fetchSqlWithItems(pivot.query, sqlNodes);
     }
   }
 
@@ -292,14 +297,67 @@ public class CTERelToSqlUtil {
       } else {
         ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
       }
-    } else if (fromNode instanceof SqlUnpivot
-        && ((SqlUnpivot) fromNode).query instanceof SqlWithItem) {
-      SqlIdentifier identifier = ((SqlWithItem) ((SqlUnpivot) fromNode).query).name;
-      SqlUnpivot unpivot = (SqlUnpivot) fromNode;
-      SqlUnpivot unpivotNode =
-          new SqlUnpivot(unpivot.getParserPosition(), identifier, unpivot.includeNulls,
-              unpivot.measureList, unpivot.axisList, unpivot.inList);
-      ((SqlSelect) sqlNode).setFrom(unpivotNode);
+    } else if (fromNode instanceof SqlUnpivot) {
+      collapseCteReferenceInUnpivot((SqlUnpivot) fromNode);
+    } else if (fromNode instanceof SqlPivot) {
+      collapseCteReferenceInPivot((SqlPivot) fromNode);
+    }
+  }
+
+  /**
+   * Replaces the CTE definition ({@link SqlWithItem}) that an UNPIVOT carries as its input relation
+   * with the CTE's name, so that referencing a CTE does not re-emit the whole CTE body.
+   *
+   * <p>Both reference shapes reach here and both must be handled:
+   *
+   * <ul>
+   * <li><b>bare</b> — {@code FROM cte UNPIVOT (…)}: the query operand is the {@link SqlWithItem}
+   * itself, so operand 0 is replaced with the CTE name ({@code SqlUnpivot} declares
+   * {@code query} mutable and its {@code setOperand} accepts index 0).</li>
+   * <li><b>aliased</b> — {@code FROM cte AS a UNPIVOT (…)}: {@code RelToSqlConverter#applyTableAlias}
+   * wraps the {@link SqlWithItem} in an {@code AS} call, so only that call's first operand is
+   * replaced and the alias is preserved.</li>
+   * </ul>
+   *
+   * <p>Leaving the aliased shape untouched emits {@code FROM (cte AS (SELECT …)) AS a UNPIVOT (…)},
+   * which is not valid in any dialect: {@code name AS (query)} is WITH-clause-only syntax.
+   */
+  private static void collapseCteReferenceInUnpivot(SqlUnpivot unpivot) {
+    SqlNode query = unpivot.query;
+    if (query instanceof SqlWithItem) {
+      unpivot.setOperand(0, ((SqlWithItem) query).name);
+    } else {
+      replaceAliasedCteReference(query);
+    }
+  }
+
+  /**
+   * The PIVOT counterpart of {@link #collapseCteReferenceInUnpivot}. A PIVOT whose result carries an
+   * alias reaches {@link #handleOperand} instead (its FROM node is then an {@code AS} call), but a
+   * PIVOT with no result alias — including every PIVOT on a dialect whose
+   * {@code SqlDialect#supportsPivotTableAlias()} is {@code false} — arrives here as a bare
+   * {@link SqlPivot} and was previously left untouched.
+   */
+  private static void collapseCteReferenceInPivot(SqlPivot pivot) {
+    SqlNode query = pivot.query;
+    if (query instanceof SqlWithItem) {
+      pivot.setOperand(0, ((SqlWithItem) query).name);
+    } else {
+      replaceAliasedCteReference(query);
+    }
+  }
+
+  /**
+   * Replaces the {@link SqlWithItem} inside an {@code AS} call with the CTE's name, in place, so the
+   * alias operand is preserved. A no-op for any other node, so a non-CTE input (base table, inline
+   * subquery) is never rewritten.
+   */
+  private static void replaceAliasedCteReference(SqlNode query) {
+    if (query instanceof SqlBasicCall) {
+      SqlIdentifier cteName = fetchCTEIdentifier(query);
+      if (cteName != null) {
+        ((SqlBasicCall) query).setOperand(0, cteName);
+      }
     }
   }
 
@@ -380,6 +438,10 @@ public class CTERelToSqlUtil {
         && ((SqlBasicCall) ((SqlPivot) operand).query).operand(0) instanceof SqlWithItem) {
       ((SqlPivot) ((SqlBasicCall) parentNode).getOperandList().get(0)).setOperand(0,
           ((SqlWithItem) ((SqlBasicCall) ((SqlPivot) operand).query).operand(0)).name);
+    } else if (operand instanceof SqlUnpivot) {
+      // Hardening: an UNPIVOT reached as an operand (for example on a JOIN side, wrapped in an AS
+      // call) had no arm here at all, so its CTE reference was never collapsed in either shape.
+      collapseCteReferenceInUnpivot((SqlUnpivot) operand);
     } else if (operand instanceof SqlWithItem) {
       SqlIdentifier identifier = fetchCTEIdentifier(parentNode);
       if (identifier != null) {

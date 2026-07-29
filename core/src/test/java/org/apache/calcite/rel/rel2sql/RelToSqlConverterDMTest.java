@@ -12316,6 +12316,80 @@ class RelToSqlConverterDMTest {
     assertThat(actualSql, isLinux(expectedSql));
   }
 
+  /**
+   * Aliased CTE reference as an UNPIVOT input. Before the fix the CTE body was re-emitted inside
+   * the FROM as {@code (RUNDATE AS (SELECT …)) AS a}, which is not valid SQL.
+   */
+  @Test public void testCTEReferenceWithAliasAsUnpivotInput() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode cteBody = builder.scan("employee")
+        .project(builder.field("first_name"), builder.field("last_name"))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
+    final TableAliasTrait aliasTrait = new TableAliasTrait("a");
+    final RelTraitSet cteRelTraitSet = cteBody.getTraitSet().plus(cteTrait).plus(aliasTrait);
+    final RelNode cteRelNodeWithRelTrait = cteBody.copy(cteRelTraitSet, cteBody.getInputs());
+
+    final RelNode unpivoted = builder
+        .push(cteRelNodeWithRelTrait)
+        .unpivot(false, ImmutableList.of("NAME_VALUE"), ImmutableList.of("NAME_TYPE"),
+            ImmutableMap.<List<RexLiteral>, List<RexNode>>builder()
+                .put(ImmutableList.of(builder.literal("FIRST_NAME")),
+                    ImmutableList.of(builder.field("first_name")))
+                .put(ImmutableList.of(builder.literal("LAST_NAME")),
+                    ImmutableList.of(builder.field("last_name")))
+                .build().entrySet())
+        .build();
+
+    final CTEScopeTrait cteScopeTrait = new CTEScopeTrait(true);
+    final RelTraitSet cteScopeRelTraitSet = unpivoted.getTraitSet().plus(cteScopeTrait);
+    final RelNode root = unpivoted.copy(cteScopeRelTraitSet, unpivoted.getInputs());
+
+    final String expectedSql = "WITH RUNDATE AS (SELECT first_name, last_name\nFROM "
+        + "foodmart.employee) (SELECT *\nFROM RUNDATE AS a UNPIVOT EXCLUDE NULLS (NAME_VALUE FOR "
+        + "NAME_TYPE IN (first_name AS 'FIRST_NAME', last_name AS 'LAST_NAME')))";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /**
+   * The PIVOT twin of {@link #testCTEReferenceWithAliasAsUnpivotInput}. Before the fix the CTE body
+   * was re-emitted inside the FROM and the WITH clause was dropped altogether, because
+   * {@code fetchSqlWithItems} never recursed into {@code SqlPivot}.
+   */
+  @Test public void testCTEReferenceWithAliasAsPivotInput() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode cteBody = builder.scan("employee")
+        .project(builder.field("department_id"), builder.field("salary"))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "DEPT", false);
+    final TableAliasTrait aliasTrait = new TableAliasTrait("a");
+    final RelTraitSet cteRelTraitSet = cteBody.getTraitSet().plus(cteTrait).plus(aliasTrait);
+    final RelNode cteRelNodeWithRelTrait = cteBody.copy(cteRelTraitSet, cteBody.getInputs());
+
+    final RelNode pivoted = builder
+        .push(cteRelNodeWithRelTrait)
+        .pivot(builder.groupKey(),
+            ImmutableList.of(builder.sum(builder.field("salary")).as("SAL")),
+            ImmutableList.of(builder.field("department_id")),
+            ImmutableMap.<String, List<RexNode>>builder()
+                .put("D1", ImmutableList.of(builder.literal(1)))
+                .build().entrySet())
+        .build();
+
+    final CTEScopeTrait cteScopeTrait = new CTEScopeTrait(true);
+    final RelTraitSet cteScopeRelTraitSet = pivoted.getTraitSet().plus(cteScopeTrait);
+    final RelNode root = pivoted.copy(cteScopeRelTraitSet, pivoted.getInputs());
+
+    final String actualSql = toSql(root, DatabaseProduct.BIG_QUERY.getDialect());
+    assertThat(actualSql, containsString("WITH DEPT AS ("));
+    assertThat(actualSql, containsString("FROM DEPT AS a PIVOT ("));
+    assertThat(actualSql, not(containsString("DEPT AS (SELECT")));
+  }
+
   @Test public void testGenerateUUID() {
     final RelBuilder builder = relBuilder();
     final RexNode generateUUID = builder.call(SqlLibraryOperators.GENERATE_UUID);
