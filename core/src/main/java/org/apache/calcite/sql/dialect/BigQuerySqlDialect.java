@@ -2089,7 +2089,11 @@ public class BigQuerySqlDialect extends SqlDialect {
     int indexOfRegexOperand = 1;
     SqlWriter.Frame regexpReplaceFrame = writer.startFunCall("REGEXP_INSTR");
     List<SqlNode> operandList = call.getOperandList();
-    unparseRegexFunctionsOperands(writer, leftPrec, rightPrec, indexOfRegexOperand, operandList);
+    // BigQuery regex arguments must be raw string literals: a non-raw literal makes the
+    // backslash-bearing pattern an invalid escape sequence ('\.' -> "Illegal escape sequence"),
+    // so REGEXP_INSTR gets the same r'...' treatment REGEXP_CONTAINS already has.
+    unparseRegexpContainsFunctionsOperands(writer, leftPrec, rightPrec, indexOfRegexOperand,
+        operandList);
     writer.endFunCall(regexpReplaceFrame);
   }
 
