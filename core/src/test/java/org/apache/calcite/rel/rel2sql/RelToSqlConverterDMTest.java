@@ -9278,6 +9278,87 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkSql));
   }
 
+  /** Test case for RTB-2332: a Teradata REGEXP_SIMILAR pattern that the source did NOT anchor
+   * must be anchored for the substring-matching targets, so whole-string semantics survive.
+   * The existing testForRegexpSimilarFunction covers the already-anchored (idempotent) case. */
+  @Test public void testForRegexpSimilarFunctionAnchorsUnanchoredPattern() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpSimilar =
+        builder.call(SqlLibraryOperators.REGEXP_SIMILAR, builder.literal("12345"),
+                builder.literal("[0-9]*"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpSimilar, "A"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT IF(REGEXP_CONTAINS('12345' , "
+        + "r'^[0-9]*$'), 1, 0) AS A\n"
+        + "FROM scott.EMP";
+
+    final String expectedSparkSql = "SELECT IF('12345' rlike r'^[0-9]*$', 1, 0)"
+        + " A\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+    assertThat(toSql(root, DatabaseProduct.SPARK.getDialect()), isLinux(expectedSparkSql));
+  }
+
+  /** Test case for RTB-2332: a top-level alternation must be grouped before anchoring,
+   * otherwise '^a|b$' would mean '^a' OR 'b$' instead of a whole-string match. */
+  @Test public void testForRegexpSimilarFunctionGroupsTopLevelAlternation() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpSimilar =
+        builder.call(SqlLibraryOperators.REGEXP_SIMILAR, builder.literal("Mike Bird"),
+                builder.literal("(Mike B(i|y)rd)|(Michael B(i|y)rd)"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpSimilar, "A"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT IF(REGEXP_CONTAINS('Mike Bird' , "
+        + "r'^(?:(Mike B(i|y)rd)|(Michael B(i|y)rd))$'), 1, 0) AS A\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  /** Test case for RTB-2332: an escaped trailing dollar is a literal '$', not an anchor,
+   * so real anchors are still added. */
+  @Test public void testForRegexpSimilarFunctionAnchorsEscapedDollarPattern() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpSimilar =
+        builder.call(SqlLibraryOperators.REGEXP_SIMILAR, builder.literal("end$"),
+                builder.literal("end\\$"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpSimilar, "A"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT IF(REGEXP_CONTAINS('end$' , "
+        + "r'^end\\$$'), 1, 0) AS A\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
+  /** Test case for RTB-2332: the 3-operand 'i' form is already anchored by
+   * modifyRegexStringForMatchArgumentI, so anchoring must be a no-op there. */
+  @Test public void testForRegexpSimilarFunctionMatchArgumentIStaysSingleAnchored() {
+    final RelBuilder builder = relBuilder();
+    final RexNode regexpSimilar =
+        builder.call(SqlLibraryOperators.REGEXP_SIMILAR, builder.literal("MiKe BIrd"),
+                builder.literal("(Mike B(i|y)rd)"), builder.literal("i"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(regexpSimilar, "A"))
+        .build();
+
+    final String expectedBiqQuery = "SELECT IF(REGEXP_CONTAINS('MiKe BIrd' , "
+        + "r'^(?i)(Mike B(i|y)rd)$'), 1, 0) AS A\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
+
   @Test public void testForRegexpSimilarFunctionWithThirdArgumentAsI() {
     final RelBuilder builder = relBuilder();
     final RexNode regexpSimilar =

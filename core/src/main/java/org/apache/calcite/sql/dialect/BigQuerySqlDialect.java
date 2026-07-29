@@ -71,6 +71,7 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.CastCallBuilder;
 import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.RegexAnchorUtil;
 import org.apache.calcite.util.SqlCommentUtil;
 import org.apache.calcite.util.TimestampString;
 import org.apache.calcite.util.ToNumberUtils;
@@ -1830,7 +1831,19 @@ public class BigQuerySqlDialect extends SqlDialect {
       SqlWriter writer, SqlCall call, String operatorName) {
     SqlCharStringLiteral secondOperand = call.getOperandList().size() == 3
         ? modifyIfRegexpContainsSecondOperand(call) : call.operand(1);
+    // Teradata REGEXP_SIMILAR is a whole-string match, but REGEXP_CONTAINS is a substring
+    // search, so the pattern must be anchored. REGEXP_LIKE deliberately shares this helper
+    // and must NOT be anchored -- Oracle/Db2 REGEXP_LIKE is genuinely a partial match.
+    if ("REGEXP_SIMILAR".equals(operatorName)) {
+      secondOperand = anchorRegexLiteral(secondOperand);
+    }
     unparseRegexLiteral(writer, secondOperand, operatorName);
+  }
+
+  private static SqlCharStringLiteral anchorRegexLiteral(SqlCharStringLiteral operand) {
+    String anchored = RegexAnchorUtil.anchorForWholeStringMatch(
+        removeLeadingAndTrailingSingleQuotes(operand.toString()));
+    return SqlLiteral.createCharString(anchored, SqlParserPos.ZERO);
   }
 
   private SqlCharStringLiteral modifyIfRegexpContainsSecondOperand(SqlCall call) {
