@@ -2109,6 +2109,19 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.STRING);
 
   /**
+   * The "BYTE_LENGTH(string_or_bytes)" function; returns the number of BYTES used to represent
+   * the argument. BigQuery-specific: for a STRING argument it counts UTF-8 bytes (not
+   * characters, unlike CHAR_LENGTH), and for a BYTES argument it counts the bytes directly.
+   * Returns NULL on a NULL argument.
+   */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction BYTE_LENGTH =
+      SqlBasicFunction.create("BYTE_LENGTH",
+          ReturnTypes.INTEGER_NULLABLE,
+          OperandTypes.or(OperandTypes.CHARACTER, OperandTypes.BINARY),
+          SqlFunctionCategory.STRING);
+
+  /**
    * The "FROM_HEX(varchar)" function; converts a hexadecimal-encoded {@code varchar} into bytes.
    */
   @LibraryOperator(libraries = {BIG_QUERY})
