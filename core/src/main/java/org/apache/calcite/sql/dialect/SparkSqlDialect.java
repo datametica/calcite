@@ -995,12 +995,29 @@ public class SparkSqlDialect extends SqlDialect {
   }
 
   private void unParseRegexString(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+    // Spark/Databricks `rlike` is a find() style partial match, so a whole-string source
+    // predicate (Teradata REGEXP_SIMILAR) must have its pattern anchored. unParseRegexpLike
+    // is reached only from `case "REGEXP_SIMILAR"` in this dialect, but the operator name is
+    // checked explicitly so a future REGEXP_LIKE caller is not silently anchored too.
+    boolean anchor = "REGEXP_SIMILAR".equals(call.getOperator().getName());
     if (call.getOperandList().size() == 3) {
       SqlCharStringLiteral modifiedRegexString = getModifiedRegexString(call);
+      if (anchor) {
+        modifiedRegexString = anchorRegexLiteral(modifiedRegexString);
+      }
       modifiedRegexString.unparse(writer, leftPrec, rightPrec);
+    } else if (anchor && call.operand(1) instanceof SqlCharStringLiteral) {
+      anchorRegexLiteral((SqlCharStringLiteral) call.operand(1))
+          .unparse(writer, leftPrec, rightPrec);
     } else {
       call.operand(1).unparse(writer, leftPrec, rightPrec);
     }
+  }
+
+  private static SqlCharStringLiteral anchorRegexLiteral(SqlCharStringLiteral operand) {
+    String raw = operand.toValue();
+    return SqlLiteral.createCharString(
+        RegexAnchorUtil.anchorForWholeStringMatch(raw), SqlParserPos.ZERO);
   }
 
   private SqlCharStringLiteral getModifiedRegexString(SqlCall call) {
