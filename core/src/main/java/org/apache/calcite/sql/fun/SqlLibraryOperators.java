@@ -958,6 +958,14 @@ public abstract class SqlLibraryOperators {
           OperandTypes.INTEGER_INTEGER_INTEGER,
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction CHECKSUM =
+      new SqlFunction("CHECKSUM",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.INTEGER, null,
+          OperandTypes.VARIADIC,
+          SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {SPARK})
   public static final SqlFunction MAKE_DATE =
       new SqlFunction("MAKE_DATE",
