@@ -580,15 +580,36 @@ public class RelToSqlConverter extends SqlImplementor
     //as per ANSI standard, we either can use LATERAL with subquery or UNNEST with array/multiset
     //But both are not allowed at the same time.
 
-    if (!(containsOnlyUnnestItems(rightNode))) {
-      final SqlNode rightLateral =
-          SqlStdOperatorTable.LATERAL.createCall(POS, rightResult.node);
-      rightLateralAs =
-          SqlStdOperatorTable.AS.createCall(POS, rightLateral,
-              new SqlIdentifier(
-                  requireNonNull(rightResult.neededAlias,
-                      () -> "rightResult.neededAlias is null, node is " + rightResult.node), POS));
+    if (containsOnlyUnnestItems(rightNode)) {
+      JoinConditionType joinConditionType = JoinConditionType.NONE;
+      SqlNode joinCondition = null;
+      JoinType joinType = joinType(e.getJoinType());
+      if (e.getJoinType().isOuterJoin()) {
+        joinConditionType = JoinConditionType.ON;
+        joinCondition = SqlLiteral.createBoolean(true, POS);
+      } else {
+        joinType = JoinType.INNER;
+      }
+
+      final SqlNode correlatedJoin =
+          new SqlJoin(
+              POS,
+              leftResult.asFrom(),
+              SqlLiteral.createBoolean(false, POS),
+              joinType.symbol(POS),
+              rightLateralAs,
+              joinConditionType.symbol(POS),
+              joinCondition);
+      return result(correlatedJoin, leftResult, rightResult);
     }
+
+    final SqlNode rightLateral =
+        SqlStdOperatorTable.LATERAL.createCall(POS, rightResult.node);
+    rightLateralAs =
+        SqlStdOperatorTable.AS.createCall(POS, rightLateral,
+            new SqlIdentifier(
+                requireNonNull(rightResult.neededAlias,
+                    () -> "rightResult.neededAlias is null, node is " + rightResult.node), POS));
 
     final SqlNode join =
         new SqlJoin(POS,
