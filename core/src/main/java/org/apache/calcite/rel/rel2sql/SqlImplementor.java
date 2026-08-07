@@ -110,6 +110,7 @@ import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlTableRef;
+import org.apache.calcite.sql.SqlTimeTravel;
 import org.apache.calcite.sql.SqlUnnestOperator;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
@@ -658,7 +659,8 @@ public abstract class SqlImplementor {
             && (((SqlCall) node).getOperator() instanceof SqlSetOperator
                 || ((SqlCall) node).getOperator() == SqlStdOperatorTable.AS
                 || ((SqlCall) node).getOperator() == SqlStdOperatorTable.VALUES
-                || ((SqlCall) node).getOperator() == SqlStdOperatorTable.TABLESAMPLE))
+                || ((SqlCall) node).getOperator() == SqlStdOperatorTable.TABLESAMPLE
+                || ((SqlCall) node).getOperator() == SqlTimeTravel.TIME_TRAVEL))
         : node;
     if (requiresAlias(node)) {
       node = as(node, "t");
