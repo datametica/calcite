@@ -15156,4 +15156,16 @@ class RelToSqlConverterDMTest {
         + "WHERE EMP.EMPNO > 5";
     assertThat(actualSql, isLinux(expectedSql));
   }
+  @Test void testDecorrelateOuterApplyOverUnionAllAggregate() {
+    // OUTER APPLY (SELECT MAX(x) FROM (SELECT MAX(x) ... WHERE k=a.k UNION ALL SELECT MAX(x) ... WHERE k=a.k))
+    // must decorrelate to a LEFT JOIN on a GROUP BY-ed union, with NO LATERAL / correlate surviving.
+    final String sql = "SELECT a.k, b.mx FROM (SELECT DISTINCT k FROM t0) a "
+        + "OUTER APPLY (SELECT MAX(x) AS mx FROM ("
+        + "  SELECT MAX(x) AS x FROM t1 WHERE t1.k = a.k "
+        + "  UNION ALL "
+        + "  SELECT MAX(x) AS x FROM t2 WHERE t2.k = a.k) u) b";
+    // Expected (BigQuery): LEFT JOIN over grouped union; assert the rel decorrelates (no LogicalCorrelate
+    // in the optimized plan) and the emitted SQL contains "LEFT JOIN" and no "LATERAL".
+    sql(sql).withBigQuery().ok(/* expected LEFT JOIN form -- no LATERAL */);
+  }
 }

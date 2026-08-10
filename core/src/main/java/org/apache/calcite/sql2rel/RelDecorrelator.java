@@ -43,6 +43,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalAggregate;
@@ -52,6 +53,7 @@ import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSnapshot;
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan;
+import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.metadata.RelMdUtil;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.rel2sql.CTERelToSqlUtil;
@@ -936,6 +938,53 @@ public class RelDecorrelator implements ReflectiveVisitor {
       }
     }
     return null;
+  }
+
+  public @Nullable Frame decorrelateRel(LogicalUnion rel, boolean isCorVarDefined) {
+    return decorrelateRel((SetOp) rel, isCorVarDefined);
+  }
+
+  /**
+   * Decorrelate a SetOp (UNION [ALL] / INTERSECT / EXCEPT) whose inputs may carry correlated
+   * variables. Each input is decorrelated independently; all inputs must expose the SAME set of
+   * correlated defs (same CorDef -> output position), so the corVar columns line up across branches.
+   * The rebuilt SetOp then propagates those corDefOutputs up, so a parent Correlate can be lowered
+   * to a join (CALCITE-7272). Without this handler a SetOp falls to decorrelateRel(RelNode), which
+   * returns null the moment any input still carries corDefOutputs, aborting the whole decorrelation.
+   */
+  public @Nullable Frame decorrelateRel(SetOp rel, boolean isCorVarDefined) {
+    final List<RelNode> oldInputs = rel.getInputs();
+    final List<RelNode> newInputs = new ArrayList<>();
+    NavigableMap<CorDef, Integer> corDefOutputs = null;
+    Map<Integer, Integer> oldToNewOutputs = null;
+
+    for (RelNode oldInput : oldInputs) {
+      final Frame frame = getInvoke(oldInput, isCorVarDefined, rel);
+      if (frame == null) {
+        // an input could not be rewritten -> cannot decorrelate the SetOp
+        return null;
+      }
+      // All SetOp branches must agree on the correlated-var column layout, otherwise the union of
+      // rows would misalign the propagated corVars. Require identical CorDef->position maps.
+      if (corDefOutputs == null) {
+        corDefOutputs = new TreeMap<>(frame.corDefOutputs);
+        oldToNewOutputs = frame.oldToNewOutputs;
+      } else if (!corDefOutputs.equals(frame.corDefOutputs)) {
+        return null;
+      }
+      newInputs.add(frame.r);
+    }
+    if (corDefOutputs == null) {
+      return null;
+    }
+
+    // Rebuild the SetOp over the decorrelated inputs (all now carry the extra corVar columns in the
+    // same positions), preserving ALL/DISTINCT.
+    final RelNode newSetOp = rel.copy(rel.getTraitSet(), newInputs, rel.all);
+
+    // Output row shape is unchanged relative to each branch's decorrelated output, so reuse the
+    // per-branch oldToNewOutputs mapping and propagate the shared corDefOutputs upward.
+    return register(rel, newSetOp, oldToNewOutputs, corDefOutputs);
   }
 
   public @Nullable Frame decorrelateRel(LogicalProject rel, boolean isCorVarDefined) {
