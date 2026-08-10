@@ -23,6 +23,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan;
 import org.apache.calcite.rel.rules.TransformationRule;
+import org.apache.calcite.sql.SqlKind;
 
 import org.immutables.value.Value;
 
@@ -98,7 +99,9 @@ public class JoinTableFunctionScanTransposeRule
         .withOperandSupplier(b0 ->
             b0.operand(LogicalJoin.class).inputs(
                 b1 -> b1.operand(RelNode.class).anyInputs(),
-                b2 -> b2.operand(LogicalTableFunctionScan.class).anyInputs()))
+                b2 -> b2.operand(LogicalTableFunctionScan.class)
+                    .predicate(scan -> scan.getCall().getKind() == SqlKind.OTHER_FUNCTION)
+                    .anyInputs()))
         .withDescription("JoinTableFunctionScanTransposeRule")
         .as(Config.class);
 
