@@ -2669,6 +2669,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       case CLOB:
       case CHAR:
       case VARCHAR:
+      case ROWVERSION:
         return createSqlDataTypeSpecByName("STRING", type);
       case BINARY:
       case VARBINARY:
