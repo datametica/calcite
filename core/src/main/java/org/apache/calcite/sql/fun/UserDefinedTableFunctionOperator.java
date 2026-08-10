@@ -22,13 +22,13 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 
-public class GenericTableFunction extends SqlFunction implements SqlTableFunction {
+public class UserDefinedTableFunctionOperator extends SqlFunction implements SqlTableFunction {
   private final RelDataType rowType;
 
-  public GenericTableFunction(String name, RelDataType rowType) {
+  public UserDefinedTableFunctionOperator(String name, RelDataType rowType) {
     super(
         name,
-        SqlKind.OTHER_FUNCTION,
+        SqlKind.UDTF,
         ReturnTypes.explicit(rowType),
         null,
         OperandTypes.SAME_VARIADIC,

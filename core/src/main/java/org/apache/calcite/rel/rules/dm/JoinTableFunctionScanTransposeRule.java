@@ -100,7 +100,7 @@ public class JoinTableFunctionScanTransposeRule
             b0.operand(LogicalJoin.class).inputs(
                 b1 -> b1.operand(RelNode.class).anyInputs(),
                 b2 -> b2.operand(LogicalTableFunctionScan.class)
-                    .predicate(scan -> scan.getCall().getKind() == SqlKind.OTHER_FUNCTION)
+                    .predicate(scan -> scan.getCall().getKind() == SqlKind.UDTF)
                     .anyInputs()))
         .withDescription("JoinTableFunctionScanTransposeRule")
         .as(Config.class);
