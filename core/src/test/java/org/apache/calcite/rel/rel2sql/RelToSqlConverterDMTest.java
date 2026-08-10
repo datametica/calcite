@@ -12316,6 +12316,49 @@ class RelToSqlConverterDMTest {
     assertThat(actualSql, isLinux(expectedSql));
   }
 
+  /** An UNPIVOT whose input is a CTE referenced by an alias must emit the CTE by NAME
+   * ({@code FROM TMP AS a UNPIVOT ...}) rather than re-inlining the CTE definition
+   * ({@code FROM (TMP AS (SELECT ...)) AS a UNPIVOT ...}), which is invalid target SQL. */
+  @Test public void testUnpivotOverCteReferencedByAlias() {
+    final RelBuilder builder = RelBuilder.create(salesConfig().build());
+
+    final RelNode cte = builder
+        .scan("sales")
+        .project(builder.field("jansales"), builder.field("febsales"), builder.field("marsales"))
+        .build();
+
+    // CTE definition trait + a table alias (mirrors what swift attaches for `FROM tmp a`).
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "TMP", false);
+    RelTraitSet cteTraits = cte.getTraitSet().plus(cteTrait).plus(new TableAliasTrait("a"));
+    final RelNode cteWithTraits = cte.copy(cteTraits, cte.getInputs());
+
+    final RelNode unpivot = builder
+        .push(cteWithTraits)
+        .unpivot(false, ImmutableList.of("monthly_sales"),
+            ImmutableList.of("month"),
+            Pair.zip(
+                Arrays.asList(ImmutableList.of(builder.literal("jan")),
+                    ImmutableList.of(builder.literal("feb")),
+                    ImmutableList.of(builder.literal("march"))),
+                Arrays.asList(ImmutableList.of(builder.field("jansales")),
+                    ImmutableList.of(builder.field("febsales")),
+                    ImmutableList.of(builder.field("marsales")))))
+        .build();
+
+    // CTE scope trait on the outer node (mirrors the WITH-carrying statement node).
+    final CTEScopeTrait cteScopeTrait = new CTEScopeTrait(true);
+    final RelNode scopeNode =
+        unpivot.copy(unpivot.getTraitSet().plus(cteScopeTrait), unpivot.getInputs());
+
+    final String actualSql = toSql(scopeNode, DatabaseProduct.BIG_QUERY.getDialect());
+
+    final String expectedSql = "WITH TMP AS (SELECT jansales, febsales, marsales\n"
+        + "FROM SALESSCHEMA.sales) (SELECT month, CAST(monthly_sales AS INTEGER) AS monthly_sales\n"
+        + "FROM TMP AS a UNPIVOT EXCLUDE NULLS (monthly_sales FOR month IN "
+        + "(jansales AS 'jan', febsales AS 'feb', marsales AS 'march')))";
+    assertThat(actualSql, isLinux(expectedSql));
+  }
+
   @Test public void testGenerateUUID() {
     final RelBuilder builder = relBuilder();
     final RexNode generateUUID = builder.call(SqlLibraryOperators.GENERATE_UUID);

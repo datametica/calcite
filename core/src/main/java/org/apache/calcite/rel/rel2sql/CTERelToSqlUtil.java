@@ -292,15 +292,38 @@ public class CTERelToSqlUtil {
       } else {
         ((SqlSelect) sqlNode).setFrom(((SqlWithItem) fromNode).name);
       }
-    } else if (fromNode instanceof SqlUnpivot
-        && ((SqlUnpivot) fromNode).query instanceof SqlWithItem) {
-      SqlIdentifier identifier = ((SqlWithItem) ((SqlUnpivot) fromNode).query).name;
+    } else if (fromNode instanceof SqlUnpivot) {
       SqlUnpivot unpivot = (SqlUnpivot) fromNode;
-      SqlUnpivot unpivotNode =
-          new SqlUnpivot(unpivot.getParserPosition(), identifier, unpivot.includeNulls,
-              unpivot.measureList, unpivot.axisList, unpivot.inList);
-      ((SqlSelect) sqlNode).setFrom(unpivotNode);
+      SqlNode collapsedQuery = collapseCteReferenceInUnpivotQuery(unpivot.query);
+      if (collapsedQuery != null) {
+        ((SqlSelect) sqlNode).setFrom(
+            new SqlUnpivot(unpivot.getParserPosition(), collapsedQuery, unpivot.includeNulls,
+                unpivot.measureList, unpivot.axisList, unpivot.inList));
+      }
     }
+  }
+
+  /**
+   * Collapses a CTE definition that appears as the input (query) of a {@link SqlUnpivot} back to a
+   * reference to the CTE name, so an UNPIVOT over a CTE emits
+   * {@code FROM cte [AS alias] UNPIVOT (...)} instead of re-inlining the CTE's full definition
+   * (which produced invalid target SQL such as {@code FROM (cte AS (SELECT ...)) AS a UNPIVOT ...}).
+   * Handles both a bare {@link SqlWithItem} ({@code FROM cte UNPIVOT ...}) and an aliased one
+   * wrapped by {@code AS} ({@code FROM cte AS a UNPIVOT ...}). Returns {@code null} when the query is
+   * not a CTE definition, so the caller leaves the FROM untouched.
+   */
+  private static SqlNode collapseCteReferenceInUnpivotQuery(SqlNode query) {
+    if (query instanceof SqlWithItem) {
+      return ((SqlWithItem) query).name;
+    }
+    if (query instanceof SqlBasicCall
+        && ((SqlBasicCall) query).getOperator() instanceof SqlAsOperator
+        && ((SqlBasicCall) query).operand(0) instanceof SqlWithItem) {
+      SqlBasicCall asCall = (SqlBasicCall) query;
+      asCall.setOperand(0, ((SqlWithItem) asCall.operand(0)).name);
+      return asCall;
+    }
+    return null;
   }
 
   private static void processBasicCall(SqlNode sqlNode) {
