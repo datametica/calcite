@@ -53,13 +53,11 @@ public class UserDefinedTableFunctionOperator extends SqlFunction implements Sql
   private final RelDataType rowType;
 
   public UserDefinedTableFunctionOperator(String name, RelDataType rowType) {
-    super(name,
     super(
         name,
         SqlKind.UDTF,
         ReturnTypes.explicit(rowType),
         null,
-        OperandTypes.SAME_VARIADIC,
         OperandTypes.VARIADIC,
         SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION);
 
