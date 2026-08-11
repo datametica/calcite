@@ -3571,8 +3571,13 @@ public class RelBuilder {
       }
     }
     if (fetchNode != null) {
-      if (!(fetchNode instanceof RexLiteral || fetchNode instanceof RexDynamicParam)) {
-        throw new IllegalArgumentException("FETCH node must be RexLiteral or RexDynamicParam");
+      // RMSAD-58: SQL Server TOP (n) PERCENT is modelled as a scalar sub-query fetch
+      // (SELECT CAST(CEIL(COUNT(*) * n / 100.0) AS BIGINT) FROM <source>). Allow a
+      // RexSubQuery so mig swift can express a computed, non-literal row count.
+      if (!(fetchNode instanceof RexLiteral || fetchNode instanceof RexDynamicParam
+          || fetchNode instanceof RexSubQuery)) {
+        throw new IllegalArgumentException(
+            "FETCH node must be RexLiteral, RexDynamicParam or RexSubQuery");
       }
     }
 
