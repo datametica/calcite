@@ -61,9 +61,21 @@ public class ToNumberUtils {
           call.setOperand(0, sqlNode[0]);
         }
 
-        SqlTypeName sqlTypeName = call.operand(0).toString().contains(".")
-                ? SqlTypeName.FLOAT : SqlTypeName.BIGINT;
-        handleCasting(writer, call, leftPrec, rightPrec, sqlTypeName, dialect);
+        // RTB-2383: for a BigQuery target, cast a single-argument decimal TO_NUMBER to an
+        // EXACT numeric type (NUMERIC / BIGNUMERIC by precision) instead of FLOAT. FLOAT
+        // (rendered FLOAT64) loses precision and, when the INSERT target column is
+        // NUMERIC/BIGNUMERIC, yields a FLOAT64 value BigQuery refuses to assign
+        // ("type FLOAT64 which cannot be inserted into column ... BIGNUMERIC").
+        // Non-BigQuery targets (Hive/Spark/Snowflake) keep the existing FLOAT behavior.
+        if (call.operand(0).toString().contains(".")) {
+          if (dialect.getDatabaseProduct() == SqlDialect.DatabaseProduct.BIG_QUERY) {
+            handleBigQueryDecimalCasting(writer, call, leftPrec, rightPrec, dialect);
+          } else {
+            handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.FLOAT, dialect);
+          }
+        } else {
+          handleCasting(writer, call, leftPrec, rightPrec, SqlTypeName.BIGINT, dialect);
+        }
       }
       break;
     case 2:
@@ -159,6 +171,34 @@ public class ToNumberUtils {
                     dialect.getCastSpec(
                         new BasicSqlType(
                             RelDataTypeSystem.DEFAULT, sqlTypeName))};
+    SqlCall extractCallCast =
+        new SqlBasicCall(SqlStdOperatorTable.CAST, extractNodeOperands, SqlParserPos.ZERO);
+    writer.getDialect().unparseCall(writer, extractCallCast, leftPrec, rightPrec);
+  }
+
+  /**
+   * Casts a single-argument decimal TO_NUMBER operand to an exact numeric type whose
+   * precision/scale is derived from the literal, so BigQuery renders NUMERIC for values
+   * that fit and BIGNUMERIC for high-precision/high-scale values
+   * ({@code BigQuerySqlDialect.getDataTypeBasedOnPrecision}). Replaces the previous lossy
+   * cast to FLOAT (FLOAT64). BigQuery-target only.
+   */
+  private static void handleBigQueryDecimalCasting(
+      SqlWriter writer, SqlCall call, int leftPrec, int rightPrec, SqlDialect dialect) {
+    String literal = call.operand(0).toString().replaceAll("[',$A-Za-z]+", "").trim();
+    String digits = literal.replaceAll("[+-]", "");
+    String[] parts = digits.split("\\.", -1);
+    int intDigits = parts[0].replaceFirst("^0+", "").length();
+    int scale = parts.length > 1 ? parts[1].length() : 0;
+    int precision = Math.min(38, Math.max(1, intDigits + scale));
+    if (scale > precision) {
+      scale = precision;
+    }
+    SqlNode[] extractNodeOperands =
+            new SqlNode[]{call.operand(0),
+                    dialect.getCastSpec(
+                        new BasicSqlType(
+                            RelDataTypeSystem.DEFAULT, SqlTypeName.DECIMAL, precision, scale))};
     SqlCall extractCallCast =
         new SqlBasicCall(SqlStdOperatorTable.CAST, extractNodeOperands, SqlParserPos.ZERO);
     writer.getDialect().unparseCall(writer, extractCallCast, leftPrec, rightPrec);
