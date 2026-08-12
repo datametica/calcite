@@ -300,7 +300,22 @@ public class CTERelToSqlUtil {
           new SqlUnpivot(unpivot.getParserPosition(), identifier, unpivot.includeNulls,
               unpivot.measureList, unpivot.axisList, unpivot.inList);
       ((SqlSelect) sqlNode).setFrom(unpivotNode);
+    } else if (fromNode instanceof SqlUnpivot
+        && isAliasedSqlWithItem(((SqlUnpivot) fromNode).query)) {
+      // CTE referenced WITH AN ALIAS under UNPIVOT: the query operand is AS(SqlWithItem, alias).
+      // Replace the inlined CTE definition with its name, keeping the alias:
+      // (TMP AS (SELECT ...)) AS a UNPIVOT (...)  ->  TMP AS a UNPIVOT (...)
+      SqlBasicCall aliasedQuery = (SqlBasicCall) ((SqlUnpivot) fromNode).query;
+      aliasedQuery.setOperand(0, ((SqlWithItem) aliasedQuery.operand(0)).name);
     }
+  }
+
+  /** Returns whether {@code node} is an AS call whose first operand is a {@link SqlWithItem}
+   * (an aliased CTE reference whose definition got inlined). */
+  private static boolean isAliasedSqlWithItem(SqlNode node) {
+    return node instanceof SqlBasicCall
+        && ((SqlBasicCall) node).getOperator() instanceof SqlAsOperator
+        && ((SqlBasicCall) node).operand(0) instanceof SqlWithItem;
   }
 
   private static void processBasicCall(SqlNode sqlNode) {
