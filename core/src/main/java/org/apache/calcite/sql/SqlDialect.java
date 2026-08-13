@@ -864,6 +864,10 @@ public class SqlDialect {
     return false;
   }
 
+  public boolean hasImplicitTypeCoercionInUnpivot() {
+    return true;
+  }
+
   /**
    * Converts a timestamp to a SQL timestamp literal, e.g.
    * {@code TIMESTAMP '2009-12-17 12:34:56'}.
