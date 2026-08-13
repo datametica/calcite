@@ -742,7 +742,15 @@ public class RelToSqlConverter extends SqlImplementor
   private SqlUnpivot createUnpivotSqlNodeWithIncludeNulls(Project projectRel,
       SqlImplementor.Builder builder, UnpivotRelToSqlUtil unpivotRelToSqlUtil) {
     RelNode leftRelOfJoin = ((LogicalJoin) projectRel.getInput(0)).getLeft();
-    SqlNode query = dispatch(leftRelOfJoin).asStatement();
+    // RSFB-4324: when the UNPIVOT source is a bare (optionally aliased) table scan,
+    // emit it directly as the UNPIVOT from-item (`<table> AS <alias>`) instead of
+    // wrapping it in a redundant `(SELECT * FROM <table> AS <alias>)` sub-select.
+    // asStatement() promotes the FROM node into a full SELECT, producing the extra
+    // nesting; asFrom() preserves the alias on the table itself.
+    final Result leftResult = dispatch(leftRelOfJoin);
+    SqlNode query = (leftRelOfJoin instanceof TableScan)
+        ? leftResult.asFrom()
+        : leftResult.asStatement();
     LogicalValues valuesRel = unpivotRelToSqlUtil.getLogicalValuesRel(projectRel);
     SqlNodeList axisList = new SqlNodeList(ImmutableList.of
         (new SqlIdentifier(unpivotRelToSqlUtil.getLogicalValueAlias(valuesRel), POS)), POS);
