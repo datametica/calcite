@@ -760,6 +760,9 @@ public class BigQuerySqlDialect extends SqlDialect {
               new SqlBasicCall(IFNULL, extractNodeOperands, SqlParserPos.ZERO);
       unparseCall(writer, sqlCall, leftPrec, rightPrec);
       break;
+    case MODE:
+      unparseMode(writer, call, leftPrec, rightPrec);
+      break;
     case OTHER_FUNCTION:
     case OTHER:
       unparseOtherFunction(writer, call, leftPrec, rightPrec);
@@ -937,6 +940,20 @@ public class BigQuerySqlDialect extends SqlDialect {
     } else {
       super.unparseCall(writer, call, leftPrec, rightPrec);
     }
+  }
+
+  /**
+   * BigQuery has no MODE aggregate. Snowflake MODE(expr) returns the most frequent value, ignoring
+   * NULLs, so it is rewritten using APPROX_TOP_COUNT: take the value of the top-1 slot; if that value
+   * is NULL (NULL was the most frequent), fall back to the second-most-frequent value when one exists,
+   * otherwise NULL.
+   */
+  private void unparseMode(SqlWriter writer, SqlCall call, final int leftPrec, final int rightPrec) {
+    String arg = call.operand(0).toSqlString(writer.getDialect()).toString();
+    writer.print("IF(APPROX_TOP_COUNT(" + arg + ",1)[OFFSET(0)].value IS NULL,\n");
+    writer.print("IF(ARRAY_LENGTH(APPROX_TOP_COUNT(" + arg + ", 2)) > 1,APPROX_TOP_COUNT("
+        + arg + ", 2)[OFFSET(1)].value,NULL),\n");
+    writer.print("APPROX_TOP_COUNT(" + arg + ",1)[OFFSET(0)].value)");
   }
 
   private void unparseItem(SqlWriter writer, SqlCall call, final int leftPrec) {
