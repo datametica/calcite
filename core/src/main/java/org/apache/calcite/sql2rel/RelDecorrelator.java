@@ -1518,6 +1518,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     boolean projectPulledAboveLeftCorrelator =
         joinType.generatesNullsOnRight();
 
+    final RelDataTypeFactory typeFactory = relBuilder.getTypeFactory();
     for (Pair<RexNode, String> pair : project.getNamedProjects()) {
       RexNode newProjExpr =
           removeCorrelationExpr(
@@ -1525,9 +1526,19 @@ public class RelDecorrelator implements ReflectiveVisitor {
               projectPulledAboveLeftCorrelator,
               isCount);
 
+      // RMSIB-162: when this correlate is the RHS of a further LEFT correlate
+      // (stacked counted OUTER APPLYs), the enclosing correlate already declares
+      // this column nullable (LOJ can null it). Re-forcing the original count
+      // NOT-NULL type here produces a project whose row type disagrees with the
+      // correlate RelSet ("Cannot add expression of different type to set").
+      // Reconcile nullability with projectPulledAboveLeftCorrelator.
+      final RelDataType reTypeAs =
+          projectPulledAboveLeftCorrelator
+              ? typeFactory.createTypeWithNullability(pair.left.getType(), true)
+              : pair.left.getType();
       newProjExpr = newProjExpr.accept(new RexShuttle() {
         @Override public RexNode visitCall(final RexCall call) {
-          return call.clone(pair.left.getType(), call.operands);
+          return call.clone(reTypeAs, call.operands);
         }
       });
       newProjects.add(newProjExpr, pair.right);
