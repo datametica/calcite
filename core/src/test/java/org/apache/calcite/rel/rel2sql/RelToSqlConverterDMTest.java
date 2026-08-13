@@ -12762,6 +12762,42 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(rel, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedBigQuery));
   }
 
+  @Test void testForModeFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlStdOperatorTable.MODE, builder.field(1));
+    final RelNode rel = builder
+        .aggregate(relBuilder().groupKey(), aggCall)
+        .build();
+    final String expectedBigQuery = "SELECT IF(APPROX_TOP_COUNT(ENAME, 1)[OFFSET(0)].value IS NULL, "
+        + "IF(ARRAY_LENGTH(APPROX_TOP_COUNT(ENAME, 2)) > 1, "
+        + "APPROX_TOP_COUNT(ENAME, 2)[OFFSET(1)].value, NULL), "
+        + "APPROX_TOP_COUNT(ENAME, 1)[OFFSET(0)].value) AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(rel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  @Test void testForModeFunctionWithFunctionOperand() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlStdOperatorTable.MODE,
+            builder.cast(
+                builder.call(SqlLibraryOperators.IF,
+                builder.call(EQUALS, builder.field(1), builder.literal(2)), builder.literal(2),
+                builder.literal(3)), SqlTypeName.DECIMAL));
+    final RelNode rel = builder
+        .aggregate(relBuilder().groupKey(), aggCall)
+        .build();
+    final String expectedBigQuery = "SELECT IF(APPROX_TOP_COUNT(IF(ENAME = 2, 2, 3), 1)[OFFSET(0)].value IS NULL, "
+        + "IF(ARRAY_LENGTH(APPROX_TOP_COUNT(IF(ENAME = 2, 2, 3), 2)) > 1, "
+        + "APPROX_TOP_COUNT(IF(ENAME = 2, 2, 3), 2)[OFFSET(1)].value, NULL), "
+        + "APPROX_TOP_COUNT(IF(ENAME = 2, 2, 3), 1)[OFFSET(0)].value) AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(rel, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
   @Test public void testUserDefinedType() {
     RelBuilder builder = relBuilder();
     RelDataTypeFactory typeFactory = builder.getTypeFactory();
