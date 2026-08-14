@@ -7736,6 +7736,31 @@ class RelToSqlConverterDMTest {
         .withBigQuery().ok(expectedBigQuery);
   }
 
+  /**
+   * RHB-1316: a deep left-deep chain of UNION ALL set operators (produced when a
+   * multi-row INSERT ... VALUES with non-literal row expressions is rewritten into a
+   * UNION ALL of single-row SELECTs) must unparse without a StackOverflowError. The
+   * ticket's INSERT had 499 rows. The inherited {@link SqlBinaryOperator} unparse recurses
+   * down the left spine, one frame group per set-op node, so the chain overflows the stack;
+   * {@link SqlSetOperator#unparse} flattens the same-operator chain iteratively instead.
+   */
+  @Test public void testDeeplyChainedUnionAllDoesNotStackOverflow() {
+    final int rows = 1500;
+    final RelBuilder builder = relBuilder();
+    builder.push(
+        createLogicalValueRel(builder.alias(builder.literal("v0a"), "col1"),
+            builder.alias(builder.literal("v0b"), "col2")));
+    for (int i = 1; i < rows; i++) {
+      builder.push(
+          createLogicalValueRel(builder.alias(builder.literal("v" + i + "a"), "col1"),
+              builder.alias(builder.literal("v" + i + "b"), "col2")));
+      builder.union(true);
+    }
+    final RelNode root = builder.build();
+    final String sql = toSql(root, DatabaseProduct.BIG_QUERY.getDialect());
+    assertThat(sql != null && sql.contains("UNION ALL"), is(true));
+  }
+
   @Test public void testRowid() {
     final RelBuilder builder = relBuilder();
     final RexNode rowidRexNode = builder.call(SqlLibraryOperators.ROWID);

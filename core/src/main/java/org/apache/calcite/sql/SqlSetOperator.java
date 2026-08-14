@@ -89,4 +89,50 @@ public class SqlSetOperator extends SqlBinaryOperator {
       SqlValidatorScope operandScope) {
     validator.validateQuery(call, operandScope, validator.getUnknownType());
   }
+
+  @Override public void unparse(
+      SqlWriter writer,
+      SqlCall call,
+      int leftPrec,
+      int rightPrec) {
+    // A set-operator chain is built left-deep: ((a UNION ALL b) UNION ALL c) ...
+    // The inherited SqlBinaryOperator.unparse recurses into operand(0) for every node
+    // in that chain, so a chain of a few hundred nodes (e.g. a multi-row
+    // INSERT ... VALUES rewritten into a UNION ALL of single-row SELECTs) overflows the
+    // JVM stack with a StackOverflowError. Flatten the run of THIS same set operator into
+    // a list and emit it in a single loop, so unparse depth is independent of chain
+    // length. Operand precedences reproduce exactly what the nested binary unparse would
+    // pass, so the rendered SQL is unchanged. (RHB-1316)
+    if (call.operandCount() != 2) {
+      super.unparse(writer, call, leftPrec, rightPrec);
+      return;
+    }
+    final java.util.Deque<SqlNode> operands = new java.util.ArrayDeque<>();
+    SqlNode node = call;
+    while (node instanceof SqlCall
+        && ((SqlCall) node).getOperator() == this
+        && ((SqlCall) node).operandCount() == 2) {
+      final SqlCall setCall = (SqlCall) node;
+      operands.addFirst(setCall.operand(1));
+      node = setCall.operand(0);
+    }
+    operands.addFirst(node);
+
+    final SqlWriter.Frame frame = writer.startList(SqlWriter.FrameTypeEnum.SETOP);
+    final boolean needsSpace = needsSpace();
+    final int lastIndex = operands.size() - 1;
+    int index = 0;
+    for (SqlNode operand : operands) {
+      final int opLeftPrec = (index == 0) ? leftPrec : getRightPrec();
+      final int opRightPrec = (index == lastIndex) ? rightPrec : getLeftPrec();
+      if (index > 0) {
+        writer.setNeedWhitespace(needsSpace);
+        writer.sep(getName());
+        writer.setNeedWhitespace(needsSpace);
+      }
+      operand.unparse(writer, opLeftPrec, opRightPrec);
+      index++;
+    }
+    writer.endList(frame);
+  }
 }
