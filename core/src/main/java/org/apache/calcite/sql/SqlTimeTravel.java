@@ -35,20 +35,18 @@ public class SqlTimeTravel extends SqlCall {
   private final SqlIdentifier tableIdentifier;
   private final String timeTravelType;
   private final SqlNode periodNode;
-  private SqlIdentifier alias;
+  private final SqlIdentifier alias;
 
   public static final SqlOperator TIME_TRAVEL =
       new SqlSpecialOperator("TIME_TRAVEL", SqlKind.OTHER);
 
-  SqlTimeTravel(SqlIdentifier tableIdentifier, String timeTravelType, SqlNode periodNode) {
+  SqlTimeTravel(SqlIdentifier tableIdentifier, SqlIdentifier alias, String timeTravelType,
+      SqlNode periodNode) {
     super(SqlParserPos.ZERO);
     this.tableIdentifier = tableIdentifier;
+    this.alias = alias;
     this.timeTravelType = timeTravelType;
     this.periodNode = periodNode;
-  }
-
-  public void setAlias(SqlIdentifier alias) {
-    this.alias = alias;
   }
 
   @Override public SqlOperator getOperator() {
