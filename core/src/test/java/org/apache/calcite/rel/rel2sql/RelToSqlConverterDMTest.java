@@ -14398,4 +14398,12 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
+
+  @Test public void testIntervalSecondDecimalValue() {
+    final String query = "SELECT INTERVAL '25.500' SECOND interval_sec";
+    final String expectedBiqquery = "SELECT INTERVAL '25.5' SECOND AS INTERVAL_SEC";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBiqquery);
+  }
 }
