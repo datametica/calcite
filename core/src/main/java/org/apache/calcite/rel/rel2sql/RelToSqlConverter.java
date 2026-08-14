@@ -104,7 +104,6 @@ import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
-import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
 import org.apache.calcite.sql.fun.BQRangeSessionizeTableFunction;
 import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
@@ -619,7 +618,7 @@ public class RelToSqlConverter extends SqlImplementor
    * Visits a Correlate; called by {@link #dispatch} via reflection.
    */
   public Result visit(Correlate e) {
-    Result leftResult = visitInput(e, 0).resetAlias();
+    Result leftResult = visitInput(e, 0);
     parseCorrelTable(e, leftResult);
     final Result rightResult = visitInput(e, 1);
     SqlNode rightLateralAs = rightResult.asFrom();
@@ -2162,7 +2161,7 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNode callNode = context.toSql(null, e.getCall());
 
     SqlNode tableFunctionCall;
-    if (dialect instanceof SparkSqlDialect || dialect instanceof PostgresqlSqlDialect) {
+    if (dialect instanceof SparkSqlDialect || callNode.isA(ImmutableSet.of(SqlKind.UDTF))) {
       tableFunctionCall = callNode;
     } else {
       // Convert to table function call, "TABLE($function_name(xxx))"
@@ -2181,6 +2180,12 @@ public class RelToSqlConverter extends SqlImplementor
     Map<String, RelDataType> aliasesMap = new HashMap<>();
     RelDataTypeField relDataTypeField = fieldList.get(0);
     aliasesMap.put(relDataTypeField.getName(), e.getRowType());
+    SubQueryAliasTrait subQueryAliasTrait = e.getTraitSet().getTrait(SubQueryAliasTraitDef.instance);
+    if (subQueryAliasTrait != null) {
+      String alias = subQueryAliasTrait.getSubQueryAlias();
+      String uniqueAlias = SqlValidatorUtil.uniquify(alias, aliasSet, SqlValidatorUtil.EXPR_SUGGESTER);
+      return result(select, ImmutableList.of(Clause.SELECT), uniqueAlias, e.getRowType(), aliasesMap);
+    }
     return result(select, ImmutableList.of(Clause.SELECT), e, aliasesMap);
   }
 

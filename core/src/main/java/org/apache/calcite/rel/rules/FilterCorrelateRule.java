@@ -19,6 +19,7 @@ package org.apache.calcite.rel.rules;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelRule;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
@@ -116,18 +117,23 @@ public class FilterCorrelateRule
         relBuilder.push(corr.getLeft()).filter(filter.getVariablesSet(), leftFilters).build();
     final RelNode rightRel =
         relBuilder.push(corr.getRight()).filter(filter.getVariablesSet(), rightFilters).build();
+    // 2. Extract original traits and merge them into the newly built nodes
+    RelTraitSet leftOriginalTraits = corr.getLeft().getTraitSet();
+    RelTraitSet rightOriginalTraits = corr.getRight().getTraitSet();
+    RelNode newLeft = leftRel.copy(leftRel.getTraitSet().merge(leftOriginalTraits), leftRel.getInputs());
+    RelNode newRight = rightRel.copy(rightRel.getTraitSet().merge(rightOriginalTraits), rightRel.getInputs());
 
     // Create the new Correlate
     RelNode newCorrRel =
-        corr.copy(corr.getTraitSet(), ImmutableList.of(leftRel, rightRel));
+        corr.copy(corr.getTraitSet(), ImmutableList.of(newLeft, newRight));
 
     call.getPlanner().onCopy(corr, newCorrRel);
 
     if (!leftFilters.isEmpty()) {
-      call.getPlanner().onCopy(filter, leftRel);
+      call.getPlanner().onCopy(filter, newRight);
     }
     if (!rightFilters.isEmpty()) {
-      call.getPlanner().onCopy(filter, rightRel);
+      call.getPlanner().onCopy(filter, newLeft);
     }
 
     // Create a Filter on top of the join if needed
