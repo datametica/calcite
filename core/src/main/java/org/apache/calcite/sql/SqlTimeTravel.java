@@ -35,6 +35,7 @@ public class SqlTimeTravel extends SqlCall {
   private final SqlIdentifier tableIdentifier;
   private final String timeTravelType;
   private final SqlNode periodNode;
+  private SqlIdentifier alias;
 
   public static final SqlOperator TIME_TRAVEL =
       new SqlSpecialOperator("TIME_TRAVEL", SqlKind.OTHER);
@@ -44,6 +45,10 @@ public class SqlTimeTravel extends SqlCall {
     this.tableIdentifier = tableIdentifier;
     this.timeTravelType = timeTravelType;
     this.periodNode = periodNode;
+  }
+
+  public void setAlias(SqlIdentifier alias) {
+    this.alias = alias;
   }
 
   @Override public SqlOperator getOperator() {
@@ -60,6 +65,10 @@ public class SqlTimeTravel extends SqlCall {
           + "handled TIME TRAVEL");
     } else {
       tableIdentifier.unparse(writer, leftPrec, rightPrec);
+      if (alias != null) {
+        writer.keyword("AS");
+        alias.unparse(writer, 0, 0);
+      }
       writer.keyword("FOR SYSTEM_TIME AS OF");
       writer.print("(");
       periodNode.unparse(writer, 0, 0);
