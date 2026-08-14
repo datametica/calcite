@@ -144,7 +144,14 @@ public enum SqlTypeName {
   TEXT(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.CHAR,
       SqlTypeFamily.CHARACTER),
   SERIAL(PrecScale.NO_NO, false, Types.INTEGER, SqlTypeFamily.NUMERIC),
-  DOUBLE_PRECISION(PrecScale.NO_NO, false, Types.FLOAT, SqlTypeFamily.NUMERIC);
+  DOUBLE_PRECISION(PrecScale.NO_NO, false, Types.FLOAT, SqlTypeFamily.NUMERIC),
+  /** SQL Server UNIQUEIDENTIFIER — a distinct canonical so targets render it their
+   * own way (AlloyDB UUID, BigQuery STRING) instead of collapsing to VARCHAR/JSON. */
+  UUID(PrecScale.NO_NO, false, Types.OTHER, SqlTypeFamily.CHARACTER),
+  /** XML document type (SQL Server XML, Postgres/AlloyDB XML). */
+  XML(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.OTHER, SqlTypeFamily.CHARACTER),
+  /** Hierarchical path type (SQL Server HIERARCHYID -> AlloyDB LTREE). */
+  HIERARCHYID(PrecScale.NO_NO, false, Types.OTHER, SqlTypeFamily.CHARACTER);
 
   public static final int MAX_DATETIME_PRECISION = 3;
 
@@ -177,7 +184,8 @@ public enum SqlTypeName {
           INTERVAL_HOUR_SECOND, INTERVAL_MINUTE, INTERVAL_MINUTE_SECOND,
           INTERVAL_SECOND, TIME_WITH_LOCAL_TIME_ZONE, TIMESTAMP_WITH_LOCAL_TIME_ZONE,
           TIMESTAMP_WITH_TIME_ZONE, FLOAT, MULTISET, JSON,
-          DISTINCT, STRUCTURED, ROW, CURSOR, COLUMN_LIST, VARIANT, VARRAY, ARRAY);
+          DISTINCT, STRUCTURED, ROW, CURSOR, COLUMN_LIST, VARIANT, VARRAY, ARRAY,
+          UUID, XML, HIERARCHYID);
 
   public static final List<SqlTypeName> BOOLEAN_TYPES =
       ImmutableList.of(BOOLEAN);
