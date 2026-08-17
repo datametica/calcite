@@ -53,6 +53,7 @@ import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sample;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.Snapshot;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
@@ -98,6 +99,7 @@ import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSampleSpec;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSpecialOperator;
+import org.apache.calcite.sql.SqlSnapshot;
 import org.apache.calcite.sql.SqlTableRef;
 import org.apache.calcite.sql.SqlUnpivot;
 import org.apache.calcite.sql.SqlUpdate;
@@ -1687,6 +1689,22 @@ public class RelToSqlConverter extends SqlImplementor
         SqlStdOperatorTable.TABLESAMPLE.createCall(POS, x.node, tableSampleLiteral);
 
     return result(tableRef, ImmutableList.of(Clause.FROM), e, null);
+  }
+
+  /**
+   * Visits a Snapshot (temporal table reference); called by {@link #dispatch}
+   * via reflection. Renders {@code <tableRef> FOR SYSTEM_TIME AS OF <period>}
+   * (see {@link org.apache.calcite.sql.SqlSnapshot}).
+   */
+  public Result visit(Snapshot e) {
+    // Visit the input (typically a TableScan) to obtain the table SqlNode.
+    final Result x = visitInput(e, 0);
+    // Convert the period RexNode to SQL using the input's aliased context,
+    // mirroring how visit(Join) converts join keys.
+    final SqlNode periodNode = x.qualifiedContext().toSql(null, e.getPeriod());
+    final SqlNode snapshotNode = new SqlSnapshot(POS, x.node, periodNode);
+    // Snapshot is a table reference, so it belongs in the FROM clause.
+    return result(snapshotNode, ImmutableList.of(Clause.FROM), e, null);
   }
 
   private @Nullable SqlIdentifier getDual() {
