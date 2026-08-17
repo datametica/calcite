@@ -4104,6 +4104,13 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIG_QUERY, ORACLE, TERADATA})
   public static final SqlFunction EDIT_DISTANCE = new SqlEditDistanceFunction();
 
+  /**
+   * The JAROWINKLER(string1, string2) returns the Jaro-Winkler
+   * similarity (a value between 0 and 1) between two strings.
+   * */
+  @LibraryOperator(libraries = {BIG_QUERY, ORACLE, TERADATA})
+  public static final SqlFunction JARO_WINKLER = new SqlJaroWinklerFunction();
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_UUID =
       new SqlFunction("GENERATE_UUID",

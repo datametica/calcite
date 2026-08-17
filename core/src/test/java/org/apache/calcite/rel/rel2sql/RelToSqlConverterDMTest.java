@@ -12312,6 +12312,19 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQQuery));
   }
 
+  @Test public void testJaroWinklerFunctionWithTwoArgs() {
+    final RelBuilder builder = relBuilder();
+    final RexNode jaroWinklerRex =
+        builder.call(SqlLibraryOperators.JARO_WINKLER, builder.literal("abc"), builder.literal("xyz"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(jaroWinklerRex)
+        .build();
+    final String expectedBQQuery = "SELECT JAROWINKLER('abc', 'xyz') AS `$f0`"
+        + "\nFROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQQuery));
+  }
+
   @Test public void testEditDistanceFunctionWithThreeArgs() {
     final RelBuilder builder = relBuilder();
     final RexNode editDistanceRex =
