@@ -2161,7 +2161,7 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNode callNode = context.toSql(null, e.getCall());
 
     SqlNode tableFunctionCall;
-    if (dialect instanceof SparkSqlDialect) {
+    if (dialect instanceof SparkSqlDialect || callNode.isA(ImmutableSet.of(SqlKind.UDTF))) {
       tableFunctionCall = callNode;
     } else {
       // Convert to table function call, "TABLE($function_name(xxx))"
@@ -2180,6 +2180,12 @@ public class RelToSqlConverter extends SqlImplementor
     Map<String, RelDataType> aliasesMap = new HashMap<>();
     RelDataTypeField relDataTypeField = fieldList.get(0);
     aliasesMap.put(relDataTypeField.getName(), e.getRowType());
+    SubQueryAliasTrait subQueryAliasTrait = e.getTraitSet().getTrait(SubQueryAliasTraitDef.instance);
+    if (subQueryAliasTrait != null) {
+      String alias = subQueryAliasTrait.getSubQueryAlias();
+      String uniqueAlias = SqlValidatorUtil.uniquify(alias, aliasSet, SqlValidatorUtil.EXPR_SUGGESTER);
+      return result(select, ImmutableList.of(Clause.SELECT), uniqueAlias, e.getRowType(), aliasesMap);
+    }
     return result(select, ImmutableList.of(Clause.SELECT), e, aliasesMap);
   }
 
