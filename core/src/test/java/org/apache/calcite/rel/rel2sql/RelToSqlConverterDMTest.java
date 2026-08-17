@@ -15269,4 +15269,18 @@ class RelToSqlConverterDMTest {
     final String expectedQuery = "SELECT UUID_STRING() AS \"$f0\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
+
+  /** RSFB-2314: a {@link org.apache.calcite.rel.core.Snapshot} round-trips back to SQL containing
+   * {@code FOR SYSTEM_TIME AS OF} (Snowflake time-travel -> BigQuery). */
+  @Test public void testSnapshotForSystemTimeAsOf() {
+    final RelBuilder builder = relBuilder();
+    final RelNode root =
+        builder.scan("EMP")
+            .snapshot(
+                builder.getRexBuilder().makeTimestampLiteral(
+                    new TimestampString("2011-07-20 12:34:56"), 0))
+            .build();
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()),
+        containsString("FOR SYSTEM_TIME AS OF"));
+  }
 }
