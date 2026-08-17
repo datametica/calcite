@@ -712,9 +712,9 @@ public class BigQuerySqlDialect extends SqlDialect {
           rightPrec);
       break;
     case INTERSECT:
-      if (((SqlSetOperator) call.getOperator()).isAll()) {
-        throw new RuntimeException("BigQuery does not support INTERSECT ALL");
-      }
+      // BigQuery has no INTERSECT ALL form; emit INTERSECT DISTINCT (mirrors the
+      // UNION downgrade above) instead of throwing. DM-fork divergence from
+      // Apache upstream, which throws here by design.
       SqlSyntax.BINARY.unparse(writer, INTERSECT_DISTINCT, call, leftPrec,
           rightPrec);
       break;
