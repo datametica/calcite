@@ -52,6 +52,7 @@ import org.apache.calcite.rel.core.Match;
 import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sample;
+import org.apache.calcite.rel.core.Snapshot;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableModify;
@@ -97,6 +98,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSampleSpec;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSnapshot;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlTableRef;
 import org.apache.calcite.sql.SqlUnpivot;
@@ -1685,6 +1687,14 @@ public class RelToSqlConverter extends SqlImplementor
         SqlStdOperatorTable.TABLESAMPLE.createCall(POS, x.node, tableSampleLiteral);
 
     return result(tableRef, ImmutableList.of(Clause.FROM), e, null);
+  }
+
+  public Result visit(Snapshot e) {
+    final Result x = visitInput(e, 0);
+    final SqlNode periodNode = x.qualifiedContext().toSql(null, e.getPeriod());
+    final SqlSnapshot snapshotNode = new SqlSnapshot(POS, x.node, periodNode);
+    return result(snapshotNode, ImmutableList.of(Clause.FROM),
+        null, e.getRowType(), x.aliases);
   }
 
   private @Nullable SqlIdentifier getDual() {
