@@ -19,6 +19,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.rel.type.RelRecordType;
 
 import com.google.common.collect.ImmutableList;
@@ -383,5 +385,75 @@ class SqlTypeFactoryTest {
     assertThat(tsWithPrecision3.toString(), is(decimalSqlType.getName() + "(3, 0)"));
     assertThat(tsWithPrecision3.getFullTypeString(),
         is(decimalSqlType.getName() + "(3, 0) NOT NULL"));
+  }
+
+  /** Test case for
+   * <a href="https://onixcloud.atlassian.net/browse/RAVEN-1798">[RAVEN-1798]
+   * Type precision collapses across dialects</a>.
+   *
+   * <p>A bare (unspecified-precision) type resolves its precision from the ATTACHED type system,
+   * but that type system is not part of the digest. Because RelDataTypeFactoryImpl interns types
+   * in a JVM-wide static cache keyed by equals()/hashCode(),
+   * two same-digest types built under different type systems must not collapse into one instance,
+   * otherwise getPrecision() leaks whichever type system was interned first. This extends the
+   * earlier DECIMAL/integer-only guard to the datetime family (fractional-seconds precision).
+   *
+   * <p>Character/binary types are intentionally NOT covered: their dialect default precision (e.g.
+   * Snowflake VARCHAR = 16 MB) must not surface in emitted SQL, so they keep digest-only equality. */
+  @Test void testInternerKeepsTypeSystemDistinctPrecision() {
+    final RelDataTypeSystem tsSmall = new RelDataTypeSystemImpl() {
+      @Override public int getDefaultPrecision(SqlTypeName typeName) {
+        switch (typeName) {
+        case TIMESTAMP:
+        case TIME:
+          return 0;
+        default:
+          return super.getDefaultPrecision(typeName);
+        }
+      }
+      @Override public int getMaxPrecision(SqlTypeName typeName) {
+        switch (typeName) {
+        case TIMESTAMP:
+        case TIME:
+          return 9;
+        default:
+          return super.getMaxPrecision(typeName);
+        }
+      }
+    };
+    final RelDataTypeSystem tsLarge = new RelDataTypeSystemImpl() {
+      @Override public int getDefaultPrecision(SqlTypeName typeName) {
+        switch (typeName) {
+        case TIMESTAMP:
+        case TIME:
+          return 6;
+        default:
+          return super.getDefaultPrecision(typeName);
+        }
+      }
+      @Override public int getMaxPrecision(SqlTypeName typeName) {
+        switch (typeName) {
+        case TIMESTAMP:
+        case TIME:
+          return 9;
+        default:
+          return super.getMaxPrecision(typeName);
+        }
+      }
+    };
+    final SqlTypeFactoryImpl factorySmall = new SqlTypeFactoryImpl(tsSmall);
+    final SqlTypeFactoryImpl factoryLarge = new SqlTypeFactoryImpl(tsLarge);
+
+    for (SqlTypeName typeName : new SqlTypeName[] {SqlTypeName.TIMESTAMP, SqlTypeName.TIME}) {
+      // Bare (unspecified precision): getPrecision() resolves from the attached type system.
+      final RelDataType small =
+          factorySmall.createSqlType(typeName, RelDataType.PRECISION_NOT_SPECIFIED);
+      final RelDataType large =
+          factoryLarge.createSqlType(typeName, RelDataType.PRECISION_NOT_SPECIFIED);
+      assertThat("small type system precision for " + typeName,
+          small.getPrecision(), is(0));
+      assertThat("large type system precision for " + typeName,
+          large.getPrecision(), is(6));
+    }
   }
 }
