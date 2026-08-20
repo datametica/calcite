@@ -52,6 +52,7 @@ import org.apache.calcite.rel.core.Match;
 import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sample;
+import org.apache.calcite.rel.core.Snapshot;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableModify;
@@ -97,6 +98,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSampleSpec;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSnapshot;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlTableRef;
 import org.apache.calcite.sql.SqlUnpivot;
@@ -1689,6 +1691,14 @@ public class RelToSqlConverter extends SqlImplementor
     return result(tableRef, ImmutableList.of(Clause.FROM), e, null);
   }
 
+  public Result visit(Snapshot e) {
+    final Result x = visitInput(e, 0);
+    final SqlNode periodNode = x.qualifiedContext().toSql(null, e.getPeriod());
+    final SqlSnapshot snapshotNode = new SqlSnapshot(POS, x.node, periodNode);
+    return result(snapshotNode, ImmutableList.of(Clause.FROM),
+        null, e.getRowType(), x.aliases);
+  }
+
   private @Nullable SqlIdentifier getDual() {
     final List<String> names = dialect.getSingleRowTableName();
     if (names == null) {
@@ -2163,7 +2173,7 @@ public class RelToSqlConverter extends SqlImplementor
     SqlNode callNode = context.toSql(null, e.getCall());
 
     SqlNode tableFunctionCall;
-    if (dialect instanceof SparkSqlDialect) {
+    if (dialect instanceof SparkSqlDialect || callNode.isA(ImmutableSet.of(SqlKind.UDTF))) {
       tableFunctionCall = callNode;
     } else {
       // Convert to table function call, "TABLE($function_name(xxx))"
@@ -2182,6 +2192,12 @@ public class RelToSqlConverter extends SqlImplementor
     Map<String, RelDataType> aliasesMap = new HashMap<>();
     RelDataTypeField relDataTypeField = fieldList.get(0);
     aliasesMap.put(relDataTypeField.getName(), e.getRowType());
+    SubQueryAliasTrait subQueryAliasTrait = e.getTraitSet().getTrait(SubQueryAliasTraitDef.instance);
+    if (subQueryAliasTrait != null) {
+      String alias = subQueryAliasTrait.getSubQueryAlias();
+      String uniqueAlias = SqlValidatorUtil.uniquify(alias, aliasSet, SqlValidatorUtil.EXPR_SUGGESTER);
+      return result(select, ImmutableList.of(Clause.SELECT), uniqueAlias, e.getRowType(), aliasesMap);
+    }
     return result(select, ImmutableList.of(Clause.SELECT), e, aliasesMap);
   }
 
