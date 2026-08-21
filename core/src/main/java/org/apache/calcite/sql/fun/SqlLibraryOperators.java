@@ -3313,6 +3313,27 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_SUNDAY = TeradataCalendarFunction.of("TD_SUNDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_MONDAY = TeradataCalendarFunction.of("TD_MONDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_TUESDAY = TeradataCalendarFunction.of("TD_TUESDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_WEDNESDAY = TeradataCalendarFunction.of("TD_WEDNESDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_THURSDAY = TeradataCalendarFunction.of("TD_THURSDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_FRIDAY = TeradataCalendarFunction.of("TD_FRIDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_SATURDAY = TeradataCalendarFunction.of("TD_SATURDAY");
+
   /** DATABRICKS "DATEDIFF(datepart string, datetime,datetime)" function. */
   @LibraryOperator(libraries = {DATABRICKS})
   public static final SqlFunction DATABRICKS_DATEDIFF =
