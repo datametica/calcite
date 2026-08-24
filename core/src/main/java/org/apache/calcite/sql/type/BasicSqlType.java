@@ -253,15 +253,24 @@ public class BasicSqlType extends AbstractSqlType {
   //     whose attached type system reports a small/unspecified default precision flips the result to
   //     INTEGER, changing integer arithmetic result width.
   //   * BigQuery NUMERIC vs BIGNUMERIC keys off unspecified DECIMAL getMaxNumericPrecision().
+  //   * A bare TIMESTAMP/TIME emitting the wrong fractional-seconds precision across dialects
+  //     (e.g. a Snowflake TIMESTAMP wanting precision 6 rendered as TIMESTAMP(0) after collapsing
+  //     onto a type system whose default is 0). [RAVEN-1798]
   // Fold the RESOLVED precision (and, for DECIMAL, the max numeric precision) into equals()/hashCode() so
   // the interner keeps type-system-distinct instances separate. This deliberately does NOT touch
   // generateTypeString(): the rendered type digest (used in CAST/Rel output) stays byte-for-byte identical.
   //
-  // SCOPE: restricted to unspecified-precision DECIMAL and the exact integer types -- the types whose
-  // type-system precision actually drives a downstream decision (leastRestrictive integer width;
-  // NUMERIC vs BIGNUMERIC). All other unspecified-precision types (e.g. VARCHAR, whose default precision
-  // varies wildly by dialect -- Snowflake 16 MB vs unspecified) keep digest-only equality, so their
-  // existing interner collapse is preserved and output that relies on it does not change.
+  // SCOPE: unspecified-precision DECIMAL and the integer types (leastRestrictive integer width;
+  // NUMERIC vs BIGNUMERIC), plus the datetime types (fractional-seconds precision) added for RAVEN-1798.
+  // The precision != PRECISION_NOT_SPECIFIED guard above means types with an EXPLICIT precision
+  // (TIMESTAMP(0), DECIMAL(10,2)) keep plain digest equality and are unaffected; only bare,
+  // type-system-defaulted types are separated per type system.
+  //
+  // CHARACTER/BINARY types are deliberately EXCLUDED. Their type-system default precision varies wildly
+  // by dialect (e.g. Snowflake VARCHAR defaults to 16 MB) and is NOT meant to surface in emitted SQL: a
+  // bare VARCHAR is expected to render as bare STRING, which today relies on the interner collapsing it
+  // onto an unspecified-precision instance. Separating them per type system would leak the dialect
+  // default into output (bare STRING becoming STRING(16777216)); see RAVEN-1798 proc/bind regressions.
   private boolean typeSystemAffectsInterning() {
     if (precision != PRECISION_NOT_SPECIFIED) {
       return false;
@@ -272,6 +281,10 @@ public class BasicSqlType extends AbstractSqlType {
     case SMALLINT:
     case INTEGER:
     case BIGINT:
+    case TIME:
+    case TIME_WITH_LOCAL_TIME_ZONE:
+    case TIMESTAMP:
+    case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       return true;
     default:
       return false;

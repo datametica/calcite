@@ -3093,12 +3093,12 @@ public class RexSimplify {
 
     private static boolean termCompareChars(RexNode term) {
       List<RelDataType> relDataTypes = ((RexSargBuilder) term).types;
-      SqlTypeName firstSqlTypeName = relDataTypes.get(0).getSqlTypeName();
-      if (relDataTypes.size() > 1) {
-        return firstSqlTypeName == SqlTypeName.CHAR
-                && firstSqlTypeName == relDataTypes.get(1).getSqlTypeName();
+      if (relDataTypes.size() <= 1) {
+        return false;
       }
-      return false;
+      SqlTypeName firstSqlTypeName = relDataTypes.get(0).getSqlTypeName();
+      return firstSqlTypeName == SqlTypeName.CHAR
+              && firstSqlTypeName == relDataTypes.get(1).getSqlTypeName();
     }
   }
 
