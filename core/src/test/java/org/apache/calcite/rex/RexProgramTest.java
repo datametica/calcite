@@ -1937,6 +1937,32 @@ class RexProgramTest extends RexProgramTestBase {
     checkSimplify(rexNode, "false");
   }
 
+  /** Test for ETLINF-3403: a ref whose only collected terms are null checks must not
+   * break Sarg collection.
+   *
+   * <p>{@code SargCollector.accept1} records no type for {@code IS NULL} /
+   * {@code IS NOT NULL} - only {@code addRange} and {@code addSarg} populate
+   * {@code RexSargBuilder.types} - so for such a ref {@code types} is empty.
+   * {@code RexSargBuilder.getType()} already guards that case; before the fix
+   * {@code SargCollector.termCompareChars} did not, and indexing element 0 of the empty
+   * list threw a bare {@code IndexOutOfBoundsException: Index 0 out of bounds for
+   * length 0} with no message and no node context.
+   *
+   * <p>{@code a IS NOT NULL OR a IS NULL} is true for every row, so the collected Sarg
+   * is the universal one, {@code Sarg[TRUE]}. */
+  @Test void testSimplifyFilterPredicatesWithOnlyNullChecks() {
+    // Uses a locally constructed RexSimplify rather than the inherited 'simplify' field:
+    // that field's executor evaluates expressions against sample values and asserts
+    // "don't know values for $0 of type CHAR(1)" before Sarg collection is reached.
+    final RexSimplify s =
+        new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, RexUtil.EXECUTOR);
+    final RexNode aRef = input(tChar(true, 1), 0);
+    final RexNode simplified =
+        s.simplifyFilterPredicates(
+            ImmutableList.of(or(isNotNull(aRef), isNull(aRef))));
+    assertThat(simplified, hasToString("SEARCH($0, Sarg[TRUE]:CHAR(1))"));
+  }
+
   /** Unit test for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-4352">[CALCITE-4352]
    * OR simplification incorrectly loses term</a>. */
