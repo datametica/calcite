@@ -14330,6 +14330,24 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedPostgresQuery));
   }
 
+  @Test public void testTryConvertFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexBuilder rexBuilder = builder.getRexBuilder();
+    final RelDataType intRelType = builder.getTypeFactory().createSqlType(SqlTypeName.INTEGER);
+    final RexNode tryConvertCall =
+        rexBuilder.makeCall(intRelType, SqlLibraryOperators.TRY_CONVERT,
+            ImmutableList.of(rexBuilder.makeLiteral("INT"), builder.field(0)));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tryConvertCall, "tryConvert"))
+        .build();
+
+    final String expectedSql = "SELECT TRY_CONVERT('INT', EMPNO) AS [tryConvert]\n"
+        + "FROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testSTRFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode strNode =
