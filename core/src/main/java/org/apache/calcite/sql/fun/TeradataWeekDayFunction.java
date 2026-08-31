@@ -48,9 +48,7 @@ public class TeradataWeekDayFunction extends SqlFunction {
 
   private TeradataWeekDayFunction(String functionName, String weekDay) {
     super(functionName, SqlKind.OTHER_FUNCTION, ReturnTypes.ARG0_NULLABLE, null,
-        OperandTypes.or(
         OperandTypes.DATETIME_OPTIONAL_STRING_OPTIONAL_TIME,
-        OperandTypes.TIMESTAMP_LTZ),
         SqlFunctionCategory.TIMEDATE);
     this.weekDay = weekDay;
   }

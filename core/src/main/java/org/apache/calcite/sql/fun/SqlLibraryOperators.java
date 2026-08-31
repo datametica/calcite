@@ -2745,6 +2745,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING.or(OperandTypes.BINARY),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction MEETS =
+      SqlBasicFunction.create("MEETS",
+          ReturnTypes.BOOLEAN_NOT_NULL,
+          OperandTypes.or(
+              family(SqlTypeFamily.PERIOD, SqlTypeFamily.PERIOD),
+              family(SqlTypeFamily.DATETIME, SqlTypeFamily.PERIOD),
+              family(SqlTypeFamily.PERIOD, SqlTypeFamily.DATETIME)));
+
   @LibraryOperator(libraries = {ALL})
   public static final SqlFunction TANH =
       SqlBasicFunction.create("TANH",
