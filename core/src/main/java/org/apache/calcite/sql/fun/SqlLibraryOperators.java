@@ -3314,25 +3314,25 @@ public abstract class SqlLibraryOperators {
           SqlFunctionCategory.TIMEDATE);
 
   @LibraryOperator(libraries = {TERADATA})
-  public static final SqlFunction TD_SUNDAY = TeradataCalendarFunction.of("TD_SUNDAY");
+  public static final SqlFunction TD_SUNDAY = TeradataWeekDayFunction.of("TD_SUNDAY");
 
   @LibraryOperator(libraries = {TERADATA})
-  public static final SqlFunction TD_MONDAY = TeradataCalendarFunction.of("TD_MONDAY");
+  public static final SqlFunction TD_MONDAY = TeradataWeekDayFunction.of("TD_MONDAY");
 
   @LibraryOperator(libraries = {TERADATA})
-  public static final SqlFunction TD_TUESDAY = TeradataCalendarFunction.of("TD_TUESDAY");
+  public static final SqlFunction TD_TUESDAY = TeradataWeekDayFunction.of("TD_TUESDAY");
 
   @LibraryOperator(libraries = {TERADATA})
-  public static final SqlFunction TD_WEDNESDAY = TeradataCalendarFunction.of("TD_WEDNESDAY");
+  public static final SqlFunction TD_WEDNESDAY = TeradataWeekDayFunction.of("TD_WEDNESDAY");
 
   @LibraryOperator(libraries = {TERADATA})
-  public static final SqlFunction TD_THURSDAY = TeradataCalendarFunction.of("TD_THURSDAY");
+  public static final SqlFunction TD_THURSDAY = TeradataWeekDayFunction.of("TD_THURSDAY");
 
   @LibraryOperator(libraries = {TERADATA})
-  public static final SqlFunction TD_FRIDAY = TeradataCalendarFunction.of("TD_FRIDAY");
+  public static final SqlFunction TD_FRIDAY = TeradataWeekDayFunction.of("TD_FRIDAY");
 
   @LibraryOperator(libraries = {TERADATA})
-  public static final SqlFunction TD_SATURDAY = TeradataCalendarFunction.of("TD_SATURDAY");
+  public static final SqlFunction TD_SATURDAY = TeradataWeekDayFunction.of("TD_SATURDAY");
 
   /** DATABRICKS "DATEDIFF(datepart string, datetime,datetime)" function. */
   @LibraryOperator(libraries = {DATABRICKS})
