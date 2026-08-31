@@ -83,6 +83,8 @@ import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_SUB;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.DATE_TRUNC;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.RAISE_ERROR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.SPLIT;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_ADD;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.TIMESTAMP_SUB;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_CHAR;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TO_DATE;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.TRY_CAST;
@@ -393,6 +395,16 @@ public class SparkSqlDialect extends SqlDialect {
             return call.getOperator();
           }
           return ADD_MONTHS;
+        }
+      case TIMESTAMP:
+      case TIME_WITH_LOCAL_TIME_ZONE:
+      case TIMESTAMP_WITH_TIME_ZONE:
+        switch (call.getOperands().get(1).getType().getSqlTypeName()) {
+        case INTERVAL_DAY:
+          if (call.op.kind == SqlKind.MINUS) {
+            return TIMESTAMP_SUB;
+          }
+          return TIMESTAMP_ADD;
         }
       default:
         return super.getTargetFunc(call);
