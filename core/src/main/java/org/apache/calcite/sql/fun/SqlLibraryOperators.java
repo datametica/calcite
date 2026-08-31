@@ -2747,8 +2747,8 @@ public abstract class SqlLibraryOperators {
 
   @LibraryOperator(libraries = {TERADATA})
   public static final SqlFunction MEETS =
-      SqlBasicFunction.create("MEETS",
-          ReturnTypes.BOOLEAN_NOT_NULL,
+      SqlBasicFunction.create(SqlKind.PERIOD_MEETS,
+          ReturnTypes.BOOLEAN_NULLABLE,
           OperandTypes.or(
               family(SqlTypeFamily.PERIOD, SqlTypeFamily.PERIOD),
               family(SqlTypeFamily.DATETIME, SqlTypeFamily.PERIOD),
