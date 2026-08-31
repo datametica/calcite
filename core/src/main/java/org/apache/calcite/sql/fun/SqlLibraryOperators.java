@@ -4104,6 +4104,13 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {BIG_QUERY, ORACLE, TERADATA})
   public static final SqlFunction EDIT_DISTANCE = new SqlEditDistanceFunction();
 
+  /**
+   * The NGRAM(string1, string2) returns the number of n-grams
+   * common to both strings.
+   * */
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction NGRAM = new SqlNgramFunction();
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_UUID =
       new SqlFunction("GENERATE_UUID",
