@@ -72,6 +72,18 @@ public class MssqlSqlDialect extends SqlDialect {
 
   public static final SqlDialect DEFAULT = new MssqlSqlDialect(DEFAULT_CONTEXT);
 
+  /**
+   * SQL Server's default datetime-to-string rendering (style 0/100:
+   * {@code Mon dd yyyy hh:miAM}), written in canonical {@link org.apache.calcite.sql.SqlDateTimeFormat}
+   * standard tokens. Must stay upper-case: {@code SqlDateTimeFormat#of} resolves
+   * case-insensitively first-match, so a lower-case spelling can bind the wrong token
+   * (e.g. {@code mm} resolves to NUMERICMONTH, not MINUTE). {@code @} is the fused
+   * no-separator marker consumed by {@code SqlDialect#getFinalFormat}. Consumers (raven swift
+   * cast handlers and the rel-generator CONVERT lowering) reference this single definition
+   * instead of hardcoding divergent literals.
+   */
+  public static final String DEFAULT_DATETIME_TO_STRING_FORMAT = "MON DD YYYY HH:MI@T";
+
   private static final SqlFunction MSSQL_SUBSTRING =
       SqlBasicFunction.create("SUBSTRING", ReturnTypes.ARG0_NULLABLE_VARYING,
           OperandTypes.VARIADIC, SqlFunctionCategory.STRING);

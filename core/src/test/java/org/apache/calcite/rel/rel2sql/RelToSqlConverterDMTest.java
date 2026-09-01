@@ -15391,4 +15391,20 @@ class RelToSqlConverterDMTest {
     final String expectedQuery = "SELECT UUID_STRING() AS \"$f0\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
+
+  @Test public void testMssqlDefaultDatetimeToStringFormatRendersTwelveHourClockOnBigQuery() {
+    final RelBuilder builder = relBuilder();
+    final RexNode formatTimestampRexNode =
+        builder.call(SqlLibraryOperators.FORMAT_TIMESTAMP,
+            builder.literal(
+                org.apache.calcite.sql.dialect.MssqlSqlDialect.DEFAULT_DATETIME_TO_STRING_FORMAT),
+            builder.scan("EMP").field(4));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(formatTimestampRexNode, "FD"))
+        .build();
+    final String expectedBiqQuery = "SELECT FORMAT_TIMESTAMP('%b %d %Y %I:%M%p', HIREDATE) AS FD\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBiqQuery));
+  }
 }
