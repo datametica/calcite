@@ -2745,6 +2745,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING.or(OperandTypes.BINARY),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction MEETS =
+      SqlBasicFunction.create(SqlKind.PERIOD_MEETS,
+          ReturnTypes.BOOLEAN_NULLABLE,
+          OperandTypes.or(
+              family(SqlTypeFamily.PERIOD, SqlTypeFamily.PERIOD),
+              family(SqlTypeFamily.DATETIME, SqlTypeFamily.PERIOD),
+              family(SqlTypeFamily.PERIOD, SqlTypeFamily.DATETIME)));
+
   @LibraryOperator(libraries = {ALL})
   public static final SqlFunction TANH =
       SqlBasicFunction.create("TANH",
@@ -3312,6 +3321,27 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("TD_WEEK_OF_YEAR", SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_SUNDAY = TeradataWeekDayFunction.of("TD_SUNDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_MONDAY = TeradataWeekDayFunction.of("TD_MONDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_TUESDAY = TeradataWeekDayFunction.of("TD_TUESDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_WEDNESDAY = TeradataWeekDayFunction.of("TD_WEDNESDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_THURSDAY = TeradataWeekDayFunction.of("TD_THURSDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_FRIDAY = TeradataWeekDayFunction.of("TD_FRIDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_SATURDAY = TeradataWeekDayFunction.of("TD_SATURDAY");
 
   /** DATABRICKS "DATEDIFF(datepart string, datetime,datetime)" function. */
   @LibraryOperator(libraries = {DATABRICKS})

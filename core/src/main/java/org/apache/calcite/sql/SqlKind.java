@@ -401,6 +401,9 @@ public enum SqlKind {
   /** {@code INTERSECT} operator for periods. */
   PERIOD_INTERSECT("INTERSECT"),
 
+  /** {@code MEETS} operator for periods. */
+  PERIOD_MEETS("MEETS"),
+
   /** {@code CONTAINS} operator for periods. */
   CONTAINS,
 
