@@ -468,11 +468,16 @@ public class AggregateCall {
         aggregateRelBase.getCluster().getTypeFactory();
 
     if (aggFunction.getKind() == SqlKind.PERCENTILE_DISC
-        || aggFunction.getKind() == SqlKind.PERCENTILE_CONT) {
-      assert collation.getKeys().size() == 1;
+    || aggFunction.getKind() == SqlKind.PERCENTILE_CONT) {
+      final RelDataType collationType;
+      if (collation.getKeys().size() == 1) {
+        collationType = SqlTypeUtil.projectTypes(rowType, collation.getKeys()).get(0);
+      } else {
+        collationType = SqlTypeUtil.projectTypes(rowType, ImmutableList.of(argList.get(0))).get(0);
+      }
       return new Aggregate.PercentileDiscAggCallBinding(typeFactory,
           aggFunction, SqlTypeUtil.projectTypes(rowType, argList),
-          SqlTypeUtil.projectTypes(rowType, collation.getKeys()).get(0),
+          collationType,
           aggregateRelBase.getGroupCount(), hasFilter());
     }
     return new Aggregate.AggCallBinding(typeFactory, aggFunction,
