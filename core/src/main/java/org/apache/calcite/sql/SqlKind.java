@@ -401,6 +401,9 @@ public enum SqlKind {
   /** {@code INTERSECT} operator for periods. */
   PERIOD_INTERSECT("INTERSECT"),
 
+  /** {@code MEETS} operator for periods. */
+  PERIOD_MEETS("MEETS"),
+
   /** {@code CONTAINS} operator for periods. */
   CONTAINS,
 
@@ -759,6 +762,11 @@ public enum SqlKind {
    * The "CONVERT(type, expr [,style])" function (Microsoft SQL Server).
    */
   MSSQL_CONVERT,
+
+  /**
+   * The "TRY_CONVERT(type, expr [,style])" function (Microsoft SQL Server).
+   */
+  MSSQL_TRY_CONVERT,
 
   /**
    * The "NEXT VALUE OF sequence" operator.

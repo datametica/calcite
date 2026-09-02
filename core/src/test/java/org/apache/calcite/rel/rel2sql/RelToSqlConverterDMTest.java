@@ -8711,6 +8711,111 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedDatabricks));
   }
 
+  @Test public void testTdSundayWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdSundayRexNode =
+        builder.call(SqlLibraryOperators.TD_SUNDAY, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdSundayRexNode, "sunday"))
+        .build();
+    final String expectedTeradata =
+        "SELECT TD_SUNDAY('2023-02-22') AS \"sunday\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradata));
+  }
+
+  @Test public void testTdMondayWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdMondayRexNode =
+        builder.call(SqlLibraryOperators.TD_MONDAY, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdMondayRexNode, "monday"))
+        .build();
+    final String expectedTeradata =
+        "SELECT TD_MONDAY('2023-02-22') AS \"monday\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradata));
+  }
+
+  @Test public void testTdTuesdayWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdTuesdayRexNode =
+        builder.call(SqlLibraryOperators.TD_TUESDAY, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdTuesdayRexNode, "tuesday"))
+        .build();
+    final String expectedTeradata =
+        "SELECT TD_TUESDAY('2023-02-22') AS \"tuesday\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradata));
+  }
+
+  @Test public void testTdWednesdayWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdWednesdayRexNode =
+        builder.call(SqlLibraryOperators.TD_WEDNESDAY, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdWednesdayRexNode, "wednesday"))
+        .build();
+    final String expectedTeradata =
+        "SELECT TD_WEDNESDAY('2023-02-22') AS \"wednesday\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradata));
+  }
+
+  @Test public void testTdThursdayWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdThursdayRexNode =
+        builder.call(SqlLibraryOperators.TD_THURSDAY, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdThursdayRexNode, "thursday"))
+        .build();
+    final String expectedTeradata =
+        "SELECT TD_THURSDAY('2023-02-22') AS \"thursday\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradata));
+  }
+
+  @Test public void testTdFridayWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdFridayRexNode =
+        builder.call(SqlLibraryOperators.TD_FRIDAY, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdFridayRexNode, "friday"))
+        .build();
+    final String expectedTeradata =
+        "SELECT TD_FRIDAY('2023-02-22') AS \"friday\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradata));
+  }
+
+  @Test public void testTdSaturdayWithDate() {
+    final RelBuilder builder = relBuilder();
+    final RexNode tdSaturdayRexNode =
+        builder.call(SqlLibraryOperators.TD_SATURDAY, builder.literal("2023-02-22"));
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(tdSaturdayRexNode, "saturday"))
+        .build();
+    final String expectedTeradata =
+        "SELECT TD_SATURDAY('2023-02-22') AS \"saturday\"\n"
+            + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.TERADATA.getDialect()), isLinux(expectedTeradata));
+  }
+
   @Test public void testTeradataDateTimeNumberOfYear() {
     final RelBuilder builder = relBuilder();
     final RexNode weekNumberOfYearCall =
@@ -14328,6 +14433,23 @@ class RelToSqlConverterDMTest {
     final String expectedPostgresQuery = "SELECT FORMAT('1234', '00000') AS [$f0]"
         + "\nFROM [scott].[EMP]";
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedPostgresQuery));
+  }
+
+  @Test public void testTryConvertFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexBuilder rexBuilder = builder.getRexBuilder();
+    final RelDataType intRelType = builder.getTypeFactory().createSqlType(SqlTypeName.INTEGER);
+    final RexNode tryConvertCall =
+        rexBuilder.makeCall(intRelType, SqlLibraryOperators.TRY_CONVERT,
+            ImmutableList.of(rexBuilder.makeLiteral("INT"), builder.field(0)));
+
+    final RelNode root = builder
+        .project(builder.alias(tryConvertCall, "tryConvert"))
+        .build();
+
+    final String expectedSql = "SELECT TRY_CONVERT('INT', [EMPNO]) AS [tryConvert]\n"
+        + "FROM [scott].[EMP]";
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
   }
 
   @Test public void testSTRFunction() {
