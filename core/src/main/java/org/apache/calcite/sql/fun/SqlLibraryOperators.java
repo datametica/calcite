@@ -4320,6 +4320,12 @@ public abstract class SqlLibraryOperators {
            ReturnTypes.INTEGER, null,
            OperandTypes.NILADIC, SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction ERROR_NUMBER =
+       new SqlFunction("ERROR_NUMBER", SqlKind.OTHER_FUNCTION,
+           ReturnTypes.INTEGER, null,
+           OperandTypes.NILADIC, SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_ERROR_LINE =
       SqlBasicFunction

@@ -14391,6 +14391,20 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testErrorNumber() {
+    final RelBuilder builder = relBuilder();
+    final RexNode errorNumber =
+        builder.call(SqlLibraryOperators.ERROR_NUMBER);
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(errorNumber, "errorNumber"))
+        .build();
+    final String expectedSql = "SELECT ERROR_NUMBER() AS [errorNumber]"
+        + "\nFROM [scott].[EMP]";
+
+    assertThat(toSql(root, DatabaseProduct.MSSQL.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testGenerateErrorLine() {
     final RelBuilder builder = relBuilder();
     final RexNode generateErrorLine =
