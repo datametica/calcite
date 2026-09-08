@@ -133,10 +133,10 @@ public class SqlSnapshot extends SqlCall {
           && ((SqlBasicCall) tableRef).getOperator() instanceof SqlAsOperator) {
         SqlBasicCall basicCall = (SqlBasicCall) tableRef;
         basicCall.operand(0).unparse(writer, 0, 0);
-        writer.setNeedWhitespace(true);
-        writeForSystemTimeAsOf(writer, snapshot);
         writer.keyword("AS");
         basicCall.operand(1).unparse(writer, 0, 0);
+        writer.setNeedWhitespace(true);
+        writeForSystemTimeAsOf(writer, snapshot);
       } else {
         tableRef.unparse(writer, 0, 0);
         writeForSystemTimeAsOf(writer, snapshot);

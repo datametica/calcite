@@ -2745,6 +2745,15 @@ public abstract class SqlLibraryOperators {
           OperandTypes.STRING.or(OperandTypes.BINARY),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction MEETS =
+      SqlBasicFunction.create(SqlKind.PERIOD_MEETS,
+          ReturnTypes.BOOLEAN_NULLABLE,
+          OperandTypes.or(
+              family(SqlTypeFamily.PERIOD, SqlTypeFamily.PERIOD),
+              family(SqlTypeFamily.DATETIME, SqlTypeFamily.PERIOD),
+              family(SqlTypeFamily.PERIOD, SqlTypeFamily.DATETIME)));
+
   @LibraryOperator(libraries = {ALL})
   public static final SqlFunction TANH =
       SqlBasicFunction.create("TANH",
@@ -3312,6 +3321,27 @@ public abstract class SqlLibraryOperators {
       new SqlFunction("TD_WEEK_OF_YEAR", SqlKind.OTHER_FUNCTION,
           ReturnTypes.INTEGER, null, OperandTypes.DATETIME,
           SqlFunctionCategory.TIMEDATE);
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_SUNDAY = TeradataWeekDayFunction.of("TD_SUNDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_MONDAY = TeradataWeekDayFunction.of("TD_MONDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_TUESDAY = TeradataWeekDayFunction.of("TD_TUESDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_WEDNESDAY = TeradataWeekDayFunction.of("TD_WEDNESDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_THURSDAY = TeradataWeekDayFunction.of("TD_THURSDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_FRIDAY = TeradataWeekDayFunction.of("TD_FRIDAY");
+
+  @LibraryOperator(libraries = {TERADATA})
+  public static final SqlFunction TD_SATURDAY = TeradataWeekDayFunction.of("TD_SATURDAY");
 
   /** DATABRICKS "DATEDIFF(datepart string, datetime,datetime)" function. */
   @LibraryOperator(libraries = {DATABRICKS})
@@ -4290,6 +4320,12 @@ public abstract class SqlLibraryOperators {
            ReturnTypes.INTEGER, null,
            OperandTypes.NILADIC, SqlFunctionCategory.SYSTEM);
 
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction ERROR_NUMBER =
+       new SqlFunction("ERROR_NUMBER", SqlKind.OTHER_FUNCTION,
+           ReturnTypes.INTEGER, null,
+           OperandTypes.NILADIC, SqlFunctionCategory.SYSTEM);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction GENERATE_ERROR_LINE =
       SqlBasicFunction
@@ -4541,6 +4577,17 @@ public abstract class SqlLibraryOperators {
           .withOperandTypeInference(InferTypes.FIRST_KNOWN)
           .withOperandHandler(
               OperandHandlers.of(SqlLibraryOperators::transformConvert));
+
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction TRY_CONVERT =
+      SqlBasicFunction.create(SqlKind.MSSQL_TRY_CONVERT,
+              ReturnTypes.andThen(SqlLibraryOperators::transformConvert,
+                  SqlCastFunction.returnTypeInference(false)),
+              OperandTypes.repeat(SqlOperandCountRanges.between(2, 3),
+                  OperandTypes.ANY))
+          .withName("TRY_CONVERT")
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withOperandTypeInference(InferTypes.FIRST_KNOWN);
 
   @LibraryOperator(libraries = {REDSHIFT})
   public static final SqlFunction REDSHIFT_CONVERT =

@@ -523,6 +523,13 @@ public abstract class OperandTypes {
           // Second and Third operand both are optional (operand index 0, 1, 2)
           number -> number == 1 || number == 2);
 
+  public static final SqlSingleOperandTypeChecker DATETIME_OPTIONAL_STRING_OPTIONAL_TIME =
+      family(
+          ImmutableList.of(SqlTypeFamily.DATETIME, SqlTypeFamily.STRING,
+              SqlTypeFamily.TIME),
+          // Second and Third operand both are optional (operand index 0, 1, 2)
+          number -> number == 1 || number == 2);
+
   public static final FamilyOperandTypeChecker STRING_NUMERIC_OPTIONAL_STRING =
       family(
           ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC,
