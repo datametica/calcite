@@ -2016,6 +2016,33 @@ class RelToSqlConverterDMTest {
     sql(query).withBigQuery().ok(expected);
   }
 
+  @Test void testIntersectAllOperatorForBigQuery() {
+    final String query = "select mod(11,3) from \"product\"\n"
+        + "INTERSECT ALL select 1 from \"product\"";
+    final String expected = "SELECT MOD(11, 3)\n"
+        + "FROM foodmart.product\n"
+        + "INTERSECT DISTINCT\n"
+        + "SELECT 1\n"
+        + "FROM foodmart.product";
+    sql(query).withBigQuery().ok(expected);
+  }
+
+  @Test void testChainedIntersectAllOperatorForBigQuery() {
+    final String query = "select \"product_id\" from \"product\"\n"
+        + "INTERSECT ALL select \"product_id\" from \"product\"\n"
+        + "INTERSECT ALL select \"product_id\" from \"product\"";
+    final String expected = "SELECT *\n"
+        + "FROM (SELECT product_id\n"
+        + "FROM foodmart.product\n"
+        + "INTERSECT DISTINCT\n"
+        + "SELECT product_id\n"
+        + "FROM foodmart.product)\n"
+        + "INTERSECT DISTINCT\n"
+        + "SELECT product_id\n"
+        + "FROM foodmart.product";
+    sql(query).withBigQuery().ok(expected);
+  }
+
   @Test public void testIntersectOrderBy() {
     final String query = "select * from (select \"product_id\" from \"product\"\n"
             + "INTERSECT select \"product_id\" from \"product\") t order by t.\"product_id\"";
