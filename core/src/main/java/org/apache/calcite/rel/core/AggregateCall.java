@@ -468,7 +468,7 @@ public class AggregateCall {
         aggregateRelBase.getCluster().getTypeFactory();
 
     if (aggFunction.getKind() == SqlKind.PERCENTILE_DISC
-    || aggFunction.getKind() == SqlKind.PERCENTILE_CONT) {
+        || aggFunction.getKind() == SqlKind.PERCENTILE_CONT) {
       final RelDataType collationType;
       if (collation.getKeys().size() == 1) {
         collationType = SqlTypeUtil.projectTypes(rowType, collation.getKeys()).get(0);
