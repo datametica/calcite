@@ -14889,6 +14889,105 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testBase64DecodeStringFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64DecodeString =
+        builder.call(SqlLibraryOperators.BASE64_DECODE_STRING, builder.literal("SEVMTE8="));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64DecodeString, "decoded_value"))
+        .build();
+
+    final String expectedSql =
+        "SELECT BASE64_DECODE_STRING('SEVMTE8=') AS \"decoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testBase64DecodeStringFunctionWithAlphabet() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64DecodeString =
+        builder.call(SqlLibraryOperators.BASE64_DECODE_STRING, builder.literal("SEVMTE8$"),
+            builder.literal("$"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64DecodeString, "decoded_value"))
+        .build();
+
+    final String expectedSql = "SELECT BASE64_DECODE_STRING('SEVMTE8$', '$') AS "
+        + "\"decoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testBase64DecodeBinaryFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64DecodeBinary =
+        builder.call(SqlLibraryOperators.BASE64_DECODE_BINARY, builder.literal("SEVMTE8="));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64DecodeBinary, "decoded_value"))
+        .build();
+
+    final String expectedSql =
+        "SELECT BASE64_DECODE_BINARY('SEVMTE8=') AS \"decoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testBase64DecodeBinaryFunctionWithAlphabet() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64DecodeBinary =
+        builder.call(SqlLibraryOperators.BASE64_DECODE_BINARY, builder.literal("SEVMTE8$"),
+            builder.literal("$"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64DecodeBinary, "decoded_value"))
+        .build();
+
+    final String expectedSql = "SELECT BASE64_DECODE_BINARY('SEVMTE8$', '$') AS "
+        + "\"decoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSafeConvertBytesToStringFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode safeConvertBytesToString =
+        builder.call(SqlLibraryOperators.SAFE_CONVERT_BYTES_TO_STRING,
+            builder.call(SqlLibraryOperators.FROM_BASE64, builder.literal("SEVMTE8=")));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(safeConvertBytesToString, "converted_value"))
+        .build();
+
+    final String expectedSql = "SELECT SAFE_CONVERT_BYTES_TO_STRING(FROM_BASE64('SEVMTE8=')) AS "
+        + "converted_value\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSafeConvertBytesToStringFunctionWithCastedColumn() {
+    final RelBuilder builder = relBuilder();
+    final RexNode safeConvertBytesToString =
+        builder.call(SqlLibraryOperators.SAFE_CONVERT_BYTES_TO_STRING,
+            builder.cast(builder.scan("EMP").field("ENAME"), SqlTypeName.VARBINARY));
+
+    final RelNode root = builder
+        .project(builder.alias(safeConvertBytesToString, "converted_value"))
+        .build();
+
+    final String expectedSql = "SELECT SAFE_CONVERT_BYTES_TO_STRING(CAST(ENAME AS BYTES)) AS "
+        + "converted_value\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testCreateXmlFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode createXmlCall =
