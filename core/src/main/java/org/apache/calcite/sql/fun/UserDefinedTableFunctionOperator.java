@@ -47,16 +47,19 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
  * original function name while still reporting the correct row type for
  * type inference.
  */
+
 public class UserDefinedTableFunctionOperator extends SqlFunction implements SqlTableFunction {
   private final RelDataType rowType;
 
   public UserDefinedTableFunctionOperator(String name, RelDataType rowType) {
-    super(name,
+    super(
+        name,
         SqlKind.UDTF,
         ReturnTypes.explicit(rowType),
         null,
         OperandTypes.VARIADIC,
         SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION);
+
     this.rowType = rowType;
   }
 
