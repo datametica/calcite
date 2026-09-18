@@ -2177,6 +2177,12 @@ public abstract class SqlLibraryOperators {
           ReturnTypes.VARBINARY_NULLABLE,
           OperandTypes.STRING, SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction SAFE_CONVERT_BYTES_TO_STRING =
+      SqlBasicFunction.create("SAFE_CONVERT_BYTES_TO_STRING",
+          ReturnTypes.VARCHAR_NULLABLE,
+          OperandTypes.BINARY, SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {MYSQL})
   public static final SqlFunction TO_BASE64 =
       SqlBasicFunction.create("TO_BASE64",
@@ -4910,6 +4916,30 @@ public abstract class SqlLibraryOperators {
               OperandTypes.family(
                   ImmutableList.of(SqlTypeFamily.BINARY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING),
                   n -> n >= 0 && n <= 2)),
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction BASE64_DECODE_STRING =
+      new SqlFunction(
+          "BASE64_DECODE_STRING",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARCHAR_2000_NULLABLE,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING),
+              n -> n == 1),
+          SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction BASE64_DECODE_BINARY =
+      new SqlFunction(
+          "BASE64_DECODE_BINARY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.VARBINARY_NULLABLE,
+          null,
+          OperandTypes.family(
+              ImmutableList.of(SqlTypeFamily.STRING, SqlTypeFamily.STRING),
+              n -> n == 1),
           SqlFunctionCategory.STRING);
 
   @LibraryOperator(libraries = {TERADATA})

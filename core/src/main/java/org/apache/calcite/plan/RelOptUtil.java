@@ -299,6 +299,18 @@ public abstract class RelOptUtil {
     return visitor.vuv.variables;
   }
 
+  /**
+   * Returns the correlation ids referenced by the given expressions,
+   * including ids referenced from within nested {@link RexSubQuery} rels.
+   */
+  public static Set<CorrelationId> getVariablesUsed(List<RexNode> nodes) {
+    final CorrelationCollector collector = new CorrelationCollector();
+    for (RexNode node : nodes) {
+      node.accept(collector.vuv);
+    }
+    return collector.vuv.variables;
+  }
+
   /** Finds which columns of a correlation variable are used within a
    * relational expression. */
   public static ImmutableBitSet correlationColumns(CorrelationId id,
