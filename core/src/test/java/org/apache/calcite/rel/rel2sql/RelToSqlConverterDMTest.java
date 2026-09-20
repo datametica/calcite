@@ -1297,6 +1297,35 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
 
+  /** Test case for UNPIVOT INCLUDE NULLS whose input is a sub-query: the sub-query
+   * SqlNode is taken from the already built join instead of visiting the join's left
+   * input again, so the sub-query keeps the alias assigned during that first visit. */
+  @Test public void testUnpivotWithIncludeNullsOnFilteredTable() {
+    final RelBuilder builder = RelBuilder.create(salesConfig().build());
+    RelNode root = builder
+        .scan("sales")
+        .filter(
+            builder.call(SqlStdOperatorTable.GREATER_THAN,
+                builder.field("year"), builder.literal(2020)))
+        .unpivot(true, ImmutableList.of("monthly_sales"), //value_column(measureList)
+            ImmutableList.of("month"), //unpivot_column(axisList)
+            Pair.zip(
+                Arrays.asList(ImmutableList.of(builder.literal("jan")), //column_alias
+                    ImmutableList.of(builder.literal("feb")),
+                    ImmutableList.of(builder.literal("march"))),
+                Arrays.asList(ImmutableList.of(builder.field("jansales")), //column_list
+                    ImmutableList.of(builder.field("febsales")),
+                    ImmutableList.of(builder.field("marsales")))))
+        .build();
+    final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT *\n"
+        + "FROM SALESSCHEMA.sales\n"
+        + "WHERE year > 2020) AS t UNPIVOT INCLUDE NULLS (monthly_sales FOR month IN "
+        + "(jansales AS 'jan', febsales AS 'feb', marsales AS 'march'))";
+    assertThat(toSql(root, dialect), isLinux(expectedSql));
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1665">[CALCITE-1665]
    * Aggregates and having cannot be combined</a>. */
@@ -15504,4 +15533,5 @@ class RelToSqlConverterDMTest {
     final String expectedQuery = "SELECT UUID_STRING() AS \"$f0\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
+
 }
