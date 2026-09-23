@@ -3882,6 +3882,20 @@ public abstract class SqlLibraryOperators {
               number -> number == 2),
           SqlFunctionCategory.TIMEDATE);
 
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlFunction SNOWFLAKE_PREVIOUS_DAY =
+      new SqlFunction(
+          "PREVIOUS_DAY",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.DATE_NULLABLE,
+          null,
+          OperandTypes.or(
+              OperandTypes.family(
+                  ImmutableList.of(SqlTypeFamily.DATE, SqlTypeFamily.CHARACTER)),
+              OperandTypes.family(
+                  ImmutableList.of(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER))),
+          SqlFunctionCategory.TIMEDATE);
+
   @LibraryOperator(libraries = {HIVE, SPARK, TERADATA})
   public static final SqlFunction SHIFTLEFT =
       new SqlFunction(
