@@ -1297,6 +1297,35 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
 
+  /** Test case for UNPIVOT INCLUDE NULLS whose input is a sub-query: the sub-query
+   * SqlNode is taken from the already built join instead of visiting the join's left
+   * input again, so the sub-query keeps the alias assigned during that first visit. */
+  @Test public void testUnpivotWithIncludeNullsOnFilteredTable() {
+    final RelBuilder builder = RelBuilder.create(salesConfig().build());
+    RelNode root = builder
+        .scan("sales")
+        .filter(
+            builder.call(SqlStdOperatorTable.GREATER_THAN,
+                builder.field("year"), builder.literal(2020)))
+        .unpivot(true, ImmutableList.of("monthly_sales"), //value_column(measureList)
+            ImmutableList.of("month"), //unpivot_column(axisList)
+            Pair.zip(
+                Arrays.asList(ImmutableList.of(builder.literal("jan")), //column_alias
+                    ImmutableList.of(builder.literal("feb")),
+                    ImmutableList.of(builder.literal("march"))),
+                Arrays.asList(ImmutableList.of(builder.field("jansales")), //column_list
+                    ImmutableList.of(builder.field("febsales")),
+                    ImmutableList.of(builder.field("marsales")))))
+        .build();
+    final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT *\n"
+        + "FROM SALESSCHEMA.sales\n"
+        + "WHERE year > 2020) AS t UNPIVOT INCLUDE NULLS (monthly_sales FOR month IN "
+        + "(jansales AS 'jan', febsales AS 'feb', marsales AS 'march'))";
+    assertThat(toSql(root, dialect), isLinux(expectedSql));
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1665">[CALCITE-1665]
    * Aggregates and having cannot be combined</a>. */
@@ -14904,6 +14933,105 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
   }
 
+  @Test public void testBase64DecodeStringFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64DecodeString =
+        builder.call(SqlLibraryOperators.BASE64_DECODE_STRING, builder.literal("SEVMTE8="));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64DecodeString, "decoded_value"))
+        .build();
+
+    final String expectedSql =
+        "SELECT BASE64_DECODE_STRING('SEVMTE8=') AS \"decoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testBase64DecodeStringFunctionWithAlphabet() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64DecodeString =
+        builder.call(SqlLibraryOperators.BASE64_DECODE_STRING, builder.literal("SEVMTE8$"),
+            builder.literal("$"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64DecodeString, "decoded_value"))
+        .build();
+
+    final String expectedSql = "SELECT BASE64_DECODE_STRING('SEVMTE8$', '$') AS "
+        + "\"decoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testBase64DecodeBinaryFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64DecodeBinary =
+        builder.call(SqlLibraryOperators.BASE64_DECODE_BINARY, builder.literal("SEVMTE8="));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64DecodeBinary, "decoded_value"))
+        .build();
+
+    final String expectedSql =
+        "SELECT BASE64_DECODE_BINARY('SEVMTE8=') AS \"decoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testBase64DecodeBinaryFunctionWithAlphabet() {
+    final RelBuilder builder = relBuilder();
+    final RexNode base64DecodeBinary =
+        builder.call(SqlLibraryOperators.BASE64_DECODE_BINARY, builder.literal("SEVMTE8$"),
+            builder.literal("$"));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(base64DecodeBinary, "decoded_value"))
+        .build();
+
+    final String expectedSql = "SELECT BASE64_DECODE_BINARY('SEVMTE8$', '$') AS "
+        + "\"decoded_value\"\nFROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSafeConvertBytesToStringFunction() {
+    final RelBuilder builder = relBuilder();
+    final RexNode safeConvertBytesToString =
+        builder.call(SqlLibraryOperators.SAFE_CONVERT_BYTES_TO_STRING,
+            builder.call(SqlLibraryOperators.FROM_BASE64, builder.literal("SEVMTE8=")));
+
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(safeConvertBytesToString, "converted_value"))
+        .build();
+
+    final String expectedSql = "SELECT SAFE_CONVERT_BYTES_TO_STRING(FROM_BASE64('SEVMTE8=')) AS "
+        + "converted_value\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSafeConvertBytesToStringFunctionWithCastedColumn() {
+    final RelBuilder builder = relBuilder();
+    final RexNode safeConvertBytesToString =
+        builder.call(SqlLibraryOperators.SAFE_CONVERT_BYTES_TO_STRING,
+            builder.cast(builder.scan("EMP").field("ENAME"), SqlTypeName.VARBINARY));
+
+    final RelNode root = builder
+        .project(builder.alias(safeConvertBytesToString, "converted_value"))
+        .build();
+
+    final String expectedSql = "SELECT SAFE_CONVERT_BYTES_TO_STRING(CAST(ENAME AS BYTES)) AS "
+        + "converted_value\nFROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testCreateXmlFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode createXmlCall =
@@ -15420,4 +15548,5 @@ class RelToSqlConverterDMTest {
     final String expectedQuery = "SELECT UUID_STRING() AS \"$f0\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
+
 }

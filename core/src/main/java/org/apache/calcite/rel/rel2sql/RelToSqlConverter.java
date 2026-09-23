@@ -949,7 +949,7 @@ public class RelToSqlConverter extends SqlImplementor
             inSqlNodeList);
     SqlNode query = isInSqlNodeContainsCast(inSqlNodeList)
         && !dialect.hasImplicitTypeCoercionInUnpivot()
-        ? dispatch(leftRelOfJoin).asStatement() : dispatch(leftRelOfJoin).node;
+        ? dispatch(leftRelOfJoin).asStatement() : ((SqlJoin) builder.select.getFrom()).getLeft();
     SqlUnpivot sqlUnpivot =
         new SqlUnpivot(POS, query, true, measureList, axisList, aliasedInSqlNodeList);
     if (isInSqlNodeContainsCast(inSqlNodeList) && !dialect.hasImplicitTypeCoercionInUnpivot()) {
