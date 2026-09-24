@@ -13284,6 +13284,47 @@ class RelToSqlConverterDMTest {
         isLinux(expected));
   }
 
+  /** Test case for RAVEN-2184: an IN sub-query in the ON clause of a RIGHT
+   * (outer) join whose left operand is on the preserved side must be
+   * decorrelated with a LEFT join + indicator, preserving the outer rows,
+   * instead of an INNER join that drops them. */
+  @Test public void testSubQueryRemoveRuleRightJoinInClausePreservesOuterRows() {
+    final RelBuilder builder = relBuilder();
+    final RelNode inSubQuery = builder.scan("EMP")
+        .project(builder.field("EMPNO"))
+        .build();
+    final RelNode root = builder.scan("DEPT")
+        .scan("EMP")
+        .join(JoinRelType.RIGHT,
+            builder.and(
+                builder.call(EQUALS, builder.field(2, 0, "DEPTNO"),
+                    builder.field(2, 1, "DEPTNO")),
+                RexSubQuery.in(inSubQuery,
+                    ImmutableList.of(builder.field(2, 1, "EMPNO")))))
+        .build();
+
+    // The preserved (right) input EMP is LEFT-joined to the dedup'd sub-query with
+    // a "TRUE AS i" indicator, and "t.i IS NOT NULL" is ANDed into the retained
+    // outer join condition; the RIGHT join is preserved so unmatched EMP rows
+    // survive with NULLs on the DEPT side (no INNER join, no sub-query in the ON).
+    final String expected = "SELECT DEPT.DEPTNO, DEPT.DNAME, DEPT.LOC, EMP.EMPNO, EMP.ENAME, "
+        + "EMP.JOB, EMP.MGR, EMP.HIREDATE, EMP.SAL, EMP.COMM, EMP.DEPTNO AS DEPTNO0\n"
+        + "FROM scott.DEPT\n"
+        + "RIGHT JOIN (scott.EMP LEFT JOIN (SELECT EMPNO, TRUE AS i\n"
+        + "FROM scott.EMP) AS t ON EMP.EMPNO = t.EMPNO) "
+        + "ON DEPT.DEPTNO = EMP.DEPTNO AND t.i IS NOT NULL";
+
+    HepProgram hepProgram = new HepProgramBuilder()
+        .addRuleInstance(SubQueryRemoveRule.Config.JOIN.toRule())
+        .build();
+    HepPlanner hepPlanner = new HepPlanner(hepProgram);
+    hepPlanner.setRoot(root);
+    RelNode optimizedRel = hepPlanner.findBestExp();
+
+    assertThat(toSql(optimizedRel, DatabaseProduct.BIG_QUERY.getDialect()),
+        isLinux(expected));
+  }
+
   @Test public void testOracleFirstDay() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     final RexNode literalTimestamp = relBuilder.call(SqlStdOperatorTable.CURRENT_TIMESTAMP);
