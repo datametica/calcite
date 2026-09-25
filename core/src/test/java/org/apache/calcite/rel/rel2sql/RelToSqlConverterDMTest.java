@@ -10476,6 +10476,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test public void testSnowflakePreviousDay() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode literalDate = relBuilder.call(CURRENT_DATE);
+    RexNode lastDayNode =
+        relBuilder.call(SqlLibraryOperators.SNOWFLAKE_PREVIOUS_DAY, literalDate,
+            relBuilder.literal("FRIDAY"));
+    RelNode root = relBuilder
+        .project(lastDayNode)
+        .build();
+    final String expecteSql = "SELECT PREVIOUS_DAY(CURRENT_DATE, 'FRIDAY') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expecteSql));
+  }
+
   @Test public void testSnowflakeLastDay() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     RexNode lastDayNode =
