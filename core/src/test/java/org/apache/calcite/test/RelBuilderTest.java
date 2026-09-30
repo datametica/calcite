@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 package org.apache.calcite.test;
+import org.apache.calcite.adapter.enumerable.EnumerableAsofJoin;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.adapter.java.ReflectiveSchema;
@@ -23,6 +24,7 @@ import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
@@ -30,6 +32,7 @@ import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.AsofJoin;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Exchange;
@@ -40,6 +43,7 @@ import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.hint.RelHint;
+import org.apache.calcite.rel.logical.LogicalAsofJoin;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -127,9 +131,11 @@ import static org.apache.calcite.test.Matchers.hasTree;
 
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -2269,6 +2275,44 @@ public class RelBuilderTest {
         + "    LogicalFilter(condition=[=($7, 20)])\n"
         + "      LogicalTableScan(table=[[scott, EMP]])\n";
     assertThat(root, hasTree(expected));
+  }
+
+  /** Tests that {@link AsofJoin#copy(RelTraitSet, List)} retains the
+   * match condition, for both {@link LogicalAsofJoin} and
+   * {@link EnumerableAsofJoin}. */
+  @Test void testAsofJoinCopyRetainsMatchCondition() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    final RelNode root = builder
+        .scan("EMP")
+        .scan("DEPT")
+        .asofJoin(JoinRelType.ASOF,
+            builder.equals(builder.field(2, 0, "DEPTNO"),
+                builder.field(2, 1, "DEPTNO")),
+            builder.lessThan(builder.field(2, 0, "EMPNO"),
+                builder.field(2, 1, "DEPTNO")))
+        .build();
+    assertThat(root, instanceOf(LogicalAsofJoin.class));
+    final AsofJoin join = (AsofJoin) root;
+    final RelNode newRight = builder.scan("DEPT").build();
+
+    final RelNode copy =
+        join.copy(join.getTraitSet(), ImmutableList.of(join.getLeft(), newRight));
+    assertThat(copy, instanceOf(LogicalAsofJoin.class));
+    assertThat(((AsofJoin) copy).getMatchCondition(),
+        is(join.getMatchCondition()));
+    assertThat(copy.getInput(1), sameInstance(newRight));
+    assertThat(copy, hasTree(RelOptUtil.toString(join)));
+
+    final EnumerableAsofJoin enumerableJoin =
+        EnumerableAsofJoin.create(join.getLeft(), join.getRight(),
+            join.getCondition(), join.getMatchCondition(),
+            join.getVariablesSet(), join.getJoinType());
+    final RelNode enumerableCopy =
+        enumerableJoin.copy(enumerableJoin.getTraitSet(),
+            ImmutableList.of(join.getLeft(), newRight));
+    assertThat(enumerableCopy, instanceOf(EnumerableAsofJoin.class));
+    assertThat(((AsofJoin) enumerableCopy).getMatchCondition(),
+        is(join.getMatchCondition()));
   }
 
   /** Tests building a simple join. Also checks {@link RelBuilder#size()}
