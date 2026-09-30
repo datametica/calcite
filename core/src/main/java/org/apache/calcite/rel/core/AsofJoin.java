@@ -56,6 +56,15 @@ public abstract class AsofJoin extends Join {
     return matchCondition;
   }
 
+  /** {@inheritDoc}
+   *
+   * <p>Re-declared abstract because the implementation in {@link Join}
+   * delegates to
+   * {@link #copy(RelTraitSet, RexNode, RelNode, RelNode, JoinRelType, boolean)},
+   * which has no match condition. Sub-classes must override this method so
+   * that the copy retains {@link #matchCondition}. */
+  @Override public abstract Join copy(RelTraitSet traitSet, List<RelNode> inputs);
+
   @Override public RelWriter explainTerms(RelWriter pw) {
     return super.explainTerms(pw)
         .item("matchCondition", matchCondition);
