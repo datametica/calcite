@@ -1370,6 +1370,20 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
+  // Helper method to check if all objects are of the same class
+  private boolean allSameEnclosingClass(List<SqlOperator> overloads) {
+    Class<?> firstOperatorClass = overloads.get(0).getClass().getEnclosingClass();
+    if (firstOperatorClass == null) {
+      return false;
+    }
+    for (int i = 1; i < overloads.size(); i++) {
+      if (overloads.get(i).getClass().getEnclosingClass() != firstOperatorClass) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * Performs expression rewrites which are always used unconditionally. These
    * rewrites massage the expression tree into a standard form so that the
@@ -1429,6 +1443,14 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
             catalogReader.nameMatcher());
         if (overloads.size() == 1) {
           ((SqlBasicCall) call).setOperator(overloads.get(0));
+        } else if (overloads.size() > 1 && allSameEnclosingClass(overloads)) {
+          String operatorName = call.getOperator().getName();
+          for (SqlOperator op : overloads) {
+            if (op.getKind().name().equals(operatorName)) {
+              ((SqlBasicCall) call).setOperator(op);
+              break;
+            }
+          }
         }
       }
       if (config.callRewrite()) {
