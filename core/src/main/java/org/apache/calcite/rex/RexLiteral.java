@@ -335,6 +335,7 @@ public class RexLiteral extends RexNode {
     case UUID:
       return value instanceof UUID;
     case BOOLEAN:
+    case BIT:
       // Unlike SqlLiteral, we do not allow boolean null.
       return value instanceof Boolean;
     case NULL:
@@ -681,6 +682,7 @@ public class RexLiteral extends RexNode {
       }
       break;
     case BOOLEAN:
+    case BIT:
       assert value instanceof Boolean;
       sb.append(value.toString());
       break;

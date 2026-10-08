@@ -2671,6 +2671,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       case DECIMAL:
         return createSqlDataTypeSpecBasedOnPreScale(type);
       case BOOLEAN:
+      case BIT:
         return createSqlDataTypeSpecByName("BOOL", typeName);
       case CLOB:
       case CHAR:
