@@ -259,4 +259,27 @@ class SqlDataTypeSpecTest {
     assertEquals(dataTypeSpec, getSqlDataTypeSpec(dataType, dialect));
     assertEquals(dataTypeSpecPrecScale, getSqlDataTypeSpecWithPrecisionAndScale(dataType, dialect));
   }
+
+  /** A SQL Server BIT is a boolean, so BigQuery renders it the same way it renders BOOLEAN. */
+  @Test void testBitRendersAsBoolForBigQuery() {
+    RelDataType bit = new BasicSqlType(TYPE_SYSTEM, SqlTypeName.BIT);
+    RelDataType bool = new BasicSqlType(TYPE_SYSTEM, SqlTypeName.BOOLEAN);
+    SqlDialect dialect = SqlDialect.DatabaseProduct.BIG_QUERY.getDialect();
+
+    assertEquals("BOOL", getSqlDataTypeSpec(bit, dialect));
+    assertEquals(getSqlDataTypeSpec(bool, dialect), getSqlDataTypeSpec(bit, dialect));
+  }
+
+  /** BIT belongs to the boolean family, so anything that accepts a boolean accepts it. */
+  @Test void testBitIsABooleanType() {
+    assertEquals(SqlTypeFamily.BOOLEAN, SqlTypeName.BIT.getFamily());
+    Assertions.assertTrue(SqlTypeName.BOOLEAN_TYPES.contains(SqlTypeName.BIT));
+    Assertions.assertTrue(SqlTypeFamily.BOOLEAN.getTypeNames().contains(SqlTypeName.BIT));
+  }
+
+  /** BIT is its own type name, so a source that has it stays distinguishable from a plain boolean. */
+  @Test void testBitIsDistinctFromBoolean() {
+    Assertions.assertNotEquals(SqlTypeName.BOOLEAN, SqlTypeName.BIT);
+    assertEquals(SqlTypeName.BIT, SqlTypeName.get("BIT"));
+  }
 }
