@@ -1844,9 +1844,11 @@ public class RelToSqlConverter extends SqlImplementor
       SqlWithItem sqlWithItem = createSqlWithItem(cteDefinationTrait, result, e);
 
       if (tableAliasTrait != null) {
-        result = applyTableAlias(sqlWithItem, tableAliasTrait, e, result);
+        result = applyTableAlias(sqlWithItem, tableAliasTrait.getTableAlias(), e, result);
       } else {
-        result = result(sqlWithItem, ImmutableList.of(Clause.FROM), e, null);
+        result =
+            result(sqlWithItem, ImmutableList.of(Clause.FROM), e,
+                ImmutableMap.of(sqlWithItem.name.getSimple(), e.getRowType()));
       }
     }
     return result;
@@ -2490,22 +2492,22 @@ public class RelToSqlConverter extends SqlImplementor
    * Applies the table alias to the given SqlWithItem and updates the result accordingly.
    *
    * @param sqlWithItem - The SqlWithItem (CTE) to which the alias will be applied
-   * @param tableAliasTrait - The table alias trait containing the alias name
+   * @param alias - The alias trait containing the alias name
    * @param e - The relational node being processed
    * @param result - The current result object
    * @return Result - The updated result with the alias applied
    */
-  private Result applyTableAlias(SqlWithItem sqlWithItem, TableAliasTrait tableAliasTrait,
+  private Result applyTableAlias(SqlWithItem sqlWithItem, String alias,
       RelNode e, Result result) {
     SqlNode aliasedIdentifier =
-        SqlStdOperatorTable.AS.createCall(POS, sqlWithItem, new SqlIdentifier(tableAliasTrait.getTableAlias(), POS));
+        SqlStdOperatorTable.AS.createCall(POS, sqlWithItem, new SqlIdentifier(alias, POS));
 
     return this.result(
         aliasedIdentifier,
         result.clauses,
-        tableAliasTrait.getTableAlias(),
+        alias,
         result.neededType,
-        ImmutableMap.of(tableAliasTrait.getTableAlias(), e.getRowType()));
+        ImmutableMap.of(alias, e.getRowType()));
   }
 
   /**

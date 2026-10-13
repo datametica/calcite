@@ -12539,6 +12539,72 @@ class RelToSqlConverterDMTest {
     assertThat(actualSql, isLinux(expectedSql));
   }
 
+  /** When a column of a CTE has the same name as the CTE and the dialect does not support
+   * identical table and column names, the column reference must be qualified with the CTE name. */
+  @Test public void testCTEWithColumnNameSameAsCTEName() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode rundate = builder.scan("employee")
+        .project(builder.alias(builder.field("birth_date"), "RUNDATE"),
+            builder.field("first_name"))
+        .aggregate(builder.groupKey(0, 1))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
+    final RelNode cteRel =
+        rundate.copy(rundate.getTraitSet().plus(cteTrait), rundate.getInputs());
+
+    final RelNode innerSelect = builder
+        .push(cteRel)
+        .project(builder.field("first_name"), builder.field("RUNDATE"))
+        .build();
+
+    final RelNode root =
+        innerSelect.copy(innerSelect.getTraitSet().plus(new CTEScopeTrait(true)),
+            innerSelect.getInputs());
+
+    final String expectedBqSql = "WITH RUNDATE AS (SELECT birth_date AS RUNDATE, first_name\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY RUNDATE, first_name) "
+        + "(SELECT first_name, RUNDATE.RUNDATE\n"
+        + "FROM RUNDATE)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
+  /** Same as {@link #testCTEWithColumnNameSameAsCTEName()} but the CTE reference carries a
+   * table alias; the column must be qualified only when it clashes with the alias. */
+  @Test public void testAliasedCTEWithColumnNameSameAsAlias() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode rundate = builder.scan("employee")
+        .project(builder.alias(builder.field("birth_date"), "R"),
+            builder.field("first_name"))
+        .aggregate(builder.groupKey(0, 1))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
+    final TableAliasTrait aliasTrait = new TableAliasTrait("R");
+    final RelNode cteRel =
+        rundate.copy(rundate.getTraitSet().plus(cteTrait).plus(aliasTrait),
+            rundate.getInputs());
+
+    final RelNode innerSelect = builder
+        .push(cteRel)
+        .project(builder.field("first_name"), builder.field("R"))
+        .build();
+
+    final RelNode root =
+        innerSelect.copy(innerSelect.getTraitSet().plus(new CTEScopeTrait(true)),
+            innerSelect.getInputs());
+
+    final String expectedBqSql = "WITH RUNDATE AS (SELECT birth_date AS R, first_name\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY R, first_name) "
+        + "(SELECT first_name, R.R\n"
+        + "FROM RUNDATE AS R)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
   /**
    * Verifies that a comment captured around a CTE name (carried on the {@link CTEDefinationTrait})
    * renders before the name at the WITH-clause definition only; the body reference, which reuses
