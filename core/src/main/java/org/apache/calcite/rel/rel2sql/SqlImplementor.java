@@ -1877,6 +1877,12 @@ public abstract class SqlImplementor {
           if (mappedSqlNode != null) {
             return mappedSqlNode;
           }
+          boolean needsQualForSameTableAndColName =
+              alias.getKey().equals(field.getName())
+                  && !dialect.supportsIdenticalTableAndColumnName();
+          if (needsQualForSameTableAndColName) {
+            return new SqlIdentifier(ImmutableList.of(alias.getKey(), field.getName()), POS);
+          }
           return new SqlIdentifier(!qualified || alias.getKey().startsWith("unnest$")
               ? ImmutableList.of(field.getName())
               : ImmutableList.of(alias.getKey(), field.getName()),
