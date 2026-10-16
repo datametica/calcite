@@ -41,6 +41,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.AsofJoin;
 import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
@@ -79,6 +80,7 @@ import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
+import org.apache.calcite.sql.SqlAsofJoin;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
@@ -364,6 +366,20 @@ public class RelToSqlConverter extends SqlImplementor
       projectExpansionUtil.handleResultAliasIfNeeded(leftResult, sqlCondition,
           getParentReferencedColumnNames(e, 0));
     }
+    if (e instanceof AsofJoin) {
+      final SqlNode sqlMatchCondition =
+          convertMatchConditionToSqlNode((AsofJoin) e, leftContext, rightContext);
+      final SqlNode asofJoin =
+          new SqlAsofJoin(POS,
+              leftResult.asFrom(),
+              SqlLiteral.createBoolean(false, POS),
+              joinType.symbol(POS),
+              rightResult.asFrom(),
+              condType,
+              sqlCondition,
+              sqlMatchCondition);
+      return result(asofJoin, leftResult, rightResult);
+    }
     SqlNode join =
         new SqlJoin(POS,
             leftResult.asFrom(),
@@ -373,6 +389,14 @@ public class RelToSqlConverter extends SqlImplementor
             condType,
             sqlCondition);
     return result(join, leftResult, rightResult);
+  }
+
+  /** Converts the MATCH_CONDITION of an {@link AsofJoin} to a {@link SqlNode}. */
+  private static SqlNode convertMatchConditionToSqlNode(AsofJoin join,
+      Context leftContext, Context rightContext) {
+    final Context joinContext =
+        leftContext.implementor().joinContext(leftContext, rightContext);
+    return joinContext.toSql(null, join.getMatchCondition());
   }
 
   private boolean isUsingOperator(Join e) {
