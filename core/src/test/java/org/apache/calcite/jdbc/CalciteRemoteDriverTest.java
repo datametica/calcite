@@ -319,7 +319,7 @@ class CalciteRemoteDriverTest {
     CalciteAssert.hr()
         .with(CalciteRemoteDriverTest::getRemoteConnection)
         .metaData(CalciteRemoteDriverTest::getTypeInfo)
-        .returns(CalciteAssert.checkResultCount(is(56)));
+        .returns(CalciteAssert.checkResultCount(is(57)));
   }
 
   @Test void testRemoteTableTypes() {
