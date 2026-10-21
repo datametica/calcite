@@ -5125,7 +5125,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlAggFunction OBJECT_AGG =
       SqlBasicAggFunction
           .create("OBJECT_AGG",
-              SqlKind.OTHER_FUNCTION,
+              SqlKind.OBJECT_AGG,
               ReturnTypes.VARIANT,
               OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY))
           .withFunctionType(SqlFunctionCategory.SYSTEM)
