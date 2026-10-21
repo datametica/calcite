@@ -5120,4 +5120,14 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction OBJECT_AGG =
+      SqlBasicAggFunction
+          .create("OBJECT_AGG",
+              SqlKind.OTHER_FUNCTION,
+              ReturnTypes.VARIANT,
+              OperandTypes.family(SqlTypeFamily.STRING, SqlTypeFamily.ANY))
+          .withFunctionType(SqlFunctionCategory.SYSTEM)
+          .withAllowsFraming(false);
 }

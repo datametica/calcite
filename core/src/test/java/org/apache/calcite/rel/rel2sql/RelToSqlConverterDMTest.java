@@ -15698,4 +15698,19 @@ class RelToSqlConverterDMTest {
         + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
+
+  @Test public void testObjectAggFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall objectAggCall =
+        builder.aggregateCall(SqlLibraryOperators.OBJECT_AGG,
+            builder.field("ENAME"), builder.field("SAL"));
+    final RelNode root = builder
+        .aggregate(builder.groupKey("DEPTNO"), objectAggCall.as("obj"))
+        .build();
+
+    final String expectedQuery = "SELECT \"DEPTNO\", OBJECT_AGG(\"ENAME\", \"SAL\") AS \"obj\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "GROUP BY \"DEPTNO\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
 }
