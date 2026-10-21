@@ -89,6 +89,13 @@ public class SubQueryRemoveRule
   protected RexNode apply(RexSubQuery e, Set<CorrelationId> variablesSet,
       RelOptUtil.Logic logic,
       RelBuilder builder, int inputCount, int offset, int subQueryIndex) {
+    return apply(e, variablesSet, logic, builder, inputCount, offset, subQueryIndex, false);
+  }
+
+  protected RexNode apply(RexSubQuery e, Set<CorrelationId> variablesSet,
+      RelOptUtil.Logic logic,
+      RelBuilder builder, int inputCount, int offset, int subQueryIndex,
+      boolean preserveOuter) {
     switch (e.getKind()) {
     case SCALAR_QUERY:
       return rewriteScalarQuery(e, variablesSet, builder, inputCount, offset);
@@ -100,7 +107,8 @@ public class SubQueryRemoveRule
     case SOME:
       return rewriteSome(e, variablesSet, builder, subQueryIndex);
     case IN:
-      return rewriteIn(e, variablesSet, logic, builder, offset, subQueryIndex);
+      return rewriteIn(e, variablesSet, logic, builder, offset, subQueryIndex,
+          preserveOuter);
     case EXISTS:
       return rewriteExists(e, variablesSet, logic, builder);
     case UNIQUE:
@@ -553,7 +561,8 @@ public class SubQueryRemoveRule
    * @return Expression that may be used to replace the RexSubQuery
    */
   private static RexNode rewriteIn(RexSubQuery e, Set<CorrelationId> variablesSet,
-      RelOptUtil.Logic logic, RelBuilder builder, int totalOffset, int subQueryIndex) {
+      RelOptUtil.Logic logic, RelBuilder builder, int totalOffset, int subQueryIndex,
+      boolean preserveOuter) {
     // Most general case, where the left and right keys might have nulls, and
     // caller requires 3-valued logic return.
     //
@@ -703,7 +712,12 @@ public class SubQueryRemoveRule
     } else {
       switch (logic) {
       case TRUE:
-        builder.aggregate(builder.groupKey(fields));
+        if (preserveOuter) {
+          builder.aggregate(builder.groupKey(fields),
+              builder.literalAgg(true).as("i"));
+        } else {
+          builder.aggregate(builder.groupKey(fields));
+        }
         break;
       case TRUE_FALSE_UNKNOWN:
       case UNKNOWN_AS_TRUE:
@@ -750,6 +764,27 @@ public class SubQueryRemoveRule
           otherConditions.add(
               builder.equals(leftPairNode, RexUtil.shift(rightPairNode, totalOffset + offset)));
         }
+      }
+      if (preserveOuter) {
+        // The sub-query is on the preserved side of an outer join: LEFT-join it
+        // (so preserved rows survive) and expose an "i IS NOT NULL" indicator for
+        // the retained join condition instead of eliminating rows with an INNER join.
+        // The indicator column ("i") is a literal TRUE typed NON-nullable in the
+        // aggregate; after the LEFT join it becomes NULL for unmatched preserved
+        // rows, so the reference must be typed nullable or IS NOT NULL folds to TRUE.
+        final RexInputRef indicatorRef =
+            (RexInputRef) RexUtil.shift(builder.field(fields.size()),
+                totalOffset + offset);
+        final RexNode nullableIndicatorRef =
+            builder.getRexBuilder().makeInputRef(
+                builder.getTypeFactory()
+                    .createTypeWithNullability(indicatorRef.getType(), true),
+                indicatorRef.getIndex());
+        builder.join(JoinRelType.LEFT, builder.and(prevInputConditions), variablesSet);
+        otherConditions.add(
+            builder.getRexBuilder().makeCall(SqlStdOperatorTable.IS_NOT_NULL,
+                nullableIndicatorRef));
+        return builder.and(otherConditions);
       }
       builder.join(JoinRelType.INNER, builder.and(prevInputConditions), variablesSet);
       return builder.and(otherConditions);
@@ -910,17 +945,39 @@ public class SubQueryRemoveRule
     final RelOptUtil.Logic logic =
         LogicVisitor.find(RelOptUtil.Logic.TRUE,
             ImmutableList.of(join.getCondition()), e);
+    final boolean preserveOuter = isSubQueryOnPreservedSide(join, e);
     builder.push(join.getLeft());
     builder.push(join.getRight());
     final int fieldCount = join.getRowType().getFieldCount();
     final Set<CorrelationId>  variablesSet =
         RelOptUtil.getVariablesUsed(e.rel);
     final RexNode target =
-        rule.apply(e, variablesSet, logic, builder, 2, fieldCount, 0);
+        rule.apply(e, variablesSet, logic, builder, 2, fieldCount, 0, preserveOuter);
     final RexShuttle shuttle = new ReplaceSubQueryShuttle(e, target);
     builder.join(join.getJoinType(), shuttle.apply(join.getCondition()));
     builder.project(fields(builder, join.getRowType().getFieldCount()));
     call.transformTo(builder.build());
+  }
+
+  /** Returns whether the sub-query's left operand references the preserved side
+   * of an outer join (the right input of a RIGHT join, or the left input of a
+   * LEFT join). Decorrelating such a sub-query with an INNER join would drop the
+   * preserved (outer) rows, so the caller must use the outer-join-preserving
+   * (LEFT join + indicator) rewrite instead. */
+  private static boolean isSubQueryOnPreservedSide(Join join, RexSubQuery e) {
+    final JoinRelType joinType = join.getJoinType();
+    if (joinType != JoinRelType.LEFT && joinType != JoinRelType.RIGHT) {
+      return false;
+    }
+    if (e.getOperands().isEmpty()
+        || !(e.getOperands().get(0) instanceof RexInputRef)) {
+      return false;
+    }
+    final int operandIndex = ((RexInputRef) e.getOperands().get(0)).getIndex();
+    final int leftFieldCount = join.getLeft().getRowType().getFieldCount();
+    final boolean operandOnRight = operandIndex >= leftFieldCount;
+    return (joinType == JoinRelType.RIGHT && operandOnRight)
+        || (joinType == JoinRelType.LEFT && !operandOnRight);
   }
 
   /** Shuttle that replaces occurrences of a given
