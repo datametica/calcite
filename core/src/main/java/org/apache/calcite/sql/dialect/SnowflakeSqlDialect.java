@@ -261,32 +261,12 @@ public class SnowflakeSqlDialect extends SqlDialect {
   }
 
   private void handleOverCall(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
-    if (call.operand(0).getKind() == SqlKind.OBJECT_AGG) {
-      unparseObjectAggOver(writer, call, leftPrec, rightPrec);
-    } else if (checkWindowFunctionContainOrderBy(call)) {
+   if (checkWindowFunctionContainOrderBy(call)) {
       super.unparseCall(writer, call, leftPrec, rightPrec);
     } else {
       call.operand(0).unparse(writer, leftPrec, rightPrec);
       unparseSqlWindow(call.operand(1), writer, call);
     }
-  }
-
-  /**
-   * Unparses OBJECT_AGG as a window function. Snowflake supports only
-   * {@code OVER ([PARTITION BY ...])} for OBJECT_AGG, so the ORDER BY clause
-   * and the window frame are dropped.
-   */
-  private void unparseObjectAggOver(SqlWriter writer, SqlCall call,
-      int leftPrec, int rightPrec) {
-    final SqlWindow window = call.operand(1);
-    final SqlWindow partitionOnlyWindow =
-        SqlWindow.create(null, null, window.getPartitionList(),
-            SqlNodeList.EMPTY, SqlLiteral.createBoolean(false, SqlParserPos.ZERO),
-            null, null, null, SqlParserPos.ZERO);
-    final SqlCall overCall =
-        SqlStdOperatorTable.OVER.createCall(SqlParserPos.ZERO, call.operand(0),
-            partitionOnlyWindow);
-    super.unparseCall(writer, overCall, leftPrec, rightPrec);
   }
 
   private boolean checkWindowFunctionContainOrderBy(SqlCall call) {
