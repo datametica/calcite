@@ -15713,4 +15713,122 @@ class RelToSqlConverterDMTest {
         + "GROUP BY \"DEPTNO\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
+
+  @Test public void testObjectAggWindowFunctionWithPartitionBy() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode objectAggOver =
+        builder.aggregateCall(SqlLibraryOperators.OBJECT_AGG,
+                builder.field("ENAME"), builder.field("SAL"))
+            .over()
+            .partitionBy(builder.field("DEPTNO"))
+            .as("obj");
+    final RelNode root = builder
+        .project(builder.field("DEPTNO"), objectAggOver)
+        .build();
+
+    final String expectedQuery = "SELECT \"DEPTNO\", OBJECT_AGG(\"ENAME\", \"SAL\") "
+        + "OVER (PARTITION BY \"DEPTNO\") AS \"obj\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testObjectAggWindowFunctionWithEmptyOver() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode objectAggOver =
+        builder.aggregateCall(SqlLibraryOperators.OBJECT_AGG,
+                builder.field("ENAME"), builder.field("SAL"))
+            .over()
+            .as("obj");
+    final RelNode root = builder
+        .project(objectAggOver)
+        .build();
+
+    final String expectedQuery = "SELECT OBJECT_AGG(\"ENAME\", \"SAL\") OVER () AS \"obj\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testObjectAggWindowFunctionDropsOrderBy() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode objectAggOver =
+        builder.aggregateCall(SqlLibraryOperators.OBJECT_AGG,
+                builder.field("ENAME"), builder.field("SAL"))
+            .over()
+            .partitionBy(builder.field("DEPTNO"))
+            .orderBy(builder.field("HIREDATE"))
+            .as("obj");
+    final RelNode root = builder
+        .project(builder.field("DEPTNO"), objectAggOver)
+        .build();
+
+    final String expectedQuery = "SELECT \"DEPTNO\", OBJECT_AGG(\"ENAME\", \"SAL\") "
+        + "OVER (PARTITION BY \"DEPTNO\") AS \"obj\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testObjectAggWindowFunctionDropsWindowFrame() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode objectAggOver =
+        builder.aggregateCall(SqlLibraryOperators.OBJECT_AGG,
+                builder.field("ENAME"), builder.field("SAL"))
+            .over()
+            .partitionBy(builder.field("DEPTNO"))
+            .orderBy(builder.field("HIREDATE"))
+            .rowsBetween(RexWindowBounds.preceding(builder.literal(2)),
+                RexWindowBounds.CURRENT_ROW)
+            .as("obj");
+    final RelNode root = builder
+        .project(builder.field("DEPTNO"), objectAggOver)
+        .build();
+
+    final String expectedQuery = "SELECT \"DEPTNO\", OBJECT_AGG(\"ENAME\", \"SAL\") "
+        + "OVER (PARTITION BY \"DEPTNO\") AS \"obj\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testObjectAggFunctionInBigQuery() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall objectAggCall =
+        builder.aggregateCall(SqlLibraryOperators.OBJECT_AGG,
+            builder.field("ENAME"), builder.field("SAL"));
+    final RelNode root = builder
+        .aggregate(builder.groupKey("DEPTNO"), objectAggCall.as("obj"))
+        .build();
+
+    final String expectedBigQuery = "TODO";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  @Test public void testObjectAggWindowFunctionInBigQuery() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode objectAggOver =
+        builder.aggregateCall(SqlLibraryOperators.OBJECT_AGG,
+                builder.field("ENAME"), builder.field("SAL"))
+            .over()
+            .partitionBy(builder.field("DEPTNO"))
+            .as("obj");
+    final RelNode root = builder
+        .project(builder.field("DEPTNO"), objectAggOver)
+        .build();
+
+    final String expectedBigQuery = "TODO";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  @Test public void testObjectAggWindowFunctionWithEmptyOverInBigQuery() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode objectAggOver =
+        builder.aggregateCall(SqlLibraryOperators.OBJECT_AGG,
+                builder.field("ENAME"), builder.field("SAL"))
+            .over()
+            .as("obj");
+    final RelNode root = builder
+        .project(objectAggOver)
+        .build();
+
+    final String expectedBigQuery = "TODO";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
 }
