@@ -5120,4 +5120,14 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction REGR_SLOPE =
+      SqlBasicAggFunction
+          .create(
+              "REGR_SLOPE",
+              SqlKind.OTHER_FUNCTION,
+              ReturnTypes.DOUBLE_NULLABLE,
+              OperandTypes.NUMERIC_NUMERIC)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
 }
