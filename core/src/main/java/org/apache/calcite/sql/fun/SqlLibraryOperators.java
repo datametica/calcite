@@ -5126,7 +5126,7 @@ public abstract class SqlLibraryOperators {
       SqlBasicAggFunction
           .create(
               "REGR_SLOPE",
-              SqlKind.OTHER_FUNCTION,
+              SqlKind.REGR_SLOPE,
               ReturnTypes.DOUBLE_NULLABLE,
               OperandTypes.NUMERIC_NUMERIC)
           .withFunctionType(SqlFunctionCategory.NUMERIC);
