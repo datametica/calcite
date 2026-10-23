@@ -318,7 +318,7 @@ public class CTERelToSqlUtil {
 
   /**
    * Replaces inline CTE bodies inside a PIVOT / UNPIVOT source that is a subquery
-   * ({@code FROM (SELECT * FROM cte) AS t UNPIVOT (...)}) with the CTE identifier.
+   * ({@code FROM (SELECT * FROM cte) AS t UNPIVOT (....)}) with the CTE identifier.
    * The alias, when present, is kept as it is.
    */
   private static void updatePivotSubQuerySource(SqlNode query) {
