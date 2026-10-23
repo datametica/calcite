@@ -4056,7 +4056,7 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction JSON_OBJECT =
       new SqlFunction("JSON_OBJECT",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.VARCHAR_2000,
+          ReturnTypes.JSON,
           null,
           OperandTypes.VARIADIC,
           SqlFunctionCategory.SYSTEM);
