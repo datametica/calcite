@@ -148,7 +148,8 @@ public enum SqlTypeName {
   HIERARCHYID(PrecScale.NO_NO, false, Types.OTHER, SqlTypeFamily.HIERARCHYID),
   UUID(PrecScale.NO_NO, false, Types.OTHER, SqlTypeFamily.UUID),
   XML(PrecScale.NO_NO, false, ExtraSqlTypes.SQLXML,  null),
-  ROWVERSION(PrecScale.NO_NO, false, Types.BINARY, SqlTypeFamily.BINARY);
+  ROWVERSION(PrecScale.NO_NO, false, Types.BINARY, SqlTypeFamily.BINARY),
+  BIT(PrecScale.NO_NO, false, Types.BIT, SqlTypeFamily.BOOLEAN);
 
   public static final int MAX_DATETIME_PRECISION = 3;
 
@@ -184,7 +185,7 @@ public enum SqlTypeName {
           DISTINCT, STRUCTURED, ROW, CURSOR, COLUMN_LIST, VARIANT, VARRAY, ARRAY);
 
   public static final List<SqlTypeName> BOOLEAN_TYPES =
-      ImmutableList.of(BOOLEAN);
+      ImmutableList.of(BOOLEAN, BIT);
 
   public static final List<SqlTypeName> BINARY_TYPES =
       ImmutableList.of(BINARY, VARBINARY, ROWVERSION);
