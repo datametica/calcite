@@ -15698,4 +15698,34 @@ class RelToSqlConverterDMTest {
         + "FROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
+
+  @Test public void testWithRegrSlope() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode regrSlopeCall = relBuilder
+        .call(SqlLibraryOperators.REGR_SLOPE,
+            relBuilder.literal(122),
+            relBuilder.literal(2));
+    RelNode root = relBuilder
+        .project(regrSlopeCall)
+        .build();
+    final String expectedSql = "SELECT REGR_SLOPE(122, 2) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test void testForRegrSlopeAggregateFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlLibraryOperators.REGR_SLOPE,
+            builder.field("SAL"),
+            builder.field("COMM"));
+    final RelNode rel = builder
+        .aggregate(builder.groupKey(), aggCall)
+        .build();
+    final String expectedSql = "SELECT REGR_SLOPE(\"SAL\", \"COMM\") AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(rel, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
 }
