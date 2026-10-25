@@ -3933,6 +3933,67 @@ class RelToSqlConverterDMTest {
         .ok(expectedBigQuery);
   }
 
+  /** RAVEN-2563: the sign of a negative interval literal is kept. */
+  @Test public void testTimestampPlusNegativeIntervalLiteralTimesColumn() {
+    String query = "select \"hire_date\" + (INTERVAL -'1' HOUR * \"store_id\") from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a negative interval literal with a quantity other than 1. */
+  @Test public void testTimestampPlusNegativeIntervalLiteralTimesColumnQuantityTwo() {
+    String query = "select \"hire_date\" + (INTERVAL -'2' HOUR * \"store_id\") from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id * 2 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a negative interval literal inside a negated multiply adds the column. */
+  @Test public void testTimestampPlusNegatedNegativeIntervalLiteral() {
+    String query = "select \"hire_date\" + ((INTERVAL -'1' HOUR * \"store_id\") * -1) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id * -1 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: only one -1 factor flips the function. */
+  @Test public void testTimestampPlusTwiceNegatedColumnScaledInterval() {
+    String query = "select \"hire_date\" + (((INTERVAL '1' HOUR * \"store_id\") * -1) * -1) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id * -1 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a DATE operand flips DATE_ADD to DATE_SUB. */
+  @Test public void testDatePlusNegatedColumnScaledInterval() {
+    String query = "select \"birth_date\" + ((INTERVAL '1' DAY * \"store_id\") * -1) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a factor with lower precedence than * keeps its brackets. */
+  @Test public void testTimestampPlusColumnScaledIntervalWithSumFactor() {
+    String query = "select \"hire_date\""
+        + " + ((INTERVAL '1' HOUR * (\"store_id\" + \"department_id\")) * 2) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_ADD(hire_date, INTERVAL (store_id + department_id) * 2 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
   @Test public void testDatePlusIntervalMonthFunctionWithCol() {
     String query = "select \"birth_date\" +  \"store_id\" * INTERVAL '10' MONTH from \"employee\"";
     final String expectedHive = "SELECT ADD_MONTHS(birth_date, store_id * 10)\n"

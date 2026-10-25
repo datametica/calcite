@@ -1287,6 +1287,9 @@ public class BigQuerySqlDialect extends SqlDialect {
    * Example 2: a factor of -1 is dropped and flips ADD to SUB (or SUB to ADD).
    * Input: DATETIME_ADD(ts, (INTERVAL 1 HOUR * store_id) * -1)
    * Output: DATETIME_SUB(ts, store_id * INTERVAL 1 HOUR)
+   * Example 3: a negative interval literal becomes a positive one and a -1 factor.
+   * Input: DATETIME_ADD(ts, INTERVAL -1 HOUR * store_id)
+   * Output: DATETIME_SUB(ts, store_id * INTERVAL 1 HOUR)
    *
    * @param call SqlCall : DATETIME_ADD(ts, (INTERVAL 1 HOUR * store_id) * -1)
    * @return the rewritten call, or the same call when there is nothing to rewrite
@@ -1296,15 +1299,26 @@ public class BigQuerySqlDialect extends SqlDialect {
       return call;
     }
     final SqlCall times = call.operand(1);
-    if (times.operand(0) instanceof SqlIntervalLiteral
-        || times.operand(1) instanceof SqlIntervalLiteral) {
-      return call;
-    }
     final List<SqlNode> factors = new ArrayList<>();
     final List<SqlNode> intervals = new ArrayList<>();
     collectMultiplyFactors(times, factors, intervals);
     if (intervals.size() != 1 || factors.isEmpty()) {
       return call;
+    }
+    SqlIntervalLiteral intervalLiteral = (SqlIntervalLiteral) intervals.get(0);
+    final SqlIntervalLiteral.IntervalValue intervalValue =
+        (SqlIntervalLiteral.IntervalValue) intervalLiteral.getValue();
+    final boolean direct = times.operand(0) == intervalLiteral
+        || times.operand(1) == intervalLiteral;
+    if (direct && intervalValue.getSign() >= 0) {
+      return call;
+    }
+    if (intervalValue.getSign() < 0) {
+      // unparseExpressionIntervalCall drops the sign of the literal, so move it into a -1 factor.
+      intervalLiteral =
+          SqlLiteral.createInterval(1, intervalValue.getIntervalLiteral(),
+              intervalValue.getIntervalQualifier(), intervalLiteral.getParserPosition());
+      factors.add(SqlLiteral.createExactNumeric("-1", SqlParserPos.ZERO));
     }
     SqlOperator operator = call.getOperator();
     final SqlOperator negatedOperator = negatedIntervalFunction(operator);
@@ -1322,7 +1336,7 @@ public class BigQuerySqlDialect extends SqlDialect {
       multiplier = MULTIPLY.createCall(SqlParserPos.ZERO, multiplier, factors.get(i));
     }
     final SqlNode interval =
-        MULTIPLY.createCall(SqlParserPos.ZERO, multiplier, intervals.get(0));
+        MULTIPLY.createCall(SqlParserPos.ZERO, multiplier, intervalLiteral);
     return operator.createCall(call.getFunctionQuantifier(), call.getParserPosition(),
         call.operand(0), interval);
   }
