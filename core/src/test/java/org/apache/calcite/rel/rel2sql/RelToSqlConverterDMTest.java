@@ -3891,6 +3891,48 @@ class RelToSqlConverterDMTest {
         .ok(expectedBigQuery);
   }
 
+  /** RAVEN-2563: a negated, column-scaled interval added to a timestamp. The
+   * interval operand is a nested multiply, {@code (INTERVAL * col) * -1}. */
+  @Test public void testTimestampPlusNegatedColumnScaledInterval() {
+    String query = "select \"hire_date\" + ((INTERVAL '1' HOUR * \"store_id\") * -1)"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  @Test public void testTimestampPlusNegatedColumnScaledIntervalFactorFirst() {
+    String query = "select \"hire_date\" + (-1 * (INTERVAL '1' MINUTE * \"store_id\"))"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id MINUTE)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  @Test public void testTimestampMinusNegatedColumnScaledInterval() {
+    String query = "select \"hire_date\" - ((INTERVAL '1' HOUR * \"store_id\") * -1)"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_ADD(hire_date, INTERVAL store_id HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  @Test public void testTimestampPlusDoubledColumnScaledInterval() {
+    String query = "select \"hire_date\" + ((INTERVAL '2' HOUR * \"store_id\") * 3)"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_ADD(hire_date, INTERVAL store_id * 3 * 2 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
   @Test public void testDatePlusIntervalMonthFunctionWithCol() {
     String query = "select \"birth_date\" +  \"store_id\" * INTERVAL '10' MONTH from \"employee\"";
     final String expectedHive = "SELECT ADD_MONTHS(birth_date, store_id * 10)\n"
