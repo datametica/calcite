@@ -1453,7 +1453,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     writer.sep("INTERVAL");
     if (call.getKind() == SqlKind.TIMES) {
       if (!literalValue.getIntervalLiteral().equals("1")) {
-        multiplier.unparse(writer, leftPrec, rightPrec);
+        // The multiplier is followed by "* N", so a lower-precedence call such as a + b
+        // needs brackets.
+        multiplier.unparse(writer, leftPrec, MULTIPLY.getLeftPrec());
         writer.sep("*");
         writer.sep(literalValue.toString());
       } else {
