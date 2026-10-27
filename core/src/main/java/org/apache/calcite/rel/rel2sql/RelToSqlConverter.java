@@ -1870,7 +1870,9 @@ public class RelToSqlConverter extends SqlImplementor
       if (tableAliasTrait != null) {
         result = applyTableAlias(sqlWithItem, tableAliasTrait, e, result);
       } else {
-        result = result(sqlWithItem, ImmutableList.of(Clause.FROM), e, null);
+        result =
+            result(sqlWithItem, ImmutableList.of(Clause.FROM), e,
+                ImmutableMap.of(sqlWithItem.name.getSimple(), e.getRowType()));
       }
     }
     return result;

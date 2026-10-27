@@ -10491,6 +10491,34 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expecteSql));
   }
 
+  @Test public void testSnowflakeJaroWinklerSimilarity() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    RexNode jaroWinklerNode =
+        relBuilder.call(SqlLibraryOperators.JAROWINKLER_SIMILARITY,
+            relBuilder.literal("Snowflake"), relBuilder.literal("Oracle"));
+    RelNode root = relBuilder
+        .project(jaroWinklerNode)
+        .build();
+    final String expectedSql = "SELECT JAROWINKLER_SIMILARITY('Snowflake', 'Oracle') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSnowflakeJaroWinklerSimilarityWithColumns() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    RexNode jaroWinklerNode =
+        relBuilder.call(SqlLibraryOperators.JAROWINKLER_SIMILARITY,
+            relBuilder.field("ENAME"), relBuilder.field("JOB"));
+    RelNode root = relBuilder
+        .project(jaroWinklerNode)
+        .build();
+    final String expectedSql = "SELECT JAROWINKLER_SIMILARITY(\"ENAME\", \"JOB\") AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testSnowflakeLastDay() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     RexNode lastDayNode =
@@ -11785,6 +11813,35 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
   }
 
+  @Test void testAiAgg() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    RelBuilder.AggCall aiAggCall =
+        builder.aggregateCall(SqlLibraryOperators.AI_AGG, builder.field("ENAME"),
+            builder.literal("Summarize the names"));
+    final RelNode root = builder
+        .aggregate(builder.groupKey("DEPTNO"), aiAggCall.as("summary"))
+        .build();
+    final String expectedBQSql = "SELECT DEPTNO, AI.AGG(ENAME, 'Summarize the names') AS summary\n"
+        + "FROM scott.EMP\n"
+        + "GROUP BY DEPTNO";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
+  }
+
+  @Test void testSnowflakeAiAgg() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    RelBuilder.AggCall aiAggCall =
+        builder.aggregateCall(SqlLibraryOperators.SNOWFLAKE_AI_AGG, builder.field("ENAME"),
+            builder.literal("Summarize the names"));
+    final RelNode root = builder
+        .aggregate(builder.groupKey("DEPTNO"), aiAggCall.as("summary"))
+        .build();
+    final String expectedSnowflakeSql = "SELECT \"DEPTNO\", "
+        + "AI_AGG(\"ENAME\", 'Summarize the names') AS \"summary\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "GROUP BY \"DEPTNO\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
+  }
+
   @Test void testCorrelatedScalarQueryInSelectList() {
     RelBuilder builder = foodmartRelBuilder();
     builder.scan("employee");
@@ -12509,6 +12566,72 @@ class RelToSqlConverterDMTest {
                                 + "foodmart.employee\nGROUP BY first_name, last_name, birth_date)"
                                 + " (SELECT first_name AS FNAME\nFROM RUNDATE)";
     assertThat(actualSql, isLinux(expectedSql));
+  }
+
+  /** When a column of a CTE has the same name as the CTE and the dialect does not support
+   * identical table and column names, the column reference must be qualified with the CTE name. */
+  @Test public void testCTEWithColumnNameSameAsCTEName() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode rundate = builder.scan("employee")
+        .project(builder.alias(builder.field("birth_date"), "RUNDATE"),
+            builder.field("first_name"))
+        .aggregate(builder.groupKey(0, 1))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
+    final RelNode cteRel =
+        rundate.copy(rundate.getTraitSet().plus(cteTrait), rundate.getInputs());
+
+    final RelNode innerSelect = builder
+        .push(cteRel)
+        .project(builder.field("first_name"), builder.field("RUNDATE"))
+        .build();
+
+    final RelNode root =
+        innerSelect.copy(innerSelect.getTraitSet().plus(new CTEScopeTrait(true)),
+            innerSelect.getInputs());
+
+    final String expectedBqSql = "WITH RUNDATE AS (SELECT birth_date AS RUNDATE, first_name\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY RUNDATE, first_name) "
+        + "(SELECT first_name, RUNDATE.RUNDATE\n"
+        + "FROM RUNDATE)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
+  /** Same as {@link #testCTEWithColumnNameSameAsCTEName()} but the CTE reference carries a
+   * table alias; the column must be qualified only when it clashes with the alias. */
+  @Test public void testAliasedCTEWithColumnNameSameAsAlias() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode rundate = builder.scan("employee")
+        .project(builder.alias(builder.field("birth_date"), "R"),
+            builder.field("first_name"))
+        .aggregate(builder.groupKey(0, 1))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
+    final TableAliasTrait aliasTrait = new TableAliasTrait("R");
+    final RelNode cteRel =
+        rundate.copy(rundate.getTraitSet().plus(cteTrait).plus(aliasTrait),
+            rundate.getInputs());
+
+    final RelNode innerSelect = builder
+        .push(cteRel)
+        .project(builder.field("first_name"), builder.field("R"))
+        .build();
+
+    final RelNode root =
+        innerSelect.copy(innerSelect.getTraitSet().plus(new CTEScopeTrait(true)),
+            innerSelect.getInputs());
+
+    final String expectedBqSql = "WITH RUNDATE AS (SELECT birth_date AS R, first_name\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY R, first_name) "
+        + "(SELECT first_name, R.R\n"
+        + "FROM RUNDATE AS R)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
   }
 
   /**
@@ -15594,4 +15717,44 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
 
+  @Test public void testObjectKeysFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode objectKeysNode =
+        builder.call(SqlLibraryOperators.OBJECT_KEYS, builder.field("ENAME"));
+    final RelNode root = builder.project(builder.alias(objectKeysNode, "keys")).build();
+
+    final String expectedQuery = "SELECT OBJECT_KEYS(\"ENAME\") AS \"keys\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testWithRegrSlope() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode regrSlopeCall = relBuilder
+        .call(SqlLibraryOperators.REGR_SLOPE,
+            relBuilder.literal(122),
+            relBuilder.literal(2));
+    RelNode root = relBuilder
+        .project(regrSlopeCall)
+        .build();
+    final String expectedSql = "SELECT REGR_SLOPE(122, 2) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test void testForRegrSlopeAggregateFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlLibraryOperators.REGR_SLOPE,
+            builder.field("SAL"),
+            builder.field("COMM"));
+    final RelNode rel = builder
+        .aggregate(builder.groupKey(), aggCall)
+        .build();
+    final String expectedSql = "SELECT REGR_SLOPE(\"SAL\", \"COMM\") AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(rel, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
 }
