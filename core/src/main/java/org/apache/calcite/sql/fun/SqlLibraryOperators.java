@@ -3613,6 +3613,24 @@ public abstract class SqlLibraryOperators {
           .withFunctionType(SqlFunctionCategory.NUMERIC)
           .withDistinct(Optionality.OPTIONAL);
 
+  /** The "AI.AGG(text, instruction)" function; reduces a column of text
+   * using a natural language instruction. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlAggFunction AI_AGG =
+      SqlBasicAggFunction
+          .create("AI.AGG", SqlKind.OTHER_FUNCTION, ReturnTypes.VARCHAR_NULLABLE,
+              OperandTypes.STRING_STRING)
+          .withFunctionType(SqlFunctionCategory.STRING);
+
+  /** The Snowflake "AI_AGG(text, instruction)" function. Equivalent to
+   * the BigQuery "AI.AGG(text, instruction)". */
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction SNOWFLAKE_AI_AGG =
+      SqlBasicAggFunction
+          .create("AI_AGG", SqlKind.OTHER_FUNCTION, ReturnTypes.VARCHAR_NULLABLE,
+              OperandTypes.STRING_STRING)
+          .withFunctionType(SqlFunctionCategory.STRING);
+
   @LibraryOperator(libraries = {BIG_QUERY})
   public static final SqlFunction FARM_FINGERPRINT =
       new SqlFunction(
@@ -5120,4 +5138,14 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.STRING,
           SqlFunctionCategory.STRING);
+
+  @LibraryOperator(libraries = {SNOWFLAKE})
+  public static final SqlAggFunction REGR_SLOPE =
+      SqlBasicAggFunction
+          .create(
+              "REGR_SLOPE",
+              SqlKind.REGR_SLOPE,
+              ReturnTypes.DOUBLE_NULLABLE,
+              OperandTypes.NUMERIC_NUMERIC)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
 }
