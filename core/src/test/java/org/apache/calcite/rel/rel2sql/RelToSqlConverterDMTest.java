@@ -15757,4 +15757,81 @@ class RelToSqlConverterDMTest {
 
     assertThat(toSql(rel, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
   }
+
+  @Test void testProtectedCteProjectNotPrunedByAggregateWithCte() {
+    final RelBuilder builder = relBuilder();
+
+    RelNode cte1 = builder
+        .scan("EMP")
+        .filter(builder.equals(builder.field("JOB"), builder.literal("CLERK")))
+        .aggregate(builder.groupKey(builder.field("DEPTNO")))
+        .build();
+
+    cte1 =
+        cte1.copy(cte1.getTraitSet().plus(new CTEDefinationTrait(true, "EMP_CTE", false)),
+            cte1.getInputs());
+
+    RelNode cte2 = builder
+        .scan("DEPT")
+        .aggregate(builder.groupKey(builder.field("DEPTNO")))
+        .build();
+
+    cte2 =
+        cte2.copy(cte2.getTraitSet().plus(new CTEDefinationTrait(true, "DEPT_CTE", false)),
+            cte2.getInputs());
+
+    RelNode innerQuery = builder
+        .push(cte1).as("E")
+        .push(cte2).as("D")
+        .join(
+            JoinRelType.LEFT,
+            builder.equals(
+                builder.field(2, "E", "DEPTNO"),
+                builder.field(2, "D", "DEPTNO")))
+        .filter(builder.isNull(builder.field("D", "DEPTNO")))
+        .project(
+            builder.field(0),
+            builder.field(1))
+        .build();
+
+    innerQuery =
+        innerQuery.copy(innerQuery.getTraitSet().plus(new CTEScopeTrait(true)),
+            innerQuery.getInputs());
+
+    final RelNode agg = builder
+        .push(innerQuery)
+        .aggregate(builder.groupKey(), builder.count())
+        .build();
+
+    builder.push(agg);
+
+    final RexNode condition =
+        builder.call(SqlStdOperatorTable.GREATER_THAN,
+            builder.field(0),
+            builder.literal(0));
+
+    final RexNode caseCall =
+        builder.call(SqlStdOperatorTable.CASE,
+            condition,
+            builder.literal("FAIL"),
+            builder.literal("PASS"));
+
+    final RelNode root = builder
+        .project(
+            Collections.singletonList(caseCall),
+            Collections.singletonList("AUDIT_CHECK"))
+        .build();
+
+    final String expectedBigQuery = "SELECT CASE WHEN COUNT(*) > 0 THEN 'FAIL' ELSE 'PASS' END AS AUDIT_CHECK\n"
+        + "FROM (WITH EMP_CTE AS (SELECT DEPTNO\n"
+        + "FROM scott.EMP\n"
+        + "WHERE JOB = 'CLERK'\n"
+        + "GROUP BY DEPTNO), DEPT_CTE AS (SELECT DEPTNO\n"
+        + "FROM scott.DEPT) (SELECT *\n"
+        + "FROM EMP_CTE AS t1\n"
+        + "LEFT JOIN DEPT_CTE AS t3 ON t1.DEPTNO = t3.DEPTNO\n"
+        + "WHERE t3.DEPTNO IS NULL))";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
 }
