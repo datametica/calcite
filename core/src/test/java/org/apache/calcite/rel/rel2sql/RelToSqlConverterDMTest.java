@@ -1297,6 +1297,35 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, dialect), isLinux(expectedSql));
   }
 
+  /** Test case for UNPIVOT INCLUDE NULLS whose input is a sub-query: the sub-query
+   * SqlNode is taken from the already built join instead of visiting the join's left
+   * input again, so the sub-query keeps the alias assigned during that first visit. */
+  @Test public void testUnpivotWithIncludeNullsOnFilteredTable() {
+    final RelBuilder builder = RelBuilder.create(salesConfig().build());
+    RelNode root = builder
+        .scan("sales")
+        .filter(
+            builder.call(SqlStdOperatorTable.GREATER_THAN,
+                builder.field("year"), builder.literal(2020)))
+        .unpivot(true, ImmutableList.of("monthly_sales"), //value_column(measureList)
+            ImmutableList.of("month"), //unpivot_column(axisList)
+            Pair.zip(
+                Arrays.asList(ImmutableList.of(builder.literal("jan")), //column_alias
+                    ImmutableList.of(builder.literal("feb")),
+                    ImmutableList.of(builder.literal("march"))),
+                Arrays.asList(ImmutableList.of(builder.field("jansales")), //column_list
+                    ImmutableList.of(builder.field("febsales")),
+                    ImmutableList.of(builder.field("marsales")))))
+        .build();
+    final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT *\n"
+        + "FROM SALESSCHEMA.sales\n"
+        + "WHERE year > 2020) AS t UNPIVOT INCLUDE NULLS (monthly_sales FOR month IN "
+        + "(jansales AS 'jan', febsales AS 'feb', marsales AS 'march'))";
+    assertThat(toSql(root, dialect), isLinux(expectedSql));
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1665">[CALCITE-1665]
    * Aggregates and having cannot be combined</a>. */
@@ -3860,6 +3889,192 @@ class RelToSqlConverterDMTest {
     sql(query)
         .withBigQuery()
         .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a negated, column-scaled interval added to a timestamp. The
+   * interval operand is a nested multiply, {@code (INTERVAL * col) * -1}. */
+  @Test public void testTimestampPlusNegatedColumnScaledInterval() {
+    String query = "select \"hire_date\" + ((INTERVAL '1' HOUR * \"store_id\") * -1)"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  @Test public void testTimestampPlusNegatedColumnScaledIntervalFactorFirst() {
+    String query = "select \"hire_date\" + (-1 * (INTERVAL '1' MINUTE * \"store_id\"))"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id MINUTE)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  @Test public void testTimestampMinusNegatedColumnScaledInterval() {
+    String query = "select \"hire_date\" - ((INTERVAL '1' HOUR * \"store_id\") * -1)"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_ADD(hire_date, INTERVAL store_id HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  @Test public void testTimestampPlusDoubledColumnScaledInterval() {
+    String query = "select \"hire_date\" + ((INTERVAL '2' HOUR * \"store_id\") * 3)"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_ADD(hire_date, INTERVAL store_id * 3 * 2 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: the sign of a negative interval literal is kept. */
+  @Test public void testTimestampPlusNegativeIntervalLiteralTimesColumn() {
+    String query = "select \"hire_date\" + (INTERVAL -'1' HOUR * \"store_id\") from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a negative interval literal with a quantity other than 1. */
+  @Test public void testTimestampPlusNegativeIntervalLiteralTimesColumnQuantityTwo() {
+    String query = "select \"hire_date\" + (INTERVAL -'2' HOUR * \"store_id\") from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id * 2 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a negative interval literal inside a negated multiply adds the column. */
+  @Test public void testTimestampPlusNegatedNegativeIntervalLiteral() {
+    String query = "select \"hire_date\" + ((INTERVAL -'1' HOUR * \"store_id\") * -1) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id * -1 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: only one -1 factor flips the function. */
+  @Test public void testTimestampPlusTwiceNegatedColumnScaledInterval() {
+    String query = "select \"hire_date\" + (((INTERVAL '1' HOUR * \"store_id\") * -1) * -1) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date, INTERVAL store_id * -1 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a DATE operand flips DATE_ADD to DATE_SUB. */
+  @Test public void testDatePlusNegatedColumnScaledInterval() {
+    String query = "select \"birth_date\" + ((INTERVAL '1' DAY * \"store_id\") * -1) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATE_SUB(birth_date, INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a factor with lower precedence than * keeps its brackets. */
+  @Test public void testTimestampPlusColumnScaledIntervalWithSumFactor() {
+    String query = "select \"hire_date\""
+        + " + ((INTERVAL '1' HOUR * (\"store_id\" + \"department_id\")) * 2) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_ADD(hire_date, INTERVAL (store_id + department_id) * 2 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a sum factor keeps its brackets when it is followed by the interval quantity. */
+  @Test public void testTimestampPlusNegatedSumScaledInterval() {
+    String query = "select \"hire_date\""
+        + " + ((INTERVAL '2' HOUR * (\"store_id\" + \"department_id\")) * -1) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_SUB(hire_date,"
+        + " INTERVAL (store_id + department_id) * 2 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: the direct shape also keeps the brackets of a sum factor. */
+  @Test public void testTimestampPlusSumScaledInterval() {
+    String query = "select \"hire_date\""
+        + " + (INTERVAL '2' HOUR * (\"store_id\" + \"department_id\")) from \"employee\"";
+    final String expectedBigQuery = "SELECT DATETIME_ADD(hire_date,"
+        + " INTERVAL (store_id + department_id) * 2 HOUR)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a DATE minus a negated interval flips DATE_SUB to DATE_ADD. */
+  @Test public void testDateMinusNegatedColumnScaledInterval() {
+    String query = "select \"birth_date\" - ((INTERVAL '1' DAY * \"store_id\") * -1)"
+        + " from \"employee\"";
+    final String expectedBigQuery = "SELECT DATE_ADD(birth_date, INTERVAL store_id DAY)\n"
+        + "FROM foodmart.employee";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  /** RAVEN-2563: a prefix minus on 1 (-(1)) counts as a factor of -1. */
+  @Test public void testTimestampPlusColumnScaledIntervalTimesPrefixMinusOne() {
+    final RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexBuilder rexBuilder = relBuilder.getRexBuilder();
+    final RexNode timestamp =
+        rexBuilder.makeTimestampLiteral(new TimestampString(2022, 2, 18, 8, 23, 45), 0);
+    final RexNode interval =
+        rexBuilder.makeIntervalLiteral(new BigDecimal(3600000),
+            new SqlIntervalQualifier(TimeUnit.HOUR, null, SqlParserPos.ZERO));
+    final RexNode scaled =
+        relBuilder.call(SqlStdOperatorTable.MULTIPLY, interval, relBuilder.field("EMPNO"));
+    final RexNode minusOne =
+        rexBuilder.makeCall(SqlStdOperatorTable.UNARY_MINUS, relBuilder.literal(1));
+    final RexNode negated = rexBuilder.makeCall(SqlStdOperatorTable.MULTIPLY, scaled, minusOne);
+    final RelNode root = relBuilder
+        .project(rexBuilder.makeCall(SqlStdOperatorTable.PLUS, timestamp, negated))
+        .build();
+    final String expectedBigQuery = "SELECT DATETIME_SUB(CAST('2022-02-18 08:23:45' AS DATETIME),"
+        + " INTERVAL EMPNO HOUR) AS `$f0`\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  /** RAVEN-2563: TIMESTAMP_SUB has no opposite function here, so it keeps the -1 factor. */
+  @Test public void testTimestampWithLocalTimeZoneAndNegatedColumnScaledInterval() {
+    final RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexBuilder rexBuilder = relBuilder.getRexBuilder();
+    final RexLiteral timestamp =
+        rexBuilder.makeTimestampWithLocalTimeZoneLiteral(
+            new TimestampString(2022, 2, 18, 8, 23, 45), 0);
+    final RexNode interval =
+        rexBuilder.makeIntervalLiteral(new BigDecimal(3600000),
+            new SqlIntervalQualifier(TimeUnit.HOUR, null, SqlParserPos.ZERO));
+    final RexNode scaled =
+        relBuilder.call(SqlStdOperatorTable.MULTIPLY, interval, relBuilder.field("EMPNO"));
+    final RexNode negated =
+        relBuilder.call(SqlStdOperatorTable.MULTIPLY, scaled, relBuilder.literal(-1));
+    final RelNode root = relBuilder
+        .project(relBuilder.call(SqlStdOperatorTable.MINUS, timestamp, negated),
+            relBuilder.call(SqlStdOperatorTable.PLUS, timestamp, negated))
+        .build();
+    final String expectedBigQuery = "SELECT TIMESTAMP_SUB(TIMESTAMP '2022-02-18 08:23:45',"
+        + " INTERVAL EMPNO * -1 HOUR) AS `$f0`,"
+        + " DATETIME_SUB(TIMESTAMP '2022-02-18 08:23:45', INTERVAL EMPNO HOUR) AS `$f1`\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
   }
 
   @Test public void testDatePlusIntervalMonthFunctionWithCol() {
@@ -10447,6 +10662,49 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.DB2.getDialect()), isLinux(expectedDB2Sql));
   }
 
+  @Test public void testSnowflakePreviousDay() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode literalDate = relBuilder.call(CURRENT_DATE);
+    RexNode lastDayNode =
+        relBuilder.call(SqlLibraryOperators.SNOWFLAKE_PREVIOUS_DAY, literalDate,
+            relBuilder.literal("FRIDAY"));
+    RelNode root = relBuilder
+        .project(lastDayNode)
+        .build();
+    final String expecteSql = "SELECT PREVIOUS_DAY(CURRENT_DATE, 'FRIDAY') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expecteSql));
+  }
+
+  @Test public void testSnowflakeJaroWinklerSimilarity() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    RexNode jaroWinklerNode =
+        relBuilder.call(SqlLibraryOperators.JAROWINKLER_SIMILARITY,
+            relBuilder.literal("Snowflake"), relBuilder.literal("Oracle"));
+    RelNode root = relBuilder
+        .project(jaroWinklerNode)
+        .build();
+    final String expectedSql = "SELECT JAROWINKLER_SIMILARITY('Snowflake', 'Oracle') AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testSnowflakeJaroWinklerSimilarityWithColumns() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    RexNode jaroWinklerNode =
+        relBuilder.call(SqlLibraryOperators.JAROWINKLER_SIMILARITY,
+            relBuilder.field("ENAME"), relBuilder.field("JOB"));
+    RelNode root = relBuilder
+        .project(jaroWinklerNode)
+        .build();
+    final String expectedSql = "SELECT JAROWINKLER_SIMILARITY(\"ENAME\", \"JOB\") AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testSnowflakeLastDay() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     RexNode lastDayNode =
@@ -11741,6 +11999,35 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
   }
 
+  @Test void testAiAgg() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    RelBuilder.AggCall aiAggCall =
+        builder.aggregateCall(SqlLibraryOperators.AI_AGG, builder.field("ENAME"),
+            builder.literal("Summarize the names"));
+    final RelNode root = builder
+        .aggregate(builder.groupKey("DEPTNO"), aiAggCall.as("summary"))
+        .build();
+    final String expectedBQSql = "SELECT DEPTNO, AI.AGG(ENAME, 'Summarize the names') AS summary\n"
+        + "FROM scott.EMP\n"
+        + "GROUP BY DEPTNO";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBQSql));
+  }
+
+  @Test void testSnowflakeAiAgg() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    RelBuilder.AggCall aiAggCall =
+        builder.aggregateCall(SqlLibraryOperators.SNOWFLAKE_AI_AGG, builder.field("ENAME"),
+            builder.literal("Summarize the names"));
+    final RelNode root = builder
+        .aggregate(builder.groupKey("DEPTNO"), aiAggCall.as("summary"))
+        .build();
+    final String expectedSnowflakeSql = "SELECT \"DEPTNO\", "
+        + "AI_AGG(\"ENAME\", 'Summarize the names') AS \"summary\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "GROUP BY \"DEPTNO\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSnowflakeSql));
+  }
+
   @Test void testCorrelatedScalarQueryInSelectList() {
     RelBuilder builder = foodmartRelBuilder();
     builder.scan("employee");
@@ -12465,6 +12752,72 @@ class RelToSqlConverterDMTest {
                                 + "foodmart.employee\nGROUP BY first_name, last_name, birth_date)"
                                 + " (SELECT first_name AS FNAME\nFROM RUNDATE)";
     assertThat(actualSql, isLinux(expectedSql));
+  }
+
+  /** When a column of a CTE has the same name as the CTE and the dialect does not support
+   * identical table and column names, the column reference must be qualified with the CTE name. */
+  @Test public void testCTEWithColumnNameSameAsCTEName() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode rundate = builder.scan("employee")
+        .project(builder.alias(builder.field("birth_date"), "RUNDATE"),
+            builder.field("first_name"))
+        .aggregate(builder.groupKey(0, 1))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
+    final RelNode cteRel =
+        rundate.copy(rundate.getTraitSet().plus(cteTrait), rundate.getInputs());
+
+    final RelNode innerSelect = builder
+        .push(cteRel)
+        .project(builder.field("first_name"), builder.field("RUNDATE"))
+        .build();
+
+    final RelNode root =
+        innerSelect.copy(innerSelect.getTraitSet().plus(new CTEScopeTrait(true)),
+            innerSelect.getInputs());
+
+    final String expectedBqSql = "WITH RUNDATE AS (SELECT birth_date AS RUNDATE, first_name\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY RUNDATE, first_name) "
+        + "(SELECT first_name, RUNDATE.RUNDATE\n"
+        + "FROM RUNDATE)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
+  /** Same as {@link #testCTEWithColumnNameSameAsCTEName()} but the CTE reference carries a
+   * table alias; the column must be qualified only when it clashes with the alias. */
+  @Test public void testAliasedCTEWithColumnNameSameAsAlias() {
+    final RelBuilder builder = foodmartRelBuilder();
+
+    final RelNode rundate = builder.scan("employee")
+        .project(builder.alias(builder.field("birth_date"), "R"),
+            builder.field("first_name"))
+        .aggregate(builder.groupKey(0, 1))
+        .build();
+
+    final CTEDefinationTrait cteTrait = new CTEDefinationTrait(true, "RUNDATE", false);
+    final TableAliasTrait aliasTrait = new TableAliasTrait("R");
+    final RelNode cteRel =
+        rundate.copy(rundate.getTraitSet().plus(cteTrait).plus(aliasTrait),
+            rundate.getInputs());
+
+    final RelNode innerSelect = builder
+        .push(cteRel)
+        .project(builder.field("first_name"), builder.field("R"))
+        .build();
+
+    final RelNode root =
+        innerSelect.copy(innerSelect.getTraitSet().plus(new CTEScopeTrait(true)),
+            innerSelect.getInputs());
+
+    final String expectedBqSql = "WITH RUNDATE AS (SELECT birth_date AS R, first_name\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY R, first_name) "
+        + "(SELECT first_name, R.R\n"
+        + "FROM RUNDATE AS R)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
   }
 
   /**
@@ -15503,5 +15856,91 @@ class RelToSqlConverterDMTest {
 
     final String expectedQuery = "SELECT UUID_STRING() AS \"$f0\"\nFROM \"scott\".\"EMP\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testCurrentRegionFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode currentRegionNode = builder.call(SqlLibraryOperators.CURRENT_REGION);
+    final RelNode root = builder.project(currentRegionNode).build();
+
+    final String expectedQuery = "SELECT CURRENT_REGION() AS \"$f0\"\nFROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testOrderByIdenticalTableAndColumnName() {
+    final RelBuilder builder = relBuilder();
+
+    final RelNode emp = builder.scan("EMP").build();
+    final RelNode innerAggregate = builder
+        .push(emp)
+        .aggregate(
+            builder.groupKey("DEPTNO"),
+            builder.count(true, "t", builder.field("EMPNO")))
+        .build();
+
+    final RelNode root = builder
+        .scan("DEPT")
+        .push(innerAggregate).as("t")
+        .join(JoinRelType.LEFT,
+            builder.equals(
+                builder.field(2, 0, "DEPTNO"),
+                builder.field(2, 1, "DEPTNO")))
+        .filter(builder.greaterThan(builder.field("t", "t"), builder.literal(0)))
+        .project(
+            builder.field(1, 0, "DEPTNO"),
+            builder.field("t", "t"))
+        .sort(builder.desc(builder.field(1)))
+        .build();
+
+    final String expectedBigQuery = "SELECT DEPT.DEPTNO, t.t\n"
+        + "FROM scott.DEPT\n"
+        + "LEFT JOIN (SELECT DEPTNO, COUNT(DISTINCT EMPNO) AS t\n"
+        + "FROM scott.EMP\n"
+        + "GROUP BY DEPTNO) AS t ON DEPT.DEPTNO = t.DEPTNO\n"
+        + "WHERE t.t > 0\n"
+        + "ORDER BY 2 DESC NULLS FIRST";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  @Test public void testObjectKeysFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RexNode objectKeysNode =
+        builder.call(SqlLibraryOperators.OBJECT_KEYS, builder.field("ENAME"));
+    final RelNode root = builder.project(builder.alias(objectKeysNode, "keys")).build();
+
+    final String expectedQuery = "SELECT OBJECT_KEYS(\"ENAME\") AS \"keys\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
+  }
+
+  @Test public void testWithRegrSlope() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    final RexNode regrSlopeCall = relBuilder
+        .call(SqlLibraryOperators.REGR_SLOPE,
+            relBuilder.literal(122),
+            relBuilder.literal(2));
+    RelNode root = relBuilder
+        .project(regrSlopeCall)
+        .build();
+    final String expectedSql = "SELECT REGR_SLOPE(122, 2) AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test void testForRegrSlopeAggregateFunction() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlLibraryOperators.REGR_SLOPE,
+            builder.field("SAL"),
+            builder.field("COMM"));
+    final RelNode rel = builder
+        .aggregate(builder.groupKey(), aggCall)
+        .build();
+    final String expectedSql = "SELECT REGR_SLOPE(\"SAL\", \"COMM\") AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(toSql(rel, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
   }
 }
