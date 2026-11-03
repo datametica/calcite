@@ -164,8 +164,12 @@ public class CTERelToSqlUtil {
     } else if (sqlNode instanceof SqlPivot) {
       fetchFromSqlWithItemNode(((SqlPivot) sqlNode).query, sqlNodes);
     } else if (sqlNode instanceof SqlCase) {
-      fetchSqlWithSelectList(((SqlCase) sqlNode).getWhenOperands(), sqlNodes);
-      fetchSqlWithSelectList(((SqlCase) sqlNode).getThenOperands(), sqlNodes);
+      SqlCase sqlCase = (SqlCase) sqlNode;
+      fetchSqlWithSelectList(sqlCase.getWhenOperands(), sqlNodes);
+      fetchSqlWithSelectList(sqlCase.getThenOperands(), sqlNodes);
+      if (sqlCase.getElseOperand() != null) {
+        processSqlNode(sqlCase.getElseOperand(), sqlNodes);
+      }
     }
   }
 
@@ -409,7 +413,7 @@ public class CTERelToSqlUtil {
         } else if (operand instanceof SqlSelect) {
           updateSqlNode(operand);
         } else if (operand instanceof SqlCase) {
-          ((SqlCase) operand).getWhenOperands().forEach(CTERelToSqlUtil::processBasicCall);
+          processCaseOperands((SqlCase) operand);
         }
       }
     } else {
@@ -437,8 +441,19 @@ public class CTERelToSqlUtil {
         ((SqlBasicCall) parentNode).setOperand(0, identifier);
       }
     } else if (operand instanceof SqlCase) {
-      ((SqlCase) operand).getWhenOperands().forEach(CTERelToSqlUtil::processBasicCall);
-      ((SqlCase) operand).getThenOperands().forEach(CTERelToSqlUtil::processBasicCall);
+      processCaseOperands((SqlCase) operand);
+    }
+  }
+
+  /**
+   * Replaces inline CTE bodies with the CTE name in every branch of a CASE:
+   * WHEN, THEN and ELSE.
+   */
+  private static void processCaseOperands(SqlCase sqlCase) {
+    sqlCase.getWhenOperands().forEach(CTERelToSqlUtil::processBasicCall);
+    sqlCase.getThenOperands().forEach(CTERelToSqlUtil::processBasicCall);
+    if (sqlCase.getElseOperand() != null) {
+      processBasicCall(sqlCase.getElseOperand());
     }
   }
 
