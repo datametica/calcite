@@ -23,6 +23,7 @@ import org.apache.calcite.plan.AdditionalProjectionTrait;
 import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.CommentTrait;
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
 import org.apache.calcite.plan.QualifyRelTrait;
 import org.apache.calcite.plan.QualifyRelTraitDef;
@@ -49,6 +50,7 @@ import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
+import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.logical.ToLogicalConverter;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
@@ -15942,5 +15944,225 @@ class RelToSqlConverterDMTest {
         + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(rel, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
+
+
+  /**
+   * Returns a {@link LogicalTableScan} of {@code scan}'s table, with a {@link TableAliasTrait}
+   * when {@code alias} is not null. This is how Raven writes {@code FROM t e}.
+   */
+  private static RelNode logicalScan(RelNode scan, String alias) {
+    final RelTraitSet traits = scan.getCluster().traitSetOf(Convention.NONE);
+    return new LogicalTableScan(scan.getCluster(),
+        alias == null ? traits : traits.plus(new TableAliasTrait(alias)), ImmutableList.of(),
+        scan.getTable());
+  }
+
+  /** Converts to BigQuery SQL and writes each aliased scan as {@code table AS alias}. */
+  private static String toBigQuerySqlWithTableAliases(RelNode root) {
+    final SqlDialect dialect = DatabaseProduct.BIG_QUERY.getDialect();
+    final SqlNode sqlNode = new TableAliasRelToSqlConverter(dialect).visitRoot(root).asStatement();
+    return sqlNode.toSqlString(c ->
+        c.withDialect(dialect)
+            .withAlwaysUseParentheses(false)
+            .withSelectListItemsOnSeparateLines(false)
+            .withUpdateSetListNewline(false)
+            .withIndentation(0))
+        .getSql();
+  }
+
+  /**
+   * Builds {@code SELECT department_id, CASE WHEN GROUPING(store_id) = 1 THEN -1 ELSE store_id
+   * END AS store_id, ...} over {@code employee}, grouped by {@code groupSets}. The CASE alias has
+   * the same name as the grouped column {@code store_id}.
+   */
+  private static RelBuilder employeeStoreIdAliasClash(RelBuilder builder, String alias,
+      ImmutableBitSet groupSet, ImmutableList<ImmutableBitSet> groupSets) {
+    final RelNode scan = builder.scan("employee").build();
+    builder.push(logicalScan(scan, alias));
+    builder.project(builder.field("department_id"), builder.field("store_id"),
+        builder.field("position_id"), builder.field("salary"));
+    builder.aggregate(builder.groupKey(groupSet, groupSets),
+        builder.aggregateCall(SqlStdOperatorTable.GROUPING, builder.field("store_id"))
+            .as("g_store"),
+        builder.sum(builder.field("salary")).as("total_salary"));
+    return builder.project(builder.field("department_id"),
+        builder.alias(
+            builder.call(SqlStdOperatorTable.CASE,
+                builder.equals(builder.field("g_store"), builder.literal(1)),
+                builder.literal(-1), builder.field("store_id")), "store_id"),
+        builder.field("total_salary"));
+  }
+
+  /** RTB-2837: a GROUPING SETS key keeps its qualifier when a SELECT alias has its name. */
+  @Test public void testRtb2837GroupingSetsKeyKeepsQualifierWhenAliasClashes() {
+    final RelBuilder builder =
+        employeeStoreIdAliasClash(foodmartRelBuilder(), "e", ImmutableBitSet.of(0, 1, 2),
+            ImmutableList.of(ImmutableBitSet.of(0, 1, 2), ImmutableBitSet.of(0, 1),
+                ImmutableBitSet.of(0)));
+    final String expected = "SELECT department_id, "
+        + "CASE WHEN GROUPING(store_id) = 1 THEN -1 ELSE store_id END AS store_id, "
+        + "SUM(salary) AS total_salary\n"
+        + "FROM foodmart.employee AS e\n"
+        + "GROUP BY GROUPING SETS((department_id, e.store_id, position_id), "
+        + "(department_id, e.store_id), department_id)";
+    assertThat(toBigQuerySqlWithTableAliases(builder.build()), isLinux(expected));
+  }
+
+  /** RTB-2837: a ROLLUP key keeps its qualifier when a SELECT alias has its name. */
+  @Test public void testRtb2837RollupKeyKeepsQualifierWhenAliasClashes() {
+    final RelBuilder builder =
+        employeeStoreIdAliasClash(foodmartRelBuilder(), "e", ImmutableBitSet.of(0, 1),
+            ImmutableList.of(ImmutableBitSet.of(0, 1), ImmutableBitSet.of(0),
+                ImmutableBitSet.of()));
+    final String expected = "SELECT department_id, "
+        + "CASE WHEN GROUPING(store_id) = 1 THEN -1 ELSE store_id END AS store_id, "
+        + "SUM(salary) AS total_salary\n"
+        + "FROM foodmart.employee AS e\n"
+        + "GROUP BY ROLLUP(department_id, e.store_id)";
+    assertThat(toBigQuerySqlWithTableAliases(builder.build()), isLinux(expected));
+  }
+
+  /**
+   * RTB-2837: with no FROM alias (a flattened derived table) the clashing GROUPING SETS key is
+   * qualified with the table name.
+   */
+  @Test public void testRtb2837GroupingSetsKeyUsesTableNameWhenFromHasNoAlias() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.push(logicalScan(builder.scan("employee").build(), null))
+        .project(builder.field("department_id"), builder.field("store_id"),
+            builder.field("salary"))
+        .aggregate(
+            builder.groupKey(ImmutableBitSet.of(0, 1),
+                ImmutableList.of(ImmutableBitSet.of(0, 1), ImmutableBitSet.of(0))),
+            builder.aggregateCall(SqlStdOperatorTable.GROUPING, builder.field("store_id")),
+            builder.sum(builder.field("salary")).as("total_salary"))
+        .project(builder.field("department_id"),
+            builder.alias(
+                builder.call(SqlStdOperatorTable.CASE,
+                    builder.isNull(builder.field("store_id")),
+                    builder.literal(-1), builder.field("store_id")), "store_id"),
+            builder.alias(builder.field(2), "g_store"),
+            builder.field("total_salary"));
+    final String expected = "SELECT department_id, "
+        + "CASE WHEN store_id IS NULL THEN -1 ELSE store_id END AS store_id, "
+        + "GROUPING(store_id) AS g_store, SUM(salary) AS total_salary\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY GROUPING SETS((department_id, employee.store_id), department_id)";
+    assertThat(toBigQuerySqlWithTableAliases(builder.build()), isLinux(expected));
+  }
+
+  /** RTB-2837 control: a plain GROUP BY key already keeps its qualifier on an alias clash. */
+  @Test public void testRtb2837PlainGroupByKeyKeepsQualifierWhenAliasClashes() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.push(logicalScan(builder.scan("employee").build(), "e"))
+        .project(builder.field("department_id"), builder.field("store_id"))
+        .aggregate(builder.groupKey(0, 1), builder.count().as("cnt"))
+        .project(builder.field("department_id"),
+            builder.alias(
+                builder.call(SqlStdOperatorTable.CASE,
+                    builder.equals(builder.field("store_id"), builder.literal(1)),
+                    builder.literal(-1), builder.field("store_id")), "store_id"),
+            builder.field("cnt"));
+    final String expected = "SELECT department_id, "
+        + "CASE WHEN store_id = 1 THEN -1 ELSE store_id END AS store_id, COUNT(*) AS cnt\n"
+        + "FROM foodmart.employee AS e\n"
+        + "GROUP BY department_id, e.store_id";
+    assertThat(toBigQuerySqlWithTableAliases(builder.build()), isLinux(expected));
+  }
+
+  /**
+   * Builds {@code SELECT RANK() OVER (ORDER BY brand_name), SUBSTR(brand_name, 1, 30) AS
+   * department_description} over {@code product} grouped by {@code brand_name}. The group key
+   * comes from an input column renamed {@code department_description}, the same alias the
+   * outer SUBSTR gets (Raven's shape for an INSERT into a narrower target column).
+   */
+  private static RelNode rankOverGroupedBrandWithSubstrAlias(RelBuilder builder,
+      String alias) {
+    final RelNode scan = builder.scan("product").build();
+    builder.push(logicalScan(scan, alias))
+        .project(builder.alias(builder.field("brand_name"), "department_description"))
+        .aggregate(builder.groupKey(0));
+    final RexNode rank =
+        builder.getRexBuilder().makeOver(
+            builder.getTypeFactory().createSqlType(SqlTypeName.BIGINT),
+            SqlStdOperatorTable.RANK, ImmutableList.of(), ImmutableList.of(),
+            ImmutableList.of(new RexFieldCollation(builder.field(0), ImmutableSet.of())),
+            RexWindowBounds.UNBOUNDED_PRECEDING, RexWindowBounds.CURRENT_ROW,
+            true, true, false, false, false);
+    return builder.project(builder.alias(rank, "department_id"),
+            builder.alias(
+                builder.call(SqlStdOperatorTable.SUBSTRING, builder.field(0),
+                    builder.literal(1), builder.literal(30)), "department_description"))
+        .build();
+  }
+
+  /**
+   * RTB-2938: when the merged SELECT gives a GROUP BY alias to a new expression, GROUP BY
+   * writes the column the alias stood for.
+   */
+  @Test public void testRtb2938GroupByAliasReusedBySubstrUsesSourceColumn() {
+    final String expected = "SELECT RANK() OVER (ORDER BY brand_name IS NULL, brand_name) "
+        + "AS department_id, SUBSTR(brand_name, 1, 30) AS department_description\n"
+        + "FROM foodmart.product AS p\n"
+        + "GROUP BY p.brand_name";
+    final RelNode root = rankOverGroupedBrandWithSubstrAlias(foodmartRelBuilder(), "p");
+    assertThat(toBigQuerySqlWithTableAliases(root), isLinux(expected));
+  }
+
+  /** RTB-2938: with no FROM alias the source column is qualified with the table name. */
+  @Test public void testRtb2938GroupByAliasReusedBySubstrWithoutFromAlias() {
+    final String expected = "SELECT RANK() OVER (ORDER BY brand_name IS NULL, brand_name) "
+        + "AS department_id, SUBSTR(brand_name, 1, 30) AS department_description\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY product.brand_name";
+    final RelNode root = rankOverGroupedBrandWithSubstrAlias(foodmartRelBuilder(), null);
+    assertThat(toBigQuerySqlWithTableAliases(root), isLinux(expected));
+  }
+
+  /**
+   * RTB-2938: the restored column is qualified, so a later SELECT alias with the column's name
+   * ({@code UPPER(brand_name) AS brand_name}) cannot capture the GROUP BY key.
+   */
+  @Test public void testRtb2938RestoredGroupByColumnIsNotCapturedByLaterAlias() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.push(logicalScan(builder.scan("product").build(), null))
+        .project(builder.alias(builder.field("brand_name"), "department_description"))
+        .aggregate(builder.groupKey(0))
+        .project(
+            builder.alias(
+                builder.call(SqlStdOperatorTable.SUBSTRING, builder.field(0),
+                    builder.literal(1), builder.literal(30)), "department_description"),
+            builder.alias(builder.call(SqlStdOperatorTable.UPPER, builder.field(0)),
+                "brand_name"));
+    final String expected = "SELECT SUBSTR(brand_name, 1, 30) AS department_description, "
+        + "UPPER(brand_name) AS brand_name\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY product.brand_name";
+    assertThat(toBigQuerySqlWithTableAliases(builder.build()), isLinux(expected));
+  }
+
+  /**
+   * RTB-2938 guard: a dialect that writes GROUP BY keys as columns, not SELECT aliases, keeps
+   * its GROUP BY when a merged Project reuses an input alias. Here {@code first_name} in GROUP BY
+   * is the table column, so it must not be replaced by {@code last_name}.
+   */
+  @Test public void testRtb2938GroupByColumnKeysUnchangedWhenDialectHasNoGroupByAlias() {
+    final RelBuilder builder = foodmartRelBuilder();
+    builder.push(logicalScan(builder.scan("employee").build(), null))
+        .project(builder.alias(builder.field("last_name"), "first_name"),
+            builder.alias(builder.field("first_name"), "x"))
+        .aggregate(builder.groupKey(0, 1))
+        .project(
+            builder.alias(
+                builder.call(SqlStdOperatorTable.SUBSTRING, builder.field(0),
+                    builder.literal(1), builder.literal(3)), "first_name"),
+            builder.field(1));
+    final String expected = "SELECT SUBSTRING(\"last_name\" FROM 1 FOR 3) AS \"first_name\", "
+        + "\"first_name\" AS \"x\"\n"
+        + "FROM \"foodmart\".\"employee\"\n"
+        + "GROUP BY \"last_name\", \"first_name\"";
+    assertThat(toSql(builder.build(), DatabaseProduct.POSTGRESQL.getDialect()),
+        isLinux(expected));
   }
 }
