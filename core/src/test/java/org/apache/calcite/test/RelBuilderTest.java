@@ -778,7 +778,33 @@ public class RelBuilderTest {
     // Note: CAST(COMM) gets the COMM alias because it occurs first
     // Note: AS(COMM, C) becomes just $6
     final String expected = ""
-        + "LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT NOT NULL], $f2=[20], COMM0=[$6], C=[$6])\n"
+        + "LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT], $f2=[20], COMM0=[$6], C=[$6])\n"
+        + "  LogicalTableScan(table=[[scott, EMP]])\n";
+    assertThat(root, hasTree(expected));
+  }
+
+  /** A cast keeps the nullability of its operand. COMM is nullable and EMPNO
+   * is not. Before, every cast except one of a NULL literal was NOT NULL, so
+   * a filter "CAST(COMM) IS NOT NULL" was simplified away. */
+  @Test void testCastKeepsOperandNullability() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    builder.scan("EMP");
+    final RexNode castComm =
+        builder.cast(builder.field("COMM"), SqlTypeName.DOUBLE);
+    final RexNode castEmpno =
+        builder.cast(builder.field("EMPNO"), SqlTypeName.VARCHAR, 10);
+    final RexNode castCommDecimal =
+        builder.cast(builder.field("COMM"), SqlTypeName.DECIMAL, 10, 2);
+    final RexNode castNull =
+        builder.cast(builder.literal(null), SqlTypeName.INTEGER);
+    assertThat(castComm.getType().isNullable(), is(true));
+    assertThat(castEmpno.getType().isNullable(), is(false));
+    assertThat(castCommDecimal.getType().isNullable(), is(true));
+    assertThat(castNull.getType().isNullable(), is(true));
+
+    final RelNode root = builder.filter(builder.isNotNull(castComm)).build();
+    final String expected = ""
+        + "LogicalFilter(condition=[IS NOT NULL(CAST($6):DOUBLE)])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
     assertThat(root, hasTree(expected));
   }
@@ -811,7 +837,7 @@ public class RelBuilderTest {
                 builder.alias(builder.field(6), "C"))
             .build();
     final String expected = ""
-        + "LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT NOT NULL], "
+        + "LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT], "
         + "$f2=[OR(SEARCH($7, Sarg[20, 30]), AND(null, =($7, 10), "
         + "IS NULL($6), IS NULL($5)))], n2=[IS NULL($2)], "
         + "nn2=[IS NOT NULL($3)], $f5=[20], COMM0=[$6], C=[$6])\n"

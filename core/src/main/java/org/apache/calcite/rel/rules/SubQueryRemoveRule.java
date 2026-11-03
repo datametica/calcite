@@ -436,7 +436,7 @@ public class SubQueryRemoveRule
     // planner complaining we need to add cast.  Note that nullable type is
     // created due to the MIN aggregate call, since there is no GROUP BY.
     if (!e.getType().isNullable()) {
-      return builder.cast(caseRexNode, e.getType().getSqlTypeName());
+      return builder.getRexBuilder().makeCast(e.getType(), caseRexNode);
     }
     return caseRexNode;
   }

@@ -1179,30 +1179,38 @@ public class RelBuilder {
     return call(SqlStdOperatorTable.IS_NOT_NULL, operand);
   }
 
-  /** Creates an expression that casts an expression to a given type. */
+  /** Creates an expression that casts an expression to a given type.
+   *
+   * <p>The result is nullable when the expression is nullable, so that a
+   * check such as {@code IS NOT NULL} on the cast is not simplified away. */
   public RexNode cast(RexNode expr, SqlTypeName typeName) {
-    RelDataType type = cluster.getTypeFactory().createSqlType(typeName);
-    if (SqlTypeName.NULL == expr.getType().getSqlTypeName()) {
-      type = getTypeFactory().createTypeWithNullability(type, true);
-    }
-    return cluster.getRexBuilder().makeCast(type, expr);
+    return castKeepingNullability(
+        cluster.getTypeFactory().createSqlType(typeName), expr);
   }
 
   /** Creates an expression that casts an expression to a type with a given name
    * and precision or length. */
   public RexNode cast(RexNode expr, SqlTypeName typeName, int precision) {
-    final RelDataType type =
-        cluster.getTypeFactory().createSqlType(typeName, precision);
-    return cluster.getRexBuilder().makeCast(type, expr);
+    return castKeepingNullability(
+        cluster.getTypeFactory().createSqlType(typeName, precision), expr);
   }
 
   /** Creates an expression that casts an expression to a type with a given
    * name, precision and scale. */
   public RexNode cast(RexNode expr, SqlTypeName typeName, int precision,
       int scale) {
-    final RelDataType type =
-        cluster.getTypeFactory().createSqlType(typeName, precision, scale);
-    return cluster.getRexBuilder().makeCast(type, expr);
+    return castKeepingNullability(
+        cluster.getTypeFactory().createSqlType(typeName, precision, scale),
+        expr);
+  }
+
+  /** Casts {@code expr} to {@code type}, made nullable if {@code expr} is
+   * nullable. A NULL literal has a nullable type, so it is covered too. */
+  private RexNode castKeepingNullability(RelDataType type, RexNode expr) {
+    final RelDataType castType =
+        getTypeFactory().createTypeWithNullability(type,
+            expr.getType().isNullable());
+    return cluster.getRexBuilder().makeCast(castType, expr);
   }
 
   /**
