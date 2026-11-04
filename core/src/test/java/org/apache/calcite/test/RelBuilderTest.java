@@ -811,7 +811,8 @@ public class RelBuilderTest {
 
   /** An explicit cast of a nullable operand to its own type stays in the
    * plan, also inside another call and after a copy with comments; a cast of
-   * a NOT NULL operand to its own type is removed, as before. */
+   * a NOT NULL operand to its own type is removed, as before, and so is a cast
+   * of a cast to the same type. */
   @Test void testCastToOwnTypeOfNullableOperandIsKept() {
     final RelBuilder builder = RelBuilder.create(config().build());
     final RelNode root =
@@ -828,10 +829,13 @@ public class RelBuilderTest {
                     builder.literal(1)),
                 builder.cast(builder.field("EMPNO"), SqlTypeName.SMALLINT),
                 builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT)
-                    .copy(ImmutableSet.of()))
+                    .copy(ImmutableSet.of()),
+                builder.cast(
+                    builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT),
+                    SqlTypeName.SMALLINT))
             .build();
     final String expected = ""
-        + "LogicalProject(MGR=[CAST($3):SMALLINT], $f1=[+(CAST($6):DECIMAL(7, 2), 1)], EMPNO=[$0], MGR0=[CAST($3):SMALLINT])\n"
+        + "LogicalProject(MGR=[CAST($3):SMALLINT], $f1=[+(CAST($6):DECIMAL(7, 2), 1)], EMPNO=[$0], MGR0=[CAST($3):SMALLINT], MGR1=[CAST($3):SMALLINT])\n"
         + "  LogicalFilter(condition=[>(CAST($3):SMALLINT, 0)])\n"
         + "    LogicalTableScan(table=[[scott, EMP]])\n";
     assertThat(root, hasTree(expected));
