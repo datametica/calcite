@@ -809,6 +809,34 @@ public class RelBuilderTest {
     assertThat(root, hasTree(expected));
   }
 
+  /** An explicit cast of a nullable operand to its own type stays in the
+   * plan, also inside another call and after a copy with comments; a cast of
+   * a NOT NULL operand to its own type is removed, as before. */
+  @Test void testCastToOwnTypeOfNullableOperandIsKept() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    final RelNode root =
+        builder.scan("EMP")
+            .filter(
+                builder.greaterThan(
+                    builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT),
+                    builder.literal(0)))
+            .project(
+                builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT),
+                builder.call(SqlStdOperatorTable.PLUS,
+                    builder.cast(builder.field("COMM"), SqlTypeName.DECIMAL,
+                        7, 2),
+                    builder.literal(1)),
+                builder.cast(builder.field("EMPNO"), SqlTypeName.SMALLINT),
+                builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT)
+                    .copy(ImmutableSet.of()))
+            .build();
+    final String expected = ""
+        + "LogicalProject(MGR=[CAST($3):SMALLINT], $f1=[+(CAST($6):DECIMAL(7, 2), 1)], EMPNO=[$0], MGR0=[CAST($3):SMALLINT])\n"
+        + "  LogicalFilter(condition=[>(CAST($3):SMALLINT, 0)])\n"
+        + "    LogicalTableScan(table=[[scott, EMP]])\n";
+    assertThat(root, hasTree(expected));
+  }
+
   /** Tests each method that creates a scalar expression. */
   @Test void testProject2() {
     final RelBuilder builder = RelBuilder.create(config().build());

@@ -1205,12 +1205,24 @@ public class RelBuilder {
   }
 
   /** Casts {@code expr} to {@code type}, made nullable if {@code expr} is
-   * nullable. A NULL literal has a nullable type, so it is covered too. */
+   * nullable. A NULL literal has a nullable type, so it is covered too.
+   *
+   * <p>A cast of a nullable operand that already has the target type is
+   * marked with {@link RexCall#keepCast()}, so the explicit cast stays in the
+   * plan, as it did when this method typed every cast NOT NULL. */
   private RexNode castKeepingNullability(RelDataType type, RexNode expr) {
     final RelDataType castType =
         getTypeFactory().createTypeWithNullability(type,
             expr.getType().isNullable());
-    return cluster.getRexBuilder().makeCast(castType, expr);
+    final RexNode cast = cluster.getRexBuilder().makeCast(castType, expr);
+    if (cast != expr
+        && cast instanceof RexCall
+        && cast.getKind() == SqlKind.CAST
+        && expr.getType().isNullable()
+        && castType.equals(expr.getType())) {
+      ((RexCall) cast).keepCast();
+    }
+    return cast;
   }
 
   /**

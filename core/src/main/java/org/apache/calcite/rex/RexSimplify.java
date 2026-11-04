@@ -2223,6 +2223,13 @@ public class RexSimplify {
   private RexNode simplifyCast(RexCall e) {
     RexNode operand = e.getOperands().get(0);
     operand = simplify(operand, UNKNOWN);
+    if (e.isKeptCast()) {
+      // The caller asked to keep this cast, for example an explicit cast
+      // in the source query whose type equals its operand's type.
+      return operand == e.getOperands().get(0)
+          ? e
+          : e.clone(e.getType(), ImmutableList.of(operand));
+    }
     if (sameTypeOrNarrowsNullability(e.getType(), operand.getType())) {
       return operand;
     }

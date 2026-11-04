@@ -73,6 +73,10 @@ public class RexCall extends RexNode {
    */
   private @Nullable Pair<SqlOperator, List<RexNode>> normalized;
 
+  /** Whether this is an explicit cast that the simplifier keeps even when its
+   * type equals its operand's type. Clones and copies keep it. */
+  private boolean keptCast = false;
+
   //~ Constructors -----------------------------------------------------------
 
   protected RexCall(
@@ -285,8 +289,23 @@ public class RexCall extends RexNode {
    * @param operands Operands to call
    * @return New call
    */
+  /** Marks this cast so that the simplifier keeps it even when its type
+   * equals its operand's type, for example an explicit cast in a source
+   * query. Returns this call. */
+  public RexCall keepCast() {
+    this.keptCast = true;
+    return this;
+  }
+
+  /** Returns whether {@link #keepCast()} marked this call. */
+  public boolean isKeptCast() {
+    return keptCast;
+  }
+
   public RexCall clone(RelDataType type, List<RexNode> operands) {
-    return new RexCall(type, op, operands);
+    final RexCall clone = new RexCall(type, op, operands);
+    clone.keptCast = keptCast;
+    return clone;
   }
 
   private Pair<SqlOperator, List<RexNode>> getNormalized() {
@@ -319,6 +338,9 @@ public class RexCall extends RexNode {
   }
 
   @Override public RexNode copy(Set<Comment> comments) {
-    return new RexCall(this.type, this.getOperator(), this.getOperands(), comments);
+    final RexCall copy =
+        new RexCall(this.type, this.getOperator(), this.getOperands(), comments);
+    copy.keptCast = keptCast;
+    return copy;
   }
 }
