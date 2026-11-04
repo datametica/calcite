@@ -36,6 +36,9 @@ import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.util.SqlShuttle;
+import org.apache.calcite.util.Util;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -84,7 +87,7 @@ public class PivotRelToSqlUtil {
     }
 
     //create axisList parameter
-    SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery, e);
+    SqlNodeList axisNodeList = getAxisNodeList(selectColumnList, hasSubquery, e, query);
     boolean[] hasQualifiedAxis = {false};
     String subQueryAlias = getSubQueryAlias(e.getInput().getTraitSet());
     axisNodeList.accept(new SqlShuttle() {
@@ -201,7 +204,8 @@ public class PivotRelToSqlUtil {
     return new SqlNodeList(aggArgList, pos);
   }
 
-  private SqlNodeList getAxisNodeList(List<SqlNode> selectColumnList, boolean hasSubquery, Aggregate e) {
+  private SqlNodeList getAxisNodeList(List<SqlNode> selectColumnList, boolean hasSubquery,
+      Aggregate e, SqlNode query) {
 
     final Set<SqlNode> modifiedAxisNodeList = new HashSet<>();
 
@@ -238,7 +242,14 @@ public class PivotRelToSqlUtil {
 
     if (axisNodeList.getOperator().kind == SqlKind.AS) {
       if (isLowerFunction(axisNodeList.operand(0))) {
-        addAxisNodeOperand(modifiedAxisNodeList, axisNodeList.operand(0), e);
+        SqlBasicCall lowerCall = axisNodeList.operand(0);
+        SqlIdentifier inputAlias = findInputColumnAlias(query, axisNodeList.operand(1));
+        if (inputAlias != null) {
+          modifiedAxisNodeList.add(
+              SqlStdOperatorTable.LOWER.createCall(SqlParserPos.ZERO, inputAlias));
+          return new SqlNodeList(modifiedAxisNodeList, pos);
+        }
+        addAxisNodeOperand(modifiedAxisNodeList, lowerCall, e);
       } else if (axisNodeList.operand(1) instanceof SqlCharStringLiteral) {
         modifiedAxisNodeList.add(getSqlIdentifier(axisNodeList.operand(1)));
       } else {
@@ -248,6 +259,42 @@ public class PivotRelToSqlUtil {
       modifiedAxisNodeList.add(new SqlIdentifier(axisNodeList.toString(), SqlParserPos.QUOTED_ZERO));
     }
     return new SqlNodeList(modifiedAxisNodeList, pos);
+  }
+
+  /**
+   * Returns the alias of the pivot input column that the FOR clause names.
+   *
+   * <p>{@code axisName} is the FOR column name carried on the axis
+   * ({@code LOWER(gender) AS 'c1'}). When the pivot input select is merged into the pivot
+   * query, the axis refers to the underlying expression ({@code gender}) while the input
+   * select exposes it as {@code gender AS c1}. The PIVOT clause can only see {@code c1}, so
+   * the axis must use that alias. Returns null when the input exposes the column under its
+   * own name (a plain {@code gender} item) or does not alias it at all.
+   */
+  private static @Nullable SqlIdentifier findInputColumnAlias(SqlNode query, SqlNode axisName) {
+    String name = axisName instanceof SqlCharStringLiteral
+        ? ((SqlCharStringLiteral) axisName).toValue()
+        : axisName instanceof SqlIdentifier && ((SqlIdentifier) axisName).isSimple()
+            ? ((SqlIdentifier) axisName).getSimple() : null;
+    if (name == null || !(query instanceof SqlSelect)) {
+      return null;
+    }
+    for (SqlNode item : ((SqlSelect) query).getSelectList()) {
+      if (item instanceof SqlIdentifier
+          && Util.last(((SqlIdentifier) item).names).equalsIgnoreCase(name)) {
+        return null;
+      }
+    }
+    for (SqlNode item : ((SqlSelect) query).getSelectList()) {
+      if (item.getKind() == SqlKind.AS) {
+        SqlNode alias = ((SqlBasicCall) item).operand(1);
+        if (alias instanceof SqlIdentifier && ((SqlIdentifier) alias).isSimple()
+            && ((SqlIdentifier) alias).getSimple().equalsIgnoreCase(name)) {
+          return (SqlIdentifier) alias;
+        }
+      }
+    }
+    return null;
   }
 
   private SqlIdentifier getSqlIdentifier(SqlCharStringLiteral alias) {

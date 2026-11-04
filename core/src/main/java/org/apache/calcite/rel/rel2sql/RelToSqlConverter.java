@@ -687,7 +687,8 @@ public class RelToSqlConverter extends SqlImplementor
       final Builder builder = x.builder(e);
       builder.setQualify(builder.context.toSql(null, e.getCondition()));
       result = builder.result();
-    } else if (input instanceof Aggregate && !isDistinctTrait(input)) {
+    } else if (input instanceof Aggregate && !isDistinctTrait(input)
+        && !isPivotAggregate(input)) {
       final Aggregate aggregate = (Aggregate) input;
       final boolean ignoreClauses = aggregate.getInput() instanceof Project;
       final Result x =
@@ -731,6 +732,13 @@ public class RelToSqlConverter extends SqlImplementor
 
   private boolean isDistinctTrait(RelNode input) {
     return input.getTraitSet().stream().anyMatch(trait -> trait instanceof DistinctTrait);
+  }
+
+  /** A PIVOT is an Aggregate whose SQL is a finished {@code SELECT * FROM ... PIVOT (...)};
+   * a filter over it is a WHERE on that result, not a HAVING on the aggregate. */
+  private static boolean isPivotAggregate(RelNode input) {
+    PivotRelTrait pivotRelTrait = input.getTraitSet().getTrait(PivotRelTraitDef.instance);
+    return pivotRelTrait != null && pivotRelTrait.isPivotRel();
   }
 
   SqlNode createUnpivotSqlNodeWithExcludeNulls(SqlSelect sqlNode) {
@@ -1116,18 +1124,21 @@ public class RelToSqlConverter extends SqlImplementor
       }
     }
 
-    String nestedCallString;
+    SqlNode inValue = nestedCall;
     if (nestedCall instanceof SqlBasicCall) {
-      SqlBasicCall basicCall = (SqlBasicCall) nestedCall;
-      SqlNode operand = basicCall.getOperandList().get(0);
-      if (operand instanceof SqlBasicCall
-          && ((SqlBasicCall) operand).getOperator() == SqlStdOperatorTable.LOWER) {
-        operand = ((SqlBasicCall) operand).getOperandList().get(0);
+      inValue = ((SqlBasicCall) nestedCall).getOperandList().get(0);
+      if (inValue instanceof SqlBasicCall
+          && ((SqlBasicCall) inValue).getOperator() == SqlStdOperatorTable.LOWER) {
+        inValue = ((SqlBasicCall) inValue).getOperandList().get(0);
       }
-      nestedCallString = requireNonNull(((SqlLiteral) operand).toValue()).toLowerCase();
-    } else {
-      nestedCallString = requireNonNull(((SqlLiteral) nestedCall).toValue()).toLowerCase();
     }
+    // A value column of the pivot input that is an expression (e.g. SUM(x) / COUNT(*) AS v)
+    // can have an identifier or a call in this position; it is a subquery column, so keep it
+    // in the select list. A pivot IN-clause item is an EQUALS and must carry a literal here.
+    if (!(inValue instanceof SqlLiteral) && firstBasicCall.getOperator().kind != SqlKind.EQUALS) {
+      return true;
+    }
+    String nestedCallString = requireNonNull(((SqlLiteral) inValue).toValue()).toLowerCase();
     for (String aggName : aggNames) {
       if (aggName.replaceAll("'", "").toLowerCase().contains(nestedCallString)) {
         aggregateInClauseFieldList.add(nestedCall);

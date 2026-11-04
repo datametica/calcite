@@ -24,6 +24,7 @@ import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.CommentTrait;
 import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
+import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.QualifyRelTrait;
 import org.apache.calcite.plan.QualifyRelTraitDef;
 import org.apache.calcite.plan.RelOptRule;
@@ -15942,5 +15943,207 @@ class RelToSqlConverterDMTest {
         + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(rel, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
+
+  /** Builds the PIVOT that Raven builds for a case-insensitive source such as Teradata:
+   *
+   * <pre>
+   * Aggregate(group={}, c4=SUM(value) FILTER $f, c5=SUM(value) FILTER $f')   [pivot]
+   *   Project(input columns...,
+   *           $f  = IS TRUE(LOWER(axis) AS axisAlias = LOWER('M') AS c4),
+   *           $f' = IS TRUE(LOWER(axis) AS axisAlias = LOWER('F') AS c5))  [sub-query t1]
+   * </pre>
+   *
+   * <p>{@code projects} / {@code names} are the pivot input columns; {@code axis} is the
+   * expression of the FOR column and {@code valueIndex} the index of the value column. */
+  private static RelNode ravenPivot(RelBuilder builder, List<RexNode> projects,
+      List<String> names, RexNode axis, String axisAlias, int valueIndex) {
+    final List<RexNode> inputColumns = new ArrayList<>(projects);
+    final List<String> inputNames = new ArrayList<>(names);
+    for (Pair<String, String> in
+        : ImmutableList.of(Pair.of("M", "c4"), Pair.of("F", "c5"))) {
+      final RexNode lowerAxis =
+          builder.alias(builder.call(SqlStdOperatorTable.LOWER, axis), axisAlias);
+      final RexNode lowerValue =
+          builder.alias(builder.call(SqlStdOperatorTable.LOWER, builder.literal(in.left)),
+              in.right);
+      inputColumns.add(
+          builder.call(SqlStdOperatorTable.IS_TRUE,
+              builder.call(SqlStdOperatorTable.EQUALS, lowerAxis, lowerValue)));
+      inputNames.add("$f" + inputNames.size());
+    }
+    final RelNode input = builder.project(inputColumns, inputNames, true).build();
+    final RelNode pivotInput =
+        input.copy(input.getTraitSet().plus(new SubQueryAliasTrait("t1"))
+            .plus(new PivotRelTrait(false, true, null)), input.getInputs());
+    final int filterIndex = projects.size();
+    final RelNode pivot = builder.push(pivotInput)
+        .aggregate(builder.groupKey(),
+            builder.sum(builder.field(valueIndex)).filter(builder.field(filterIndex))
+                .as("c4"),
+            builder.sum(builder.field(valueIndex)).filter(builder.field(filterIndex + 1))
+                .as("c5"))
+        .build();
+    return pivot.copy(pivot.getTraitSet().plus(new PivotRelTrait(true, true, "t4")),
+        pivot.getInputs());
+  }
+
+  private static RelBuilder ravenPivotRelBuilder() {
+    return foodmartRelBuilder()
+        .transform(c -> c.withPruneInputOfAggregate(false).withSimplify(false));
+  }
+
+  /** RTB-2953: the pivot value is an aggregate expression of the input
+   * (SUM(salary) / COUNT(*) AS c12). It used to fail with a ClassCastException
+   * (SqlIdentifier cannot be cast to SqlLiteral) in isSqlNodeValid. */
+  @Test void testPivotOverAggregateExpressionValueOfSubquery() {
+    final RelBuilder builder = ravenPivotRelBuilder();
+    builder.scan("employee")
+        .aggregate(builder.groupKey("gender"),
+            builder.sum(builder.field("salary")).as("s"),
+            builder.count().as("n"));
+    final RexNode c12 =
+        builder.call(SqlStdOperatorTable.DIVIDE, builder.field("s"), builder.field("n"));
+    final RelNode root =
+        ravenPivot(builder, ImmutableList.of(builder.field("gender"), c12),
+            ImmutableList.of("c1", "c12"), builder.field("gender"), "c1", 1);
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT gender AS c1, SUM(salary) / COUNT(*) AS c12\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY gender) PIVOT (SUM(c12) FOR LOWER(c1) "
+        + "IN (LOWER('M') AS c4, LOWER('F') AS c5))"
+        + " AS t4";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** RTB-2953: the pivot value is a call whose second operand is a call with an
+   * identifier operand (COALESCE(a, 0) + COALESCE(b, 0) AS v). It used to fail with a
+   * ClassCastException in isSqlNodeValid. */
+  @Test void testPivotOverNestedCallValueOfSubquery() {
+    final RelBuilder builder = ravenPivotRelBuilder();
+    builder.scan("employee");
+    final RexNode v =
+        builder.call(SqlStdOperatorTable.PLUS,
+            builder.call(SqlStdOperatorTable.COALESCE, builder.field("department_id"),
+                builder.literal(0)),
+            builder.call(SqlStdOperatorTable.COALESCE, builder.field("store_id"),
+                builder.literal(0)));
+    final RelNode root =
+        ravenPivot(builder, ImmutableList.of(builder.field("gender"), v),
+            ImmutableList.of("c1", "v"), builder.field("gender"), "c1", 1);
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT gender AS c1, COALESCE(department_id, 0) + COALESCE(store_id, 0) AS v\n"
+        + "FROM foodmart.employee) PIVOT (SUM(v) FOR LOWER(c1) "
+        + "IN (LOWER('M') AS c4, LOWER('F') AS c5))"
+        + " AS t4";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** RTB-2953: the pivot input renames the axis column (gender AS c1). The PIVOT
+   * clause can only see c1, so the axis must be LOWER(c1), not LOWER(gender). */
+  @Test void testPivotAxisUsesAliasOfRenamedInputColumn() {
+    final RelBuilder builder = ravenPivotRelBuilder();
+    builder.scan("employee");
+    final RexNode v =
+        builder.call(SqlStdOperatorTable.MULTIPLY, builder.field("salary"),
+            builder.literal(2));
+    final RelNode root =
+        ravenPivot(builder, ImmutableList.of(builder.field("gender"), v),
+            ImmutableList.of("c1", "v"), builder.field("gender"), "c1", 1);
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT gender AS c1, salary * 2 AS v\n"
+        + "FROM foodmart.employee) PIVOT (SUM(v) FOR LOWER(c1) "
+        + "IN (LOWER('M') AS c4, LOWER('F') AS c5))"
+        + " AS t4";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** RTB-2953: the axis column is a computed column of the input (UPPER(gender) AS c1),
+   * so the axis must be LOWER(c1), not LOWER(UPPER(gender)). */
+  @Test void testPivotAxisUsesAliasOfComputedInputColumn() {
+    final RelBuilder builder = ravenPivotRelBuilder();
+    builder.scan("employee");
+    final RexNode c1 = builder.call(SqlStdOperatorTable.UPPER, builder.field("gender"));
+    final RelNode root =
+        ravenPivot(builder, ImmutableList.of(c1, builder.field("salary")),
+            ImmutableList.of("c1", "v"), c1, "c1", 1);
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT UPPER(gender) AS c1, salary AS v\n"
+        + "FROM foodmart.employee) PIVOT (SUM(v) FOR LOWER(c1) "
+        + "IN (LOWER('M') AS c4, LOWER('F') AS c5))"
+        + " AS t4";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** RTB-2953 control: the axis column keeps its own name (no alias), so the axis
+   * stays LOWER(gender). */
+  @Test void testPivotAxisKeepsUnrenamedInputColumn() {
+    final RelBuilder builder = ravenPivotRelBuilder();
+    builder.scan("employee");
+    final RelNode root =
+        ravenPivot(builder, ImmutableList.of(builder.field("gender"), builder.field("salary")),
+            ImmutableList.of("gender", "salary"), builder.field("gender"), "gender", 1);
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT gender, salary\n"
+        + "FROM foodmart.employee) PIVOT (SUM(salary) FOR LOWER(gender) "
+        + "IN (LOWER('M') AS c4, LOWER('F') AS c5))"
+        + " AS t4";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** RTB-2953: a filter over the PIVOT result is a WHERE on that result. It used to be
+   * written as HAVING, which BigQuery rejects without a GROUP BY. */
+  @Test void testFilterOverPivotIsWhereNotHaving() {
+    final RelBuilder builder = ravenPivotRelBuilder();
+    builder.scan("employee");
+    final RelNode pivot =
+        ravenPivot(builder, ImmutableList.of(builder.field("gender"), builder.field("salary")),
+            ImmutableList.of("gender", "salary"), builder.field("gender"), "gender", 1);
+    final RelNode root = builder.push(pivot)
+        .filter(
+            builder.call(SqlStdOperatorTable.GREATER_THAN, builder.field("c5"),
+                builder.literal(300)))
+        .build();
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT *\n"
+        + "FROM (SELECT gender, salary\n"
+        + "FROM foodmart.employee) PIVOT (SUM(salary) FOR LOWER(gender) "
+        + "IN (LOWER('M') AS c4, LOWER('F') AS c5)) AS t4) AS t0\n"
+        + "WHERE c5 > 300";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** RTB-2953: the input has the axis column under its own name AND a second alias of the
+   * same expression (gender, gender AS g2). FOR gender must stay LOWER(gender). */
+  @Test void testPivotAxisKeepsOwnNameWhenSameExpressionIsAlsoAliased() {
+    final RelBuilder builder = ravenPivotRelBuilder();
+    builder.scan("employee");
+    final RelNode root =
+        ravenPivot(builder,
+            ImmutableList.of(builder.field("gender"), builder.field("gender"),
+                builder.field("salary")),
+            ImmutableList.of("gender", "g2", "salary"), builder.field("gender"), "gender", 2);
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT gender, gender AS g2, salary\n"
+        + "FROM foodmart.employee) PIVOT (SUM(salary) FOR LOWER(gender) "
+        + "IN (LOWER('M') AS c4, LOWER('F') AS c5)) AS t4";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** RTB-2953: two aliases of the same expression (gender AS c1, gender AS c2) and FOR c2.
+   * The axis must be the alias the FOR clause names, LOWER(c2). */
+  @Test void testPivotAxisUsesTheAliasTheForClauseNames() {
+    final RelBuilder builder = ravenPivotRelBuilder();
+    builder.scan("employee");
+    final RelNode root =
+        ravenPivot(builder,
+            ImmutableList.of(builder.field("gender"), builder.field("gender"),
+                builder.field("salary")),
+            ImmutableList.of("c1", "c2", "salary"), builder.field("gender"), "c2", 2);
+    final String expectedSql = "SELECT *\n"
+        + "FROM (SELECT gender AS c1, gender AS c2, salary\n"
+        + "FROM foodmart.employee) PIVOT (SUM(salary) FOR LOWER(c2) "
+        + "IN (LOWER('M') AS c4, LOWER('F') AS c5)) AS t4";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 }
