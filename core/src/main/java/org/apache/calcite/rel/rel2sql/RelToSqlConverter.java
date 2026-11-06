@@ -123,6 +123,7 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.AnchorType;
 import org.apache.calcite.util.Comment;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Permutation;
 import org.apache.calcite.util.ReflectUtil;
@@ -154,7 +155,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -873,7 +876,11 @@ public class RelToSqlConverter extends SqlImplementor
           }
         }
 
+        final SqlNodeList inputSelectList = builder.select.getSelectList();
         builder.setSelect(new SqlNodeList(selectList, POS));
+        if (dialect.getConformance().isGroupByAlias()) {
+          restoreReboundGroupByAliases(builder.select, inputSelectList);
+        }
       }
       result = builder.result();
     }
@@ -890,6 +897,84 @@ public class RelToSqlConverter extends SqlImplementor
       }
     }
     return result;
+  }
+
+  /**
+   * Keeps each GROUP BY alias bound to the column it was written for. A GROUP BY key can be
+   * written as a SELECT alias (BigQuery {@code isGroupByAlias}). When a Project is then merged into
+   * the same SELECT and gives that alias to a different expression (for example a target-width
+   * SUBSTR), the alias in GROUP BY would bind to the new expression. In that case, when the alias
+   * stood for a plain column in the input SELECT, the key is written as that column, qualified
+   * with the FROM alias or table name so that no other SELECT alias can capture it.
+   *
+   * <p>An alias that stood for a larger expression is left alone: BigQuery does not match a grouped
+   * expression inside a bigger SELECT expression, so writing the expression would be rejected.
+   */
+  private static void restoreReboundGroupByAliases(SqlSelect select,
+      @Nullable SqlNodeList inputSelectList) {
+    SqlNodeList groupList = select.getGroup();
+    if (groupList == null || inputSelectList == null) {
+      return;
+    }
+    Map<String, SqlNode> inputItems = aliasedSelectItems(inputSelectList);
+    if (inputItems.isEmpty()) {
+      return;
+    }
+    Map<String, SqlNode> outputItems = aliasedSelectItems(select.getSelectList());
+    SqlNode from = select.getFrom();
+    String fromAlias = isFromAliased(select) || from instanceof SqlIdentifier
+        ? SqlValidatorUtil.alias(from) : null;
+    List<SqlNode> keys = new ArrayList<>();
+    boolean changed = false;
+    for (SqlNode node : groupList) {
+      SqlNode key =
+          qualifyGroupingItem(node,
+              item -> restoreGroupKey(item, inputItems, outputItems, fromAlias));
+      changed |= key != node;
+      keys.add(key);
+    }
+    if (changed) {
+      select.setGroupBy(new SqlNodeList(keys, groupList.getParserPosition()));
+    }
+  }
+
+  private static SqlNode restoreGroupKey(SqlNode key, Map<String, SqlNode> inputItems,
+      Map<String, SqlNode> outputItems, @Nullable String fromAlias) {
+    if (!(key instanceof SqlIdentifier) || !((SqlIdentifier) key).isSimple()) {
+      return key;
+    }
+    String name = ((SqlIdentifier) key).getSimple();
+    SqlNode original = inputItems.get(name);
+    if (!(original instanceof SqlIdentifier)
+        || original.equalsDeep(outputItems.get(name), Litmus.IGNORE)) {
+      return key;
+    }
+    SqlIdentifier column = (SqlIdentifier) original;
+    SqlNode restored = fromAlias != null && column.isSimple()
+        ? new SqlIdentifier(Arrays.asList(fromAlias, column.getSimple()), key.getParserPosition())
+        : column.clone(column.getParserPosition());
+    return withComments(key, restored);
+  }
+
+  /** Copies the comments of {@code from} onto {@code to}, which replaces it, and returns it. */
+  private static SqlNode withComments(SqlNode from, SqlNode to) {
+    Set<Comment> comments = from.getCommentList();
+    if (!comments.isEmpty()) {
+      to.updateCommentSet(comments);
+    }
+    return to;
+  }
+
+  /** Maps each alias of an {@code expr AS alias} item to {@code expr}, ignoring case. */
+  private static Map<String, SqlNode> aliasedSelectItems(SqlNodeList selectList) {
+    Map<String, SqlNode> items = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    for (SqlNode item : selectList) {
+      if (item.getKind() == SqlKind.AS) {
+        SqlCall call = (SqlCall) item;
+        items.putIfAbsent(((SqlIdentifier) call.operand(1)).getSimple(), call.operand(0));
+      }
+    }
+    return items;
   }
 
   /**
@@ -2331,8 +2416,9 @@ public class RelToSqlConverter extends SqlImplementor
           selectListAliases.add(alias.names.get(0));
         }
       }
-      List<SqlNode> groupList =
-          createGroupByList(sqlSelect, selectListAliases, tableFieldNames, tableAlias);
+      UnaryOperator<SqlNode> qualifier =
+          groupKeyQualifier(sqlSelect, selectListAliases, tableFieldNames, tableAlias);
+      List<SqlNode> groupList = createGroupByList(sqlSelect, qualifier);
       SqlNode node =
           new SqlSelect(sqlSelect.getParserPosition(), null, sqlSelect.getSelectList(),
           sqlSelect.getFrom(), sqlSelect.getWhere(), new SqlNodeList(groupList, SqlParserPos.ZERO),
@@ -2400,23 +2486,86 @@ public class RelToSqlConverter extends SqlImplementor
   }
 
   private List<SqlNode> createGroupByList(SqlSelect sqlSelect,
+      UnaryOperator<SqlNode> qualifier) {
+    return sqlSelect.getGroup().getList().stream()
+        .map(node -> qualifyGroupingItem(node, qualifier))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Returns a function that qualifies a GROUP BY key with {@code tableAlias} when BigQuery would
+   * otherwise bind the bare name to a SELECT alias of the same name.
+   */
+  private UnaryOperator<SqlNode> groupKeyQualifier(SqlSelect sqlSelect,
       List<String> selectListAliases, List<String> tableFieldNames, String tableAlias) {
     Map<String, Boolean> groupByColumnPresentInSelect = isFromAliased(sqlSelect)
-        ? new HashMap<>() : createGroupByColumnAliasMap(selectListAliases, sqlSelect.getGroup());
-    return sqlSelect.getGroup().getList().stream()
-        .map(node -> {
-          if (node instanceof SqlIdentifier) {
-            SqlIdentifier identifier = (SqlIdentifier) node;
-            String name = identifier.names.get(0);
-            boolean isMatch = selectListAliases.stream().anyMatch(alias -> alias.equals(name))
-                && tableFieldNames.stream().anyMatch(alias -> alias.equals(name));
-            if (isMatch && (groupByColumnPresentInSelect.get(name) != Boolean.TRUE
-                || isAliasReusedAsColumnInProjection(getNodesAfterAliasMatch(sqlSelect.getSelectList(), name), name))) {
-              return new SqlIdentifier(Arrays.asList(tableAlias, name), node.getParserPosition());
-            }
-          }
-          return node;
-        }).collect(Collectors.toList());
+        ? new HashMap<>()
+        : createGroupByColumnAliasMap(selectListAliases, groupingKeys(sqlSelect.getGroup()));
+    return node -> {
+      if (node instanceof SqlIdentifier) {
+        SqlIdentifier identifier = (SqlIdentifier) node;
+        String name = identifier.names.get(0);
+        boolean isMatch = selectListAliases.stream().anyMatch(alias -> alias.equals(name))
+            && tableFieldNames.stream().anyMatch(alias -> alias.equals(name));
+        if (isMatch && (groupByColumnPresentInSelect.get(name) != Boolean.TRUE
+            || isAliasReusedAsColumnInProjection(getNodesAfterAliasMatch(sqlSelect.getSelectList(), name), name))) {
+          return withComments(node,
+              new SqlIdentifier(Arrays.asList(tableAlias, name), node.getParserPosition()));
+        }
+      }
+      return node;
+    };
+  }
+
+  /**
+   * Applies {@code keyMapper} to a GROUP BY item and to every key nested in its
+   * GROUPING SETS, ROLLUP, CUBE and ROW operands. Returns the item itself when nothing changes.
+   */
+  private static SqlNode qualifyGroupingItem(SqlNode node, UnaryOperator<SqlNode> keyMapper) {
+    if (!isGroupingConstruct(node)) {
+      return keyMapper.apply(node);
+    }
+    SqlCall call = (SqlCall) node;
+    SqlCall copy = null;
+    List<SqlNode> operands = call.getOperandList();
+    for (int i = 0; i < operands.size(); i++) {
+      SqlNode operand = operands.get(i);
+      if (operand == null) {
+        continue;
+      }
+      SqlNode mapped = qualifyGroupingItem(operand, keyMapper);
+      if (mapped != operand) {
+        if (copy == null) {
+          copy = (SqlCall) withComments(call, call.clone(call.getParserPosition()));
+        }
+        copy.setOperand(i, mapped);
+      }
+    }
+    return copy == null ? node : copy;
+  }
+
+  private static boolean isGroupingConstruct(SqlNode node) {
+    switch (node.getKind()) {
+    case GROUPING_SETS:
+    case ROLLUP:
+    case CUBE:
+    case ROW:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /** Returns the GROUP BY keys, with the keys inside GROUPING SETS, ROLLUP, CUBE and ROW. */
+  private static SqlNodeList groupingKeys(SqlNodeList groupList) {
+    List<SqlNode> keys = new ArrayList<>();
+    for (SqlNode node : groupList) {
+      qualifyGroupingItem(node, key -> {
+        keys.add(key);
+        return key;
+      });
+    }
+    return new SqlNodeList(keys, POS);
   }
 
   /**
