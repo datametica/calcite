@@ -1068,6 +1068,13 @@ public class SqlDialect {
               SqlParserPos.ZERO);
         }
         break;
+      case BIT:
+        // BIT exists only so a T-SQL boolean stays distinguishable while it is being converted.
+        // No target spells it that way, so by default it renders as the boolean it is, and a
+        // dialect that spells a boolean differently overrides this (BigQuery: BOOL).
+        return new SqlDataTypeSpec(
+            new SqlBasicTypeNameSpec(SqlTypeName.BOOLEAN, SqlParserPos.ZERO),
+            SqlParserPos.ZERO);
       default:
         break;
       }

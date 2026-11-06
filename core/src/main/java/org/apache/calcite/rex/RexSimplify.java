@@ -556,7 +556,9 @@ public class RexSimplify {
       }
     }
 
-    if (o0.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
+    // A T-SQL BIT is the boolean it will be rendered as, so it collapses the same way:
+    // without this, "flag = TRUE" survives into the SQL instead of becoming "flag".
+    if (SqlTypeName.BOOLEAN_TYPES.contains(o0.getType().getSqlTypeName())) {
       Comparison cmp = Comparison.of(rexBuilder.makeCall(e.getOperator(), o0, o1), node -> true);
       if (cmp != null) {
         if (cmp.literal.isAlwaysTrue()) {
