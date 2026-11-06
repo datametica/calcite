@@ -2756,7 +2756,9 @@ public class BigQuerySqlDialect extends SqlDialect {
     if (type instanceof BasicSqlType) {
       final SqlTypeName typeName = type.getSqlTypeName();
       switch (typeName) {
-      // BigQuery only supports INT64 for integer types.
+      // BigQuery only supports INT64 for integer types. A T-SQL BIT is a number, so it lands
+      // here with TINYINT: a BIT column stays countable, and SUM() over it works.
+      case BIT:
       case TINYINT:
       case SMALLINT:
       case INTEGER:
@@ -2784,7 +2786,6 @@ public class BigQuerySqlDialect extends SqlDialect {
       case DECIMAL:
         return createSqlDataTypeSpecBasedOnPreScale(type);
       case BOOLEAN:
-      case BIT:
         return createSqlDataTypeSpecByName("BOOL", typeName);
       case CLOB:
       case CHAR:
