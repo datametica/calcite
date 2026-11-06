@@ -270,11 +270,13 @@ class SqlDataTypeSpecTest {
     assertEquals(getSqlDataTypeSpec(bool, dialect), getSqlDataTypeSpec(bit, dialect));
   }
 
-  /** BIT belongs to the boolean family, so anything that accepts a boolean accepts it. */
-  @Test void testBitIsABooleanType() {
-    assertEquals(SqlTypeFamily.BOOLEAN, SqlTypeName.BIT.getFamily());
-    Assertions.assertTrue(SqlTypeName.BOOLEAN_TYPES.contains(SqlTypeName.BIT));
-    Assertions.assertTrue(SqlTypeFamily.BOOLEAN.getTypeNames().contains(SqlTypeName.BIT));
+  /** BIT is T-SQL's number-shaped boolean. It belongs to the numeric family, so it adds and
+   * compares as a number, and a column of it stays countable on the target. */
+  @Test void testBitIsANumericType() {
+    assertEquals(SqlTypeFamily.NUMERIC, SqlTypeName.BIT.getFamily());
+    Assertions.assertTrue(SqlTypeName.INT_TYPES.contains(SqlTypeName.BIT));
+    Assertions.assertFalse(SqlTypeName.BOOLEAN_TYPES.contains(SqlTypeName.BIT));
+    Assertions.assertTrue(SqlTypeFamily.NUMERIC.getTypeNames().contains(SqlTypeName.BIT));
   }
 
   /** BIT is its own type name, so a source that has it stays distinguishable from a plain boolean. */
