@@ -149,7 +149,7 @@ public enum SqlTypeName {
   UUID(PrecScale.NO_NO, false, Types.OTHER, SqlTypeFamily.UUID),
   XML(PrecScale.NO_NO, false, ExtraSqlTypes.SQLXML,  null),
   ROWVERSION(PrecScale.NO_NO, false, Types.BINARY, SqlTypeFamily.BINARY),
-  BIT(PrecScale.NO_NO, false, Types.BIT, SqlTypeFamily.BOOLEAN);
+  BIT(PrecScale.NO_NO, false, Types.BIT, SqlTypeFamily.NUMERIC);
 
   public static final int MAX_DATETIME_PRECISION = 3;
 
@@ -185,8 +185,12 @@ public enum SqlTypeName {
           DISTINCT, STRUCTURED, ROW, CURSOR, COLUMN_LIST, VARIANT, VARRAY, ARRAY,
           BIT);
 
+  // BIT is NOT listed here. T-SQL's BIT is a number that carries a truth value: it compares and
+  // adds like a number, so "@b = 1" has to stay a numeric comparison instead of coercing the 1
+  // into TRUE. A BIT variable is still declared BOOL on the target - the raven shuttle retypes
+  // it before any renderer sees it - so that half needs nothing from this list.
   public static final List<SqlTypeName> BOOLEAN_TYPES =
-      ImmutableList.of(BOOLEAN, BIT);
+      ImmutableList.of(BOOLEAN);
 
   public static final List<SqlTypeName> BINARY_TYPES =
       ImmutableList.of(BINARY, VARBINARY, ROWVERSION);
@@ -194,8 +198,12 @@ public enum SqlTypeName {
   public static final List<SqlTypeName> ARRAY_TYPES =
       ImmutableList.of(ARRAY, VARRAY);
 
+  // BIT is T-SQL's number-shaped boolean. It behaves as an exact integer everywhere - arithmetic,
+  // comparison, literal representation - so it belongs here, and reaches EXACT_TYPES and
+  // NUMERIC_TYPES through this list. It is a separate value from TINYINT only so a real TINYINT
+  // column is never mistaken for a BIT.
   public static final List<SqlTypeName> INT_TYPES =
-      ImmutableList.of(TINYINT, SMALLINT, INTEGER, BIGINT);
+      ImmutableList.of(BIT, TINYINT, SMALLINT, INTEGER, BIGINT);
 
   public static final List<SqlTypeName> EXACT_TYPES =
       combine(INT_TYPES, ImmutableList.of(DECIMAL));

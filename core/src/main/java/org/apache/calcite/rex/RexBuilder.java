@@ -569,10 +569,10 @@ public class RexBuilder {
       Comparable value = literal.getValueAs(Comparable.class);
       SqlTypeName typeName = literal.getTypeName();
 
-      // Allow casting boolean literals to integer types. A T-SQL BIT is one of these: it is
-      // the boolean it will be rendered as, so it converts by the same CASE form rather than a
-      // raw cast the target cannot apply to a boolean.
-      if (SqlTypeName.BOOLEAN_TYPES.contains(exp.getType().getSqlTypeName())
+      // Allow casting boolean literals to integer types. BIT is deliberately excluded: it is
+      // T-SQL's number-shaped boolean, and a cast of it to an exact type must stay a plain cast
+      // so the target reads it as the number it is.
+      if (exp.getType().getSqlTypeName() == SqlTypeName.BOOLEAN
           && SqlTypeUtil.isExactNumeric(type)) {
         return makeCastBooleanToExact(type, exp);
       }
@@ -641,7 +641,7 @@ public class RexBuilder {
     } else if (sqlType == SqlTypeName.BOOLEAN
         && SqlTypeUtil.isExactNumeric(exp.getType())) {
       return makeCastExactToBoolean(type, exp);
-    } else if (SqlTypeName.BOOLEAN_TYPES.contains(exp.getType().getSqlTypeName())
+    } else if (exp.getType().getSqlTypeName() == SqlTypeName.BOOLEAN
         && SqlTypeUtil.isExactNumeric(type)) {
       return makeCastBooleanToExact(type, exp);
     }
