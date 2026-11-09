@@ -15955,6 +15955,66 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
 
+  /** Builds a CASE whose ELSE branch is a scalar sub-query reading a CTE named TMP, under a CTE
+   * scope. The CTE is used only in ELSE. With {@code bareElse} the ELSE branch is the sub-query
+   * itself ({@code ELSE (SELECT MAX(DEPTNO) FROM TMP)}); otherwise it is wrapped in a call
+   * ({@code ELSE 'dept ' || CAST((SELECT MAX(DEPTNO) FROM TMP) AS STRING)}). */
+  private static RelNode cteUsedOnlyInCaseElse(boolean bareElse) {
+    final RelBuilder builder = relBuilder();
+    final RelNode cteBody = builder.scan("EMP")
+        .project(builder.field("DEPTNO"))
+        .distinct()
+        .build();
+    final RelNode cteRel =
+        cteBody.copy(cteBody.getTraitSet().plus(new CTEDefinationTrait(true, "TMP", false)),
+            cteBody.getInputs());
+    final RelNode maxDeptFromCte = builder.push(cteRel)
+        .aggregate(builder.groupKey(), builder.max(builder.field("DEPTNO")))
+        .build();
+
+    builder.scan("EMP");
+    final RexNode subQuery = RexSubQuery.scalar(maxDeptFromCte);
+    final RexNode caseExpr = bareElse
+        ? builder.call(SqlStdOperatorTable.CASE,
+        builder.equals(builder.field("ENAME"), builder.literal("KING")),
+        builder.field("DEPTNO"),
+        subQuery)
+        : builder.call(SqlStdOperatorTable.CASE,
+            builder.equals(builder.field("ENAME"), builder.literal("KING")),
+            builder.literal("boss"),
+            builder.call(SqlStdOperatorTable.CONCAT, builder.literal("dept "),
+                builder.cast(subQuery, SqlTypeName.VARCHAR)));
+    final RelNode select = builder.project(builder.alias(caseExpr, "ROLE")).build();
+    return select.copy(select.getTraitSet().plus(new CTEScopeTrait(true)), select.getInputs());
+  }
+
+  /** RSFB-5421: a CTE referenced only inside the ELSE branch of a CASE (wrapped in another call)
+   * must be lifted into the WITH list and referenced by name, not left inline as
+   * {@code (TMP AS (SELECT ...))}. */
+  @Test public void testCTEReferencedInCaseElseWrappedInCall() {
+    final RelNode root = cteUsedOnlyInCaseElse(false);
+    final String expectedBqSql = "WITH TMP AS (SELECT DEPTNO\n"
+        + "FROM scott.EMP\n"
+        + "GROUP BY DEPTNO) (SELECT CASE WHEN ENAME = 'KING' THEN 'boss' "
+        + "ELSE 'dept ' || CAST((SELECT MAX(DEPTNO) AS `$f0`\n"
+        + "FROM TMP) AS STRING) END AS ROLE\n"
+        + "FROM scott.EMP)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
+  /** RSFB-5421: same as {@link #testCTEReferencedInCaseElseWrappedInCall()} but the ELSE branch is
+   * the bare scalar sub-query. */
+  @Test public void testCTEReferencedInCaseElseAsBareSubQuery() {
+    final RelNode root = cteUsedOnlyInCaseElse(true);
+    final String expectedBqSql = "WITH TMP AS (SELECT DEPTNO\n"
+        + "FROM scott.EMP\n"
+        + "GROUP BY DEPTNO) (SELECT CASE WHEN ENAME = 'KING' THEN DEPTNO "
+        + "ELSE (SELECT MAX(DEPTNO) AS `$f0`\n"
+        + "FROM TMP) END AS ROLE\n"
+        + "FROM scott.EMP)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
   @Test public void testWithRegrSlope() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     final RexNode regrSlopeCall = relBuilder
