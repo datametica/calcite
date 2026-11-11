@@ -24,6 +24,7 @@ import org.apache.calcite.plan.CTEDefinationTrait;
 import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.CommentTrait;
 import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
+import org.apache.calcite.plan.MergeSortProjectTrait;
 import org.apache.calcite.plan.QualifyRelTrait;
 import org.apache.calcite.plan.QualifyRelTraitDef;
 import org.apache.calcite.plan.RelOptRule;
@@ -10320,7 +10321,7 @@ class RelToSqlConverterDMTest {
   @Test public void testToDateforOracle() {
     RelBuilder builder = relBuilder().scan("EMP");
     final RexNode oracleToDateCall =
-        builder.call(SqlLibraryOperators.ORACLE_TO_DATE, builder.call(CURRENT_DATE));
+        builder.call(SqlLibraryOperators.TO_DATE, builder.call(CURRENT_DATE));
     RelNode root = builder
         .project(oracleToDateCall)
         .build();
@@ -10759,13 +10760,13 @@ class RelToSqlConverterDMTest {
   @Test public void testOracleNextDayFunction() {
     final RelBuilder builder = relBuilder();
     final RexNode nextDayRexNode =
-        builder.call(SqlLibraryOperators.ORACLE_NEXT_DAY, builder.call(CURRENT_DATE),
+        builder.call(SqlLibraryOperators.NEXT_DAY, builder.call(CURRENT_DATE),
                 builder.literal(DayOfWeek.SATURDAY.name()));
     final RelNode root = builder
         .scan("EMP")
         .project(builder.alias(nextDayRexNode, "next_day"))
         .build();
-    final String expectedOracle = "SELECT ORACLE_NEXT_DAY(CURRENT_DATE, 'SATURDAY') \"next_day\"\n"
+    final String expectedOracle = "SELECT NEXT_DAY(CURRENT_DATE, 'SATURDAY') \"next_day\"\n"
         + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(root, DatabaseProduct.ORACLE.getDialect()), isLinux(expectedOracle));
@@ -12752,6 +12753,30 @@ class RelToSqlConverterDMTest {
                                 + "foodmart.employee\nGROUP BY first_name, last_name, birth_date)"
                                 + " (SELECT first_name AS FNAME\nFROM RUNDATE)";
     assertThat(actualSql, isLinux(expectedSql));
+  }
+
+  /** A Sort carrying {@link MergeSortProjectTrait} is not wrapped in a sub-query for its
+   * sort-only column, and its ORDER BY item is rendered as the underlying expression. */
+  @Test public void testSortWithMergeSortProjectTrait() {
+    final RelBuilder builder = foodmartRelBuilder();
+    final RelNode sort = builder.scan("employee")
+        .project(builder.field("full_name"), builder.field("birth_date"),
+            builder.call(SqlStdOperatorTable.EXTRACT, builder.literal(TimeUnitRange.YEAR),
+                builder.field("birth_date")))
+        .sortLimit(0, 5, builder.desc(builder.field(2)))
+        .build();
+    final RelNode sortWithTrait =
+        sort.copy(sort.getTraitSet().plus(new MergeSortProjectTrait(ImmutableList.of(2))),
+            sort.getInputs());
+    final RelNode root = builder.push(sortWithTrait)
+        .project(builder.field(0), builder.field(1))
+        .build();
+
+    final String expectedSql = "SELECT full_name, birth_date\n"
+        + "FROM foodmart.employee\n"
+        + "ORDER BY EXTRACT(YEAR FROM birth_date) DESC NULLS FIRST\n"
+        + "LIMIT 5";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 
   /** When a column of a CTE has the same name as the CTE and the dialect does not support
@@ -16019,5 +16044,37 @@ class RelToSqlConverterDMTest {
         + "WHERE t3.DEPTNO IS NULL))";
 
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBigQuery));
+  }
+
+  @Test void testApproxPercentileAggregate() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlLibraryOperators.APPROX_PERCENTILE,
+            builder.field("SAL"), builder.literal(0.5));
+    final RelNode root = builder
+        .aggregate(builder.groupKey(), aggCall.as("median_sal"))
+        .build();
+
+    final String expectedSnowflakeSql = "SELECT APPROX_PERCENTILE(\"SAL\", 0.5) AS \"median_sal\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
+        isLinux(expectedSnowflakeSql));
+  }
+
+  @Test void testApproxPercentileAggregateWithGroupBy() {
+    final RelBuilder builder = relBuilder().scan("EMP");
+    final RelBuilder.AggCall aggCall =
+        builder.aggregateCall(SqlLibraryOperators.APPROX_PERCENTILE,
+            builder.field("SAL"), builder.literal(0.001));
+    final RelNode root = builder
+        .aggregate(builder.groupKey("DEPTNO"), aggCall.as("low_sal"))
+        .build();
+
+    final String expectedSnowflakeSql = "SELECT \"DEPTNO\", "
+        + "APPROX_PERCENTILE(\"SAL\", 0.001) AS \"low_sal\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "GROUP BY \"DEPTNO\"";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
+        isLinux(expectedSnowflakeSql));
   }
 }

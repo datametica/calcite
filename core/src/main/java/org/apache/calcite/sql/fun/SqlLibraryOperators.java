@@ -1895,6 +1895,15 @@ public abstract class SqlLibraryOperators {
               ReturnTypes.TO_ARRAY, OperandTypes.ANY_NUMERIC)
           .withDistinct(Optionality.OPTIONAL)
           .withFunctionType(SqlFunctionCategory.NUMERIC);
+  /**
+   * the "APPROX_PERCENTILE" function.
+   */
+  @LibraryOperator(libraries = {SqlLibrary.SNOWFLAKE})
+  public static final SqlAggFunction APPROX_PERCENTILE =
+      SqlBasicAggFunction.create("APPROX_PERCENTILE", SqlKind.APPROX_PERCENTILE,
+              ReturnTypes.ARG0_NULLABLE, OperandTypes.NUMERIC_NUMERIC)
+          .withDistinct(Optionality.OPTIONAL)
+          .withFunctionType(SqlFunctionCategory.NUMERIC);
 
   /** The "ARRAY_MAX(array)" function. */
   @LibraryOperator(libraries = {SPARK})
@@ -2301,15 +2310,6 @@ public abstract class SqlLibraryOperators {
   public static final SqlFunction TO_DATE =
       SqlBasicFunction.create("TO_DATE",
           ReturnTypes.DATE_NULLABLE,
-          OperandTypes.STRING_STRING,
-          SqlFunctionCategory.TIMEDATE);
-
-  @LibraryOperator(libraries = {ORACLE})
-  public static final SqlFunction ORACLE_TO_DATE =
-      new SqlFunction("TO_DATE",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.TIMESTAMP_NULLABLE,
-          null,
           OperandTypes.STRING_STRING,
           SqlFunctionCategory.TIMEDATE);
 
@@ -3696,7 +3696,7 @@ public abstract class SqlLibraryOperators {
       new SqlFunction(
           "TRUNC",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.TIMESTAMP,
+          ReturnTypes.DATE,
           null,
           OperandTypes.family(SqlTypeFamily.DATETIME,
               SqlTypeFamily.STRING), SqlFunctionCategory.SYSTEM);
@@ -3842,23 +3842,12 @@ public abstract class SqlLibraryOperators {
               number -> number == 2),
           SqlFunctionCategory.STRING);
 
-  @LibraryOperator(libraries = {HIVE, SPARK})
+  @LibraryOperator(libraries = {HIVE, SPARK, ORACLE})
   public static final SqlFunction NEXT_DAY =
       new SqlFunction(
           "NEXT_DAY",
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.DATE,
-          null,
-          OperandTypes.family(SqlTypeFamily.ANY,
-              SqlTypeFamily.STRING),
-          SqlFunctionCategory.TIMEDATE);
-
-  @LibraryOperator(libraries = {ORACLE})
-  public static final SqlFunction ORACLE_NEXT_DAY =
-      new SqlFunction(
-          "ORACLE_NEXT_DAY",
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.TIMESTAMP_NULLABLE,
+          ReturnTypes.DATE_NULLABLE,
           null,
           OperandTypes.family(SqlTypeFamily.ANY,
               SqlTypeFamily.STRING),
