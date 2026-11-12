@@ -3977,7 +3977,10 @@ class RelToSqlConverterTest {
         + "ASOF JOIN \"SCOTT\".\"DEPT\" "
         + "MATCH_CONDITION (\"EMP\".\"EMPNO\" >= \"DEPT\".\"DEPTNO\") "
         + "ON \"EMP\".\"DEPTNO\" = \"DEPT\".\"DEPTNO\"";
-    final String expectedSnowflake = expected;
+    // Snowflake's ASOF JOIN preserves unmatched left rows, so an inner ASOF
+    // join needs a filter to remove them
+    final String expectedSnowflake = expected + "\n"
+        + "WHERE \"DEPT\".\"DEPTNO\" IS NOT NULL";
     sql(sql)
         .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
         .ok(expected)
@@ -3996,7 +3999,7 @@ class RelToSqlConverterTest {
         + "\"SAL\", \"COMM\", \"DEPTNO\", CAST(\"ENAME\" AS VARCHAR(14)) AS \"ENAME0\", "
         + "CAST(\"JOB\" AS VARCHAR(13)) AS \"JOB0\"\n"
         + "FROM \"SCOTT\".\"EMP\") AS \"t\"\n"
-        + "LEFT ASOF JOIN \"SCOTT\".\"DEPT\" "
+        + "ASOF JOIN \"SCOTT\".\"DEPT\" "
         + "MATCH_CONDITION (\"t\".\"DEPTNO\" <= \"DEPT\".\"DEPTNO\") "
         + "ON \"t\".\"ENAME0\" = \"DEPT\".\"DNAME\" "
         + "AND \"t\".\"JOB0\" = \"DEPT\".\"LOC\"";
@@ -4022,7 +4025,29 @@ class RelToSqlConverterTest {
         + "FROM \"scott\".\"EMP\"\n"
         + "ASOF JOIN \"scott\".\"DEPT\" "
         + "MATCH_CONDITION (\"EMP\".\"DEPTNO\" < \"DEPT\".\"DEPTNO\") "
-        + "ON \"EMP\".\"ENAME\" = \"DEPT\".\"DNAME\"";
+        + "ON \"EMP\".\"ENAME\" = \"DEPT\".\"DNAME\"\n"
+        + "WHERE \"DEPT\".\"DEPTNO\" IS NOT NULL";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
+        isLinux(expectedSnowflake));
+  }
+
+  /** Test case for ASOF JOIN without an ON clause. The join condition is
+   * TRUE, and no "ON TRUE" must be generated. */
+  @Test void testLeftAsofJoinWithoutOnCondition() {
+    final RelBuilder builder = relBuilder();
+    final RelNode root = builder
+        .scan("EMP")
+        .scan("DEPT")
+        .asofJoin(JoinRelType.LEFT_ASOF,
+            builder.literal(true),
+            builder.greaterThanOrEqual(builder.field(2, 0, "DEPTNO"),
+                builder.field(2, 1, "DEPTNO")))
+        .project(builder.field("EMPNO"), builder.field("DNAME"))
+        .build();
+    final String expectedSnowflake = "SELECT \"EMP\".\"EMPNO\", \"DEPT\".\"DNAME\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "ASOF JOIN \"scott\".\"DEPT\" "
+        + "MATCH_CONDITION (\"EMP\".\"DEPTNO\" >= \"DEPT\".\"DEPTNO\")";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
         isLinux(expectedSnowflake));
   }

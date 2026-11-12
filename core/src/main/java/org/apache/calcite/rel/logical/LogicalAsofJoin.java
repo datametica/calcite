@@ -124,15 +124,17 @@ public final class LogicalAsofJoin extends AsofJoin {
     if (this == obj) {
       return true;
     }
+    // deepEquals0 checks getClass(), so the cast is only safe after it passes.
+    if (!deepEquals0(obj)) {
+      return false;
+    }
     LogicalAsofJoin asofObj = (LogicalAsofJoin) obj;
-    assert asofObj != null;
-    return deepEquals0(obj)
-        && matchCondition.equals(asofObj.matchCondition)
+    return matchCondition.equals(asofObj.matchCondition)
         && systemFieldList.equals(asofObj.systemFieldList);
   }
 
   @Override public int deepHashCode() {
-    return Objects.hash(deepHashCode0(), systemFieldList);
+    return Objects.hash(deepHashCode0(), matchCondition, systemFieldList);
   }
 
   @Override public ImmutableList<RelDataTypeField> getSystemFieldList() {

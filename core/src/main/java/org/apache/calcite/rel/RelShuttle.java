@@ -70,7 +70,13 @@ public interface RelShuttle {
 
   RelNode visit(LogicalTableModify modify);
 
-  RelNode visit(LogicalAsofJoin logicalAsofJoin);
+  /** Visits a {@link LogicalAsofJoin}.
+   *
+   * <p>This is a default method, delegating to {@link #visit(RelNode)}, so
+   * that existing implementations of this interface continue to compile. */
+  default RelNode visit(LogicalAsofJoin logicalAsofJoin) {
+    return visit((RelNode) logicalAsofJoin);
+  }
 
   RelNode visit(RelNode other);
 }
