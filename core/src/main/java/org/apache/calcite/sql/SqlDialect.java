@@ -853,6 +853,18 @@ public class SqlDialect {
   }
 
   /**
+   * Returns whether the {@code ASOF JOIN} syntax of this dialect preserves
+   * every row of the left input, padding the right side with NULLs when no
+   * match is found (that is, behaves like Calcite's {@code LEFT ASOF JOIN}).
+   *
+   * <p>Such dialects (e.g. Snowflake) have no {@code LEFT ASOF JOIN} syntax,
+   * and have no direct equivalent of an inner {@code ASOF JOIN}.
+   */
+  public boolean isAsofJoinLeftOuter() {
+    return false;
+  }
+
+  /**
    * supportsPivotTableAlias method denote whether pivotTableAlias is supported or not
    * SELECT * FROM query PIVOT (agg, ... FOR axis, ... IN (in, ...)) AS pivotTableAlias;
    */

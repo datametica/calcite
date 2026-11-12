@@ -369,16 +369,37 @@ public class RelToSqlConverter extends SqlImplementor
     if (e instanceof AsofJoin) {
       final SqlNode sqlMatchCondition =
           convertMatchConditionToSqlNode((AsofJoin) e, leftContext, rightContext);
+      // In some dialects (e.g. Snowflake) ASOF JOIN preserves the unmatched
+      // rows of the left input. For those, an inner ASOF join is generated as
+      // an ASOF JOIN followed by a filter that removes the unmatched rows.
+      final boolean emulateInnerAsof =
+          joinType == JoinType.ASOF && dialect.isAsofJoinLeftOuter();
+      // ON is optional in an ASOF JOIN. A join without ON has the condition
+      // TRUE, which must not be generated as "ON TRUE".
+      if (e.getCondition().isAlwaysTrue()) {
+        condType = JoinConditionType.NONE.symbol(POS);
+        sqlCondition = null;
+      }
       final SqlNode asofJoin =
           new SqlAsofJoin(POS,
               leftResult.asFrom(),
               SqlLiteral.createBoolean(false, POS),
-              joinType.symbol(POS),
+              (emulateInnerAsof ? JoinType.LEFT_ASOF : joinType).symbol(POS),
               rightResult.asFrom(),
               condType,
               sqlCondition,
               sqlMatchCondition);
-      return result(asofJoin, leftResult, rightResult);
+      final Result asofResult = result(asofJoin, leftResult, rightResult);
+      if (!emulateInnerAsof) {
+        return asofResult;
+      }
+      final SqlSelect select = wrapSelect(asofJoin);
+      select.setWhere(
+          SqlStdOperatorTable.IS_NOT_NULL.createCall(POS,
+              convertRightMatchOperandToSqlNode((AsofJoin) e, leftContext,
+                  rightContext)));
+      return result(select, ImmutableList.of(Clause.FROM, Clause.WHERE), null,
+          null, asofResult.aliases);
     }
     SqlNode join =
         new SqlJoin(POS,
@@ -397,6 +418,32 @@ public class RelToSqlConverter extends SqlImplementor
     final Context joinContext =
         leftContext.implementor().joinContext(leftContext, rightContext);
     return joinContext.toSql(null, join.getMatchCondition());
+  }
+
+  /** Converts the operand of the MATCH_CONDITION of an {@link AsofJoin} that
+   * comes from the right input to a {@link SqlNode}.
+   *
+   * <p>A row of the right input can only match if this operand is not null,
+   * therefore in a join that preserves the left rows the operand is null if
+   * and only if the left row has no match. */
+  private static SqlNode convertRightMatchOperandToSqlNode(AsofJoin join,
+      Context leftContext, Context rightContext) {
+    final int leftFieldCount = join.getLeft().getRowType().getFieldCount();
+    final RexNode matchCondition = join.getMatchCondition();
+    if (matchCondition instanceof RexCall) {
+      for (RexNode operand : ((RexCall) matchCondition).getOperands()) {
+        final ImmutableBitSet bits = RelOptUtil.InputFinder.bits(operand);
+        if (!bits.isEmpty() && bits.nextSetBit(0) >= leftFieldCount) {
+          final Context joinContext =
+              leftContext.implementor().joinContext(leftContext, rightContext);
+          return joinContext.toSql(null, operand);
+        }
+      }
+    }
+    throw new UnsupportedOperationException("Cannot convert inner ASOF JOIN to "
+        + "a dialect whose ASOF JOIN preserves unmatched rows of the left "
+        + "input: MATCH_CONDITION " + matchCondition
+        + " has no operand that references only the right input");
   }
 
   private boolean isUsingOperator(Join e) {
