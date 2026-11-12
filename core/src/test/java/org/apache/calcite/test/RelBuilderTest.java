@@ -778,8 +778,66 @@ public class RelBuilderTest {
     // Note: CAST(COMM) gets the COMM alias because it occurs first
     // Note: AS(COMM, C) becomes just $6
     final String expected = ""
-        + "LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT NOT NULL], $f2=[20], COMM0=[$6], C=[$6])\n"
+        + "LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT], $f2=[20], COMM0=[$6], C=[$6])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
+    assertThat(root, hasTree(expected));
+  }
+
+  /** A cast keeps the nullability of its operand. COMM is nullable and EMPNO
+   * is not. Before, every cast except one of a NULL literal was NOT NULL, so
+   * a filter "CAST(COMM) IS NOT NULL" was simplified away. */
+  @Test void testCastKeepsOperandNullability() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    builder.scan("EMP");
+    final RexNode castComm =
+        builder.cast(builder.field("COMM"), SqlTypeName.DOUBLE);
+    final RexNode castEmpno =
+        builder.cast(builder.field("EMPNO"), SqlTypeName.VARCHAR, 10);
+    final RexNode castCommDecimal =
+        builder.cast(builder.field("COMM"), SqlTypeName.DECIMAL, 10, 2);
+    final RexNode castNull =
+        builder.cast(builder.literal(null), SqlTypeName.INTEGER);
+    assertThat(castComm.getType().isNullable(), is(true));
+    assertThat(castEmpno.getType().isNullable(), is(false));
+    assertThat(castCommDecimal.getType().isNullable(), is(true));
+    assertThat(castNull.getType().isNullable(), is(true));
+
+    final RelNode root = builder.filter(builder.isNotNull(castComm)).build();
+    final String expected = ""
+        + "LogicalFilter(condition=[IS NOT NULL(CAST($6):DOUBLE)])\n"
+        + "  LogicalTableScan(table=[[scott, EMP]])\n";
+    assertThat(root, hasTree(expected));
+  }
+
+  /** An explicit cast of a nullable operand to its own type stays in the
+   * plan, also inside another call and after a copy with comments; a cast of
+   * a NOT NULL operand to its own type is removed, as before, and so is a cast
+   * of a cast to the same type. */
+  @Test void testCastToOwnTypeOfNullableOperandIsKept() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    final RelNode root =
+        builder.scan("EMP")
+            .filter(
+                builder.greaterThan(
+                    builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT),
+                    builder.literal(0)))
+            .project(
+                builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT),
+                builder.call(SqlStdOperatorTable.PLUS,
+                    builder.cast(builder.field("COMM"), SqlTypeName.DECIMAL,
+                        7, 2),
+                    builder.literal(1)),
+                builder.cast(builder.field("EMPNO"), SqlTypeName.SMALLINT),
+                builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT)
+                    .copy(ImmutableSet.of()),
+                builder.cast(
+                    builder.cast(builder.field("MGR"), SqlTypeName.SMALLINT),
+                    SqlTypeName.SMALLINT))
+            .build();
+    final String expected = ""
+        + "LogicalProject(MGR=[CAST($3):SMALLINT], $f1=[+(CAST($6):DECIMAL(7, 2), 1)], EMPNO=[$0], MGR0=[CAST($3):SMALLINT], MGR1=[CAST($3):SMALLINT])\n"
+        + "  LogicalFilter(condition=[>(CAST($3):SMALLINT, 0)])\n"
+        + "    LogicalTableScan(table=[[scott, EMP]])\n";
     assertThat(root, hasTree(expected));
   }
 
@@ -811,7 +869,7 @@ public class RelBuilderTest {
                 builder.alias(builder.field(6), "C"))
             .build();
     final String expected = ""
-        + "LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT NOT NULL], "
+        + "LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT], "
         + "$f2=[OR(SEARCH($7, Sarg[20, 30]), AND(null, =($7, 10), "
         + "IS NULL($6), IS NULL($5)))], n2=[IS NULL($2)], "
         + "nn2=[IS NOT NULL($3)], $f5=[20], COMM0=[$6], C=[$6])\n"
