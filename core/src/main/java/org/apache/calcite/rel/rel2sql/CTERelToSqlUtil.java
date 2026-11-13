@@ -162,7 +162,7 @@ public class CTERelToSqlUtil {
     } else if (sqlNode instanceof SqlWithItem) {
       fetchFromSqlWithItemNode(sqlNode, sqlNodes);
     } else if (sqlNode instanceof SqlPivot) {
-      fetchFromSqlWithItemNode(((SqlPivot) sqlNode).query, sqlNodes);
+      fetchSqlWithItems(((SqlPivot) sqlNode).query, sqlNodes);
     } else if (sqlNode instanceof SqlCase) {
       fetchSqlWithSelectList(((SqlCase) sqlNode).getWhenOperands(), sqlNodes);
       fetchSqlWithSelectList(((SqlCase) sqlNode).getThenOperands(), sqlNodes);
