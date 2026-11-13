@@ -3977,14 +3977,10 @@ class RelToSqlConverterTest {
         + "ASOF JOIN \"SCOTT\".\"DEPT\" "
         + "MATCH_CONDITION (\"EMP\".\"EMPNO\" >= \"DEPT\".\"DEPTNO\") "
         + "ON \"EMP\".\"DEPTNO\" = \"DEPT\".\"DEPTNO\"";
-    // Snowflake's ASOF JOIN preserves unmatched left rows, so an inner ASOF
-    // join needs a filter to remove them
-    final String expectedSnowflake = expected + "\n"
-        + "WHERE \"DEPT\".\"DEPTNO\" IS NOT NULL";
     sql(sql)
         .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
         .ok(expected)
-        .withSnowflake().ok(expectedSnowflake);
+        .withSnowflake().ok(expected);
   }
 
   /** Test case for LEFT ASOF JOIN with MATCH_CONDITION: SqlNode -> RelNode -> SqlNode. */
@@ -4025,8 +4021,7 @@ class RelToSqlConverterTest {
         + "FROM \"scott\".\"EMP\"\n"
         + "ASOF JOIN \"scott\".\"DEPT\" "
         + "MATCH_CONDITION (\"EMP\".\"DEPTNO\" < \"DEPT\".\"DEPTNO\") "
-        + "ON \"EMP\".\"ENAME\" = \"DEPT\".\"DNAME\"\n"
-        + "WHERE \"DEPT\".\"DEPTNO\" IS NOT NULL";
+        + "ON \"EMP\".\"ENAME\" = \"DEPT\".\"DNAME\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
         isLinux(expectedSnowflake));
   }
