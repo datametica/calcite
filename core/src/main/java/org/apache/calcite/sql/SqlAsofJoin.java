@@ -118,6 +118,13 @@ public class SqlAsofJoin extends SqlJoin {
           operands[5], operands[6]);
     }
 
+    /** Message of the exception thrown when an inner ASOF JOIN is unparsed
+     * in a dialect whose ASOF JOIN is left outer. */
+    private static final String INNER_ASOF_UNSUPPORTED =
+        "Inner ASOF JOIN is not supported by this dialect, whose ASOF JOIN "
+        + "preserves unmatched rows of the left input; use LEFT ASOF JOIN "
+        + "and filter out the rows that have no match";
+
     @Override public void unparse(
         SqlWriter writer,
         SqlCall call,
@@ -129,10 +136,16 @@ public class SqlAsofJoin extends SqlJoin {
           writer,
           leftPrec,
           getLeftPrec());
-      // In some dialects (e.g. Snowflake) ASOF JOIN already preserves the
-      // rows of the left input, and there is no LEFT ASOF JOIN syntax.
-      if (join.getJoinType() == JoinType.LEFT_ASOF
-          && !writer.getDialect().isAsofJoinLeftOuter()) {
+      if (writer.getDialect().isAsofJoinLeftOuter()) {
+        // In this dialect (e.g. Snowflake) ASOF JOIN already preserves the
+        // rows of the left input, and there is no LEFT ASOF JOIN syntax.
+        // An inner ASOF JOIN has no equivalent; generating ASOF JOIN for it
+        // would silently return the unmatched rows of the left input.
+        if (join.getJoinType() != JoinType.LEFT_ASOF) {
+          throw new UnsupportedOperationException(INNER_ASOF_UNSUPPORTED);
+        }
+        writer.sep("ASOF JOIN");
+      } else if (join.getJoinType() == JoinType.LEFT_ASOF) {
         writer.sep("LEFT ASOF JOIN");
       } else {
         writer.sep("ASOF JOIN");
