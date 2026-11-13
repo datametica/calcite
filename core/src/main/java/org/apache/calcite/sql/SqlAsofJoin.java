@@ -129,17 +129,10 @@ public class SqlAsofJoin extends SqlJoin {
           writer,
           leftPrec,
           getLeftPrec());
-      if (writer.getDialect().isAsofJoinLeftOuter()) {
-        // In this dialect (e.g. Snowflake) ASOF JOIN already preserves the
-        // rows of the left input, and there is no LEFT ASOF JOIN syntax.
-        if (join.getJoinType() != JoinType.LEFT_ASOF) {
-          throw new UnsupportedOperationException("Inner ASOF JOIN is not "
-              + "supported by this dialect, whose ASOF JOIN preserves "
-              + "unmatched rows of the left input; use LEFT ASOF JOIN and "
-              + "filter out the rows that have no match");
-        }
-        writer.sep("ASOF JOIN");
-      } else if (join.getJoinType() == JoinType.LEFT_ASOF) {
+      // In some dialects (e.g. Snowflake) ASOF JOIN already preserves the
+      // rows of the left input, and there is no LEFT ASOF JOIN syntax.
+      if (join.getJoinType() == JoinType.LEFT_ASOF
+          && !writer.getDialect().isAsofJoinLeftOuter()) {
         writer.sep("LEFT ASOF JOIN");
       } else {
         writer.sep("ASOF JOIN");
