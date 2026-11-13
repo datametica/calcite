@@ -212,6 +212,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16035,5 +16036,22 @@ class RelToSqlConverterDMTest {
         + "GROUP BY \"DEPTNO\"";
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
         isLinux(expectedSnowflakeSql));
+  }
+
+  @Test void testFetchSqlWithItemsWithPivotSubqueryInCte() throws Exception {
+    final String sql = "WITH R AS (\n"
+        + "  SELECT DAY_ID, CAMPAIGNGROUP, 'Order' AS ACT_ORD\n"
+        + "  FROM (\n"
+        + "    SELECT DAY_ID, CAMPAIGNGROUP, METRIC, VARIABLE_VALUE\n"
+        + "    FROM WHPRD_BI.MKTG.STAGEGT\n"
+        + "    WHERE CREATIVE = 'Existing'\n"
+        + "  ) PIVOT (SUM(VARIABLE_VALUE) FOR METRIC IN ('Order' AS \"ORDER\")) AS PivotTable\n"
+        + ")\n"
+        + "SELECT * FROM R";
+    final SqlWith sqlWith = (SqlWith) SqlParser.create(sql).parseQuery();
+    final List<SqlNode> sqlNodes = new ArrayList<>();
+    CTERelToSqlUtil.fetchSqlWithItems(sqlWith, sqlNodes);
+    assertThat(sqlNodes, hasSize(1));
+    assertThat(((SqlWithItem) sqlNodes.get(0)).name.toString(), is("R"));
   }
 }
