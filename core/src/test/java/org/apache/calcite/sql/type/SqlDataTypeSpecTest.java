@@ -259,4 +259,32 @@ class SqlDataTypeSpecTest {
     assertEquals(dataTypeSpec, getSqlDataTypeSpec(dataType, dialect));
     assertEquals(dataTypeSpecPrecScale, getSqlDataTypeSpecWithPrecisionAndScale(dataType, dialect));
   }
+
+  /** A SQL Server BIT is a number, so BigQuery renders it the way it renders TINYINT, and not
+   * the way it renders BOOLEAN. Only a column reaches this path. */
+  @Test void testBitRendersAsInt64ForBigQuery() {
+    RelDataType bit = new BasicSqlType(TYPE_SYSTEM, SqlTypeName.BIT);
+    RelDataType tinyInt = new BasicSqlType(TYPE_SYSTEM, SqlTypeName.TINYINT);
+    RelDataType bool = new BasicSqlType(TYPE_SYSTEM, SqlTypeName.BOOLEAN);
+    SqlDialect dialect = SqlDialect.DatabaseProduct.BIG_QUERY.getDialect();
+
+    assertEquals("INT64", getSqlDataTypeSpec(bit, dialect));
+    assertEquals(getSqlDataTypeSpec(tinyInt, dialect), getSqlDataTypeSpec(bit, dialect));
+    Assertions.assertNotEquals(getSqlDataTypeSpec(bool, dialect), getSqlDataTypeSpec(bit, dialect));
+  }
+
+  /** BIT is T-SQL's number-shaped boolean. It belongs to the numeric family, so it adds and
+   * compares as a number, and a column of it stays countable on the target. */
+  @Test void testBitIsANumericType() {
+    assertEquals(SqlTypeFamily.NUMERIC, SqlTypeName.BIT.getFamily());
+    Assertions.assertTrue(SqlTypeName.INT_TYPES.contains(SqlTypeName.BIT));
+    Assertions.assertFalse(SqlTypeName.BOOLEAN_TYPES.contains(SqlTypeName.BIT));
+    Assertions.assertTrue(SqlTypeFamily.NUMERIC.getTypeNames().contains(SqlTypeName.BIT));
+  }
+
+  /** BIT is its own type name, so a source that has it stays distinguishable from a plain boolean. */
+  @Test void testBitIsDistinctFromBoolean() {
+    Assertions.assertNotEquals(SqlTypeName.BOOLEAN, SqlTypeName.BIT);
+    assertEquals(SqlTypeName.BIT, SqlTypeName.get("BIT"));
+  }
 }

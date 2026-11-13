@@ -68,17 +68,24 @@ public class SqlTypeAssignmentRule implements SqlTypeMappingRule {
     rules.add(SqlTypeName.MULTISET, EnumSet.of(SqlTypeName.MULTISET));
 
     // TINYINT is assignable from...
-    rules.add(SqlTypeName.TINYINT, EnumSet.of(SqlTypeName.TINYINT));
+    rules.add(SqlTypeName.TINYINT, EnumSet.of(SqlTypeName.TINYINT, SqlTypeName.BIT));
+
+    // BIT is assignable from... BIT is T-SQL's number-shaped boolean and behaves as an exact
+    // integer, so it assigns interchangeably with TINYINT. Without an entry here every operator
+    // that derives a return type over a BIT operand fails with "No assign rules for BIT defined".
+    rules.add(SqlTypeName.BIT, EnumSet.of(SqlTypeName.BIT, SqlTypeName.TINYINT));
 
     // SMALLINT is assignable from...
     rule.clear();
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rules.add(SqlTypeName.SMALLINT, rule);
 
     // INTEGER is assignable from...
     rule.clear();
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rules.add(SqlTypeName.INTEGER, rule);
@@ -86,6 +93,7 @@ public class SqlTypeAssignmentRule implements SqlTypeMappingRule {
     // BIGINT is assignable from...
     rule.clear();
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rule.add(SqlTypeName.BIGINT);
@@ -94,6 +102,7 @@ public class SqlTypeAssignmentRule implements SqlTypeMappingRule {
     // FLOAT (up to 64 bit floating point) is assignable from...
     rule.clear();
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rule.add(SqlTypeName.BIGINT);
@@ -105,6 +114,7 @@ public class SqlTypeAssignmentRule implements SqlTypeMappingRule {
     // REAL (32 bit floating point) is assignable from...
     rule.clear();
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rule.add(SqlTypeName.BIGINT);
@@ -117,6 +127,7 @@ public class SqlTypeAssignmentRule implements SqlTypeMappingRule {
     // DOUBLE is assignable from...
     rule.clear();
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rule.add(SqlTypeName.BIGINT);
@@ -129,6 +140,7 @@ public class SqlTypeAssignmentRule implements SqlTypeMappingRule {
     // DECIMAL is assignable from...
     rule.clear();
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rule.add(SqlTypeName.BIGINT);
@@ -201,6 +213,7 @@ public class SqlTypeAssignmentRule implements SqlTypeMappingRule {
     // ANY is assignable from ...
     rule.clear();
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rule.add(SqlTypeName.BIGINT);

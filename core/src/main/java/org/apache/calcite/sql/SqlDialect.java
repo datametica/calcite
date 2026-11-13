@@ -1068,6 +1068,15 @@ public class SqlDialect {
               SqlParserPos.ZERO);
         }
         break;
+      case BIT:
+        // BIT exists only so a T-SQL BIT stays distinguishable while it is being converted. No
+        // target spells it that way, so by default it renders as the smallest integer, which is
+        // what it stores. A dialect with a better fit overrides this (BigQuery: INT64). Only a
+        // column reaches here - a BIT variable is retyped by the consumer before any renderer
+        // sees it - and a column has to stay numeric so it remains countable.
+        return new SqlDataTypeSpec(
+            new SqlBasicTypeNameSpec(SqlTypeName.TINYINT, SqlParserPos.ZERO),
+            SqlParserPos.ZERO);
       default:
         break;
       }

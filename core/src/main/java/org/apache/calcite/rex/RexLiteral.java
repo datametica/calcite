@@ -340,6 +340,7 @@ public class RexLiteral extends RexNode {
     case NULL:
       return false; // value should have been null
     case INTEGER: // not allowed -- use Decimal
+    case BIT:
     case TINYINT:
     case SMALLINT:
       if (strict) {
@@ -429,6 +430,7 @@ public class RexLiteral extends RexNode {
     final SqlTypeName typeName = type.getSqlTypeName();
     switch (typeName) {
     case INTEGER:
+    case BIT:
     case TINYINT:
     case SMALLINT:
       return SqlTypeName.DECIMAL;
@@ -1095,6 +1097,7 @@ public class RexLiteral extends RexNode {
     case BIGINT:
     case INTEGER:
     case SMALLINT:
+    case BIT:
     case TINYINT:
     case DOUBLE:
     case REAL:
