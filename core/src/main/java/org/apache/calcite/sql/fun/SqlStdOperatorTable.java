@@ -2235,7 +2235,18 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
             SqlCall call,
             int leftPrec,
             int rightPrec) {
-          call.operand(0).unparse(writer, 0, 0);
+          final SqlNode query = call.operand(0);
+          if (!query.isA(SqlKind.SET_QUERY)) {
+            // A SELECT writes its own parentheses when it is used as a value.
+            query.unparse(writer, 0, 0);
+            return;
+          }
+          // A set operation does not, so "SELECT a, (q1 UNION q2)" would
+          // come out as "SELECT a, SELECT ... UNION SELECT ..." (RORAB-3761).
+          final SqlWriter.Frame frame =
+              writer.startList(SqlWriter.FrameTypeEnum.SUB_QUERY, "(", ")");
+          query.unparse(writer, 0, 0);
+          writer.endList(frame);
         }
 
         @Override public boolean argumentMustBeScalar(int ordinal) {
