@@ -19,6 +19,7 @@ package org.apache.calcite.rel;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalAggregate;
+import org.apache.calcite.rel.logical.LogicalAsofJoin;
 import org.apache.calcite.rel.logical.LogicalCalc;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalExchange;
@@ -68,6 +69,14 @@ public interface RelShuttle {
   RelNode visit(LogicalExchange exchange);
 
   RelNode visit(LogicalTableModify modify);
+
+  /** Visits a {@link LogicalAsofJoin}.
+   *
+   * <p>This is a default method, delegating to {@link #visit(RelNode)}, so
+   * that existing implementations of this interface continue to compile. */
+  default RelNode visit(LogicalAsofJoin logicalAsofJoin) {
+    return visit((RelNode) logicalAsofJoin);
+  }
 
   RelNode visit(RelNode other);
 }

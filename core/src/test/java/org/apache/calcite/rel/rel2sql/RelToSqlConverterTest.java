@@ -115,6 +115,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -3964,6 +3965,101 @@ class RelToSqlConverterTest {
         .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
         .ok(expected)
         .withDb2().ok(expectedDb2);
+  }
+
+  /** Test case for ASOF JOIN with MATCH_CONDITION: SqlNode -> RelNode -> SqlNode. */
+  @Test void testAsofJoin() {
+    final String sql = "SELECT e.empno, d.deptno\n"
+        + "FROM emp e ASOF JOIN dept d\n"
+        + "MATCH_CONDITION (e.empno >= d.deptno)\n"
+        + "ON e.deptno = d.deptno";
+    final String expected = "SELECT \"EMP\".\"EMPNO\", \"DEPT\".\"DEPTNO\"\n"
+        + "FROM \"SCOTT\".\"EMP\"\n"
+        + "ASOF JOIN \"SCOTT\".\"DEPT\" "
+        + "MATCH_CONDITION (\"EMP\".\"EMPNO\" >= \"DEPT\".\"DEPTNO\") "
+        + "ON \"EMP\".\"DEPTNO\" = \"DEPT\".\"DEPTNO\"";
+    // Snowflake's ASOF JOIN preserves unmatched left rows, so it cannot
+    // express an inner ASOF join
+    final String expectedSnowflakeError = "Inner ASOF JOIN is not supported by this dialect, whose ASOF JOIN "
+        + "preserves unmatched rows of the left input; use LEFT ASOF JOIN "
+        + "and filter out the rows that have no match";
+    sql(sql)
+        .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
+        .ok(expected)
+        .withSnowflake().throws_(expectedSnowflakeError);
+  }
+
+  /** Test case for LEFT ASOF JOIN with MATCH_CONDITION: SqlNode -> RelNode -> SqlNode. */
+  @Test void testLeftAsofJoin() {
+    final String sql = "SELECT e.empno, e.ename, d.deptno, d.dname\n"
+        + "FROM emp e LEFT ASOF JOIN dept d\n"
+        + "MATCH_CONDITION (e.deptno <= d.deptno)\n"
+        + "ON e.ename = d.dname AND e.job = d.loc";
+    final String expectedSnowflake = "SELECT \"t\".\"EMPNO\", \"t\".\"ENAME\", "
+        + "\"DEPT\".\"DEPTNO\", \"DEPT\".\"DNAME\"\n"
+        + "FROM (SELECT \"EMPNO\", \"ENAME\", \"JOB\", \"MGR\", \"HIREDATE\", "
+        + "\"SAL\", \"COMM\", \"DEPTNO\", CAST(\"ENAME\" AS VARCHAR(14)) AS \"ENAME0\", "
+        + "CAST(\"JOB\" AS VARCHAR(13)) AS \"JOB0\"\n"
+        + "FROM \"SCOTT\".\"EMP\") AS \"t\"\n"
+        + "ASOF JOIN \"SCOTT\".\"DEPT\" "
+        + "MATCH_CONDITION (\"t\".\"DEPTNO\" <= \"DEPT\".\"DEPTNO\") "
+        + "ON \"t\".\"ENAME0\" = \"DEPT\".\"DNAME\" "
+        + "AND \"t\".\"JOB0\" = \"DEPT\".\"LOC\"";
+    sql(sql)
+        .schema(CalciteAssert.SchemaSpec.JDBC_SCOTT)
+        .withSnowflake().ok(expectedSnowflake);
+  }
+
+  /** Test case for ASOF JOIN built with {@link RelBuilder#asofJoin}. */
+  @Test void testAsofJoinWithRelBuilder() {
+    final RelBuilder builder = relBuilder();
+    final RelNode root = builder
+        .scan("EMP")
+        .scan("DEPT")
+        .asofJoin(JoinRelType.ASOF,
+            builder.equals(builder.field(2, 0, "ENAME"),
+                builder.field(2, 1, "DNAME")),
+            builder.lessThan(builder.field(2, 0, "DEPTNO"),
+                builder.field(2, 1, "DEPTNO")))
+        .project(builder.field("EMPNO"), builder.field("DNAME"))
+        .build();
+    final String expected = "SELECT \"EMP\".\"EMPNO\", \"DEPT\".\"DNAME\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "ASOF JOIN \"scott\".\"DEPT\" "
+        + "MATCH_CONDITION (\"EMP\".\"DEPTNO\" < \"DEPT\".\"DEPTNO\") "
+        + "ON \"EMP\".\"ENAME\" = \"DEPT\".\"DNAME\"";
+    assertThat(toSql(root, DatabaseProduct.CALCITE.getDialect()),
+        isLinux(expected));
+    // Snowflake's ASOF JOIN preserves unmatched left rows, so it cannot
+    // express an inner ASOF join
+    final UnsupportedOperationException e =
+        assertThrows(UnsupportedOperationException.class,
+            () -> toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()));
+    assertThat(e.getMessage(),
+        is("Inner ASOF JOIN is not supported by this dialect, whose ASOF JOIN "
+            + "preserves unmatched rows of the left input; use LEFT ASOF JOIN "
+            + "and filter out the rows that have no match"));
+  }
+
+  /** Test case for ASOF JOIN without an ON clause. The join condition is
+   * TRUE, and no "ON TRUE" must be generated. */
+  @Test void testLeftAsofJoinWithoutOnCondition() {
+    final RelBuilder builder = relBuilder();
+    final RelNode root = builder
+        .scan("EMP")
+        .scan("DEPT")
+        .asofJoin(JoinRelType.LEFT_ASOF,
+            builder.literal(true),
+            builder.greaterThanOrEqual(builder.field(2, 0, "DEPTNO"),
+                builder.field(2, 1, "DEPTNO")))
+        .project(builder.field("EMPNO"), builder.field("DNAME"))
+        .build();
+    final String expectedSnowflake = "SELECT \"EMP\".\"EMPNO\", \"DEPT\".\"DNAME\"\n"
+        + "FROM \"scott\".\"EMP\"\n"
+        + "ASOF JOIN \"scott\".\"DEPT\" "
+        + "MATCH_CONDITION (\"EMP\".\"DEPTNO\" >= \"DEPT\".\"DEPTNO\")";
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
+        isLinux(expectedSnowflake));
   }
 
   /** Test case for
