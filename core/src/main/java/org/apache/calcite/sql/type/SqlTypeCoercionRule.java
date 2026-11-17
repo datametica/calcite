@@ -108,6 +108,7 @@ public class SqlTypeCoercionRule implements SqlTypeMappingRule {
     // Make numbers symmetrical,
     // and make VARCHAR, CHAR, and TIMESTAMP castable to/from numbers
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rule.add(SqlTypeName.BIGINT);
@@ -279,6 +280,7 @@ public class SqlTypeCoercionRule implements SqlTypeMappingRule {
     rule.clear();
 
     rule.add(SqlTypeName.TINYINT);
+    rule.add(SqlTypeName.BIT);
     rule.add(SqlTypeName.SMALLINT);
     rule.add(SqlTypeName.INTEGER);
     rule.add(SqlTypeName.BIGINT);
