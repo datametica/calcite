@@ -47,6 +47,7 @@ import org.apache.calcite.rel.hint.HintStrategyTable;
 import org.apache.calcite.rel.hint.Hintable;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.logical.LogicalAggregate;
+import org.apache.calcite.rel.logical.LogicalAsofJoin;
 import org.apache.calcite.rel.logical.LogicalCalc;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalJoin;
@@ -3865,9 +3866,19 @@ public abstract class RelOptUtil {
 
     final RelNode right = relBuilder.build();
     final RelNode left = relBuilder.build();
-    relBuilder.push(
-        originalJoin.copy(originalJoin.getTraitSet(),
-            joinCond, left, right, joinType, originalJoin.isSemiJoinDone()));
+    if (joinType == JoinRelType.ASOF || joinType == JoinRelType.LEFT_ASOF) {
+      LogicalAsofJoin ljoin = (LogicalAsofJoin) originalJoin;
+      // Right-side fields are shifted by the expressions pushed to the left input
+      RexNode match =
+          RexUtil.shift(ljoin.getMatchCondition(), leftCount, extraLeftExprs.size());
+      RelNode copy =
+          ljoin.copy(originalJoin.getTraitSet(), joinCond, match, left, right);
+      relBuilder.push(copy);
+    } else {
+      relBuilder.push(
+          originalJoin.copy(originalJoin.getTraitSet(),
+              joinCond, left, right, joinType, originalJoin.isSemiJoinDone()));
+    }
     if (!extraLeftExprs.isEmpty() || !extraRightExprs.isEmpty()) {
       final int totalFields = joinType.projectsRight()
           ? leftCount + extraLeftExprs.size() + rightCount + extraRightExprs.size()

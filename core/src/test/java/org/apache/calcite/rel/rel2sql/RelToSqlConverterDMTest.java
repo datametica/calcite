@@ -42,6 +42,7 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
@@ -10678,6 +10679,21 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expecteSql));
   }
 
+  @Test public void testArrayConstructCompact() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    RexNode projectNode =
+        relBuilder.call(SqlLibraryOperators.ARRAY_CONSTRUCT_COMPACT, relBuilder.field(1),
+            relBuilder.field(2));
+    RelNode root = relBuilder
+        .project(projectNode)
+        .build();
+    final String expectedSql = "SELECT ARRAY_CONSTRUCT_COMPACT(\"ENAME\", \"JOB\") AS \"$f0\"\n"
+        + "FROM \"scott\".\"EMP\"";
+
+    assertThat(projectNode.getType().toString(), is("VARCHAR(10) ARRAY"));
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedSql));
+  }
+
   @Test public void testSnowflakeJaroWinklerSimilarity() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     RexNode jaroWinklerNode =
@@ -12055,6 +12071,115 @@ class RelToSqlConverterDMTest {
         + "FROM foodmart.department\n"
         + "WHERE department_id = employee.department_id) AS dept_id\n"
         + "FROM foodmart.employee";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** A correlated scalar sub-query in the SELECT list of a GROUP BY query (RORAB-3780).
+   * The Project merges into the Aggregate's SELECT, so the correlation must use the FROM
+   * table of that SELECT, not the alias of the Aggregate result (t0), which is never written. */
+  @Test void testCorrelatedScalarQueryInSelectListOverAggregate() {
+    RelBuilder builder = foodmartRelBuilder();
+    builder.scan("employee")
+        .project(builder.field("first_name"))
+        .aggregate(builder.groupKey(builder.field("first_name")),
+            builder.countStar("cnt"));
+    CorrelationId correlationId = builder.getCluster().createCorrel();
+    RelDataType relDataType = builder.peek().getRowType();
+    RexNode correlVariable = builder.getRexBuilder().makeCorrel(relDataType, correlationId);
+    RexNode correlatedScalarSubQuery = RexSubQuery.scalar(builder
+        .scan("position")
+        .filter(builder
+            .equals(
+                builder.field("position_title"),
+                builder.getRexBuilder().makeFieldAccess(correlVariable, 0)))
+        .project(builder.field("position_title"))
+        .build());
+    RelNode root = builder
+        .project(
+            ImmutableSet.of(builder.field("cnt"), correlatedScalarSubQuery),
+            ImmutableSet.of("cnt", "title"),
+            false,
+            ImmutableSet.of(correlationId))
+        .build();
+    final String expectedSql = "SELECT COUNT(*) AS cnt, (SELECT position_title\n"
+        + "FROM foodmart.position\n"
+        + "WHERE position_title = employee.first_name) AS title\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY first_name";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** Same as {@link #testCorrelatedScalarQueryInSelectListOverAggregate} with a HAVING
+   * filter between the Project and the Aggregate (RORAB-3780). Here the GROUP BY query
+   * becomes a sub-select (t1), so the correlation must use that alias, not the alias of
+   * the Filter's input (t0). */
+  @Test void testCorrelatedScalarQueryInSelectListOverAggregateWithHaving() {
+    RelBuilder builder = foodmartRelBuilder();
+    builder.scan("employee")
+        .project(builder.field("first_name"))
+        .aggregate(builder.groupKey(builder.field("first_name")),
+            builder.countStar("cnt"))
+        .filter(builder.greaterThan(builder.field("cnt"), builder.literal(1)));
+    CorrelationId correlationId = builder.getCluster().createCorrel();
+    RelDataType relDataType = builder.peek().getRowType();
+    RexNode correlVariable = builder.getRexBuilder().makeCorrel(relDataType, correlationId);
+    RexNode correlatedScalarSubQuery = RexSubQuery.scalar(builder
+        .scan("position")
+        .filter(builder
+            .equals(
+                builder.field("position_title"),
+                builder.getRexBuilder().makeFieldAccess(correlVariable, 0)))
+        .project(builder.field("position_title"))
+        .build());
+    RelNode root = builder
+        .project(
+            ImmutableSet.of(builder.field("cnt"), correlatedScalarSubQuery),
+            ImmutableSet.of("cnt", "title"),
+            false,
+            ImmutableSet.of(correlationId))
+        .build();
+    final String expectedSql = "SELECT cnt, (SELECT position_title\n"
+        + "FROM foodmart.position\n"
+        + "WHERE position_title = t1.first_name) AS title\n"
+        + "FROM (SELECT first_name, COUNT(*) AS cnt\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY first_name\n"
+        + "HAVING cnt > 1) AS t1";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+  }
+
+  /** A correlation to an aggregate result cannot use a column of the GROUP BY query's
+   * FROM table, so the GROUP BY query becomes a sub-select with an alias (RORAB-3780). */
+  @Test void testCorrelatedScalarQueryInSelectListOnAggregateResult() {
+    RelBuilder builder = foodmartRelBuilder();
+    builder.scan("employee")
+        .project(builder.field("first_name"))
+        .aggregate(builder.groupKey(builder.field("first_name")),
+            builder.countStar("cnt"));
+    CorrelationId correlationId = builder.getCluster().createCorrel();
+    RelDataType relDataType = builder.peek().getRowType();
+    RexNode correlVariable = builder.getRexBuilder().makeCorrel(relDataType, correlationId);
+    RexNode correlatedScalarSubQuery = RexSubQuery.scalar(builder
+        .scan("position")
+        .filter(builder
+            .equals(
+                builder.field("position_id"),
+                builder.getRexBuilder().makeFieldAccess(correlVariable, 1)))
+        .project(builder.field("position_title"))
+        .build());
+    RelNode root = builder
+        .project(
+            ImmutableSet.of(builder.field("first_name"), correlatedScalarSubQuery),
+            ImmutableSet.of("first_name", "title"),
+            false,
+            ImmutableSet.of(correlationId))
+        .build();
+    final String expectedSql = "SELECT first_name, (SELECT position_title\n"
+        + "FROM foodmart.position\n"
+        + "WHERE position_id = t0.cnt) AS title\n"
+        + "FROM (SELECT first_name, COUNT(*) AS cnt\n"
+        + "FROM foodmart.employee\n"
+        + "GROUP BY first_name) AS t0";
     assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
   }
 
@@ -15939,6 +16064,66 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expectedQuery));
   }
 
+  /** Builds a CASE whose ELSE branch is a scalar sub-query reading a CTE named TMP, under a CTE
+   * scope. The CTE is used only in ELSE. With {@code bareElse} the ELSE branch is the sub-query
+   * itself ({@code ELSE (SELECT MAX(DEPTNO) FROM TMP)}); otherwise it is wrapped in a call
+   * ({@code ELSE 'dept ' || CAST((SELECT MAX(DEPTNO) FROM TMP) AS STRING)}). */
+  private static RelNode cteUsedOnlyInCaseElse(boolean bareElse) {
+    final RelBuilder builder = relBuilder();
+    final RelNode cteBody = builder.scan("EMP")
+        .project(builder.field("DEPTNO"))
+        .distinct()
+        .build();
+    final RelNode cteRel =
+        cteBody.copy(cteBody.getTraitSet().plus(new CTEDefinationTrait(true, "TMP", false)),
+            cteBody.getInputs());
+    final RelNode maxDeptFromCte = builder.push(cteRel)
+        .aggregate(builder.groupKey(), builder.max(builder.field("DEPTNO")))
+        .build();
+
+    builder.scan("EMP");
+    final RexNode subQuery = RexSubQuery.scalar(maxDeptFromCte);
+    final RexNode caseExpr = bareElse
+        ? builder.call(SqlStdOperatorTable.CASE,
+        builder.equals(builder.field("ENAME"), builder.literal("KING")),
+        builder.field("DEPTNO"),
+        subQuery)
+        : builder.call(SqlStdOperatorTable.CASE,
+            builder.equals(builder.field("ENAME"), builder.literal("KING")),
+            builder.literal("boss"),
+            builder.call(SqlStdOperatorTable.CONCAT, builder.literal("dept "),
+                builder.cast(subQuery, SqlTypeName.VARCHAR)));
+    final RelNode select = builder.project(builder.alias(caseExpr, "ROLE")).build();
+    return select.copy(select.getTraitSet().plus(new CTEScopeTrait(true)), select.getInputs());
+  }
+
+  /** RSFB-5421: a CTE referenced only inside the ELSE branch of a CASE (wrapped in another call)
+   * must be lifted into the WITH list and referenced by name, not left inline as
+   * {@code (TMP AS (SELECT ...))}. */
+  @Test public void testCTEReferencedInCaseElseWrappedInCall() {
+    final RelNode root = cteUsedOnlyInCaseElse(false);
+    final String expectedBqSql = "WITH TMP AS (SELECT DEPTNO\n"
+        + "FROM scott.EMP\n"
+        + "GROUP BY DEPTNO) (SELECT CASE WHEN ENAME = 'KING' THEN 'boss' "
+        + "ELSE 'dept ' || CAST((SELECT MAX(DEPTNO) AS `$f0`\n"
+        + "FROM TMP) AS STRING) END AS ROLE\n"
+        + "FROM scott.EMP)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
+  /** RSFB-5421: same as {@link #testCTEReferencedInCaseElseWrappedInCall()} but the ELSE branch is
+   * the bare scalar sub-query. */
+  @Test public void testCTEReferencedInCaseElseAsBareSubQuery() {
+    final RelNode root = cteUsedOnlyInCaseElse(true);
+    final String expectedBqSql = "WITH TMP AS (SELECT DEPTNO\n"
+        + "FROM scott.EMP\n"
+        + "GROUP BY DEPTNO) (SELECT CASE WHEN ENAME = 'KING' THEN DEPTNO "
+        + "ELSE (SELECT MAX(DEPTNO) AS `$f0`\n"
+        + "FROM TMP) END AS ROLE\n"
+        + "FROM scott.EMP)";
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedBqSql));
+  }
+
   @Test public void testWithRegrSlope() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     final RexNode regrSlopeCall = relBuilder
@@ -15967,6 +16152,26 @@ class RelToSqlConverterDMTest {
         + "FROM \"scott\".\"EMP\"";
 
     assertThat(toSql(rel, DatabaseProduct.CALCITE.getDialect()), isLinux(expectedSql));
+  }
+
+  @Test public void testAggregateCallBindingWithMultipleCollationKeys() {
+    final RelNode input = relBuilder().scan("EMP").build();
+    final RelDataType argumentType =
+        input.getRowType().getFieldList().get(1).getType();
+    final RelCollation collation =
+        RelCollations.of(new RelFieldCollation(0), new RelFieldCollation(5));
+    final AggregateCall call =
+        AggregateCall.create(SqlStdOperatorTable.PERCENTILE_DISC, false, false, false,
+        ImmutableList.of(), ImmutableList.of(1), -1, null, collation,
+        argumentType, "percentile_disc");
+    final LogicalAggregate aggregate =
+        LogicalAggregate.create(input, ImmutableList.of(), ImmutableBitSet.of(), null, ImmutableList.of(call));
+
+    final RelDataType collationType =
+        call.createBinding(aggregate).getCollationType();
+    assertThat(collationType, is(argumentType));
+    assertThat(collationType,
+        is(not(input.getRowType().getFieldList().get(0).getType())));
   }
 
   @Test void testProtectedCteProjectNotPrunedByAggregateWithCte() {

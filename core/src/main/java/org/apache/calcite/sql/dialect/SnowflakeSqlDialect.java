@@ -859,4 +859,8 @@ public class SnowflakeSqlDialect extends SqlDialect {
     return true;
   }
 
+  @Override public boolean isAsofJoinLeftOuter() {
+    return true;
+  }
+
 }
