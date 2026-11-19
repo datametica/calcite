@@ -107,6 +107,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.ANTE_MERIDIAN_INDICATOR_W
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFMONTH;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFWEEK;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DAYOFYEAR;
+import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMMYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.DDMMYYYYHH24;
@@ -137,6 +138,8 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.MILLISECONDS_5;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MINUTE;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMDDYYYY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MMMYY;
+import static org.apache.calcite.sql.SqlDateTimeFormat.MMMYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMYYYY;
 import static org.apache.calcite.sql.SqlDateTimeFormat.MMYYYYDD;
@@ -165,6 +168,7 @@ import static org.apache.calcite.sql.SqlDateTimeFormat.U;
 import static org.apache.calcite.sql.SqlDateTimeFormat.WEEK_OF_YEAR;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMDDHH24MISS;
+import static org.apache.calcite.sql.SqlDateTimeFormat.YYMMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYDDD;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYDDMM;
 import static org.apache.calcite.sql.SqlDateTimeFormat.YYYYMM;
@@ -343,6 +347,10 @@ public class BigQuerySqlDialect extends SqlDialect {
         put(FORMAT_QQYY, "%Q%Q%y");
         put(FORMAT_QQYYYY, "%Q%Q%Y");
         put(MMYYYY, "%m%Y");
+        put(MMMYY, "%b%y");
+        put(MMMYYYY, "%b%Y");
+        put(DDMMMYY, "%d%b%y");
+        put(YYMMM, "%y%b");
       }};
 
   private static final String OR = "|";
