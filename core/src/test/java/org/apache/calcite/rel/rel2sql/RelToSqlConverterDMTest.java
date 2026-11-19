@@ -1984,6 +1984,76 @@ class RelToSqlConverterDMTest {
         isLinux(expectedSnowflake));
   }
 
+  /** RORAB-3761: a scalar sub-query over a set operation is written in parentheses for every dialect.
+   * Without them the output is {@code SELECT EMPNO, SELECT DEPTNO ... UNION SELECT ...}, which no engine
+   * accepts. A SELECT body adds its own parentheses; a set operation does not. */
+  @Test public void testScalarQueryOverSetOperationIsParenthesized() {
+    final RelBuilder builder = relBuilder();
+    final RelNode union = builder
+        .scan("DEPT")
+        .filter(builder.equals(builder.field("DEPTNO"), builder.literal(40)))
+        .project(builder.field(0))
+        .scan("DEPT")
+        .filter(builder.equals(builder.field("DEPTNO"), builder.literal(10)))
+        .project(builder.field(0))
+        .union(false)
+        .build();
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.field("EMPNO"),
+            builder.alias(RexSubQuery.scalar(union), "SC_DEPTNO"))
+        .build();
+    final String expectedPostgres = "SELECT \"EMPNO\", (SELECT \"DEPTNO\"\n"
+        + "FROM \"scott\".\"DEPT\"\n"
+        + "WHERE \"DEPTNO\" = 40\n"
+        + "UNION\n"
+        + "SELECT \"DEPTNO\"\n"
+        + "FROM \"scott\".\"DEPT\"\n"
+        + "WHERE \"DEPTNO\" = 10) AS \"SC_DEPTNO\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    final String expectedBigQuery = "SELECT EMPNO, (SELECT DEPTNO\n"
+        + "FROM scott.DEPT\n"
+        + "WHERE DEPTNO = 40\n"
+        + "UNION DISTINCT\n"
+        + "SELECT DEPTNO\n"
+        + "FROM scott.DEPT\n"
+        + "WHERE DEPTNO = 10) AS SC_DEPTNO\n"
+        + "FROM scott.EMP";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()),
+        isLinux(expectedPostgres));
+    assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()),
+        isLinux(expectedPostgres));
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()),
+        isLinux(expectedBigQuery));
+  }
+
+  /** RORAB-3761: the same for EXCEPT (Oracle MINUS) and INTERSECT. */
+  @Test public void testScalarQueryOverExceptAndIntersectIsParenthesized() {
+    final RelBuilder builder = relBuilder();
+    final RelNode except = builder
+        .scan("DEPT").project(builder.field(0))
+        .scan("EMP").project(builder.field("DEPTNO"))
+        .minus(false)
+        .scan("DEPT").project(builder.field(0))
+        .intersect(false)
+        .build();
+    final RelNode root = builder
+        .scan("EMP")
+        .project(builder.alias(RexSubQuery.scalar(except), "SC_DEPTNO"))
+        .build();
+    final String expected = "SELECT (SELECT *\n"
+        + "FROM (SELECT \"DEPTNO\"\n"
+        + "FROM \"scott\".\"DEPT\"\n"
+        + "EXCEPT\n"
+        + "SELECT \"DEPTNO\"\n"
+        + "FROM \"scott\".\"EMP\")\n"
+        + "INTERSECT\n"
+        + "SELECT \"DEPTNO\"\n"
+        + "FROM \"scott\".\"DEPT\") AS \"SC_DEPTNO\"\n"
+        + "FROM \"scott\".\"EMP\"";
+    assertThat(toSql(root, DatabaseProduct.POSTGRESQL.getDialect()), isLinux(expected));
+  }
+
   @Test void testPositionFunctionForHive() {
     final String query = "select position('A' IN 'ABC') from \"product\"";
     final String expected = "SELECT INSTR('ABC', 'A')\n"
