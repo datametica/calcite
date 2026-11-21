@@ -569,7 +569,9 @@ public class RexBuilder {
       Comparable value = literal.getValueAs(Comparable.class);
       SqlTypeName typeName = literal.getTypeName();
 
-      // Allow casting boolean literals to integer types.
+      // Allow casting boolean literals to integer types. BIT is deliberately excluded: it is
+      // T-SQL's number-shaped boolean, and a cast of it to an exact type must stay a plain cast
+      // so the target reads it as the number it is.
       if (exp.getType().getSqlTypeName() == SqlTypeName.BOOLEAN
           && SqlTypeUtil.isExactNumeric(type)) {
         return makeCastBooleanToExact(type, exp);
