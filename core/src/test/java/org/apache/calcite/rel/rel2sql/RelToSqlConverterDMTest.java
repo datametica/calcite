@@ -80,6 +80,7 @@ import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexWindowBounds;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDialect;
@@ -16258,5 +16259,24 @@ class RelToSqlConverterDMTest {
         + "FROM (SELECT EMPNO, COALESCE(ENAME, '') || COALESCE(JOB, '') AS MS_DT, SAL\n"
         + "FROM scott.EMP) PIVOT (MAX(SAL) FOR MS_DT IN ('SMITHCLERK' AS AU_DATE))";
     relFn(b -> root).withBigQuery().ok(expected);
+  }
+
+  /** An aliased PIVOT whose source is a sub-query that reads a CTE: the inline CTE body in
+   * that sub-query's FROM is replaced by the CTE name. Before RORAB-3873 the body stayed in
+   * the FROM (as {@code FROM (DEPT_STATUS AS (SELECT ...))}) in a CREATE VIEW. */
+  @Test void testUpdateSqlNodeReplacesCteInsideAliasedPivotSubQuery() throws Exception {
+    final SqlSelect outer = (SqlSelect) SqlParser.create("SELECT * FROM "
+        + "(SELECT DEPTNO, MTYPE, STATUS, ENAME FROM T) "
+        + "PIVOT (MAX(ENAME) FOR STATUS IN ('M' AS M_NAME, 'S' AS S_NAME)) AS A").parseQuery();
+    final SqlPivot pivot = ((SqlBasicCall) outer.getFrom()).operand(0);
+    final SqlSelect pivotSource = (SqlSelect) pivot.query;
+    final SqlNode cteBody = SqlParser.create("SELECT DEPTNO, 'MS' AS MTYPE, STATUS, ENAME FROM EMP")
+        .parseQuery();
+    pivotSource.setFrom(
+        new SqlWithItem(SqlParserPos.ZERO, new SqlIdentifier("DEPT_STATUS", SqlParserPos.ZERO),
+            null, cteBody));
+    CTERelToSqlUtil.updateSqlNode(outer);
+    assertThat(pivotSource.getFrom() instanceof SqlIdentifier, is(true));
+    assertThat(((SqlIdentifier) pivotSource.getFrom()).getSimple(), is("DEPT_STATUS"));
   }
 }

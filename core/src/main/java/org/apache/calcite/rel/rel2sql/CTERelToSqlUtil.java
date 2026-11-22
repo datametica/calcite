@@ -435,6 +435,9 @@ public class CTERelToSqlUtil {
         && ((SqlBasicCall) ((SqlPivot) operand).query).operand(0) instanceof SqlWithItem) {
       ((SqlPivot) ((SqlBasicCall) parentNode).getOperandList().get(0)).setOperand(0,
           ((SqlWithItem) ((SqlBasicCall) ((SqlPivot) operand).query).operand(0)).name);
+    } else if (operand instanceof SqlPivot) {
+      // A PIVOT whose source is a sub-query: replace inline CTE bodies inside that sub-query.
+      updatePivotSubQuerySource(((SqlPivot) operand).query);
     } else if (operand instanceof SqlWithItem) {
       SqlIdentifier identifier = fetchCTEIdentifier(parentNode);
       if (identifier != null) {
