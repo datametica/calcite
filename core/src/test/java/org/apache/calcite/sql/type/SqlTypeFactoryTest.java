@@ -87,6 +87,38 @@ class SqlTypeFactoryTest {
     assertThat(leastRestrictive.isNullable(), is(true));
   }
 
+  /** A UNION of NULL and the generic INTERVAL type (BigQuery INTERVAL) must
+   * derive its row type. Before the fix the assignment rule had no entry for
+   * INTERVAL and threw "No assign rules for INTERVAL defined". */
+  @Test void testLeastRestrictiveNullAndGenericInterval() {
+    SqlTypeFixture f = new SqlTypeFixture();
+    RelDataType nullableInterval =
+        f.typeFactory.createTypeWithNullability(f.sqlInterval, true);
+    for (List<RelDataType> types
+        : ImmutableList.of(Lists.newArrayList(f.sqlNull, f.sqlInterval),
+            Lists.newArrayList(f.sqlInterval, f.sqlNull),
+            Lists.newArrayList(nullableInterval, f.sqlInterval),
+            Lists.newArrayList(f.sqlNull, nullableInterval, f.sqlInterval))) {
+      RelDataType leastRestrictive =
+          f.typeFactory.leastRestrictive(types, SqlTypeAssignmentRule.instance());
+      assertThat(types.toString(), leastRestrictive.getSqlTypeName(),
+          is(SqlTypeName.INTERVAL));
+      assertThat(types.toString(), leastRestrictive.isNullable(), is(true));
+    }
+  }
+
+  /** The generic INTERVAL type accepts NULL, itself and every day-time and
+   * year-month interval type. */
+  @Test void testGenericIntervalAssignmentRule() {
+    SqlTypeAssignmentRule rule = SqlTypeAssignmentRule.instance();
+    assertTrue(rule.canApplyFrom(SqlTypeName.INTERVAL, SqlTypeName.NULL));
+    assertTrue(rule.canApplyFrom(SqlTypeName.INTERVAL, SqlTypeName.INTERVAL));
+    for (SqlTypeName interval : SqlTypeName.INTERVAL_TYPES) {
+      assertTrue(rule.canApplyFrom(SqlTypeName.INTERVAL, interval), interval.toString());
+    }
+    assertFalse(rule.canApplyFrom(SqlTypeName.INTERVAL, SqlTypeName.INTEGER));
+  }
+
   @Test void testLeastRestrictiveStructWithNull() {
     SqlTypeFixture f = new SqlTypeFixture();
     RelDataType leastRestrictive =
