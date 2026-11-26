@@ -18,6 +18,8 @@ package org.apache.calcite.rel.rules.dm;
 
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelRule;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.rules.TransformationRule;
@@ -58,7 +60,13 @@ public class RemoveSingleRowCrossJoinRule
         ImmutableRemoveSingleRowCrossJoinRule.Config.of()
             .withOperandSupplier(b ->
                 b.operand(LogicalProject.class)
-                    .oneInput(r -> r.operand(LogicalJoin.class).anyInputs())
+                    .oneInput(r -> r.operand(LogicalJoin.class)
+                        .inputs(
+                            b1 -> b1.operand(Values.class)
+                                .predicate(RemoveSingleRowCrossJoinRule::hasScalarValue)
+                                .noInputs(),
+                            b2 -> b2.operand(RelNode.class).anyInputs()
+                            ))
             )
             .withDescription("RemoveSingleRowCrossJoinRule")
             .as(RemoveSingleRowCrossJoinRule.Config.class);
@@ -66,5 +74,9 @@ public class RemoveSingleRowCrossJoinRule
     @Override default RemoveSingleRowCrossJoinRule toRule() {
       return new RemoveSingleRowCrossJoinRule(this);
     }
+  }
+
+  public static boolean hasScalarValue(Values values) {
+    return values.getTuples().size() == 1 && values.getTuples().get(0).size() == 1;
   }
 }
