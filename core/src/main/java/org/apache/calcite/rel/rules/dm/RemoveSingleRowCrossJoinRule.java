@@ -65,8 +65,7 @@ public class RemoveSingleRowCrossJoinRule
                             b1 -> b1.operand(Values.class)
                                 .predicate(RemoveSingleRowCrossJoinRule::hasScalarValue)
                                 .noInputs(),
-                            b2 -> b2.operand(RelNode.class).anyInputs()
-                            ))
+                            b2 -> b2.operand(RelNode.class).anyInputs()))
             )
             .withDescription("RemoveSingleRowCrossJoinRule")
             .as(RemoveSingleRowCrossJoinRule.Config.class);
