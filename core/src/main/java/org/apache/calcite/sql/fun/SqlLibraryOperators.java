@@ -20,6 +20,7 @@ import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlBasicFunction;
 import org.apache.calcite.sql.SqlBinaryOperator;
@@ -28,6 +29,7 @@ import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
@@ -35,6 +37,7 @@ import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandHandlers;
 import org.apache.calcite.sql.type.OperandTypes;
@@ -2976,6 +2979,45 @@ public abstract class SqlLibraryOperators {
   @LibraryOperator(libraries = {MSSQL, SPARK})
   public static final SqlFunction TRY_CAST =
       new SqlCastFunction("TRY_CAST", SqlKind.SAFE_CAST);
+
+  /** The "CAST(text AS type FORMAT mask)" call of BigQuery where the mask is an
+   * expression (a parameter, a variable or a concatenation), not a literal. A cast
+   * type carries only a literal format, so this call prints the cast itself.
+   * Operands: the text, the mask, and the name of the target type as a character
+   * literal. For example, CAST_WITH_FORMAT_EXPRESSION(p_s, p_fmt, 'TIMESTAMP')
+   * prints {@code CAST(p_s AS DATETIME FORMAT p_fmt)}. */
+  @LibraryOperator(libraries = {BIG_QUERY})
+  public static final SqlFunction CAST_WITH_FORMAT_EXPRESSION =
+      new SqlFunction("CAST_WITH_FORMAT_EXPRESSION", SqlKind.OTHER_FUNCTION,
+          SqlLibraryOperators::castWithFormatExpressionType, null,
+          OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.CHARACTER,
+              SqlTypeFamily.CHARACTER),
+          SqlFunctionCategory.SYSTEM) {
+        @Override public void unparse(SqlWriter writer, SqlCall call,
+            int leftPrec, int rightPrec) {
+          final SqlWriter.Frame frame = writer.startFunCall("CAST");
+          call.operand(0).unparse(writer, 0, 0);
+          writer.sep("AS");
+          final SqlTypeName typeName =
+              SqlTypeName.get(((SqlLiteral) call.operand(2)).getValueAs(String.class));
+          writer.getDialect()
+              .getCastSpec(new BasicSqlType(RelDataTypeSystem.DEFAULT, requireNonNull(typeName)))
+              .unparse(writer, 0, 0);
+          writer.sep("FORMAT");
+          call.operand(1).unparse(writer, 0, 0);
+          writer.endFunCall(frame);
+        }
+      };
+
+  /** The nullable type named by the third operand of
+   * {@link #CAST_WITH_FORMAT_EXPRESSION}. */
+  private static RelDataType castWithFormatExpressionType(SqlOperatorBinding opBinding) {
+    final RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
+    final SqlTypeName typeName =
+        SqlTypeName.get(requireNonNull(opBinding.getOperandLiteralValue(2, String.class)));
+    return typeFactory.createTypeWithNullability(
+        typeFactory.createSqlType(requireNonNull(typeName)), true);
+  }
 
   /** The "OFFSET(index)" array subscript operator used by BigQuery. The index
    * starts at 0 and produces an error if the index is out of range. */
