@@ -16223,4 +16223,26 @@ class RelToSqlConverterDMTest {
     assertThat(sqlNodes, hasSize(1));
     assertThat(((SqlWithItem) sqlNodes.get(0)).name.toString(), is("R"));
   }
+
+  @Test public void testBigQueryFlattenProjectOverSortOrderBy() {
+    String query = "select \"full_name\" from \"employee\" "
+        + "order by \"first_name\" desc nulls first";
+    final String expectedBigQuery = "SELECT full_name\n"
+        + "FROM foodmart.employee\n"
+        + "ORDER BY first_name DESC NULLS FIRST";
+    sql(query)
+        .withBigQuery()
+        .ok(expectedBigQuery);
+  }
+
+  @Test public void testNonBigQueryDoesNotFlattenProjectOverSort() {
+    String query = "select \"full_name\" from \"employee\" order by \"hire_date\"";
+    final String expectedOracle = "SELECT \"full_name\"\n"
+        + "FROM (SELECT \"full_name\", \"hire_date\"\n"
+        + "FROM \"foodmart\".\"employee\"\n"
+        + "ORDER BY \"hire_date\") \"t0\"";
+    sql(query)
+        .withOracle()
+        .ok(expectedOracle);
+  }
 }
