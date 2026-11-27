@@ -10680,6 +10680,25 @@ class RelToSqlConverterDMTest {
     assertThat(toSql(root, DatabaseProduct.SNOWFLAKE.getDialect()), isLinux(expecteSql));
   }
 
+  /** CAST(text AS type FORMAT mask) where the mask is an expression (a column here, a parameter or a
+   * concatenation in a script), so it cannot be a FORMAT literal of the cast type. */
+  @Test public void testCastWithFormatExpression() {
+    RelBuilder relBuilder = relBuilder().scan("EMP");
+    RexNode castNode =
+        relBuilder.call(SqlLibraryOperators.CAST_WITH_FORMAT_EXPRESSION, relBuilder.field("ENAME"),
+            relBuilder.field("JOB"), relBuilder.literal("TIMESTAMP"));
+    RelNode root = relBuilder
+        .project(castNode)
+        .build();
+    final String expectedSql = "SELECT CAST(ENAME AS DATETIME FORMAT JOB) AS `$f0`\n"
+        + "FROM scott.EMP";
+
+    assertThat(toSql(root, DatabaseProduct.BIG_QUERY.getDialect()), isLinux(expectedSql));
+    assertThat(root.getRowType().getFieldList().get(0).getType().getSqlTypeName(),
+        is(SqlTypeName.TIMESTAMP));
+    assertThat(root.getRowType().getFieldList().get(0).getType().isNullable(), is(true));
+  }
+
   @Test public void testArrayConstructCompact() {
     RelBuilder relBuilder = relBuilder().scan("EMP");
     RexNode projectNode =
