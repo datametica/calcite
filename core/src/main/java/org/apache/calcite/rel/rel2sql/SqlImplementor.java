@@ -119,6 +119,7 @@ import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
+import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
@@ -2660,7 +2661,7 @@ public abstract class SqlImplementor {
         // Columns that RelBuilder.sortLimit materialised only so the collation had an ordinal to
         // reference are not part of the SELECT list; not projecting them is not a reason to wrap.
         return !areAllNamedInputFieldsProjected(((Project) rel).getProjects(), rel.getRowType(),
-            relInput.getRowType(), mergeSortProjectTrait(relInput));
+            relInput.getRowType(), mergeSortProjectTrait(relInput), (Sort) relInput);
       }
 
       // If old and new clause are equal and belong to below set,
@@ -2928,14 +2929,20 @@ public abstract class SqlImplementor {
     private boolean areAllNamedInputFieldsProjected(List<RexNode> projects,
         RelDataType projectRelDataType,
         RelDataType inputRelDataType) {
-      return areAllNamedInputFieldsProjected(projects, projectRelDataType, inputRelDataType, null);
+      return areAllNamedInputFieldsProjected(projects, projectRelDataType, inputRelDataType, null, null);
     }
 
     private boolean areAllNamedInputFieldsProjected(List<RexNode> projects,
         RelDataType projectRelDataType,
         RelDataType inputRelDataType,
-        @Nullable MergeSortProjectTrait mergeSortProject) {
+        @Nullable MergeSortProjectTrait mergeSortProject,
+        Sort sort) {
       Map<Integer, List<String>> fieldsProjected = fieldsProjected(projects, projectRelDataType);
+      boolean canSkipUnprojectedSortCols = sort != null
+          && dialect instanceof BigQuerySqlDialect
+          && sort.fetch == null
+          && sort.offset == null
+          && !hasSortByOrdinal();
       int inputFieldIndex = 0;
       for (RelDataTypeField inputField : inputRelDataType.getFieldList()) {
         if (mergeSortProject != null && mergeSortProject.isSortOnlyField(inputFieldIndex)) {
@@ -2945,9 +2952,32 @@ public abstract class SqlImplementor {
         if (!inputField.getName().startsWith(SqlUtil.GENERATED_EXPR_ALIAS_PREFIX)
             && !(fieldsProjected.containsKey(inputFieldIndex)
             && fieldsProjected.get(inputFieldIndex).contains(inputField.getName()))) {
+          if (canSkipUnprojectedSortCols
+              && isUnaliasedSortColumn(sort, inputFieldIndex, inputField.getName(), projectRelDataType)) {
+            inputFieldIndex++;
+            continue;
+          }
           return false;
         }
         inputFieldIndex++;
+      }
+      return true;
+    }
+
+    private boolean isUnaliasedSortColumn(
+        Sort sort, int fieldIndex, String fieldName, RelDataType projectRowType) {
+      if (projectRowType.getField(fieldName, false, false) != null) {
+        return false;
+      }
+      if (sort.getInput() instanceof Project) {
+        Project innerProject = (Project) sort.getInput();
+        RexNode expr = innerProject.getProjects().get(fieldIndex);
+        if (!(expr instanceof RexInputRef)) {
+          return false;
+        }
+        String physicalColumn = innerProject.getInput().getRowType()
+            .getFieldNames().get(((RexInputRef) expr).getIndex());
+        return physicalColumn.equalsIgnoreCase(fieldName);
       }
       return true;
     }
