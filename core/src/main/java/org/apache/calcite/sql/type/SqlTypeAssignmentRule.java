@@ -64,6 +64,13 @@ public class SqlTypeAssignmentRule implements SqlTypeMappingRule {
       rules.add(interval, SqlTypeName.DAY_INTERVAL_TYPES);
     }
 
+    // The generic INTERVAL (BigQuery INTERVAL) is assignable from itself and
+    // from every year-month and day-time interval type.
+    rule.clear();
+    rule.addAll(SqlTypeName.INTERVAL_TYPES);
+    rule.add(SqlTypeName.INTERVAL);
+    rules.add(SqlTypeName.INTERVAL, rule);
+
     // MULTISET is assignable from...
     rules.add(SqlTypeName.MULTISET, EnumSet.of(SqlTypeName.MULTISET));
 

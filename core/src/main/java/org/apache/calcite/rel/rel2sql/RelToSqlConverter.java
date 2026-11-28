@@ -1154,8 +1154,15 @@ public class RelToSqlConverter extends SqlImplementor
           && ((SqlBasicCall) operand).getOperator() == SqlStdOperatorTable.LOWER) {
         operand = ((SqlBasicCall) operand).getOperandList().get(0);
       }
+      if (!(operand instanceof SqlLiteral)) {
+        // A computed source column such as a || b, not a pivot condition: keep it.
+        return true;
+      }
       nestedCallString = requireNonNull(((SqlLiteral) operand).toValue()).toLowerCase();
     } else {
+      if (!(nestedCall instanceof SqlLiteral)) {
+        return true;
+      }
       nestedCallString = requireNonNull(((SqlLiteral) nestedCall).toValue()).toLowerCase();
     }
     for (String aggName : aggNames) {

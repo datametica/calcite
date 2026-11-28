@@ -25,6 +25,7 @@ import org.apache.calcite.plan.CTEScopeTrait;
 import org.apache.calcite.plan.CommentTrait;
 import org.apache.calcite.plan.GroupByWithQualifyHavingRankRelTrait;
 import org.apache.calcite.plan.MergeSortProjectTrait;
+import org.apache.calcite.plan.PivotRelTrait;
 import org.apache.calcite.plan.QualifyRelTrait;
 import org.apache.calcite.plan.QualifyRelTraitDef;
 import org.apache.calcite.plan.RelOptRule;
@@ -79,6 +80,7 @@ import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexWindowBounds;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDateTimeFormat;
 import org.apache.calcite.sql.SqlDialect;
@@ -91,6 +93,7 @@ import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlPivot;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
@@ -16334,5 +16337,58 @@ class RelToSqlConverterDMTest {
     CTERelToSqlUtil.fetchSqlWithItems(sqlWith, sqlNodes);
     assertThat(sqlNodes, hasSize(1));
     assertThat(((SqlWithItem) sqlNodes.get(0)).name.toString(), is("R"));
+  }
+
+  /** A PIVOT over a sub-query whose source column is computed (Oracle {@code a || b}, which
+   * becomes {@code ||(COALESCE(a, ''), COALESCE(b, ''))}) keeps that column in the PIVOT input.
+   * It used to fail with ClassCastException SqlIdentifier to SqlLiteral in isSqlNodeValid
+   * (RORAB-3907). The rel has the shape Raven builds: the input Project keeps the computed
+   * axis column and the filter column of each IN value. */
+  @Test void testPivotOverSubQueryWithComputedSourceColumn() {
+    final RelBuilder builder =
+        relBuilder().transform(c -> c.withPruneInputOfAggregate(false));
+    builder.scan("EMP");
+    final RexNode msDt =
+        builder.call(SqlStdOperatorTable.CONCAT,
+            builder.call(SqlStdOperatorTable.COALESCE, builder.field("ENAME"),
+                builder.literal("")),
+            builder.call(SqlStdOperatorTable.COALESCE, builder.field("JOB"),
+                builder.literal("")));
+    final RexNode filter =
+        builder.equals(builder.alias(msDt, "MS_DT"),
+            builder.alias(builder.literal("SMITHCLERK"), "AU_DATE"));
+    builder.project(
+        ImmutableList.of(builder.field("EMPNO"), msDt, builder.field("SAL"), filter),
+        ImmutableList.of("EMPNO", "MS_DT", "SAL", "$f3"));
+    final org.apache.calcite.rel.core.Aggregate pivot =
+        (org.apache.calcite.rel.core.Aggregate) builder.aggregate(builder.groupKey(0),
+            builder.max(builder.field(2)).filter(builder.field(3)).as("AU_DATE"))
+            .build();
+    final RelNode root =
+        pivot.copy(pivot.getTraitSet().plus(new PivotRelTrait(true, true, null)),
+            pivot.getInput(), pivot.getGroupSet(), pivot.getGroupSets(), pivot.getAggCallList());
+    final String expected = "SELECT *\n"
+        + "FROM (SELECT EMPNO, COALESCE(ENAME, '') || COALESCE(JOB, '') AS MS_DT, SAL\n"
+        + "FROM scott.EMP) PIVOT (MAX(SAL) FOR MS_DT IN ('SMITHCLERK' AS AU_DATE))";
+    relFn(b -> root).withBigQuery().ok(expected);
+  }
+
+  /** An aliased PIVOT whose source is a sub-query that reads a CTE: the inline CTE body in
+   * that sub-query's FROM is replaced by the CTE name. Before RORAB-3873 the body stayed in
+   * the FROM (as {@code FROM (DEPT_STATUS AS (SELECT ...))}) in a CREATE VIEW. */
+  @Test void testUpdateSqlNodeReplacesCteInsideAliasedPivotSubQuery() throws Exception {
+    final SqlSelect outer = (SqlSelect) SqlParser.create("SELECT * FROM "
+        + "(SELECT DEPTNO, MTYPE, STATUS, ENAME FROM T) "
+        + "PIVOT (MAX(ENAME) FOR STATUS IN ('M' AS M_NAME, 'S' AS S_NAME)) AS A").parseQuery();
+    final SqlPivot pivot = ((SqlBasicCall) outer.getFrom()).operand(0);
+    final SqlSelect pivotSource = (SqlSelect) pivot.query;
+    final SqlNode cteBody = SqlParser.create("SELECT DEPTNO, 'MS' AS MTYPE, STATUS, ENAME FROM EMP")
+        .parseQuery();
+    pivotSource.setFrom(
+        new SqlWithItem(SqlParserPos.ZERO, new SqlIdentifier("DEPT_STATUS", SqlParserPos.ZERO),
+            null, cteBody));
+    CTERelToSqlUtil.updateSqlNode(outer);
+    assertThat(pivotSource.getFrom() instanceof SqlIdentifier, is(true));
+    assertThat(((SqlIdentifier) pivotSource.getFrom()).getSimple(), is("DEPT_STATUS"));
   }
 }
